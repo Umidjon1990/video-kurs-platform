@@ -33,6 +33,12 @@ A comprehensive Learning Management System (LMS) platform for video-based course
   - ✅ Generic HTTPS URL support for other video platforms
   - ✅ Improved video ID extraction from YouTube URLs
   - ✅ Fallback display for unrecognized video formats
+- ✅ **Payment Status & Enrollment Improvements** (Oct 16, 2025)
+  - ✅ Added `getEnrollmentByCourseAndUser(courseId, userId)` storage method
+  - ✅ Created GET `/api/student/enrollment/:courseId` endpoint for checking enrollment
+  - ✅ Fixed payment status logic: accepts both 'confirmed' (manual admin approval) and 'approved' (Stripe auto-approval)
+  - ✅ Updated LearningPage to unlock all lessons for enrollments with either status
+  - ✅ Changed enrollment badge text from "Yozilgan" to "Harid qilingan" (Enrolled → Purchased)
 
 ### Previously Completed Features
 - ✅ Assignment and Test linkage to specific lessons via optional lessonId field
