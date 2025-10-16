@@ -63,24 +63,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fileExt = req.file.mimetype.split('/')[1];
       const safeFileName = `receipt-${crypto.randomUUID()}.${fileExt}`;
       
-      // Use PUBLIC storage so images are accessible
-      const publicPaths = process.env.PUBLIC_OBJECT_SEARCH_PATHS?.split(',') || [];
-      const publicDir = publicPaths[0] || '/public';
-      const receiptsDir = join(publicDir, 'receipts');
-      const filePath = join(receiptsDir, safeFileName);
+      // Use ObjectStorageService to upload
+      const { ObjectStorageService } = await import('./objectStorage');
+      const objectStorage = new ObjectStorageService();
+      const publicUrl = await objectStorage.uploadFile(
+        req.file.buffer,
+        safeFileName,
+        req.file.mimetype
+      );
 
-      // Create receipts directory if it doesn't exist
-      const { mkdir } = await import('fs/promises');
-      await mkdir(receiptsDir, { recursive: true });
-      
-      await writeFile(filePath, req.file.buffer);
-
-      // Return web-accessible URL
-      const publicUrl = `/receipts/${safeFileName}`;
       res.json({ url: publicUrl });
     } catch (error: any) {
       console.error("Upload error:", error);
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Serve public receipt images
+  app.get('/receipts/:fileName', async (req, res) => {
+    try {
+      const { ObjectStorageService } = await import('./objectStorage');
+      const objectStorage = new ObjectStorageService();
+      const file = await objectStorage.searchPublicObject(`receipts/${req.params.fileName}`);
+      
+      if (!file) {
+        return res.status(404).json({ error: "File not found" });
+      }
+      
+      await objectStorage.downloadObject(file, res);
+    } catch (error: any) {
+      console.error("Download error:", error);
+      res.status(500).json({ error: "Error downloading file" });
     }
   });
 
