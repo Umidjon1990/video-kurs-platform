@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck } from "lucide-react";
+import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video } from "lucide-react";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import type { Course, Lesson, Assignment, Test } from "@shared/schema";
 
@@ -423,7 +423,16 @@ export default function InstructorDashboard() {
                       >
                         <div className="flex-1 min-w-0">
                           <h4 className="font-semibold">{lesson.title}</h4>
-                          <p className="text-sm text-muted-foreground truncate">{lesson.videoUrl}</p>
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Video className="w-3 h-3" />
+                            <span>
+                              {lesson.videoUrl.includes('kinescope') ? 'Kinescope video' : 
+                               lesson.videoUrl.includes('youtube') ? 'YouTube video' : 
+                               lesson.videoUrl.includes('vimeo') ? 'Vimeo video' : 
+                               lesson.videoUrl.includes('iframe') || lesson.videoUrl.includes('<div') ? 'Video embed' : 
+                               lesson.videoUrl.length > 40 ? lesson.videoUrl.substring(0, 40) + '...' : lesson.videoUrl}
+                            </span>
+                          </div>
                           <span className="text-xs text-muted-foreground">
                             {lesson.duration ? `${lesson.duration} daqiqa` : 'Davomiylik ko\'rsatilmagan'}
                           </span>
