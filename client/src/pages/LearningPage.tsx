@@ -130,7 +130,7 @@ export default function LearningPage() {
               {/* Video Player */}
               <Card>
                 <CardContent className="p-0">
-                  <div className="aspect-video bg-black rounded-lg flex items-center justify-center">
+                  <div className="aspect-video bg-black rounded-lg overflow-hidden">
                     {(() => {
                       const videoContent = currentLesson.videoUrl;
                       
@@ -147,10 +147,26 @@ export default function LearningPage() {
                       
                       // Check if it's a YouTube URL
                       if (videoContent.includes('youtube.com') || videoContent.includes('youtu.be')) {
+                        const embedUrl = videoContent.includes('embed') 
+                          ? videoContent 
+                          : videoContent.replace('watch?v=', 'embed/');
                         return (
                           <iframe
-                            src={videoContent.replace('watch?v=', 'embed/')}
-                            className="w-full h-full rounded-lg"
+                            src={embedUrl}
+                            className="w-full h-full"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            data-testid="video-player"
+                          />
+                        );
+                      }
+                      
+                      // Check if it's a Kinescope or other direct URL
+                      if (videoContent.includes('kinescope') || videoContent.includes('vimeo')) {
+                        return (
+                          <iframe
+                            src={videoContent}
+                            className="w-full h-full"
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                             allowFullScreen
                             data-testid="video-player"
@@ -160,17 +176,19 @@ export default function LearningPage() {
                       
                       // Default: show as link
                       return (
-                        <div className="text-white p-8 text-center">
-                          <p className="mb-4">Video URL:</p>
-                          <a 
-                            href={currentLesson.videoUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-primary underline"
-                            data-testid="video-link"
-                          >
-                            {currentLesson.videoUrl}
-                          </a>
+                        <div className="text-white p-8 text-center flex items-center justify-center h-full">
+                          <div>
+                            <p className="mb-4">Video URL yoki Embed kod kiriting:</p>
+                            <a 
+                              href={currentLesson.videoUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-primary underline break-all"
+                              data-testid="video-link"
+                            >
+                              {currentLesson.videoUrl}
+                            </a>
+                          </div>
                         </div>
                       );
                     })()}
