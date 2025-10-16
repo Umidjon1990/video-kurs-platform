@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -13,6 +13,7 @@ export default function LearningPage() {
   const { courseId } = useParams<{ courseId: string }>();
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -37,6 +38,13 @@ export default function LearningPage() {
     enabled: !!courseId && isAuthenticated,
   });
 
+  // Set first lesson as current when lessons load
+  useEffect(() => {
+    if (lessons && lessons.length > 0 && !currentLessonId) {
+      setCurrentLessonId(lessons[0].id);
+    }
+  }, [lessons, currentLessonId]);
+
   if (authLoading || courseLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -53,7 +61,7 @@ export default function LearningPage() {
     );
   }
 
-  const currentLesson = lessons?.[0];
+  const currentLesson = lessons?.find(l => l.id === currentLessonId);
 
   return (
     <div className="min-h-screen bg-background">
@@ -84,12 +92,19 @@ export default function LearningPage() {
                 lessons?.map((lesson) => (
                   <div
                     key={lesson.id}
-                    className="flex items-center gap-3 p-3 rounded-lg hover-elevate cursor-pointer"
+                    onClick={() => setCurrentLessonId(lesson.id)}
+                    className={`flex items-center gap-3 p-3 rounded-lg hover-elevate cursor-pointer transition-colors ${
+                      currentLessonId === lesson.id ? 'bg-primary/10 border-l-4 border-primary' : ''
+                    }`}
                     data-testid={`lesson-item-${lesson.id}`}
                   >
-                    <PlayCircle className="w-5 h-5 text-primary flex-shrink-0" />
+                    <PlayCircle className={`w-5 h-5 flex-shrink-0 ${
+                      currentLessonId === lesson.id ? 'text-primary' : 'text-muted-foreground'
+                    }`} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium line-clamp-1">{lesson.title}</p>
+                      <p className={`text-sm font-medium line-clamp-1 ${
+                        currentLessonId === lesson.id ? 'text-primary' : ''
+                      }`}>{lesson.title}</p>
                       {lesson.duration && (
                         <p className="text-xs text-muted-foreground">{lesson.duration} daqiqa</p>
                       )}
