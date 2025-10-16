@@ -1432,6 +1432,10 @@ function QuestionsList({ testId }: { testId: string }) {
               variant="ghost"
               size="icon"
               onClick={async () => {
+                // Avval hamma ma'lumotlarni tozalaymiz
+                setMcOptions([{ text: "", isCorrect: false }]);
+                setMatchingPairs([{ left: "", right: "" }]);
+                
                 setEditingQuestion(q);
                 setQuestionForm({
                   type: q.type,
@@ -1444,6 +1448,8 @@ function QuestionsList({ testId }: { testId: string }) {
                 if (q.type === "multiple_choice") {
                   const options = await fetch(`/api/instructor/questions/${q.id}/options`).then(r => r.json());
                   setMcOptions(options.map((opt: any) => ({ text: opt.optionText, isCorrect: opt.isCorrect })));
+                } else {
+                  setMcOptions([{ text: "", isCorrect: false }]);
                 }
                 
                 // Load matching pairs
@@ -1454,6 +1460,8 @@ function QuestionsList({ testId }: { testId: string }) {
                     right: config.rightColumn[i] || ""
                   }));
                   setMatchingPairs(pairs);
+                } else {
+                  setMatchingPairs([{ left: "", right: "" }]);
                 }
                 
                 setIsAddQuestionOpen(true);
