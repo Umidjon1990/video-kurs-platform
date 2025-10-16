@@ -1228,6 +1228,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allSubmissions = await storage.getSubmissionsByInstructor(instructorId);
       // Filter by course
       const courseSubmissions = allSubmissions.filter((s: any) => s.course.id === courseId);
+      
+      // Prevent caching to ensure fresh data
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
       res.json(courseSubmissions);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
