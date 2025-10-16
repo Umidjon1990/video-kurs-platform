@@ -979,6 +979,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
         answers: JSON.stringify(answers),
         score: totalScore,
+        totalPoints,
         isPassed,
       });
       

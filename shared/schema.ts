@@ -156,6 +156,7 @@ export const testAttempts = pgTable("test_attempts", {
   userId: varchar("user_id").notNull().references(() => users.id),
   answers: jsonb("answers").notNull(), // User's answers {questionId: answer}
   score: integer("score"), // Total score
+  totalPoints: integer("total_points"), // Maximum possible score
   isPassed: boolean("is_passed"),
   completedAt: timestamp("completed_at").defaultNow(),
   gradedAt: timestamp("graded_at"), // For manual grading (essay questions)

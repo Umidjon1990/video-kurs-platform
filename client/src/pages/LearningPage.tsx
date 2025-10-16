@@ -379,7 +379,11 @@ export default function LearningPage() {
 
                 <TabsContent value="results" className="space-y-4">
                   {(() => {
-                    const currentLessonTests = tests?.filter(t => t.lessonId === currentLessonId).sort((a, b) => (a.order || 0) - (b.order || 0)) || [];
+                    const currentLessonTests = tests?.filter(t => t.lessonId === currentLessonId).sort((a, b) => {
+                      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                      return dateA - dateB;
+                    }) || [];
                     const lessonTestsWithAttempts = currentLessonTests.map(test => {
                       const attempts = testAttempts?.filter((a: any) => a.testId === test.id) || [];
                       const bestAttempt = attempts.length > 0 
