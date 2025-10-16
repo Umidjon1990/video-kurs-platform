@@ -102,6 +102,7 @@ export interface IStorage {
   getSubmissionsByInstructor(instructorId: string): Promise<any[]>;
   getSubmissionsByUser(userId: string): Promise<Submission[]>;
   updateSubmissionGrade(submissionId: string, grade: number, feedback: string, status: string): Promise<Submission>;
+  deleteSubmission(submissionId: string): Promise<void>;
   
   // Test Attempts
   createTestAttempt(attempt: InsertTestAttempt): Promise<TestAttempt>;
@@ -515,6 +516,10 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return submission;
+  }
+
+  async deleteSubmission(submissionId: string): Promise<void> {
+    await db.delete(submissions).where(eq(submissions.id, submissionId));
   }
 
   // Test attempt operations

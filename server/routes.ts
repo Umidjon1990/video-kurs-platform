@@ -1281,6 +1281,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // O'qituvchi - Vazifani o'chirish
+  app.delete('/api/instructor/submissions/:id', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const instructorId = req.user.claims.sub;
+      const { id } = req.params;
+      
+      // Authorization check: ensure submission belongs to instructor's course
+      const submissions = await storage.getSubmissionsByInstructor(instructorId);
+      const submissionData = submissions.find((s: any) => s.submission.id === id);
+      
+      if (!submissionData) {
+        return res.status(403).json({ message: "Sizga bu vazifani o'chirish huquqi yo'q" });
+      }
+      
+      await storage.deleteSubmission(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // O'quvchi - Vazifa yuborish
   app.post('/api/student/submissions', isAuthenticated, upload.fields([
     { name: 'images', maxCount: 5 },
