@@ -47,15 +47,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      // Save to object storage (.private directory)
-      const fileName = `receipt-${Date.now()}-${req.file.originalname}`;
-      const privateDir = process.env.PRIVATE_OBJECT_DIR || '/.private';
-      const filePath = join(privateDir, fileName);
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(req.file.mimetype)) {
+        return res.status(400).json({ message: "Faqat rasm fayllari (JPG, PNG, WEBP) qabul qilinadi" });
+      }
 
+      // Validate file size (max 5MB)
+      if (req.file.size > 5 * 1024 * 1024) {
+        return res.status(400).json({ message: "Fayl hajmi 5MB dan oshmasligi kerak" });
+      }
+
+      // SECURITY: Generate safe filename using UUID (no user input)
+      const crypto = await import('crypto');
+      const fileExt = req.file.mimetype.split('/')[1];
+      const safeFileName = `receipt-${crypto.randomUUID()}.${fileExt}`;
+      
+      // Use PUBLIC storage so images are accessible
+      const publicPaths = process.env.PUBLIC_OBJECT_SEARCH_PATHS?.split(',') || [];
+      const publicDir = publicPaths[0] || '/public';
+      const receiptsDir = join(publicDir, 'receipts');
+      const filePath = join(receiptsDir, safeFileName);
+
+      // Create receipts directory if it doesn't exist
+      const { mkdir } = await import('fs/promises');
+      await mkdir(receiptsDir, { recursive: true });
+      
       await writeFile(filePath, req.file.buffer);
 
-      // Return the file path as URL
-      res.json({ url: filePath });
+      // Return web-accessible URL
+      const publicUrl = `/receipts/${safeFileName}`;
+      res.json({ url: publicUrl });
     } catch (error: any) {
       console.error("Upload error:", error);
       res.status(500).json({ message: error.message });

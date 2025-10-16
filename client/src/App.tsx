@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import Landing from "@/pages/Landing";
 import AdminDashboard from "@/pages/AdminDashboard";
+import AdminPayments from "@/pages/AdminPayments";
 import InstructorDashboard from "@/pages/InstructorDashboard";
 import StudentCourses from "@/pages/StudentCourses";
 import LearningPage from "@/pages/LearningPage";
@@ -33,7 +34,10 @@ function Router() {
         <>
           {/* Admin Routes */}
           {user?.role === 'admin' && (
-            <Route path="/" component={AdminDashboard} />
+            <>
+              <Route path="/" component={AdminDashboard} />
+              <Route path="/admin/payments" component={AdminPayments} />
+            </>
           )}
           
           {/* Instructor Routes */}

@@ -21,12 +21,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Users, BookOpen } from "lucide-react";
+import { Users, BookOpen, CreditCard } from "lucide-react";
+import { useLocation } from "wouter";
 import type { User } from "@shared/schema";
 
 export default function AdminDashboard() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -88,7 +90,16 @@ export default function AdminDashboard() {
       <div className="border-b">
         <div className="flex h-16 items-center px-4 gap-4">
           <h1 className="text-2xl font-bold" data-testid="text-admin-title">Admin Paneli</h1>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-3">
+            <Button
+              variant="default"
+              onClick={() => setLocation('/admin/payments')}
+              data-testid="button-payments"
+              className="flex items-center gap-2"
+            >
+              <CreditCard className="w-4 h-4" />
+              To'lovlar
+            </Button>
             <Button
               variant="outline"
               onClick={() => window.location.href = "/api/logout"}
