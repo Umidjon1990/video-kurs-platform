@@ -587,58 +587,6 @@ export default function InstructorDashboard() {
                             </div>
                           </div>
                         </CardHeader>
-                        <CardContent className="pt-0 space-y-3">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setTestForm({ title: "", passingScore: "", lessonId: lesson.id });
-                              setEditingTest(null);
-                              setIsAddTestOpen(true);
-                            }}
-                            data-testid={`button-add-test-for-lesson-${lesson.id}`}
-                            className="w-full"
-                          >
-                            <Plus className="w-4 h-4 mr-2" />
-                            Test Qo'shish
-                          </Button>
-                          
-                          {tests?.filter(t => t.lessonId === lesson.id).map((test) => (
-                            <div key={test.id} className="p-3 bg-muted/50 rounded-lg space-y-2">
-                              <div className="flex items-center justify-between gap-2">
-                                <h5 className="text-sm font-medium">{test.title}</h5>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedTest(test);
-                                    setQuestionForm({
-                                      type: "multiple_choice",
-                                      questionText: "",
-                                      points: "1",
-                                      correctAnswer: "",
-                                    });
-                                    setMcOptions([{ text: "", isCorrect: false }]);
-                                    setMatchingPairs([{ left: "", right: "" }]);
-                                    setIsAddQuestionOpen(true);
-                                  }}
-                                  data-testid={`button-add-question-${test.id}`}
-                                >
-                                  <Plus className="w-3 h-3 mr-1" />
-                                  Savol
-                                </Button>
-                              </div>
-                              <QuestionsList 
-                                testId={test.id}
-                                setEditingQuestion={setEditingQuestion}
-                                setQuestionForm={setQuestionForm}
-                                setMcOptions={setMcOptions}
-                                setMatchingPairs={setMatchingPairs}
-                                setIsAddQuestionOpen={setIsAddQuestionOpen}
-                              />
-                            </div>
-                          ))}
-                        </CardContent>
                       </Card>
                     ))
                   )}
