@@ -494,6 +494,19 @@ export default function InstructorDashboard() {
     },
   });
 
+  const deleteSubmissionMutation = useMutation({
+    mutationFn: async (submissionId: string) => {
+      await apiRequest("DELETE", `/api/instructor/submissions/${submissionId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/instructor/courses", selectedCourse?.id, "submissions"] });
+      toast({ title: "Muvaffaqiyatli", description: "Vazifa o'chirildi" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+
   if (authLoading || coursesLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -974,22 +987,36 @@ export default function InstructorDashboard() {
                               )}
                             </div>
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedSubmission(item);
-                              setGradingForm({
-                                score: item.submission.score?.toString() || "",
-                                feedback: item.submission.feedback || "",
-                                status: item.submission.status === 'graded' ? 'graded' : 'needs_revision',
-                              });
-                              setIsGradingOpen(true);
-                            }}
-                            data-testid={`button-grade-${item.submission.id}`}
-                          >
-                            Tekshirish
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedSubmission(item);
+                                setGradingForm({
+                                  score: item.submission.score?.toString() || "",
+                                  feedback: item.submission.feedback || "",
+                                  status: item.submission.status === 'graded' ? 'graded' : 'needs_revision',
+                                });
+                                setIsGradingOpen(true);
+                              }}
+                              data-testid={`button-grade-${item.submission.id}`}
+                            >
+                              Tekshirish
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                if (confirm("Bu vazifani o'chirmoqchimisiz?")) {
+                                  deleteSubmissionMutation.mutate(item.submission.id);
+                                }
+                              }}
+                              data-testid={`button-delete-submission-${item.submission.id}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </div>
