@@ -451,6 +451,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         courseId,
         lessonId: req.body.lessonId === "none" ? null : req.body.lessonId,
+        dueDate: req.body.dueDate ? new Date(req.body.dueDate) : undefined,
       });
       const assignment = await storage.createAssignment(assignmentData);
       res.json(assignment);
@@ -477,7 +478,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      const updatedAssignment = await storage.updateAssignment(assignmentId, req.body);
+      const updateData = {
+        ...req.body,
+        dueDate: req.body.dueDate ? new Date(req.body.dueDate) : undefined,
+      };
+      const updatedAssignment = await storage.updateAssignment(assignmentId, updateData);
       res.json(updatedAssignment);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
