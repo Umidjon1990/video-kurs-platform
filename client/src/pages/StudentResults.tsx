@@ -49,7 +49,23 @@ export default function StudentResults() {
           </Button>
           <h1 className="text-2xl font-bold" data-testid="text-results-title">Mening Natijalarim</h1>
           <div className="ml-auto flex items-center gap-2">
-            <NotificationBell />
+            <NotificationBell 
+              onNotificationAction={(notification) => {
+                if ((notification.type === 'assignment_graded' || notification.type === 'revision_requested') && notification.relatedId) {
+                  // Find submission in current submissions
+                  const submission = submissions?.find((s: any) => s.id === notification.relatedId);
+                  if (submission) {
+                    setSelectedSubmission(submission);
+                  } else {
+                    toast({ 
+                      title: "Ma'lumot", 
+                      description: "Vazifa natijasini ko'rish uchun 'Vazifalar' tabini oching",
+                      variant: "default"
+                    });
+                  }
+                }
+              }}
+            />
             <Button
               variant="outline"
               onClick={() => window.location.href = "/api/logout"}

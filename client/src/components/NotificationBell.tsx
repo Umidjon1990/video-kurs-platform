@@ -14,7 +14,11 @@ import { uz } from "date-fns/locale";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Notification } from "@shared/schema";
 
-export function NotificationBell() {
+interface NotificationBellProps {
+  onNotificationAction?: (notification: Notification) => void;
+}
+
+export function NotificationBell({ onNotificationAction }: NotificationBellProps = {}) {
   const [open, setOpen] = useState(false);
 
   const { data: notifications = [] } = useQuery<Notification[]>({
@@ -42,6 +46,11 @@ export function NotificationBell() {
   const handleNotificationClick = (notification: Notification) => {
     if (!notification.isRead) {
       markAsReadMutation.mutate(notification.id);
+    }
+    
+    if (onNotificationAction) {
+      onNotificationAction(notification);
+      setOpen(false);
     }
   };
 

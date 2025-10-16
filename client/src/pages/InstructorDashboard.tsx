@@ -505,7 +505,25 @@ export default function InstructorDashboard() {
         <div className="flex h-16 items-center px-4 gap-4">
           <h1 className="text-2xl font-bold" data-testid="text-instructor-title">O'qituvchi Paneli</h1>
           <div className="ml-auto flex items-center gap-2">
-            <NotificationBell />
+            <NotificationBell 
+              onNotificationAction={(notification) => {
+                if (notification.type === 'assignment_submission' && notification.relatedId) {
+                  // Find submission in current submissions
+                  const submission = submissions?.find((s: any) => s.submission.id === notification.relatedId);
+                  if (submission) {
+                    setSubmissionToGrade(submission);
+                    setGradingForm({ score: "", feedback: "", status: "graded" });
+                    setIsGradingOpen(true);
+                  } else {
+                    toast({ 
+                      title: "Ogohlantirish", 
+                      description: "Vazifani ko'rish uchun 'Vazifalar' tabga o'ting va kursni tanlang",
+                      variant: "default"
+                    });
+                  }
+                }
+              }}
+            />
             <Button
               variant="outline"
               onClick={() => window.location.href = "/api/logout"}
