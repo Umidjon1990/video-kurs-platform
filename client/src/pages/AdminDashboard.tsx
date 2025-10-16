@@ -41,7 +41,11 @@ export default function AdminDashboard() {
     }
   }, [isAuthenticated, authLoading, toast]);
 
-  const { data: stats } = useQuery({
+  const { data: stats } = useQuery<{
+    instructorCount: number;
+    courseCount: number;
+    studentCount: number;
+  }>({
     queryKey: ["/api/admin/stats"],
     enabled: isAuthenticated,
   });

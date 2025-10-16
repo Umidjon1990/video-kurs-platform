@@ -74,7 +74,7 @@ export default function InstructorDashboard() {
     mutationFn: async () => {
       await apiRequest("POST", "/api/instructor/courses", {
         ...courseForm,
-        price: parseFloat(courseForm.price),
+        price: courseForm.price,
       });
     },
     onSuccess: () => {
