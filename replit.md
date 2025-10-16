@@ -7,6 +7,18 @@ This project is a comprehensive Learning Management System (LMS) platform design
 ## Recent Changes (October 16, 2025)
 
 ### Latest Updates
+- ✅ **Notification & Assignment Result Enhancements** (Oct 16, 2025)
+  - ✅ **Notification fixes:**
+    - ✅ Fixed endpoint: Changed POST to PATCH for marking notification as read
+    - ✅ Implemented "Mark all as read" functionality
+    - ✅ Added /api/notifications/mark-all-read endpoint
+    - ✅ Storage function: markAllNotificationsAsRead()
+  - ✅ **Assignment result detail view:**
+    - ✅ "Batafsil ko'rish" button on each assignment result
+    - ✅ Full-screen dialog showing complete assignment details
+    - ✅ Large score display (4xl font)
+    - ✅ Shows: score, feedback, status, submission content, files, timestamps
+    - ✅ All uploaded files visible (images, audio, documents)
 - ✅ **Student Notification System - COMPLETE** (Oct 16, 2025)
   - ✅ **LearningPage notification integration:**
     - ✅ NotificationBell added to LearningPage header

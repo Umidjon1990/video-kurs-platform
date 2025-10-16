@@ -1378,11 +1378,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // O'qilgan deb belgilash
-  app.post('/api/notifications/:id/read', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/notifications/:id/read', isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
       const notification = await storage.markNotificationAsRead(id);
       res.json(notification);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Barchasini o'qilgan deb belgilash
+  app.patch('/api/notifications/mark-all-read', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      await storage.markAllNotificationsAsRead(userId);
+      res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

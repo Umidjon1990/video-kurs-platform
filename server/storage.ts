@@ -112,6 +112,7 @@ export interface IStorage {
   createNotification(notification: InsertNotification): Promise<Notification>;
   getNotificationsByUser(userId: string): Promise<Notification[]>;
   markNotificationAsRead(notificationId: string): Promise<Notification>;
+  markAllNotificationsAsRead(userId: string): Promise<void>;
   getUnreadCount(userId: string): Promise<number>;
   
   // Statistics
@@ -559,6 +560,16 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return notification;
+  }
+
+  async markAllNotificationsAsRead(userId: string): Promise<void> {
+    await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(and(
+        eq(notifications.userId, userId),
+        eq(notifications.isRead, false)
+      ));
   }
 
   async getUnreadCount(userId: string): Promise<number> {
