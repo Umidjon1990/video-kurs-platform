@@ -90,6 +90,14 @@ export default function InstructorDashboard() {
   ]);
   const [expandedTests, setExpandedTests] = useState<Set<string>>(new Set());
 
+  const [isGradingOpen, setIsGradingOpen] = useState(false);
+  const [selectedSubmission, setSelectedSubmission] = useState<any | null>(null);
+  const [gradingForm, setGradingForm] = useState({
+    score: "",
+    feedback: "",
+    status: "graded",
+  });
+
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       toast({
@@ -120,6 +128,11 @@ export default function InstructorDashboard() {
 
   const { data: tests } = useQuery<Test[]>({
     queryKey: ["/api/instructor/courses", selectedCourse?.id, "tests"],
+    enabled: !!selectedCourse,
+  });
+
+  const { data: submissions } = useQuery<any[]>({
+    queryKey: ["/api/instructor/courses", selectedCourse?.id, "submissions"],
     enabled: !!selectedCourse,
   });
 
@@ -421,6 +434,27 @@ export default function InstructorDashboard() {
     },
   });
 
+  const gradingMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedSubmission) return;
+      await apiRequest("POST", `/api/instructor/submissions/${selectedSubmission.submission.id}/grade`, {
+        grade: parseInt(gradingForm.score),
+        feedback: gradingForm.feedback,
+        status: gradingForm.status,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/instructor/courses", selectedCourse?.id, "submissions"] });
+      toast({ title: "Muvaffaqiyatli", description: "Vazifa baholandi" });
+      setIsGradingOpen(false);
+      setGradingForm({ score: "", feedback: "", status: "graded" });
+      setSelectedSubmission(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+
   if (authLoading || coursesLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -531,7 +565,7 @@ export default function InstructorDashboard() {
             </DialogHeader>
             
             <Tabs defaultValue="lessons" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="lessons" data-testid="tab-lessons">
                   <BookOpen className="w-4 h-4 mr-2" />
                   Darslar
@@ -543,6 +577,10 @@ export default function InstructorDashboard() {
                 <TabsTrigger value="tests" data-testid="tab-tests">
                   <ClipboardCheck className="w-4 h-4 mr-2" />
                   Testlar
+                </TabsTrigger>
+                <TabsTrigger value="submissions" data-testid="tab-submissions">
+                  <ClipboardCheck className="w-4 h-4 mr-2" />
+                  Yuborilganlar
                 </TabsTrigger>
               </TabsList>
 
@@ -793,6 +831,63 @@ export default function InstructorDashboard() {
                         </CardContent>
                       </Card>
                     ))
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="submissions" className="space-y-4">
+                <div className="max-h-96 overflow-y-auto">
+                  {!submissions || submissions.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">Hali vazifalar yuborilmagan</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {submissions.map((item: any) => (
+                        <div
+                          key={item.submission.id}
+                          className="flex items-center justify-between p-4 border rounded-lg gap-4"
+                          data-testid={`submission-${item.submission.id}`}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold">{item.assignment.title}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              O'quvchi: {item.user.name}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className={`text-xs px-2 py-1 rounded ${
+                                item.submission.status === 'graded' ? 'bg-green-100 text-green-800' :
+                                item.submission.status === 'needs_revision' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-blue-100 text-blue-800'
+                              }`}>
+                                {item.submission.status === 'graded' ? 'Tekshirilgan' :
+                                 item.submission.status === 'needs_revision' ? 'Qayta topshirish' :
+                                 'Yangi'}
+                              </span>
+                              {item.submission.score !== null && (
+                                <span className="text-sm font-medium">
+                                  Ball: {item.submission.score}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedSubmission(item);
+                              setGradingForm({
+                                score: item.submission.score?.toString() || "",
+                                feedback: item.submission.feedback || "",
+                                status: item.submission.status === 'graded' ? 'graded' : 'needs_revision',
+                              });
+                              setIsGradingOpen(true);
+                            }}
+                            data-testid={`button-grade-${item.submission.id}`}
+                          >
+                            Tekshirish
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               </TabsContent>
@@ -1400,6 +1495,17 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Grading Dialog */}
+      <GradingDialog
+        open={isGradingOpen}
+        onOpenChange={setIsGradingOpen}
+        submission={selectedSubmission}
+        gradingForm={gradingForm}
+        setGradingForm={setGradingForm}
+        onSubmit={() => gradingMutation.mutate()}
+        isPending={gradingMutation.isPending}
+      />
     </div>
   );
 }
@@ -1531,5 +1637,139 @@ function QuestionsList({
         </div>
       ))}
     </div>
+  );
+}
+
+function GradingDialog({ 
+  open, 
+  onOpenChange, 
+  submission, 
+  gradingForm, 
+  setGradingForm, 
+  onSubmit, 
+  isPending 
+}: any) {
+  if (!submission) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto" data-testid="dialog-grading">
+        <DialogHeader>
+          <DialogTitle>Vazifani Tekshirish</DialogTitle>
+          <DialogDescription>
+            O'quvchi: {submission.user.name} | Vazifa: {submission.assignment.title}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div>
+            <h4 className="font-medium mb-2">Yuborilgan matn:</h4>
+            <p className="text-sm text-muted-foreground bg-muted p-3 rounded">
+              {submission.submission.content || "Matn kiritilmagan"}
+            </p>
+          </div>
+
+          {submission.submission.imageUrls && submission.submission.imageUrls.length > 0 && (
+            <div>
+              <h4 className="font-medium mb-2">Rasmlar:</h4>
+              <div className="grid grid-cols-2 gap-2">
+                {submission.submission.imageUrls.map((url: string, i: number) => (
+                  <img key={i} src={url} alt={`Image ${i + 1}`} className="rounded border w-full h-32 object-cover" />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {submission.submission.audioUrls && submission.submission.audioUrls.length > 0 && (
+            <div>
+              <h4 className="font-medium mb-2">Audio fayllar:</h4>
+              {submission.submission.audioUrls.map((url: string, i: number) => (
+                <audio key={i} controls className="w-full mb-2">
+                  <source src={url} />
+                </audio>
+              ))}
+            </div>
+          )}
+
+          {submission.submission.fileUrls && submission.submission.fileUrls.length > 0 && (
+            <div>
+              <h4 className="font-medium mb-2">Fayllar:</h4>
+              {submission.submission.fileUrls.map((url: string, i: number) => (
+                <a 
+                  key={i} 
+                  href={url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="block text-sm text-primary hover:underline mb-1"
+                >
+                  📎 Fayl {i + 1}
+                </a>
+              ))}
+            </div>
+          )}
+
+          <div className="border-t pt-4 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="score">Ball (0-100)</Label>
+              <Input
+                id="score"
+                type="number"
+                min="0"
+                max="100"
+                value={gradingForm.score}
+                onChange={(e) => setGradingForm({ ...gradingForm, score: e.target.value })}
+                placeholder="85"
+                data-testid="input-grade-score"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="feedback">Izoh</Label>
+              <Textarea
+                id="feedback"
+                value={gradingForm.feedback}
+                onChange={(e) => setGradingForm({ ...gradingForm, feedback: e.target.value })}
+                placeholder="Yaxshi ish! Lekin..."
+                rows={4}
+                data-testid="input-grade-feedback"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select
+                value={gradingForm.status}
+                onValueChange={(value) => setGradingForm({ ...gradingForm, status: value })}
+              >
+                <SelectTrigger data-testid="select-grade-status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="graded">Tekshirilgan</SelectItem>
+                  <SelectItem value="needs_revision">Qayta topshirish kerak</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            data-testid="button-cancel-grading"
+          >
+            Bekor qilish
+          </Button>
+          <Button
+            onClick={onSubmit}
+            disabled={!gradingForm.score || !gradingForm.feedback || isPending}
+            data-testid="button-submit-grading"
+          >
+            {isPending ? "Saqlanmoqda..." : "Baholash"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
