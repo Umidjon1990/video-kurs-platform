@@ -1,118 +1,120 @@
-// Stripe integration for course payment
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams, useLocation } from "wouter";
-import { useStripe, Elements, PaymentElement, useElements } from '@stripe/react-stripe-js';
-import { loadStripe } from '@stripe/stripe-js';
-import { useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Input } from "@/components/ui/input";
+import { ArrowLeft, Upload, CheckCircle } from "lucide-react";
 import type { Course } from "@shared/schema";
-
-const stripePromise = import.meta.env.VITE_STRIPE_PUBLIC_KEY 
-  ? loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY)
-  : null;
-
-function CheckoutForm({ courseId }: { courseId: string }) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const { toast } = useToast();
-  const [, setLocation] = useLocation();
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!stripe || !elements) {
-      return;
-    }
-
-    setIsProcessing(true);
-
-    const { error } = await stripe.confirmPayment({
-      elements,
-      confirmParams: {
-        return_url: `${window.location.origin}/payment-success?courseId=${courseId}`,
-      },
-    });
-
-    if (error) {
-      toast({
-        title: "To'lov Xatosi",
-        description: error.message,
-        variant: "destructive",
-      });
-      setIsProcessing(false);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <PaymentElement />
-      <div className="text-sm text-muted-foreground bg-muted/50 p-4 rounded-lg">
-        <p className="font-medium mb-2">Test karta ma'lumotlari:</p>
-        <p>Karta raqami: 4242 4242 4242 4242</p>
-        <p>Amal qilish muddati: Istalgan kelajak sanasi</p>
-        <p>CVV: Istalgan 3 raqam</p>
-      </div>
-      <Button
-        type="submit"
-        className="w-full"
-        disabled={!stripe || isProcessing}
-        data-testid="button-pay"
-      >
-        {isProcessing ? "To'lov amalga oshirilmoqda..." : "To'lash"}
-      </Button>
-    </form>
-  );
-}
 
 export default function Checkout() {
   const { courseId } = useParams<{ courseId: string }>();
   const [, setLocation] = useLocation();
-  const [clientSecret, setClientSecret] = useState("");
+  const { toast } = useToast();
+  
+  const [paymentMethod, setPaymentMethod] = useState<"naqd" | "karta">("karta");
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [receiptPreview, setReceiptPreview] = useState<string>("");
+  const [enrollmentSuccess, setEnrollmentSuccess] = useState(false);
 
   const { data: course } = useQuery<Course>({
     queryKey: ["/api/courses", courseId],
     enabled: !!courseId,
   });
 
-  useEffect(() => {
-    if (!courseId) return;
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setReceiptFile(file);
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setReceiptPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
-    // Server will get the price from database for security
-    apiRequest("POST", "/api/create-payment-intent", { 
-      courseId
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setClientSecret(data.clientSecret);
-      })
-      .catch((error) => {
-        console.error("Payment intent error:", error);
+  const enrollMutation = useMutation({
+    mutationFn: async () => {
+      if (!receiptFile) {
+        throw new Error("Iltimos to'lov cheki rasmini yuklang");
+      }
+
+      setIsUploading(true);
+
+      // Upload receipt to object storage
+      const formData = new FormData();
+      formData.append("file", receiptFile);
+      
+      const uploadRes = await fetch("/api/upload-receipt", {
+        method: "POST",
+        body: formData,
       });
-  }, [courseId]);
 
-  if (!stripePromise) {
+      if (!uploadRes.ok) {
+        throw new Error("Rasm yuklashda xatolik");
+      }
+
+      const { url } = await uploadRes.json();
+
+      // Create enrollment with pending status
+      await apiRequest("POST", "/api/student/enroll", {
+        courseId,
+        paymentMethod,
+        paymentProofUrl: url,
+      });
+
+      setIsUploading(false);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/student/enrolled-courses"] });
+      setEnrollmentSuccess(true);
+      toast({
+        title: "Muvaffaqiyatli!",
+        description: "To'lovingiz admin tomonidan ko'rib chiqiladi",
+      });
+    },
+    onError: (error: Error) => {
+      setIsUploading(false);
+      toast({
+        title: "Xatolik",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  if (!course) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Card className="max-w-md">
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">
-              Stripe kalitlari sozlanmagan. Iltimos adminstratorga murojaat qiling.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
     );
   }
 
-  if (!clientSecret || !course) {
+  if (enrollmentSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="max-w-md w-full">
+          <CardContent className="pt-8 text-center space-y-4">
+            <div className="w-16 h-16 mx-auto bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
+              <CheckCircle className="w-10 h-10 text-green-600 dark:text-green-400" />
+            </div>
+            <h2 className="text-2xl font-bold">To'lov Yuborildi!</h2>
+            <p className="text-muted-foreground">
+              To'lovingiz admin tomonidan tekshiriladi. Tasdiqlangandan so'ng kursga kirish huquqingiz ochiladi.
+            </p>
+            <Button onClick={() => setLocation("/")} className="w-full">
+              Bosh Sahifaga Qaytish
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -156,7 +158,7 @@ export default function Checkout() {
                 <div className="flex justify-between items-center text-lg">
                   <span>Jami:</span>
                   <span className="font-bold text-2xl text-primary" data-testid="text-total-price">
-                    ${course.price}
+                    {course.price} so'm
                   </span>
                 </div>
               </div>
@@ -168,10 +170,72 @@ export default function Checkout() {
             <CardHeader>
               <CardTitle>To'lov Ma'lumotlari</CardTitle>
             </CardHeader>
-            <CardContent>
-              <Elements stripe={stripePromise} options={{ clientSecret }}>
-                <CheckoutForm courseId={courseId!} />
-              </Elements>
+            <CardContent className="space-y-6">
+              {/* Payment Method Selection */}
+              <div className="space-y-3">
+                <Label>To'lov Turi</Label>
+                <RadioGroup value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as any)}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="karta" id="karta" data-testid="radio-karta" />
+                    <Label htmlFor="karta" className="cursor-pointer">Karta orqali</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="naqd" id="naqd" data-testid="radio-naqd" />
+                    <Label htmlFor="naqd" className="cursor-pointer">Naqd pul</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {/* Receipt Upload */}
+              <div className="space-y-3">
+                <Label htmlFor="receipt">To'lov Cheki (Rasm)</Label>
+                <div className="border-2 border-dashed rounded-lg p-6 text-center hover-elevate active-elevate-2 cursor-pointer"
+                     onClick={() => document.getElementById('receipt')?.click()}>
+                  {receiptPreview ? (
+                    <img src={receiptPreview} alt="Receipt" className="max-h-48 mx-auto rounded" />
+                  ) : (
+                    <div className="space-y-2">
+                      <Upload className="w-12 h-12 mx-auto text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">
+                        To'lov cheki rasmini yuklash uchun bosing
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <Input
+                  id="receipt"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                  data-testid="input-receipt"
+                />
+                {receiptFile && (
+                  <p className="text-sm text-muted-foreground">
+                    Tanlangan: {receiptFile.name}
+                  </p>
+                )}
+              </div>
+
+              {/* Instructions */}
+              <div className="text-sm text-muted-foreground bg-muted/50 p-4 rounded-lg">
+                <p className="font-medium mb-2">Yo'riqnoma:</p>
+                <ol className="list-decimal list-inside space-y-1">
+                  <li>To'lovni amalga oshiring</li>
+                  <li>To'lov cheki rasmini yuklang</li>
+                  <li>"Yuborish" tugmasini bosing</li>
+                  <li>Admin to'lovni tasdiqlagandan keyin kursga kirish ochiladi</li>
+                </ol>
+              </div>
+
+              <Button
+                onClick={() => enrollMutation.mutate()}
+                className="w-full"
+                disabled={!receiptFile || enrollMutation.isPending || isUploading}
+                data-testid="button-submit-payment"
+              >
+                {isUploading ? "Yuklanmoqda..." : enrollMutation.isPending ? "Yuborilmoqda..." : "Yuborish"}
+              </Button>
             </CardContent>
           </Card>
         </div>

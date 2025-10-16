@@ -4,6 +4,9 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, isAdmin, isInstructor } from "./replitAuth";
 import Stripe from "stripe";
+import multer from "multer";
+import { writeFile } from "fs/promises";
+import { join } from "path";
 import {
   insertCourseSchema,
   insertLessonSchema,
@@ -13,6 +16,8 @@ import {
   insertSubmissionSchema,
   insertTestResultSchema,
 } from "@shared/schema";
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Stripe setup
 const stripe = process.env.STRIPE_SECRET_KEY 
@@ -32,6 +37,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // File upload endpoint for payment receipts
+  app.post('/api/upload-receipt', isAuthenticated, upload.single('file'), async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      // Save to object storage (.private directory)
+      const fileName = `receipt-${Date.now()}-${req.file.originalname}`;
+      const privateDir = process.env.PRIVATE_OBJECT_DIR || '/.private';
+      const filePath = join(privateDir, fileName);
+
+      await writeFile(filePath, req.file.buffer);
+
+      // Return the file path as URL
+      res.json({ url: filePath });
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      res.status(500).json({ message: error.message });
     }
   });
 
