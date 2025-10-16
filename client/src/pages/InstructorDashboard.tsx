@@ -57,6 +57,7 @@ export default function InstructorDashboard() {
     description: "",
     dueDate: "",
     maxScore: "",
+    lessonId: "",
   });
 
   const [isAddTestOpen, setIsAddTestOpen] = useState(false);
@@ -64,6 +65,7 @@ export default function InstructorDashboard() {
   const [testForm, setTestForm] = useState({
     title: "",
     passingScore: "",
+    lessonId: "",
   });
 
   useEffect(() => {
@@ -187,6 +189,7 @@ export default function InstructorDashboard() {
           description: assignmentForm.description || null,
           dueDate: assignmentForm.dueDate ? new Date(assignmentForm.dueDate) : null,
           maxScore: assignmentForm.maxScore ? parseInt(assignmentForm.maxScore) : null,
+          lessonId: assignmentForm.lessonId || null,
         });
       } else {
         await apiRequest("POST", `/api/instructor/courses/${selectedCourse.id}/assignments`, {
@@ -194,6 +197,7 @@ export default function InstructorDashboard() {
           description: assignmentForm.description || null,
           dueDate: assignmentForm.dueDate ? new Date(assignmentForm.dueDate) : null,
           maxScore: assignmentForm.maxScore ? parseInt(assignmentForm.maxScore) : null,
+          lessonId: assignmentForm.lessonId || null,
         });
       }
     },
@@ -204,7 +208,7 @@ export default function InstructorDashboard() {
         description: editingAssignment ? "Vazifa yangilandi" : "Vazifa qo'shildi" 
       });
       setIsAddAssignmentOpen(false);
-      setAssignmentForm({ title: "", description: "", dueDate: "", maxScore: "" });
+      setAssignmentForm({ title: "", description: "", dueDate: "", maxScore: "", lessonId: "" });
       setEditingAssignment(null);
     },
     onError: (error: Error) => {
@@ -235,12 +239,14 @@ export default function InstructorDashboard() {
           title: testForm.title,
           questions: editingTest.questions || [], // Preserve existing questions or default to empty
           passingScore: testForm.passingScore ? parseInt(testForm.passingScore) : null,
+          lessonId: testForm.lessonId || null,
         });
       } else {
         await apiRequest("POST", `/api/instructor/courses/${selectedCourse.id}/tests`, {
           title: testForm.title,
           questions: [], // Default empty questions array for new tests
           passingScore: testForm.passingScore ? parseInt(testForm.passingScore) : null,
+          lessonId: testForm.lessonId || null,
         });
       }
     },
@@ -251,7 +257,7 @@ export default function InstructorDashboard() {
         description: editingTest ? "Test yangilandi" : "Test qo'shildi" 
       });
       setIsAddTestOpen(false);
-      setTestForm({ title: "", passingScore: "" });
+      setTestForm({ title: "", passingScore: "", lessonId: "" });
       setEditingTest(null);
     },
     onError: (error: Error) => {
@@ -506,6 +512,7 @@ export default function InstructorDashboard() {
                                 description: assignment.description || "",
                                 dueDate: assignment.dueDate ? new Date(assignment.dueDate).toISOString().split('T')[0] : "",
                                 maxScore: assignment.maxScore?.toString() || "",
+                                lessonId: assignment.lessonId || "",
                               });
                               setIsAddAssignmentOpen(true);
                             }}
@@ -562,6 +569,7 @@ export default function InstructorDashboard() {
                               setTestForm({
                                 title: test.title,
                                 passingScore: test.passingScore?.toString() || "",
+                                lessonId: test.lessonId || "",
                               });
                               setIsAddTestOpen(true);
                             }}
@@ -746,7 +754,7 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
         setIsAddAssignmentOpen(open);
         if (!open) {
           setEditingAssignment(null);
-          setAssignmentForm({ title: "", description: "", dueDate: "", maxScore: "" });
+          setAssignmentForm({ title: "", description: "", dueDate: "", maxScore: "", lessonId: "" });
         }
       }}>
         <DialogContent data-testid="dialog-add-assignment">
@@ -800,6 +808,25 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
                 data-testid="input-assignment-maxscore"
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="assignment-lesson">Darsni tanlang (ixtiyoriy)</Label>
+              <Select 
+                value={assignmentForm.lessonId} 
+                onValueChange={(value) => setAssignmentForm({ ...assignmentForm, lessonId: value })}
+              >
+                <SelectTrigger data-testid="select-assignment-lesson">
+                  <SelectValue placeholder="Darsni tanlang" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Tanlanmagan</SelectItem>
+                  {lessons?.map((lesson) => (
+                    <SelectItem key={lesson.id} value={lesson.id}>
+                      {lesson.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button
@@ -827,7 +854,7 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
         setIsAddTestOpen(open);
         if (!open) {
           setEditingTest(null);
-          setTestForm({ title: "", passingScore: "" });
+          setTestForm({ title: "", passingScore: "", lessonId: "" });
         }
       }}>
         <DialogContent data-testid="dialog-add-test">
@@ -860,6 +887,25 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
                 placeholder="70"
                 data-testid="input-test-passing-score"
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="test-lesson">Darsni tanlang (ixtiyoriy)</Label>
+              <Select 
+                value={testForm.lessonId} 
+                onValueChange={(value) => setTestForm({ ...testForm, lessonId: value })}
+              >
+                <SelectTrigger data-testid="select-test-lesson">
+                  <SelectValue placeholder="Darsni tanlang" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Tanlanmagan</SelectItem>
+                  {lessons?.map((lesson) => (
+                    <SelectItem key={lesson.id} value={lesson.id}>
+                      {lesson.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>
