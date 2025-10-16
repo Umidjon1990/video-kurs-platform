@@ -23,9 +23,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BookOpen, Plus, Edit, Trash2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck } from "lucide-react";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import type { Course, Lesson } from "@shared/schema";
+import type { Course, Lesson, Assignment, Test } from "@shared/schema";
 
 export default function InstructorDashboard() {
   const { toast } = useToast();
@@ -49,6 +50,22 @@ export default function InstructorDashboard() {
 
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
 
+  const [isAddAssignmentOpen, setIsAddAssignmentOpen] = useState(false);
+  const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
+  const [assignmentForm, setAssignmentForm] = useState({
+    title: "",
+    description: "",
+    dueDate: "",
+    maxScore: "",
+  });
+
+  const [isAddTestOpen, setIsAddTestOpen] = useState(false);
+  const [editingTest, setEditingTest] = useState<Test | null>(null);
+  const [testForm, setTestForm] = useState({
+    title: "",
+    passingScore: "",
+  });
+
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       toast({
@@ -69,6 +86,16 @@ export default function InstructorDashboard() {
 
   const { data: lessons } = useQuery<Lesson[]>({
     queryKey: ["/api/instructor/courses", selectedCourse?.id, "lessons"],
+    enabled: !!selectedCourse,
+  });
+
+  const { data: assignments } = useQuery<Assignment[]>({
+    queryKey: ["/api/instructor/courses", selectedCourse?.id, "assignments"],
+    enabled: !!selectedCourse,
+  });
+
+  const { data: tests } = useQuery<Test[]>({
+    queryKey: ["/api/instructor/courses", selectedCourse?.id, "tests"],
     enabled: !!selectedCourse,
   });
 
@@ -143,6 +170,102 @@ export default function InstructorDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/instructor/courses", selectedCourse?.id, "lessons"] });
       toast({ title: "Muvaffaqiyatli", description: "Dars o'chirildi" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Assignment mutations
+  const addAssignmentMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedCourse) return;
+      
+      if (editingAssignment) {
+        await apiRequest("PATCH", `/api/instructor/assignments/${editingAssignment.id}`, {
+          title: assignmentForm.title,
+          description: assignmentForm.description || null,
+          dueDate: assignmentForm.dueDate ? new Date(assignmentForm.dueDate) : null,
+          maxScore: assignmentForm.maxScore ? parseInt(assignmentForm.maxScore) : null,
+        });
+      } else {
+        await apiRequest("POST", `/api/instructor/courses/${selectedCourse.id}/assignments`, {
+          title: assignmentForm.title,
+          description: assignmentForm.description || null,
+          dueDate: assignmentForm.dueDate ? new Date(assignmentForm.dueDate) : null,
+          maxScore: assignmentForm.maxScore ? parseInt(assignmentForm.maxScore) : null,
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/instructor/courses", selectedCourse?.id, "assignments"] });
+      toast({ 
+        title: "Muvaffaqiyatli", 
+        description: editingAssignment ? "Vazifa yangilandi" : "Vazifa qo'shildi" 
+      });
+      setIsAddAssignmentOpen(false);
+      setAssignmentForm({ title: "", description: "", dueDate: "", maxScore: "" });
+      setEditingAssignment(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteAssignmentMutation = useMutation({
+    mutationFn: async (assignmentId: string) => {
+      await apiRequest("DELETE", `/api/instructor/assignments/${assignmentId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/instructor/courses", selectedCourse?.id, "assignments"] });
+      toast({ title: "Muvaffaqiyatli", description: "Vazifa o'chirildi" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Test mutations
+  const addTestMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedCourse) return;
+      
+      if (editingTest) {
+        await apiRequest("PATCH", `/api/instructor/tests/${editingTest.id}`, {
+          title: testForm.title,
+          questions: editingTest.questions || [], // Preserve existing questions or default to empty
+          passingScore: testForm.passingScore ? parseInt(testForm.passingScore) : null,
+        });
+      } else {
+        await apiRequest("POST", `/api/instructor/courses/${selectedCourse.id}/tests`, {
+          title: testForm.title,
+          questions: [], // Default empty questions array for new tests
+          passingScore: testForm.passingScore ? parseInt(testForm.passingScore) : null,
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/instructor/courses", selectedCourse?.id, "tests"] });
+      toast({ 
+        title: "Muvaffaqiyatli", 
+        description: editingTest ? "Test yangilandi" : "Test qo'shildi" 
+      });
+      setIsAddTestOpen(false);
+      setTestForm({ title: "", passingScore: "" });
+      setEditingTest(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteTestMutation = useMutation({
+    mutationFn: async (testId: string) => {
+      await apiRequest("DELETE", `/api/instructor/tests/${testId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/instructor/courses", selectedCourse?.id, "tests"] });
+      toast({ title: "Muvaffaqiyatli", description: "Test o'chirildi" });
     },
     onError: (error: Error) => {
       toast({ title: "Xatolik", description: error.message, variant: "destructive" });
@@ -262,71 +385,204 @@ export default function InstructorDashboard() {
         )}
       </div>
 
-      {/* Course Lessons Dialog */}
+      {/* Course Management Dialog with Tabs */}
       {selectedCourse && (
         <Dialog open={!!selectedCourse} onOpenChange={() => setSelectedCourse(null)}>
-          <DialogContent className="max-w-4xl" data-testid="dialog-course-lessons">
+          <DialogContent className="max-w-5xl max-h-[80vh]" data-testid="dialog-course-management">
             <DialogHeader>
-              <DialogTitle>{selectedCourse.title} - Darslar</DialogTitle>
-              <DialogDescription>Kurs darslarini boshqarish</DialogDescription>
+              <DialogTitle>{selectedCourse.title} - Kursni Boshqarish</DialogTitle>
+              <DialogDescription>Darslar, vazifalar va testlarni boshqarish</DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 max-h-96 overflow-y-auto">
-              {lessons && lessons.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">Hali darslar yo'q</p>
-              ) : (
-                lessons?.map((lesson) => (
-                  <div
-                    key={lesson.id}
-                    className="flex items-center justify-between p-4 border rounded-lg gap-4"
-                    data-testid={`lesson-${lesson.id}`}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold">{lesson.title}</h4>
-                      <p className="text-sm text-muted-foreground truncate">{lesson.videoUrl}</p>
-                      <span className="text-xs text-muted-foreground">
-                        {lesson.duration ? `${lesson.duration} daqiqa` : 'Davomiylik ko\'rsatilmagan'}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setEditingLesson(lesson);
-                          setLessonForm({
-                            title: lesson.title,
-                            videoUrl: lesson.videoUrl,
-                            duration: lesson.duration?.toString() || "",
-                          });
-                          setIsAddLessonOpen(true);
-                        }}
-                        data-testid={`button-edit-lesson-${lesson.id}`}
+            
+            <Tabs defaultValue="lessons" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="lessons" data-testid="tab-lessons">
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  Darslar
+                </TabsTrigger>
+                <TabsTrigger value="assignments" data-testid="tab-assignments">
+                  <FileText className="w-4 h-4 mr-2" />
+                  Vazifalar
+                </TabsTrigger>
+                <TabsTrigger value="tests" data-testid="tab-tests">
+                  <ClipboardCheck className="w-4 h-4 mr-2" />
+                  Testlar
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="lessons" className="space-y-4">
+                <div className="max-h-96 overflow-y-auto space-y-4">
+                  {lessons && lessons.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">Hali darslar yo'q</p>
+                  ) : (
+                    lessons?.map((lesson) => (
+                      <div
+                        key={lesson.id}
+                        className="flex items-center justify-between p-4 border rounded-lg gap-4"
+                        data-testid={`lesson-${lesson.id}`}
                       >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          if (confirm("Darsni o'chirishga ishonchingiz komilmi?")) {
-                            deleteLessonMutation.mutate(lesson.id);
-                          }
-                        }}
-                        data-testid={`button-delete-lesson-${lesson.id}`}
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold">{lesson.title}</h4>
+                          <p className="text-sm text-muted-foreground truncate">{lesson.videoUrl}</p>
+                          <span className="text-xs text-muted-foreground">
+                            {lesson.duration ? `${lesson.duration} daqiqa` : 'Davomiylik ko\'rsatilmagan'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setEditingLesson(lesson);
+                              setLessonForm({
+                                title: lesson.title,
+                                videoUrl: lesson.videoUrl,
+                                duration: lesson.duration?.toString() || "",
+                              });
+                              setIsAddLessonOpen(true);
+                            }}
+                            data-testid={`button-edit-lesson-${lesson.id}`}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              if (confirm("Darsni o'chirishga ishonchingiz komilmi?")) {
+                                deleteLessonMutation.mutate(lesson.id);
+                              }
+                            }}
+                            data-testid={`button-delete-lesson-${lesson.id}`}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <Button onClick={() => setIsAddLessonOpen(true)} data-testid="button-add-lesson" className="w-full">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Dars Qo'shish
+                </Button>
+              </TabsContent>
+
+              <TabsContent value="assignments" className="space-y-4">
+                <div className="max-h-96 overflow-y-auto space-y-4">
+                  {assignments && assignments.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">Hali vazifalar yo'q</p>
+                  ) : (
+                    assignments?.map((assignment) => (
+                      <div
+                        key={assignment.id}
+                        className="flex items-center justify-between p-4 border rounded-lg gap-4"
+                        data-testid={`assignment-${assignment.id}`}
                       >
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-            <DialogFooter>
-              <Button onClick={() => setIsAddLessonOpen(true)} data-testid="button-add-lesson">
-                <Plus className="w-4 h-4 mr-2" />
-                Dars Qo'shish
-              </Button>
-            </DialogFooter>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold">{assignment.title}</h4>
+                          <p className="text-sm text-muted-foreground truncate">{assignment.description}</p>
+                          <span className="text-xs text-muted-foreground">
+                            Max ball: {assignment.maxScore || 'Ko\'rsatilmagan'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setEditingAssignment(assignment);
+                              setAssignmentForm({
+                                title: assignment.title,
+                                description: assignment.description || "",
+                                dueDate: assignment.dueDate ? new Date(assignment.dueDate).toISOString().split('T')[0] : "",
+                                maxScore: assignment.maxScore?.toString() || "",
+                              });
+                              setIsAddAssignmentOpen(true);
+                            }}
+                            data-testid={`button-edit-assignment-${assignment.id}`}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              if (confirm("Vazifani o'chirishga ishonchingiz komilmi?")) {
+                                deleteAssignmentMutation.mutate(assignment.id);
+                              }
+                            }}
+                            data-testid={`button-delete-assignment-${assignment.id}`}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <Button onClick={() => setIsAddAssignmentOpen(true)} data-testid="button-add-assignment" className="w-full">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Vazifa Qo'shish
+                </Button>
+              </TabsContent>
+
+              <TabsContent value="tests" className="space-y-4">
+                <div className="max-h-96 overflow-y-auto space-y-4">
+                  {tests && tests.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">Hali testlar yo'q</p>
+                  ) : (
+                    tests?.map((test) => (
+                      <div
+                        key={test.id}
+                        className="flex items-center justify-between p-4 border rounded-lg gap-4"
+                        data-testid={`test-${test.id}`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold">{test.title}</h4>
+                          <span className="text-xs text-muted-foreground">
+                            O'tish bali: {test.passingScore || 'Ko\'rsatilmagan'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setEditingTest(test);
+                              setTestForm({
+                                title: test.title,
+                                passingScore: test.passingScore?.toString() || "",
+                              });
+                              setIsAddTestOpen(true);
+                            }}
+                            data-testid={`button-edit-test-${test.id}`}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              if (confirm("Testni o'chirishga ishonchingiz komilmi?")) {
+                                deleteTestMutation.mutate(test.id);
+                              }
+                            }}
+                            data-testid={`button-delete-test-${test.id}`}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <Button onClick={() => setIsAddTestOpen(true)} data-testid="button-add-test" className="w-full">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Test Qo'shish
+                </Button>
+              </TabsContent>
+            </Tabs>
           </DialogContent>
         </Dialog>
       )}
@@ -471,6 +727,148 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
               {addLessonMutation.isPending 
                 ? (editingLesson ? "Yangilanmoqda..." : "Qo'shilmoqda...") 
                 : (editingLesson ? "Yangilash" : "Qo'shish")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Assignment Dialog */}
+      <Dialog open={isAddAssignmentOpen} onOpenChange={(open) => {
+        setIsAddAssignmentOpen(open);
+        if (!open) {
+          setEditingAssignment(null);
+          setAssignmentForm({ title: "", description: "", dueDate: "", maxScore: "" });
+        }
+      }}>
+        <DialogContent data-testid="dialog-add-assignment">
+          <DialogHeader>
+            <DialogTitle>
+              {editingAssignment ? "Vazifani Tahrirlash" : "Yangi Vazifa Qo'shish"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingAssignment ? "Vazifa ma'lumotlarini yangilang" : "Vazifa ma'lumotlarini kiriting"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="assignment-title">Vazifa Nomi</Label>
+              <Input
+                id="assignment-title"
+                value={assignmentForm.title}
+                onChange={(e) => setAssignmentForm({ ...assignmentForm, title: e.target.value })}
+                placeholder="Masalan: Birinchi topshiriq"
+                data-testid="input-assignment-title"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="assignment-description">Tavsif</Label>
+              <Textarea
+                id="assignment-description"
+                value={assignmentForm.description}
+                onChange={(e) => setAssignmentForm({ ...assignmentForm, description: e.target.value })}
+                placeholder="Vazifa tavsifi"
+                data-testid="input-assignment-description"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="assignment-duedate">Topshirish sanasi</Label>
+              <Input
+                id="assignment-duedate"
+                type="date"
+                value={assignmentForm.dueDate}
+                onChange={(e) => setAssignmentForm({ ...assignmentForm, dueDate: e.target.value })}
+                data-testid="input-assignment-duedate"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="assignment-maxscore">Maksimal Ball</Label>
+              <Input
+                id="assignment-maxscore"
+                type="number"
+                value={assignmentForm.maxScore}
+                onChange={(e) => setAssignmentForm({ ...assignmentForm, maxScore: e.target.value })}
+                placeholder="100"
+                data-testid="input-assignment-maxscore"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsAddAssignmentOpen(false)}
+              data-testid="button-cancel-add-assignment"
+            >
+              Bekor Qilish
+            </Button>
+            <Button
+              onClick={() => addAssignmentMutation.mutate()}
+              disabled={!assignmentForm.title || addAssignmentMutation.isPending}
+              data-testid="button-confirm-add-assignment"
+            >
+              {addAssignmentMutation.isPending 
+                ? (editingAssignment ? "Yangilanmoqda..." : "Qo'shilmoqda...") 
+                : (editingAssignment ? "Yangilash" : "Qo'shish")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Test Dialog */}
+      <Dialog open={isAddTestOpen} onOpenChange={(open) => {
+        setIsAddTestOpen(open);
+        if (!open) {
+          setEditingTest(null);
+          setTestForm({ title: "", passingScore: "" });
+        }
+      }}>
+        <DialogContent data-testid="dialog-add-test">
+          <DialogHeader>
+            <DialogTitle>
+              {editingTest ? "Testni Tahrirlash" : "Yangi Test Qo'shish"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingTest ? "Test ma'lumotlarini yangilang" : "Test ma'lumotlarini kiriting"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="test-title">Test Nomi</Label>
+              <Input
+                id="test-title"
+                value={testForm.title}
+                onChange={(e) => setTestForm({ ...testForm, title: e.target.value })}
+                placeholder="Masalan: 1-Modul testi"
+                data-testid="input-test-title"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="test-passing-score">O'tish Bali</Label>
+              <Input
+                id="test-passing-score"
+                type="number"
+                value={testForm.passingScore}
+                onChange={(e) => setTestForm({ ...testForm, passingScore: e.target.value })}
+                placeholder="70"
+                data-testid="input-test-passing-score"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsAddTestOpen(false)}
+              data-testid="button-cancel-add-test"
+            >
+              Bekor Qilish
+            </Button>
+            <Button
+              onClick={() => addTestMutation.mutate()}
+              disabled={!testForm.title || addTestMutation.isPending}
+              data-testid="button-confirm-add-test"
+            >
+              {addTestMutation.isPending 
+                ? (editingTest ? "Yangilanmoqda..." : "Qo'shilmoqda...") 
+                : (editingTest ? "Yangilash" : "Qo'shish")}
             </Button>
           </DialogFooter>
         </DialogContent>

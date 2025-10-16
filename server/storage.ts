@@ -52,10 +52,16 @@ export interface IStorage {
   // Assignment operations
   createAssignment(assignment: InsertAssignment): Promise<Assignment>;
   getAssignmentsByCourse(courseId: string): Promise<Assignment[]>;
+  getAssignment(id: string): Promise<Assignment | undefined>;
+  updateAssignment(id: string, data: Partial<InsertAssignment>): Promise<Assignment>;
+  deleteAssignment(id: string): Promise<void>;
   
   // Test operations
   createTest(test: InsertTest): Promise<Test>;
   getTestsByCourse(courseId: string): Promise<Test[]>;
+  getTest(id: string): Promise<Test | undefined>;
+  updateTest(id: string, data: Partial<InsertTest>): Promise<Test>;
+  deleteTest(id: string): Promise<void>;
   
   // Enrollment operations
   createEnrollment(enrollment: InsertEnrollment): Promise<Enrollment>;
@@ -204,6 +210,27 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(assignments.createdAt));
   }
 
+  async getAssignment(id: string): Promise<Assignment | undefined> {
+    const [assignment] = await db
+      .select()
+      .from(assignments)
+      .where(eq(assignments.id, id));
+    return assignment;
+  }
+
+  async updateAssignment(id: string, data: Partial<InsertAssignment>): Promise<Assignment> {
+    const [assignment] = await db
+      .update(assignments)
+      .set(data)
+      .where(eq(assignments.id, id))
+      .returning();
+    return assignment;
+  }
+
+  async deleteAssignment(id: string): Promise<void> {
+    await db.delete(assignments).where(eq(assignments.id, id));
+  }
+
   // Test operations
   async createTest(testData: InsertTest): Promise<Test> {
     const [test] = await db.insert(tests).values(testData).returning();
@@ -216,6 +243,27 @@ export class DatabaseStorage implements IStorage {
       .from(tests)
       .where(eq(tests.courseId, courseId))
       .orderBy(desc(tests.createdAt));
+  }
+
+  async getTest(id: string): Promise<Test | undefined> {
+    const [test] = await db
+      .select()
+      .from(tests)
+      .where(eq(tests.id, id));
+    return test;
+  }
+
+  async updateTest(id: string, data: Partial<InsertTest>): Promise<Test> {
+    const [test] = await db
+      .update(tests)
+      .set(data)
+      .where(eq(tests.id, id))
+      .returning();
+    return test;
+  }
+
+  async deleteTest(id: string): Promise<void> {
+    await db.delete(tests).where(eq(tests.id, id));
   }
 
   // Enrollment operations

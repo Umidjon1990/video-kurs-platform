@@ -373,6 +373,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch('/api/instructor/assignments/:assignmentId', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { assignmentId } = req.params;
+      const instructorId = req.user.claims.sub;
+      
+      const assignment = await storage.getAssignment(assignmentId);
+      if (!assignment) {
+        return res.status(404).json({ message: "Assignment not found" });
+      }
+      
+      const course = await storage.getCourse(assignment.courseId);
+      if (course?.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+      }
+      
+      const updatedAssignment = await storage.updateAssignment(assignmentId, req.body);
+      res.json(updatedAssignment);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete('/api/instructor/assignments/:assignmentId', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { assignmentId } = req.params;
+      const instructorId = req.user.claims.sub;
+      
+      const assignment = await storage.getAssignment(assignmentId);
+      if (!assignment) {
+        return res.status(404).json({ message: "Assignment not found" });
+      }
+      
+      const course = await storage.getCourse(assignment.courseId);
+      if (course?.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+      }
+      
+      await storage.deleteAssignment(assignmentId);
+      res.json({ message: "Assignment deleted" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get('/api/instructor/courses/:courseId/tests', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
       const { courseId } = req.params;
@@ -422,6 +472,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(test);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.patch('/api/instructor/tests/:testId', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { testId } = req.params;
+      const instructorId = req.user.claims.sub;
+      
+      const test = await storage.getTest(testId);
+      if (!test) {
+        return res.status(404).json({ message: "Test not found" });
+      }
+      
+      const course = await storage.getCourse(test.courseId);
+      if (course?.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+      }
+      
+      const updatedTest = await storage.updateTest(testId, req.body);
+      res.json(updatedTest);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete('/api/instructor/tests/:testId', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { testId } = req.params;
+      const instructorId = req.user.claims.sub;
+      
+      const test = await storage.getTest(testId);
+      if (!test) {
+        return res.status(404).json({ message: "Test not found" });
+      }
+      
+      const course = await storage.getCourse(test.courseId);
+      if (course?.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+      }
+      
+      await storage.deleteTest(testId);
+      res.json({ message: "Test deleted" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   });
 

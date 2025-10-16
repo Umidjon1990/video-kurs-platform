@@ -93,6 +93,7 @@ export const assignments = pgTable("assignments", {
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   dueDate: timestamp("due_date"),
+  maxScore: integer("max_score"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -109,7 +110,8 @@ export const tests = pgTable("tests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: 'cascade' }),
   title: varchar("title", { length: 255 }).notNull(),
-  questions: jsonb("questions").notNull(), // Array of {question, options, correctAnswer}
+  questions: jsonb("questions").default(sql`'[]'`), // Array of {question, options, correctAnswer}
+  passingScore: integer("passing_score"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
