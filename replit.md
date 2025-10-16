@@ -7,11 +7,18 @@ This project is a comprehensive Learning Management System (LMS) platform design
 ## Recent Changes (October 16, 2025)
 
 ### Latest Updates
-- ✅ **UI Enhancements: Archive Collapse & Student Info** (Oct 16, 2025)
-  - ✅ **Archive Collapsible UI:**
-    - ✅ Arxiv section now collapsible (closed by default)
-    - ✅ Click to expand/collapse with ChevronDown icon
-    - ✅ Better organization for notification history
+- ✅ **Tozalash (Clear) Functionality** (Oct 16, 2025)
+  - ✅ **NotificationBell Tozalash:**
+    - ✅ Replaced archive with "Tozalash" button
+    - ✅ Clears all read notifications with one click
+    - ✅ Shows Trash icon for visual clarity
+    - ✅ Backend DELETE endpoint: /api/notifications/clear-read
+  - ✅ **Instructor Submission Tozalash:**
+    - ✅ Delete button on each submission in Vazifalar tab
+    - ✅ Confirmation dialog before deletion
+    - ✅ Authorization check (only instructor's submissions)
+    - ✅ Backend DELETE endpoint: /api/instructor/submissions/:id
+- ✅ **UI Enhancements: Student Info Display** (Oct 16, 2025)
   - ✅ **Instructor Submission List:**
     - ✅ Full student information display (name + email)
     - ✅ Better identification of students in submissions
