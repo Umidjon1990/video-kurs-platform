@@ -237,14 +237,12 @@ export default function InstructorDashboard() {
       if (editingTest) {
         await apiRequest("PATCH", `/api/instructor/tests/${editingTest.id}`, {
           title: testForm.title,
-          questions: editingTest.questions || [], // Preserve existing questions or default to empty
           passingScore: testForm.passingScore ? parseInt(testForm.passingScore) : null,
           lessonId: testForm.lessonId || null,
         });
       } else {
         await apiRequest("POST", `/api/instructor/courses/${selectedCourse.id}/tests`, {
           title: testForm.title,
-          questions: [], // Default empty questions array for new tests
           passingScore: testForm.passingScore ? parseInt(testForm.passingScore) : null,
           lessonId: testForm.lessonId || null,
         });

@@ -7,7 +7,9 @@ import {
   tests,
   enrollments,
   submissions,
-  testResults,
+  testAttempts,
+  questions,
+  questionOptions,
   type User,
   type UpsertUser,
   type Course,
@@ -22,8 +24,12 @@ import {
   type InsertEnrollment,
   type Submission,
   type InsertSubmission,
-  type TestResult,
-  type InsertTestResult,
+  type TestAttempt,
+  type InsertTestAttempt,
+  type Question,
+  type InsertQuestion,
+  type QuestionOption,
+  type InsertQuestionOption,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";
@@ -75,8 +81,20 @@ export interface IStorage {
   getSubmissionsByAssignment(assignmentId: string): Promise<Submission[]>;
   
   // Test result operations
-  createTestResult(result: InsertTestResult): Promise<TestResult>;
-  getTestResultsByTest(testId: string): Promise<TestResult[]>;
+  // Test Attempts
+  createTestAttempt(attempt: InsertTestAttempt): Promise<TestAttempt>;
+  getTestAttemptsByTest(testId: string): Promise<TestAttempt[]>;
+  
+  // Questions
+  createQuestion(question: InsertQuestion): Promise<Question>;
+  getQuestionsByTest(testId: string): Promise<Question[]>;
+  updateQuestion(id: string, question: Partial<InsertQuestion>): Promise<Question>;
+  deleteQuestion(id: string): Promise<void>;
+  
+  // Question Options
+  createQuestionOption(option: InsertQuestionOption): Promise<QuestionOption>;
+  getQuestionOptionsByQuestion(questionId: string): Promise<QuestionOption[]>;
+  deleteQuestionOption(id: string): Promise<void>;
   
   // Statistics
   getStats(): Promise<{
@@ -334,18 +352,63 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(submissions.submittedAt));
   }
 
-  // Test result operations
-  async createTestResult(resultData: InsertTestResult): Promise<TestResult> {
-    const [result] = await db.insert(testResults).values(resultData).returning();
-    return result;
+  // Test attempt operations
+  async createTestAttempt(attemptData: InsertTestAttempt): Promise<TestAttempt> {
+    const [attempt] = await db.insert(testAttempts).values(attemptData).returning();
+    return attempt;
   }
 
-  async getTestResultsByTest(testId: string): Promise<TestResult[]> {
+  async getTestAttemptsByTest(testId: string): Promise<TestAttempt[]> {
     return await db
       .select()
-      .from(testResults)
-      .where(eq(testResults.testId, testId))
-      .orderBy(desc(testResults.completedAt));
+      .from(testAttempts)
+      .where(eq(testAttempts.testId, testId))
+      .orderBy(desc(testAttempts.completedAt));
+  }
+
+  // Question operations
+  async createQuestion(questionData: InsertQuestion): Promise<Question> {
+    const [question] = await db.insert(questions).values(questionData).returning();
+    return question;
+  }
+
+  async getQuestionsByTest(testId: string): Promise<Question[]> {
+    return await db
+      .select()
+      .from(questions)
+      .where(eq(questions.testId, testId))
+      .orderBy(questions.order);
+  }
+
+  async updateQuestion(id: string, questionData: Partial<InsertQuestion>): Promise<Question> {
+    const [question] = await db
+      .update(questions)
+      .set(questionData)
+      .where(eq(questions.id, id))
+      .returning();
+    return question;
+  }
+
+  async deleteQuestion(id: string): Promise<void> {
+    await db.delete(questions).where(eq(questions.id, id));
+  }
+
+  // Question option operations
+  async createQuestionOption(optionData: InsertQuestionOption): Promise<QuestionOption> {
+    const [option] = await db.insert(questionOptions).values(optionData).returning();
+    return option;
+  }
+
+  async getQuestionOptionsByQuestion(questionId: string): Promise<QuestionOption[]> {
+    return await db
+      .select()
+      .from(questionOptions)
+      .where(eq(questionOptions.questionId, questionId))
+      .orderBy(questionOptions.order);
+  }
+
+  async deleteQuestionOption(id: string): Promise<void> {
+    await db.delete(questionOptions).where(eq(questionOptions.id, id));
   }
 
   // Statistics

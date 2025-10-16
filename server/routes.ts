@@ -14,7 +14,9 @@ import {
   insertTestSchema,
   insertEnrollmentSchema,
   insertSubmissionSchema,
-  insertTestResultSchema,
+  insertTestAttemptSchema,
+  insertQuestionSchema,
+  insertQuestionOptionSchema,
 } from "@shared/schema";
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -670,14 +672,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const { testId } = req.params;
       
-      const resultData = insertTestResultSchema.parse({
+      const attemptData = insertTestAttemptSchema.parse({
         ...req.body,
         testId,
         userId,
       });
       
-      const result = await storage.createTestResult(resultData);
-      res.json(result);
+      const attempt = await storage.createTestAttempt(attemptData);
+      res.json(attempt);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }

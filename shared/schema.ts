@@ -41,7 +41,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   coursesAsInstructor: many(courses),
   enrollments: many(enrollments),
   submissions: many(submissions),
-  testResults: many(testResults),
+  testAttempts: many(testAttempts),
 }));
 
 // Courses table
@@ -118,8 +118,10 @@ export const tests = pgTable("tests", {
   courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: 'cascade' }),
   lessonId: varchar("lesson_id").references(() => lessons.id, { onDelete: 'cascade' }),
   title: varchar("title", { length: 255 }).notNull(),
-  questions: jsonb("questions").default(sql`'[]'`), // Array of {question, options, correctAnswer}
+  description: text("description"),
   passingScore: integer("passing_score"),
+  isDraft: boolean("is_draft").default(true),
+  randomOrder: boolean("random_order").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -132,7 +134,70 @@ export const testsRelations = relations(tests, ({ one, many }) => ({
     fields: [tests.lessonId],
     references: [lessons.id],
   }),
-  results: many(testResults),
+  questions: many(questions),
+  attempts: many(testAttempts),
+}));
+
+// Questions table
+export const questions = pgTable("questions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  testId: varchar("test_id").notNull().references(() => tests.id, { onDelete: 'cascade' }),
+  type: varchar("type", { length: 50 }).notNull(), // multiple_choice, true_false, fill_blanks, matching, short_answer, essay
+  questionText: text("question_text").notNull(),
+  points: integer("points").notNull().default(1),
+  order: integer("order").notNull(),
+  mediaUrl: text("media_url"), // For images, audio, video
+  correctAnswer: text("correct_answer"), // For simple answer types
+  config: jsonb("config").default(sql`'{}'`), // Type-specific configuration
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const questionsRelations = relations(questions, ({ one, many }) => ({
+  test: one(tests, {
+    fields: [questions.testId],
+    references: [tests.id],
+  }),
+  options: many(questionOptions),
+}));
+
+// Question Options table (for multiple choice and matching)
+export const questionOptions = pgTable("question_options", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  questionId: varchar("question_id").notNull().references(() => questions.id, { onDelete: 'cascade' }),
+  optionText: text("option_text").notNull(),
+  isCorrect: boolean("is_correct").default(false),
+  order: integer("order").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const questionOptionsRelations = relations(questionOptions, ({ one }) => ({
+  question: one(questions, {
+    fields: [questionOptions.questionId],
+    references: [questions.id],
+  }),
+}));
+
+// Test Attempts table (renamed from testResults)
+export const testAttempts = pgTable("test_attempts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  testId: varchar("test_id").notNull().references(() => tests.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  answers: jsonb("answers").notNull(), // User's answers {questionId: answer}
+  score: integer("score"), // Total score
+  isPassed: boolean("is_passed"),
+  completedAt: timestamp("completed_at").defaultNow(),
+  gradedAt: timestamp("graded_at"), // For manual grading (essay questions)
+});
+
+export const testAttemptsRelations = relations(testAttempts, ({ one }) => ({
+  test: one(tests, {
+    fields: [testAttempts.testId],
+    references: [tests.id],
+  }),
+  user: one(users, {
+    fields: [testAttempts.userId],
+    references: [users.id],
+  }),
 }));
 
 // Enrollments table
@@ -180,26 +245,6 @@ export const submissionsRelations = relations(submissions, ({ one }) => ({
   }),
 }));
 
-// Test Results table
-export const testResults = pgTable("test_results", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  testId: varchar("test_id").notNull().references(() => tests.id, { onDelete: 'cascade' }),
-  userId: varchar("user_id").notNull().references(() => users.id),
-  answers: jsonb("answers").notNull(), // User's answers
-  score: integer("score").notNull(), // Percentage score
-  completedAt: timestamp("completed_at").defaultNow(),
-});
-
-export const testResultsRelations = relations(testResults, ({ one }) => ({
-  test: one(tests, {
-    fields: [testResults.testId],
-    references: [tests.id],
-  }),
-  user: one(users, {
-    fields: [testResults.userId],
-    references: [users.id],
-  }),
-}));
 
 // Zod schemas for validation
 export const insertUserSchema = createInsertSchema(users).omit({
@@ -239,7 +284,17 @@ export const insertSubmissionSchema = createInsertSchema(submissions).omit({
   submittedAt: true,
 });
 
-export const insertTestResultSchema = createInsertSchema(testResults).omit({
+export const insertQuestionSchema = createInsertSchema(questions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertQuestionOptionSchema = createInsertSchema(questionOptions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTestAttemptSchema = createInsertSchema(testAttempts).omit({
   id: true,
   completedAt: true,
 });
@@ -260,11 +315,17 @@ export type Assignment = typeof assignments.$inferSelect;
 export type InsertTest = z.infer<typeof insertTestSchema>;
 export type Test = typeof tests.$inferSelect;
 
+export type InsertQuestion = z.infer<typeof insertQuestionSchema>;
+export type Question = typeof questions.$inferSelect;
+
+export type InsertQuestionOption = z.infer<typeof insertQuestionOptionSchema>;
+export type QuestionOption = typeof questionOptions.$inferSelect;
+
+export type InsertTestAttempt = z.infer<typeof insertTestAttemptSchema>;
+export type TestAttempt = typeof testAttempts.$inferSelect;
+
 export type InsertEnrollment = z.infer<typeof insertEnrollmentSchema>;
 export type Enrollment = typeof enrollments.$inferSelect;
 
 export type InsertSubmission = z.infer<typeof insertSubmissionSchema>;
 export type Submission = typeof submissions.$inferSelect;
-
-export type InsertTestResult = z.infer<typeof insertTestResultSchema>;
-export type TestResult = typeof testResults.$inferSelect;

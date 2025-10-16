@@ -2,11 +2,30 @@
 
 ## Overview
 
-A comprehensive Learning Management System (LMS) platform for video-based courses. The platform supports three distinct user roles: Administrators who manage users and oversee the platform, Instructors who create and publish courses with lessons and assessments, and Students who enroll in courses and track their learning progress. The system integrates payment processing through Stripe for course enrollments and uses Replit's authentication for secure user access.
+A comprehensive Learning Management System (LMS) platform for video-based courses. The platform supports three distinct user roles: Administrators who manage users and oversee the platform, Instructors who create and publish courses with lessons and assessments, and Students who enroll in courses and track their learning progress. The system uses manual payment processing with receipt upload and admin approval. All interface text is in Uzbek language.
+
+## Recent Changes (October 16, 2025)
+
+### Completed Features
+- ✅ Assignment and Test linkage to specific lessons via optional lessonId field
+- ✅ Instructor dashboard: lesson selection dropdowns for assignments/tests
+- ✅ Student submission workflow: dialog-based assignment submission form
+- ✅ Fixed SelectItem value prop error (empty string → "none")
+- ✅ Backend handling of "none" lessonId conversion to null
+
+### Upcoming Major Enhancement
+**Advanced Test System Implementation** (In Progress)
+- Multiple test types: Multiple Choice, True/False, Fill in Blanks, Matching, Short Answer, Essay
+- Question bank with multimedia support (images, audio, video)
+- Import/Export functionality (Excel/CSV)
+- Auto-grading system with manual grading for essay questions
+- Random question order feature
+- Draft mode for tests
+- Duplicate test functionality
 
 ## User Preferences
 
-Preferred communication style: Simple, everyday language.
+Preferred communication style: Simple, everyday language (Uzbek interface).
 
 ## System Architecture
 
@@ -41,7 +60,7 @@ Preferred communication style: Simple, everyday language.
 **API Structure**
 - `/api/auth/*` - Authentication endpoints (login, user profile)
 - `/api/admin/*` - Admin-only routes (user management, platform statistics)
-- `/api/instructor/*` - Instructor routes (course management, lesson creation)
+- `/api/instructor/*` - Instructor routes (course management, lesson creation, test builder)
 - `/api/student/*` - Student routes (course enrollment, learning progress)
 - `/api/courses/*` - Public course browsing
 
@@ -61,18 +80,41 @@ Preferred communication style: Simple, everyday language.
 - **Users**: Replit-authenticated users with role assignment (admin/instructor/student)
 - **Courses**: Instructor-created courses with pricing, thumbnails, and publication status
 - **Lessons**: Video-based lesson content organized within courses
-- **Assignments**: Submission-based assessments with grading
-- **Tests**: Multiple-choice assessments with automated scoring
+- **Assignments**: Submission-based assessments with grading and optional lesson linkage
+- **Tests**: Enhanced assessment system with multiple question types
+- **Questions**: Individual test questions with type-specific configuration (multiple choice, true/false, fill blanks, matching, short answer, essay)
+- **Question Options**: Answer choices for multiple-choice and matching questions
+- **Test Attempts**: Student test submissions with answers and auto-grading results
 - **Enrollments**: Student course registrations with payment tracking
 - **Submissions**: Student assignment submissions
-- **Test Results**: Student test attempt records
 - **Sessions**: PostgreSQL-backed session storage
 
 **Relational Design**
 - One-to-many relationships: Users → Courses (as instructors)
 - One-to-many: Courses → Lessons, Assignments, Tests
+- One-to-many: Tests → Questions → Question Options
 - Many-to-many: Users ↔ Courses (via Enrollments)
-- Tracking relationships: Users → Submissions, TestResults
+- Tracking relationships: Users → Submissions, TestAttempts
+
+### Test System Features
+
+**Question Types**
+1. **Multiple Choice**: Single or multiple correct answers with configurable options
+2. **True/False**: Binary choice questions for quick assessment
+3. **Fill in the Blanks**: Text input with exact or partial match validation
+4. **Matching**: Pair items from two columns (word-definition, image-text, date-event)
+5. **Short Answer**: Free-text response with keyword matching
+6. **Essay/Writing Task**: Long-form answers requiring manual instructor grading
+
+**Assessment Features**
+- Auto-grading for objective question types (MC, T/F, Fill blanks, Matching, Short answer)
+- Manual grading workflow for essay questions
+- Percentage and point-based scoring
+- Random question order option
+- Multimedia support (images, audio, video in questions)
+- Draft mode for test creation
+- Duplicate test functionality
+- Import/Export via CSV/Excel templates
 
 ### Authentication & Authorization
 
@@ -91,19 +133,11 @@ Preferred communication style: Simple, everyday language.
 
 ### Payment Processing
 
-**Stripe Integration**
-- Stripe Checkout for course payments
-- Payment Intent creation and confirmation flow
-- Webhook handling for payment status (implementation-ready structure)
-- Post-payment enrollment automation
-- Client-side payment UI with Stripe Elements
-
-**Payment Flow**
-1. Student selects course and initiates checkout
-2. Server creates Stripe Payment Intent
-3. Client renders Stripe payment form
-4. Payment confirmation redirects to success page
-5. Enrollment record created with payment reference
+**Manual Payment System**
+- Student uploads payment receipt/screenshot
+- Admin reviews and approves/rejects payments
+- Automatic enrollment upon payment approval
+- Payment tracking with status (pending/confirmed/rejected)
 
 ## External Dependencies
 
@@ -114,28 +148,27 @@ Preferred communication style: Simple, everyday language.
 - Environment variables: `ISSUER_URL`, `REPL_ID`, `REPLIT_DOMAINS`, `SESSION_SECRET`
 - Passport.js strategy implementation for session management
 
-**Stripe Payment Processing**
-- API version: 2023-10-16
-- Environment variables: `STRIPE_SECRET_KEY`, `VITE_STRIPE_PUBLIC_KEY`
-- React Stripe.js for client-side payment forms
-- Payment Intents API for secure payment handling
-
 **Neon Serverless PostgreSQL**
 - Serverless PostgreSQL database hosting
 - WebSocket connection support for edge environments
 - Environment variable: `DATABASE_URL`
 - Connection pooling via @neondatabase/serverless
 
+**Object Storage (Replit)**
+- Cloud storage for multimedia files (images, audio, video)
+- Environment variables: `DEFAULT_OBJECT_STORAGE_BUCKET_ID`, `PUBLIC_OBJECT_SEARCH_PATHS`, `PRIVATE_OBJECT_DIR`
+- Used for test question media assets and student submissions
+
 ### Key NPM Packages
 
 **Frontend Libraries**
 - @tanstack/react-query - Server state management
 - wouter - Lightweight routing
-- @stripe/react-stripe-js & @stripe/stripe-js - Payment processing
 - @radix-ui/* - Accessible UI primitives (20+ components)
 - react-hook-form & @hookform/resolvers - Form management
 - zod - Runtime type validation
 - date-fns - Date manipulation
+- lucide-react - Icon library
 
 **Backend Libraries**
 - express - Web server framework
@@ -144,7 +177,7 @@ Preferred communication style: Simple, everyday language.
 - openid-client - OIDC implementation
 - express-session - Session management
 - connect-pg-simple - PostgreSQL session store
-- stripe - Payment processing SDK
+- @google-cloud/storage - Object storage integration
 
 **Development Tools**
 - typescript - Type checking
@@ -157,13 +190,22 @@ Preferred communication style: Simple, everyday language.
 
 **PostgreSQL Tables**
 - sessions (Replit Auth session storage)
-- users (role: admin | instructor | student)
-- courses (instructorId, price, status, thumbnailUrl)
-- lessons (courseId, videoUrl, duration, order)
-- assignments (courseId, dueDate, maxScore)
-- tests (courseId, passingScore)
-- enrollments (userId, courseId, paymentIntentId, enrolledAt)
-- submissions (assignmentId, userId, score, submittedAt)
-- testResults (testId, userId, score, completedAt)
+- users (role: admin | instructor | student, replitId, email, name)
+- courses (instructorId, title, description, price, status, thumbnailUrl)
+- lessons (courseId, title, videoUrl, duration, order)
+- assignments (courseId, lessonId [optional], title, description, dueDate, maxScore)
+- tests (courseId, lessonId [optional], title, description, passingScore, isDraft, randomOrder)
+- questions (testId, type, questionText, points, order, mediaUrl, correctAnswer, config)
+- question_options (questionId, optionText, isCorrect, order)
+- test_attempts (testId, userId, answers, score, isPassed, completedAt, gradedAt)
+- enrollments (userId, courseId, paymentStatus, enrolledAt)
+- submissions (assignmentId, userId, content, fileUrl, score, submittedAt)
+
+**Question Type Configuration (JSONB field)**
+- Multiple Choice: `{ allowMultiple: boolean, shuffleOptions: boolean }`
+- Fill in Blanks: `{ caseSensitive: boolean, acceptPartialMatch: boolean }`
+- Matching: `{ leftColumn: string[], rightColumn: string[], correctPairs: [number, number][] }`
+- Short Answer: `{ keywords: string[], minLength: number, maxLength: number }`
+- Essay: `{ minWords: number, maxWords: number, rubric: string }`
 
 All tables use UUID primary keys and include timestamp tracking for created/updated records.
