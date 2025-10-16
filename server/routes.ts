@@ -1329,11 +1329,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // O'qituvchiga ogohlantirish yuborish
       const course = await storage.getCourse(assignment.courseId);
       if (course) {
+        const student = await storage.getUser(userId);
+        const studentName = student?.firstName || student?.email || 'O\'quvchi';
         const notificationData = insertNotificationSchema.parse({
           userId: course.instructorId,
           type: 'assignment_submitted',
-          title: 'Yangi vazifa yuborildi',
-          message: `${assignment.title} uchun yangi vazifa yuborildi`,
+          title: 'Yangi vazifa topshirildi',
+          message: `${studentName} "${assignment.title}" vazifasini topshirdi`,
           relatedId: submission.id,
           isRead: false,
         });
