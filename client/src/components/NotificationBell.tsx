@@ -42,6 +42,9 @@ export function NotificationBell({ onNotificationAction }: NotificationBellProps
   });
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
+  
+  const recentNotifications = notifications.slice(0, 5);
+  const archivedNotifications = notifications.slice(5);
 
   const handleNotificationClick = (notification: Notification) => {
     if (!notification.isRead) {
@@ -53,6 +56,37 @@ export function NotificationBell({ onNotificationAction }: NotificationBellProps
       setOpen(false);
     }
   };
+
+  const renderNotification = (notification: Notification) => (
+    <div
+      key={notification.id}
+      className={`p-4 cursor-pointer hover-elevate ${
+        !notification.isRead ? "bg-accent/10" : ""
+      }`}
+      onClick={() => handleNotificationClick(notification)}
+      data-testid={`notification-${notification.id}`}
+    >
+      <div className="flex items-start gap-2">
+        <div className="flex-1">
+          <p className="font-medium text-sm">
+            {notification.title}
+          </p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {notification.message}
+          </p>
+          <p className="text-xs text-muted-foreground mt-2">
+            {notification.createdAt && formatDistanceToNow(new Date(notification.createdAt), {
+              addSuffix: true,
+              locale: uz,
+            })}
+          </p>
+        </div>
+        {!notification.isRead && (
+          <div className="w-2 h-2 bg-primary rounded-full mt-1" />
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -98,38 +132,24 @@ export function NotificationBell({ onNotificationAction }: NotificationBellProps
               Ogohlantirishlar yo'q
             </div>
           ) : (
-            <div className="divide-y">
-              {notifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className={`p-4 cursor-pointer hover-elevate ${
-                    !notification.isRead ? "bg-accent/10" : ""
-                  }`}
-                  onClick={() => handleNotificationClick(notification)}
-                  data-testid={`notification-${notification.id}`}
-                >
-                  <div className="flex items-start gap-2">
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">
-                        {notification.title}
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {notification.message}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        {notification.createdAt && formatDistanceToNow(new Date(notification.createdAt), {
-                          addSuffix: true,
-                          locale: uz,
-                        })}
-                      </p>
-                    </div>
-                    {!notification.isRead && (
-                      <div className="w-2 h-2 bg-primary rounded-full mt-1" />
-                    )}
+            <>
+              <div className="divide-y">
+                {recentNotifications.map(renderNotification)}
+              </div>
+              
+              {archivedNotifications.length > 0 && (
+                <>
+                  <div className="px-4 py-2 bg-muted/30 border-t border-b">
+                    <p className="text-xs font-semibold text-muted-foreground">
+                      Arxiv ({archivedNotifications.length})
+                    </p>
                   </div>
-                </div>
-              ))}
-            </div>
+                  <div className="divide-y">
+                    {archivedNotifications.map(renderNotification)}
+                  </div>
+                </>
+              )}
+            </>
           )}
         </ScrollArea>
       </PopoverContent>
