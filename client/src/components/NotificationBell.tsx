@@ -43,19 +43,18 @@ export function NotificationBell({ onNotificationAction }: NotificationBellProps
     },
   });
 
-  const clearReadMutation = useMutation({
-    mutationFn: () => apiRequest("DELETE", "/api/notifications/clear-read"),
+  const clearAllMutation = useMutation({
+    mutationFn: () => apiRequest("DELETE", "/api/notifications/clear-all"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
       toast({
         title: "Muvaffaqiyatli",
-        description: "O'qilgan ogohlantirishlar tozalandi",
+        description: "Barcha ogohlantirishlar tozalandi",
       });
     },
   });
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
-  const readCount = notifications.filter((n) => n.isRead).length;
 
   const handleNotificationClick = (notification: Notification) => {
     if (!notification.isRead) {
@@ -134,12 +133,12 @@ export function NotificationBell({ onNotificationAction }: NotificationBellProps
                 Barchasini o'qilgan qilish
               </Button>
             )}
-            {readCount > 0 && (
+            {notifications.length > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => clearReadMutation.mutate()}
-                data-testid="button-clear-read"
+                onClick={() => clearAllMutation.mutate()}
+                data-testid="button-clear-all"
               >
                 <Trash2 className="h-4 w-4 mr-1" />
                 Tozalash

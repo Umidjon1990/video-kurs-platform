@@ -9,10 +9,10 @@ This project is a comprehensive Learning Management System (LMS) platform design
 ### Latest Updates
 - ✅ **Tozalash (Clear) Functionality** (Oct 16, 2025)
   - ✅ **NotificationBell Tozalash:**
-    - ✅ Replaced archive with "Tozalash" button
-    - ✅ Clears all read notifications with one click
+    - ✅ "Tozalash" button always visible when notifications exist
+    - ✅ Clears ALL notifications with one click (read/unread)
     - ✅ Shows Trash icon for visual clarity
-    - ✅ Backend DELETE endpoint: /api/notifications/clear-read
+    - ✅ Backend DELETE endpoint: /api/notifications/clear-all
   - ✅ **Instructor Submission Tozalash:**
     - ✅ Delete button on each submission in Vazifalar tab
     - ✅ Confirmation dialog before deletion
