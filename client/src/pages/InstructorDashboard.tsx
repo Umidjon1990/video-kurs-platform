@@ -494,58 +494,93 @@ export default function InstructorDashboard() {
                     <p className="text-center text-muted-foreground py-8">Hali darslar yo'q</p>
                   ) : (
                     lessons?.map((lesson) => (
-                      <div
-                        key={lesson.id}
-                        className="flex items-center justify-between p-4 border rounded-lg gap-4"
-                        data-testid={`lesson-${lesson.id}`}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold">{lesson.title}</h4>
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Video className="w-3 h-3" />
-                            <span>
-                              {lesson.videoUrl.includes('kinescope') ? 'Kinescope video' : 
-                               lesson.videoUrl.includes('youtube') ? 'YouTube video' : 
-                               lesson.videoUrl.includes('vimeo') ? 'Vimeo video' : 
-                               lesson.videoUrl.includes('iframe') || lesson.videoUrl.includes('<div') ? 'Video embed' : 
-                               lesson.videoUrl.length > 40 ? lesson.videoUrl.substring(0, 40) + '...' : lesson.videoUrl}
-                            </span>
+                      <Card key={lesson.id} data-testid={`lesson-${lesson.id}`}>
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <CardTitle className="text-base">{lesson.title}</CardTitle>
+                              <p className="text-sm text-muted-foreground">
+                                {lesson.duration ? `${lesson.duration} daqiqa` : 'Davomiylik ko\'rsatilmagan'}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  setEditingLesson(lesson);
+                                  setLessonForm({
+                                    title: lesson.title,
+                                    videoUrl: lesson.videoUrl,
+                                    duration: lesson.duration?.toString() || "",
+                                  });
+                                  setIsAddLessonOpen(true);
+                                }}
+                                data-testid={`button-edit-lesson-${lesson.id}`}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  if (confirm("Darsni o'chirishga ishonchingiz komilmi?")) {
+                                    deleteLessonMutation.mutate(lesson.id);
+                                  }
+                                }}
+                                data-testid={`button-delete-lesson-${lesson.id}`}
+                              >
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </div>
                           </div>
-                          <span className="text-xs text-muted-foreground">
-                            {lesson.duration ? `${lesson.duration} daqiqa` : 'Davomiylik ko\'rsatilmagan'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
+                        </CardHeader>
+                        <CardContent className="pt-0 space-y-3">
                           <Button
-                            variant="ghost"
-                            size="icon"
+                            variant="outline"
+                            size="sm"
                             onClick={() => {
-                              setEditingLesson(lesson);
-                              setLessonForm({
-                                title: lesson.title,
-                                videoUrl: lesson.videoUrl,
-                                duration: lesson.duration?.toString() || "",
-                              });
-                              setIsAddLessonOpen(true);
+                              setTestForm({ title: "", passingScore: "", lessonId: lesson.id });
+                              setEditingTest(null);
+                              setIsAddTestOpen(true);
                             }}
-                            data-testid={`button-edit-lesson-${lesson.id}`}
+                            data-testid={`button-add-test-for-lesson-${lesson.id}`}
+                            className="w-full"
                           >
-                            <Edit className="w-4 h-4" />
+                            <Plus className="w-4 h-4 mr-2" />
+                            Test Qo'shish
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              if (confirm("Darsni o'chirishga ishonchingiz komilmi?")) {
-                                deleteLessonMutation.mutate(lesson.id);
-                              }
-                            }}
-                            data-testid={`button-delete-lesson-${lesson.id}`}
-                          >
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </div>
+                          
+                          {tests?.filter(t => t.lessonId === lesson.id).map((test) => (
+                            <div key={test.id} className="p-3 bg-muted/50 rounded-lg space-y-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <h5 className="text-sm font-medium">{test.title}</h5>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedTest(test);
+                                    setQuestionForm({
+                                      type: "multiple_choice",
+                                      questionText: "",
+                                      points: "1",
+                                      correctAnswer: "",
+                                    });
+                                    setMcOptions([{ text: "", isCorrect: false }]);
+                                    setMatchingPairs([{ left: "", right: "" }]);
+                                    setIsAddQuestionOpen(true);
+                                  }}
+                                  data-testid={`button-add-question-${test.id}`}
+                                >
+                                  <Plus className="w-3 h-3 mr-1" />
+                                  Savol
+                                </Button>
+                              </div>
+                              <QuestionsList testId={test.id} />
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
                     ))
                   )}
                 </div>
@@ -1321,7 +1356,10 @@ function QuestionsList({ testId }: { testId: string }) {
   return (
     <div className="space-y-2">
       {questions.map((q: any, idx: number) => (
-        <div key={q.id} className="flex items-start justify-between p-3 bg-muted/50 rounded-lg gap-4" data-testid={`question-${q.id}`}>
+        <div key={q.id} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg" data-testid={`question-${q.id}`}>
+          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-semibold flex-shrink-0">
+            {idx + 1}
+          </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <span className="text-xs font-medium bg-primary/10 text-primary px-2 py-0.5 rounded">
