@@ -125,19 +125,6 @@ export const tests = pgTable("tests", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const testsRelations = relations(tests, ({ one, many }) => ({
-  course: one(courses, {
-    fields: [tests.courseId],
-    references: [courses.id],
-  }),
-  lesson: one(lessons, {
-    fields: [tests.lessonId],
-    references: [lessons.id],
-  }),
-  questions: many(questions),
-  attempts: many(testAttempts),
-}));
-
 // Questions table
 export const questions = pgTable("questions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -152,14 +139,6 @@ export const questions = pgTable("questions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const questionsRelations = relations(questions, ({ one, many }) => ({
-  test: one(tests, {
-    fields: [questions.testId],
-    references: [tests.id],
-  }),
-  options: many(questionOptions),
-}));
-
 // Question Options table (for multiple choice and matching)
 export const questionOptions = pgTable("question_options", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -169,13 +148,6 @@ export const questionOptions = pgTable("question_options", {
   order: integer("order").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
-
-export const questionOptionsRelations = relations(questionOptions, ({ one }) => ({
-  question: one(questions, {
-    fields: [questionOptions.questionId],
-    references: [questions.id],
-  }),
-}));
 
 // Test Attempts table (renamed from testResults)
 export const testAttempts = pgTable("test_attempts", {
@@ -188,6 +160,35 @@ export const testAttempts = pgTable("test_attempts", {
   completedAt: timestamp("completed_at").defaultNow(),
   gradedAt: timestamp("graded_at"), // For manual grading (essay questions)
 });
+
+// Relations - defined after all tables
+export const testsRelations = relations(tests, ({ one, many }) => ({
+  course: one(courses, {
+    fields: [tests.courseId],
+    references: [courses.id],
+  }),
+  lesson: one(lessons, {
+    fields: [tests.lessonId],
+    references: [lessons.id],
+  }),
+  questions: many(questions),
+  attempts: many(testAttempts),
+}));
+
+export const questionsRelations = relations(questions, ({ one, many }) => ({
+  test: one(tests, {
+    fields: [questions.testId],
+    references: [tests.id],
+  }),
+  options: many(questionOptions),
+}));
+
+export const questionOptionsRelations = relations(questionOptions, ({ one }) => ({
+  question: one(questions, {
+    fields: [questionOptions.questionId],
+    references: [questions.id],
+  }),
+}));
 
 export const testAttemptsRelations = relations(testAttempts, ({ one }) => ({
   test: one(tests, {
