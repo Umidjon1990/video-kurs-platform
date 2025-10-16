@@ -26,6 +26,13 @@ A comprehensive Learning Management System (LMS) platform for video-based course
 - ✅ **Navigation Improvements** (Oct 16, 2025)
   - ✅ Student panel back button routes to home page ("/")
   - ✅ Home icon button added to LearningPage header
+- ✅ **Enhanced Video Player Support** (Oct 16, 2025)
+  - ✅ YouTube URL support (all formats: watch?v=, youtu.be/, embed/)
+  - ✅ Kinescope, Vimeo, Dailymotion, Wistia support
+  - ✅ Embed code support (iframe/embed tags)
+  - ✅ Generic HTTPS URL support for other video platforms
+  - ✅ Improved video ID extraction from YouTube URLs
+  - ✅ Fallback display for unrecognized video formats
 
 ### Previously Completed Features
 - ✅ Assignment and Test linkage to specific lessons via optional lessonId field
