@@ -27,7 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import type { Course, Lesson, Assignment, Test, Module } from "@shared/schema";
+import type { Course, Lesson, Assignment, Test } from "@shared/schema";
 
 export default function InstructorDashboard() {
   const { toast } = useToast();
@@ -88,13 +88,6 @@ export default function InstructorDashboard() {
   ]);
   const [expandedTests, setExpandedTests] = useState<Set<string>>(new Set());
 
-  const [isAddModuleOpen, setIsAddModuleOpen] = useState(false);
-  const [moduleForm, setModuleForm] = useState({
-    title: "",
-    description: "",
-    topics: "",
-  });
-
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       toast({
@@ -125,11 +118,6 @@ export default function InstructorDashboard() {
 
   const { data: tests } = useQuery<Test[]>({
     queryKey: ["/api/instructor/courses", selectedCourse?.id, "tests"],
-    enabled: !!selectedCourse,
-  });
-
-  const { data: modules } = useQuery<Module[]>({
-    queryKey: ["/api/instructor/courses", selectedCourse?.id, "modules"],
     enabled: !!selectedCourse,
   });
 
@@ -304,32 +292,6 @@ export default function InstructorDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/instructor/courses", selectedCourse?.id, "tests"] });
       toast({ title: "Muvaffaqiyatli", description: "Test o'chirildi" });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
-    },
-  });
-
-  // Module mutations
-  const createModuleMutation = useMutation({
-    mutationFn: async () => {
-      if (!selectedCourse) return;
-      const nextOrder = (modules?.length || 0) + 1;
-      const topicsArray = moduleForm.topics.split('\n').map(t => t.trim()).filter(t => t);
-      
-      await apiRequest("POST", `/api/instructor/courses/${selectedCourse.id}/modules`, {
-        title: moduleForm.title,
-        description: moduleForm.description || null,
-        order: nextOrder,
-        topics: topicsArray,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/instructor/courses", selectedCourse?.id, "modules"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/instructor/courses", selectedCourse?.id, "lessons"] });
-      toast({ title: "Muvaffaqiyatli", description: "Modul va darslar yaratildi" });
-      setIsAddModuleOpen(false);
-      setModuleForm({ title: "", description: "", topics: "" });
     },
     onError: (error: Error) => {
       toast({ title: "Xatolik", description: error.message, variant: "destructive" });
@@ -567,14 +529,10 @@ export default function InstructorDashboard() {
             </DialogHeader>
             
             <Tabs defaultValue="lessons" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="lessons" data-testid="tab-lessons">
                   <BookOpen className="w-4 h-4 mr-2" />
                   Darslar
-                </TabsTrigger>
-                <TabsTrigger value="modules" data-testid="tab-modules">
-                  <Video className="w-4 h-4 mr-2" />
-                  Modullar
                 </TabsTrigger>
                 <TabsTrigger value="assignments" data-testid="tab-assignments">
                   <FileText className="w-4 h-4 mr-2" />
@@ -700,36 +658,6 @@ export default function InstructorDashboard() {
                 <Button onClick={() => setIsAddAssignmentOpen(true)} data-testid="button-add-assignment" className="w-full">
                   <Plus className="w-4 h-4 mr-2" />
                   Vazifa Qo'shish
-                </Button>
-              </TabsContent>
-
-              <TabsContent value="modules" className="space-y-4">
-                <div className="max-h-96 overflow-y-auto space-y-4">
-                  {modules && modules.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8">Hali modullar yo'q</p>
-                  ) : (
-                    modules?.map((module) => (
-                      <Card key={module.id} data-testid={`module-${module.id}`}>
-                        <CardHeader>
-                          <div className="flex items-center justify-between gap-4">
-                            <div className="flex-1 min-w-0">
-                              <CardTitle className="text-base">{module.title}</CardTitle>
-                              {module.description && (
-                                <p className="text-sm text-muted-foreground mt-1">{module.description}</p>
-                              )}
-                              <p className="text-sm text-muted-foreground mt-2">
-                                {lessons?.filter(l => l.moduleId === module.id).length || 0} ta dars
-                              </p>
-                            </div>
-                          </div>
-                        </CardHeader>
-                      </Card>
-                    ))
-                  )}
-                </div>
-                <Button onClick={() => setIsAddModuleOpen(true)} data-testid="button-add-module" className="w-full">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Modul Qo'shish
                 </Button>
               </TabsContent>
 
@@ -1454,73 +1382,6 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
               {addQuestionMutation.isPending 
                 ? (editingQuestion ? "Yangilanmoqda..." : "Qo'shilmoqda...") 
                 : (editingQuestion ? "Saqlash" : "Qo'shish")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Module Dialog */}
-      <Dialog open={isAddModuleOpen} onOpenChange={setIsAddModuleOpen}>
-        <DialogContent data-testid="dialog-add-module">
-          <DialogHeader>
-            <DialogTitle>Yangi Modul Yaratish</DialogTitle>
-            <DialogDescription>
-              Modul nomi va mavzularni kiriting. Har bir mavzu alohida dars sifatida yaratiladi.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="module-title">Modul Nomi</Label>
-              <Input
-                id="module-title"
-                value={moduleForm.title}
-                onChange={(e) => setModuleForm({ ...moduleForm, title: e.target.value })}
-                placeholder="Masalan: JavaScript Asoslari"
-                data-testid="input-module-title"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="module-description">Tavsif (ixtiyoriy)</Label>
-              <Textarea
-                id="module-description"
-                value={moduleForm.description}
-                onChange={(e) => setModuleForm({ ...moduleForm, description: e.target.value })}
-                placeholder="Modul haqida qisqacha ma'lumot"
-                data-testid="input-module-description"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="module-topics">Mavzular (har bir qatorda bitta mavzu)</Label>
-              <Textarea
-                id="module-topics"
-                value={moduleForm.topics}
-                onChange={(e) => setModuleForm({ ...moduleForm, topics: e.target.value })}
-                placeholder="O'zgaruvchilar va ma'lumot turlari&#10;Operatorlar&#10;Shart operatorlari&#10;Tsikllar"
-                rows={6}
-                data-testid="input-module-topics"
-              />
-              <p className="text-sm text-muted-foreground">
-                Har bir mavzu uchun avtomatik dars yaratiladi. Birinchi dars "Demo" bo'ladi.
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsAddModuleOpen(false);
-                setModuleForm({ title: "", description: "", topics: "" });
-              }}
-              data-testid="button-cancel-add-module"
-            >
-              Bekor Qilish
-            </Button>
-            <Button
-              onClick={() => createModuleMutation.mutate()}
-              disabled={!moduleForm.title || !moduleForm.topics.trim() || createModuleMutation.isPending}
-              data-testid="button-confirm-add-module"
-            >
-              {createModuleMutation.isPending ? "Yaratilmoqda..." : "Yaratish"}
             </Button>
           </DialogFooter>
         </DialogContent>

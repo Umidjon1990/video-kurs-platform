@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useParams } from "wouter";
+import { useParams, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PlayCircle, CheckCircle, FileText, ClipboardCheck, Lock } from "lucide-react";
+import { PlayCircle, CheckCircle, FileText, ClipboardCheck, Lock, Home } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Course, Lesson, Assignment, Test } from "@shared/schema";
@@ -19,6 +19,7 @@ export default function LearningPage() {
   const { courseId } = useParams<{ courseId: string }>();
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const [, setLocation] = useLocation();
   const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
   const [submissionDialog, setSubmissionDialog] = useState<{ open: boolean; assignmentId: string | null }>({ open: false, assignmentId: null });
   const [submissionForm, setSubmissionForm] = useState({ content: "", fileUrl: "" });
@@ -160,14 +161,22 @@ export default function LearningPage() {
     <div className="min-h-screen bg-background">
       <div className="border-b">
         <div className="flex h-16 items-center px-4 gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setLocation('/')}
+            data-testid="button-back-home"
+          >
+            <Home className="w-5 h-5" />
+          </Button>
           <h1 className="text-xl font-bold line-clamp-1" data-testid="text-course-title">{course.title}</h1>
           <div className="ml-auto">
             <Button
               variant="outline"
-              onClick={() => window.history.back()}
-              data-testid="button-back"
+              onClick={() => window.location.href = "/api/logout"}
+              data-testid="button-logout"
             >
-              Orqaga
+              Chiqish
             </Button>
           </div>
         </div>
