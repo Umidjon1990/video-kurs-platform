@@ -79,17 +79,20 @@ export const lessons = pgTable("lessons", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const lessonsRelations = relations(lessons, ({ one }) => ({
+export const lessonsRelations = relations(lessons, ({ one, many }) => ({
   course: one(courses, {
     fields: [lessons.courseId],
     references: [courses.id],
   }),
+  assignments: many(assignments),
+  tests: many(tests),
 }));
 
 // Assignments table
 export const assignments = pgTable("assignments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: 'cascade' }),
+  lessonId: varchar("lesson_id").references(() => lessons.id, { onDelete: 'cascade' }),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   dueDate: timestamp("due_date"),
@@ -102,6 +105,10 @@ export const assignmentsRelations = relations(assignments, ({ one, many }) => ({
     fields: [assignments.courseId],
     references: [courses.id],
   }),
+  lesson: one(lessons, {
+    fields: [assignments.lessonId],
+    references: [lessons.id],
+  }),
   submissions: many(submissions),
 }));
 
@@ -109,6 +116,7 @@ export const assignmentsRelations = relations(assignments, ({ one, many }) => ({
 export const tests = pgTable("tests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: 'cascade' }),
+  lessonId: varchar("lesson_id").references(() => lessons.id, { onDelete: 'cascade' }),
   title: varchar("title", { length: 255 }).notNull(),
   questions: jsonb("questions").default(sql`'[]'`), // Array of {question, options, correctAnswer}
   passingScore: integer("passing_score"),
@@ -119,6 +127,10 @@ export const testsRelations = relations(tests, ({ one, many }) => ({
   course: one(courses, {
     fields: [tests.courseId],
     references: [courses.id],
+  }),
+  lesson: one(lessons, {
+    fields: [tests.lessonId],
+    references: [lessons.id],
   }),
   results: many(testResults),
 }));
