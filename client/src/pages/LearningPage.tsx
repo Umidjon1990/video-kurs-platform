@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PlayCircle, CheckCircle, FileText, ClipboardCheck } from "lucide-react";
+import { PlayCircle, CheckCircle, FileText, ClipboardCheck, Lock } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Course, Lesson, Assignment, Test } from "@shared/schema";
@@ -61,6 +61,11 @@ export default function LearningPage() {
   const { data: testAttempts } = useQuery<any[]>({
     queryKey: ["/api/student/test-attempts"],
     enabled: isAuthenticated,
+  });
+
+  const { data: enrollment } = useQuery<{ paymentStatus: string } | null>({
+    queryKey: ["/api/student/enrollment", courseId],
+    enabled: !!courseId && isAuthenticated,
   });
 
   const { data: testQuestions } = useQuery<any[]>({
@@ -177,28 +182,46 @@ export default function LearningPage() {
               {lessons && lessons.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Darslar hali qo'shilmagan</p>
               ) : (
-                lessons?.map((lesson) => (
-                  <div
-                    key={lesson.id}
-                    onClick={() => setCurrentLessonId(lesson.id)}
-                    className={`flex items-center gap-3 p-3 rounded-lg hover-elevate cursor-pointer transition-colors ${
-                      currentLessonId === lesson.id ? 'bg-primary/10 border-l-4 border-primary' : ''
-                    }`}
-                    data-testid={`lesson-item-${lesson.id}`}
-                  >
-                    <PlayCircle className={`w-5 h-5 flex-shrink-0 ${
-                      currentLessonId === lesson.id ? 'text-primary' : 'text-muted-foreground'
-                    }`} />
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium line-clamp-1 ${
-                        currentLessonId === lesson.id ? 'text-primary' : ''
-                      }`}>{lesson.title}</p>
-                      {lesson.duration && (
-                        <p className="text-xs text-muted-foreground">{lesson.duration} daqiqa</p>
+                lessons?.map((lesson) => {
+                  const isEnrolled = enrollment?.paymentStatus === 'confirmed';
+                  const isLocked = !lesson.isDemo && !isEnrolled;
+                  
+                  return (
+                    <div
+                      key={lesson.id}
+                      onClick={() => !isLocked && setCurrentLessonId(lesson.id)}
+                      className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
+                        isLocked 
+                          ? 'opacity-60 cursor-not-allowed' 
+                          : 'hover-elevate cursor-pointer'
+                      } ${
+                        currentLessonId === lesson.id ? 'bg-primary/10 border-l-4 border-primary' : ''
+                      }`}
+                      data-testid={`lesson-item-${lesson.id}`}
+                    >
+                      {isLocked ? (
+                        <Lock className="w-5 h-5 flex-shrink-0 text-muted-foreground" />
+                      ) : (
+                        <PlayCircle className={`w-5 h-5 flex-shrink-0 ${
+                          currentLessonId === lesson.id ? 'text-primary' : 'text-muted-foreground'
+                        }`} />
                       )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className={`text-sm font-medium line-clamp-1 ${
+                            currentLessonId === lesson.id ? 'text-primary' : ''
+                          }`}>{lesson.title}</p>
+                          {lesson.isDemo && (
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">Demo</span>
+                          )}
+                        </div>
+                        {lesson.duration && (
+                          <p className="text-xs text-muted-foreground">{lesson.duration} daqiqa</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
@@ -207,17 +230,39 @@ export default function LearningPage() {
         {/* Main Content */}
         <div className="flex-1 p-8">
           {currentLesson ? (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold mb-2" data-testid="text-lesson-title">{currentLesson.title}</h2>
-                <p className="text-muted-foreground">
-                  {currentLesson.duration ? `Davomiyligi: ${currentLesson.duration} daqiqa` : ''}
-                </p>
-              </div>
+            (() => {
+              const isEnrolled = enrollment?.paymentStatus === 'confirmed';
+              const isLocked = !currentLesson.isDemo && !isEnrolled;
+              
+              if (isLocked) {
+                return (
+                  <Card>
+                    <CardContent className="p-12 text-center">
+                      <Lock className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+                      <h3 className="text-xl font-semibold mb-2">Bu dars qulflangan</h3>
+                      <p className="text-muted-foreground mb-4">
+                        Bu darsni ko'rish uchun kursni sotib oling
+                      </p>
+                      <Button onClick={() => window.history.back()}>
+                        Orqaga
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              }
+              
+              return (
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-2xl font-bold mb-2" data-testid="text-lesson-title">{currentLesson.title}</h2>
+                    <p className="text-muted-foreground">
+                      {currentLesson.duration ? `Davomiyligi: ${currentLesson.duration} daqiqa` : ''}
+                    </p>
+                  </div>
 
-              {/* Video Player */}
-              <Card>
-                <CardContent className="p-0">
+                  {/* Video Player */}
+                  <Card>
+                    <CardContent className="p-0">
                   <div className="aspect-video bg-black rounded-lg overflow-hidden">
                     {(() => {
                       const videoContent = currentLesson.videoUrl;
@@ -467,7 +512,9 @@ export default function LearningPage() {
                 </TabsContent>
               </Tabs>
             </div>
-          ) : (
+          );
+        })()
+      ) : (
             <Card>
               <CardContent className="py-16">
                 <p className="text-center text-muted-foreground">
