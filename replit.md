@@ -7,6 +7,14 @@ This project is a comprehensive Learning Management System (LMS) platform design
 ## Recent Changes (October 16, 2025)
 
 ### Latest Updates
+- ✅ **UI Enhancements: Archive Collapse & Student Info** (Oct 16, 2025)
+  - ✅ **Archive Collapsible UI:**
+    - ✅ Arxiv section now collapsible (closed by default)
+    - ✅ Click to expand/collapse with ChevronDown icon
+    - ✅ Better organization for notification history
+  - ✅ **Instructor Submission List:**
+    - ✅ Full student information display (name + email)
+    - ✅ Better identification of students in submissions
 - ✅ **Notification Archive & Score Display** (Oct 16, 2025)
   - ✅ **Notification Archive System:**
     - ✅ Shows 5 most recent notifications in main list
