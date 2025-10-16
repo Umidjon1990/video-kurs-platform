@@ -379,7 +379,7 @@ export default function LearningPage() {
 
                 <TabsContent value="results" className="space-y-4">
                   {(() => {
-                    const currentLessonTests = tests?.filter(t => t.lessonId === currentLessonId) || [];
+                    const currentLessonTests = tests?.filter(t => t.lessonId === currentLessonId).sort((a, b) => (a.order || 0) - (b.order || 0)) || [];
                     const lessonTestsWithAttempts = currentLessonTests.map(test => {
                       const attempts = testAttempts?.filter((a: any) => a.testId === test.id) || [];
                       const bestAttempt = attempts.length > 0 
@@ -387,7 +387,26 @@ export default function LearningPage() {
                             current.score > best.score ? current : best
                           )
                         : null;
-                      return { test, attempts, bestAttempt, attemptCount: attempts.length };
+                      const worstAttempt = attempts.length > 0
+                        ? attempts.reduce((worst: any, current: any) => 
+                            current.score < worst.score ? current : worst
+                          )
+                        : null;
+                      
+                      const calculatePercentage = (attempt: any) => {
+                        if (!attempt || !attempt.totalPoints || attempt.totalPoints === 0) return 0;
+                        return Math.round((attempt.score / attempt.totalPoints) * 100);
+                      };
+                      
+                      return { 
+                        test, 
+                        attempts, 
+                        bestAttempt, 
+                        worstAttempt,
+                        bestPercentage: calculatePercentage(bestAttempt),
+                        worstPercentage: calculatePercentage(worstAttempt),
+                        attemptCount: attempts.length 
+                      };
                     }).filter(item => item.attemptCount > 0);
 
                     return lessonTestsWithAttempts.length > 0 ? (
@@ -397,28 +416,36 @@ export default function LearningPage() {
                         </CardHeader>
                         <CardContent>
                           <div className="space-y-3">
-                            {lessonTestsWithAttempts.map(({ test, bestAttempt, attemptCount }) => (
+                            {lessonTestsWithAttempts.map(({ test, bestAttempt, worstAttempt, bestPercentage, worstPercentage, attemptCount }) => (
                               <div 
                                 key={test.id} 
-                                className="flex items-center justify-between p-3 rounded-lg border"
+                                className="p-4 rounded-lg border"
                                 data-testid={`result-item-${test.id}`}
                               >
-                                <div className="flex-1">
-                                  <p className="font-medium">{test.title}</p>
-                                  <p className="text-sm text-muted-foreground">
-                                    Urinishlar: {attemptCount} marta
-                                  </p>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                  <div className="text-right">
-                                    <p className="font-semibold">{bestAttempt?.score || 0} ball</p>
-                                    <p className="text-xs text-muted-foreground">Eng yaxshi natija</p>
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex-1">
+                                    <p className="font-medium">{test.title}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                      Urinishlar: {attemptCount} marta
+                                    </p>
                                   </div>
                                   {bestAttempt?.isPassed ? (
                                     <CheckCircle className="w-5 h-5 text-green-600" />
                                   ) : (
-                                    <span className="text-sm text-destructive">O'tmadi</span>
+                                    <span className="text-sm text-destructive font-medium">O'tmadi</span>
                                   )}
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 pt-3 border-t">
+                                  <div className="text-center">
+                                    <p className="text-2xl font-bold text-green-600">{bestPercentage}%</p>
+                                    <p className="text-xs text-muted-foreground mt-1">Eng yaxshi natija</p>
+                                    <p className="text-sm mt-1">{bestAttempt?.score || 0} ball</p>
+                                  </div>
+                                  <div className="text-center">
+                                    <p className="text-2xl font-bold text-orange-600">{worstPercentage}%</p>
+                                    <p className="text-xs text-muted-foreground mt-1">Eng yomon natija</p>
+                                    <p className="text-sm mt-1">{worstAttempt?.score || 0} ball</p>
+                                  </div>
                                 </div>
                               </div>
                             ))}
