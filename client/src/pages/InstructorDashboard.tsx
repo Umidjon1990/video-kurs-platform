@@ -352,7 +352,7 @@ export default function InstructorDashboard() {
           config = { leftColumn, rightColumn, correctPairs };
         }
         
-        const questionResponse: any = await apiRequest("POST", `/api/instructor/tests/${selectedTest.id}/questions`, {
+        const questionResponse = await apiRequest("POST", `/api/instructor/tests/${selectedTest.id}/questions`, {
           type: questionForm.type,
           questionText: questionForm.questionText,
           points: parseInt(questionForm.points),
@@ -361,11 +361,13 @@ export default function InstructorDashboard() {
           config,
         });
         
-        if (questionForm.type === "multiple_choice" && questionResponse?.id) {
+        const createdQuestion: any = await questionResponse.json();
+        
+        if (questionForm.type === "multiple_choice" && createdQuestion?.id) {
           for (let i = 0; i < mcOptions.length; i++) {
             const option = mcOptions[i];
             if (option.text.trim()) {
-              await apiRequest("POST", `/api/instructor/questions/${questionResponse.id}/options`, {
+              await apiRequest("POST", `/api/instructor/questions/${createdQuestion.id}/options`, {
                 optionText: option.text,
                 isCorrect: option.isCorrect,
                 order: i,
