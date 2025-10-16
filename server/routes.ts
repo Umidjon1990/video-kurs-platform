@@ -844,6 +844,137 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get test questions (student - for taking test) - SANITIZED (no correct answers)
+  app.get('/api/tests/:testId/questions', isAuthenticated, async (req, res) => {
+    try {
+      const { testId } = req.params;
+      const questions = await storage.getQuestionsByTest(testId);
+      
+      // Remove correct answers and sensitive config
+      const sanitizedQuestions = questions.map((q: any) => ({
+        id: q.id,
+        testId: q.testId,
+        type: q.type,
+        questionText: q.questionText,
+        points: q.points,
+        order: q.order,
+        mediaUrl: q.mediaUrl,
+        // Remove correctAnswer
+        // Sanitize config for matching (remove correctPairs)
+        config: q.type === 'matching' ? {
+          leftColumn: (q.config as any)?.leftColumn || [],
+          rightColumn: (q.config as any)?.rightColumn || [],
+          // correctPairs removed
+        } : (q.config || {}),
+      }));
+      
+      res.json(sanitizedQuestions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get question options (student - for taking test) - SANITIZED (no isCorrect)
+  app.get('/api/questions/:questionId/options', isAuthenticated, async (req, res) => {
+    try {
+      const { questionId } = req.params;
+      const options = await storage.getQuestionOptionsByQuestion(questionId);
+      
+      // Remove isCorrect flag
+      const sanitizedOptions = options.map((o: any) => ({
+        id: o.id,
+        questionId: o.questionId,
+        optionText: o.optionText,
+        order: o.order,
+        // isCorrect removed
+      }));
+      
+      res.json(sanitizedOptions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  //Test attempt submission (student)
+  app.post('/api/student/tests/:testId/submit', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { testId } = req.params;
+      const { answers } = req.body;
+      
+      // Get test and questions
+      const test = await storage.getTest(testId);
+      if (!test) {
+        return res.status(404).json({ message: "Test topilmadi" });
+      }
+      
+      const questions = await storage.getQuestionsByTest(testId);
+      
+      // Calculate score (auto-grading)
+      let totalScore = 0;
+      let totalPoints = 0;
+      
+      for (const question of questions) {
+        totalPoints += question.points;
+        const studentAnswer = answers[question.id];
+        
+        if (!studentAnswer) continue;
+        
+        // Auto-grading logic based on question type
+        if (question.type === 'multiple_choice') {
+          const options = await storage.getQuestionOptionsByQuestion(question.id);
+          const correctOptions = options.filter((o: any) => o.isCorrect).map((o: any) => o.id);
+          const studentOptions = Array.isArray(studentAnswer) ? studentAnswer : [studentAnswer];
+          
+          if (JSON.stringify(correctOptions.sort()) === JSON.stringify(studentOptions.sort())) {
+            totalScore += question.points;
+          }
+        } else if (question.type === 'true_false') {
+          if (studentAnswer === question.correctAnswer) {
+            totalScore += question.points;
+          }
+        } else if (question.type === 'fill_blanks') {
+          if (studentAnswer.toLowerCase().trim() === question.correctAnswer?.toLowerCase().trim()) {
+            totalScore += question.points;
+          }
+        } else if (question.type === 'matching') {
+          const config = question.config as any;
+          const correctPairs = config.correctPairs || [];
+          const studentPairs = studentAnswer;
+          
+          if (JSON.stringify(correctPairs.sort()) === JSON.stringify(studentPairs.sort())) {
+            totalScore += question.points;
+          }
+        } else if (question.type === 'short_answer') {
+          const keywords = question.correctAnswer?.toLowerCase().split(',').map(k => k.trim()) || [];
+          const studentText = studentAnswer.toLowerCase();
+          const matchedKeywords = keywords.filter(k => studentText.includes(k));
+          
+          if (matchedKeywords.length >= keywords.length * 0.5) {
+            totalScore += question.points;
+          }
+        }
+        // Essay: manual grading required (score = 0 for now)
+      }
+      
+      const percentage = totalPoints > 0 ? (totalScore / totalPoints) * 100 : 0;
+      const isPassed = test.passingScore ? percentage >= test.passingScore : false;
+      
+      const attemptData = insertTestAttemptSchema.parse({
+        testId,
+        userId,
+        answers: JSON.stringify(answers),
+        score: totalScore,
+        isPassed,
+      });
+      
+      const attempt = await storage.createTestAttempt(attemptData);
+      res.json({ ...attempt, percentage });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
   app.get('/api/courses/:courseId/assignments', isAuthenticated, async (req, res) => {
     try {
       const { courseId } = req.params;

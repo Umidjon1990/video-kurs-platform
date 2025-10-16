@@ -21,6 +21,8 @@ export default function LearningPage() {
   const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
   const [submissionDialog, setSubmissionDialog] = useState<{ open: boolean; assignmentId: string | null }>({ open: false, assignmentId: null });
   const [submissionForm, setSubmissionForm] = useState({ content: "", fileUrl: "" });
+  const [testDialog, setTestDialog] = useState<{ open: boolean; testId: string | null }>({ open: false, testId: null });
+  const [testAnswers, setTestAnswers] = useState<Record<string, any>>({});
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -53,6 +55,31 @@ export default function LearningPage() {
   const { data: tests } = useQuery<Test[]>({
     queryKey: ["/api/courses", courseId, "tests"],
     enabled: !!courseId && isAuthenticated,
+  });
+
+  const { data: testQuestions } = useQuery<any[]>({
+    queryKey: ["/api/tests", testDialog.testId, "questions"],
+    enabled: !!testDialog.testId && testDialog.open,
+  });
+
+  const submitTestMutation = useMutation({
+    mutationFn: async () => {
+      if (!testDialog.testId) return;
+      return await apiRequest("POST", `/api/student/tests/${testDialog.testId}/submit`, {
+        answers: testAnswers,
+      });
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: data.isPassed ? "Test muvaffaqiyatli o'tildi!" : "Test topshirildi",
+        description: `Ball: ${data.score}/${data.percentage.toFixed(0)}%`,
+      });
+      setTestDialog({ open: false, testId: null });
+      setTestAnswers({});
+    },
+    onError: (error: Error) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
   });
 
   const submitAssignmentMutation = useMutation({
@@ -307,10 +334,8 @@ export default function LearningPage() {
                         <CardContent>
                           <Button 
                             onClick={() => {
-                              toast({
-                                title: "Test topshirildi",
-                                description: "Natijani tez orada bilasiz. O'qituvchi ham ko'radi.",
-                              });
+                              setTestDialog({ open: true, testId: test.id });
+                              setTestAnswers({});
                             }}
                             data-testid={`button-start-test-${test.id}`}
                           >
@@ -396,6 +421,164 @@ export default function LearningPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Test Dialog */}
+      <Dialog open={testDialog.open} onOpenChange={(open) => {
+        if (!open) {
+          setTestDialog({ open: false, testId: null });
+          setTestAnswers({});
+        }
+      }}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto" data-testid="dialog-take-test">
+          <DialogHeader>
+            <DialogTitle>Test Ishlash</DialogTitle>
+            <DialogDescription>
+              Barcha savollarga javob bering
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6">
+            {testQuestions?.map((q, idx) => (
+              <Card key={q.id} data-testid={`test-question-${q.id}`}>
+                <CardHeader>
+                  <CardTitle className="text-base">
+                    {idx + 1}. {q.questionText} <span className="text-sm text-muted-foreground">({q.points} ball)</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <TestQuestionInput
+                    question={q}
+                    value={testAnswers[q.id]}
+                    onChange={(value) => setTestAnswers({ ...testAnswers, [q.id]: value })}
+                  />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setTestDialog({ open: false, testId: null })}
+              data-testid="button-cancel-test"
+            >
+              Bekor Qilish
+            </Button>
+            <Button
+              onClick={() => submitTestMutation.mutate()}
+              disabled={submitTestMutation.isPending}
+              data-testid="button-submit-test"
+            >
+              {submitTestMutation.isPending ? "Topshirilmoqda..." : "Testni Topshirish"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
+}
+
+function TestQuestionInput({ question, value, onChange }: { question: any; value: any; onChange: (value: any) => void }) {
+  const { data: mcOptions } = useQuery<any[]>({
+    queryKey: ["/api/questions", question.id, "options"],
+    enabled: question.type === "multiple_choice",
+  });
+
+  if (question.type === "multiple_choice") {
+    return (
+      <div className="space-y-2">
+        {mcOptions?.map((opt) => (
+          <label key={opt.id} className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={Array.isArray(value) && value.includes(opt.id)}
+              onChange={(e) => {
+                const current = Array.isArray(value) ? value : [];
+                if (e.target.checked) {
+                  onChange([...current, opt.id]);
+                } else {
+                  onChange(current.filter((id: string) => id !== opt.id));
+                }
+              }}
+              data-testid={`checkbox-option-${opt.id}`}
+            />
+            <span>{opt.optionText}</span>
+          </label>
+        ))}
+      </div>
+    );
+  } else if (question.type === "true_false") {
+    return (
+      <div className="space-y-2">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="radio"
+            checked={value === "true"}
+            onChange={() => onChange("true")}
+            data-testid="radio-true"
+          />
+          <span>To'g'ri</span>
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="radio"
+            checked={value === "false"}
+            onChange={() => onChange("false")}
+            data-testid="radio-false"
+          />
+          <span>Noto'g'ri</span>
+        </label>
+      </div>
+    );
+  } else if (question.type === "fill_blanks" || question.type === "short_answer") {
+    return (
+      <Input
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Javobingizni kiriting..."
+        data-testid="input-text-answer"
+      />
+    );
+  } else if (question.type === "essay") {
+    return (
+      <Textarea
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Javobingizni kiriting..."
+        rows={5}
+        data-testid="textarea-essay-answer"
+      />
+    );
+  } else if (question.type === "matching") {
+    const config = question.config as any;
+    const leftColumn = config?.leftColumn || [];
+    const rightColumn = config?.rightColumn || [];
+    
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-muted-foreground">Chap va o'ng ustunlarni moslang</p>
+        {leftColumn.map((leftItem: string, leftIdx: number) => (
+          <div key={leftIdx} className="flex items-center gap-4">
+            <div className="flex-1 p-2 border rounded">{leftItem}</div>
+            <span>=</span>
+            <select
+              className="flex-1 p-2 border rounded"
+              value={value?.[leftIdx]?.[1] ?? ""}
+              onChange={(e) => {
+                const current = Array.isArray(value) ? [...value] : [];
+                current[leftIdx] = [leftIdx, parseInt(e.target.value)];
+                onChange(current);
+              }}
+              data-testid={`select-match-${leftIdx}`}
+            >
+              <option value="">Tanlang...</option>
+              {rightColumn.map((rightItem: string, rightIdx: number) => (
+                <option key={rightIdx} value={rightIdx}>{rightItem}</option>
+              ))}
+            </select>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  
+  return null;
 }
