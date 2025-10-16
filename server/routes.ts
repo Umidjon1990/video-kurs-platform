@@ -668,7 +668,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      const options = await storage.getOptionsByQuestion(questionId);
+      const options = await storage.getQuestionOptionsByQuestion(questionId);
       res.json(options);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
