@@ -7,6 +7,19 @@ This project is a comprehensive Learning Management System (LMS) platform design
 ## Recent Changes (October 16, 2025)
 
 ### Latest Updates
+- ✅ **Notification Archive & Score Display** (Oct 16, 2025)
+  - ✅ **Notification Archive System:**
+    - ✅ Shows 5 most recent notifications in main list
+    - ✅ Older notifications (6+) displayed in "Arxiv" section
+    - ✅ Archive count indicator shows number of archived notifications
+  - ✅ **Student Score Display:**
+    - ✅ Graded notifications show score in message: "85/100 ball. [feedback]"
+    - ✅ Revision requests show feedback only (no score)
+  - ✅ **Instructor Detail View:**
+    - ✅ Graded submissions open in read-only detail dialog
+    - ✅ Pending submissions open in grading dialog
+    - ✅ Shows: student info, score, content, files, feedback
+    - ✅ Notification action routes based on submission status
 - ✅ **Notification & Assignment Result Enhancements** (Oct 16, 2025)
   - ✅ **Notification fixes:**
     - ✅ Fixed endpoint: Changed POST to PATCH for marking notification as read
