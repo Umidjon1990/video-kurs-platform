@@ -87,6 +87,7 @@ export interface IStorage {
   // Enrollment operations
   createEnrollment(enrollment: InsertEnrollment): Promise<Enrollment>;
   getEnrollmentsByUser(userId: string): Promise<Enrollment[]>;
+  getEnrollmentByCourseAndUser(courseId: string, userId: string): Promise<Enrollment | null>;
   getEnrolledCourses(userId: string): Promise<Course[]>;
   getPendingPayments(): Promise<any[]>;
   updateEnrollmentStatus(enrollmentId: string, status: string): Promise<Enrollment>;
@@ -378,6 +379,18 @@ export class DatabaseStorage implements IStorage {
       .from(enrollments)
       .where(eq(enrollments.userId, userId))
       .orderBy(desc(enrollments.enrolledAt));
+  }
+
+  async getEnrollmentByCourseAndUser(courseId: string, userId: string): Promise<Enrollment | null> {
+    const [enrollment] = await db
+      .select()
+      .from(enrollments)
+      .where(and(
+        eq(enrollments.courseId, courseId),
+        eq(enrollments.userId, userId)
+      ))
+      .limit(1);
+    return enrollment || null;
   }
 
   async getEnrolledCourses(userId: string): Promise<Course[]> {

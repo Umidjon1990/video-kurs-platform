@@ -39,7 +39,7 @@ export function CourseCard({ course, onEnroll, onViewDemo, isEnrolled }: CourseC
             </h3>
             {isEnrolled && (
               <Badge variant="secondary" data-testid={`badge-enrolled-${course.id}`}>
-                Yozilgan
+                Harid qilingan
               </Badge>
             )}
           </div>

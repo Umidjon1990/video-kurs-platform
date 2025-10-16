@@ -192,7 +192,7 @@ export default function LearningPage() {
                 <p className="text-sm text-muted-foreground">Darslar hali qo'shilmagan</p>
               ) : (
                 lessons?.map((lesson) => {
-                  const isEnrolled = enrollment?.paymentStatus === 'confirmed';
+                  const isEnrolled = enrollment?.paymentStatus === 'confirmed' || enrollment?.paymentStatus === 'approved';
                   const isLocked = !lesson.isDemo && !isEnrolled;
                   
                   return (
@@ -240,7 +240,7 @@ export default function LearningPage() {
         <div className="flex-1 p-8">
           {currentLesson ? (
             (() => {
-              const isEnrolled = enrollment?.paymentStatus === 'confirmed';
+              const isEnrolled = enrollment?.paymentStatus === 'confirmed' || enrollment?.paymentStatus === 'approved';
               const isLocked = !currentLesson.isDemo && !isEnrolled;
               
               if (isLocked) {

@@ -797,6 +797,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/student/enrollment/:courseId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { courseId } = req.params;
+      const enrollment = await storage.getEnrollmentByCourseAndUser(courseId, userId);
+      res.json(enrollment);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.post('/api/student/enroll', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
