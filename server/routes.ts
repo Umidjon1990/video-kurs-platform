@@ -1403,6 +1403,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // O'qilgan ogohlantirishlarni tozalash
+  app.delete('/api/notifications/clear-read', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      await storage.clearReadNotifications(userId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // O'qilmagan soni
   app.get('/api/notifications/unread-count', isAuthenticated, async (req: any, res) => {
     try {
