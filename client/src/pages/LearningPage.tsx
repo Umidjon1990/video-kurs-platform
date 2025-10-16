@@ -378,58 +378,61 @@ export default function LearningPage() {
                 </TabsContent>
 
                 <TabsContent value="results" className="space-y-4">
-                  {testAttempts && testAttempts.filter((attempt: any) => {
-                    const test = tests?.find(t => t.id === attempt.testId);
-                    return test?.lessonId === currentLessonId;
-                  }).length > 0 ? (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Bu Darsning Test Natijalari</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {testAttempts
-                            .filter((attempt: any) => {
-                              const test = tests?.find(t => t.id === attempt.testId);
-                              return test?.lessonId === currentLessonId;
-                            })
-                            .map((attempt: any) => {
-                              const test = tests?.find(t => t.id === attempt.testId);
-                              return (
-                                <div 
-                                  key={attempt.id} 
-                                  className="flex items-center justify-between p-3 rounded-lg border"
-                                  data-testid={`result-item-${attempt.id}`}
-                                >
-                                  <div className="flex-1">
-                                    <p className="font-medium">{test?.title || "Test"}</p>
-                                    <p className="text-sm text-muted-foreground">
-                                      {new Date(attempt.completedAt).toLocaleDateString('uz-UZ')}
-                                    </p>
+                  {(() => {
+                    const currentLessonTests = tests?.filter(t => t.lessonId === currentLessonId) || [];
+                    const lessonTestsWithAttempts = currentLessonTests.map(test => {
+                      const attempts = testAttempts?.filter((a: any) => a.testId === test.id) || [];
+                      const bestAttempt = attempts.length > 0 
+                        ? attempts.reduce((best: any, current: any) => 
+                            current.score > best.score ? current : best
+                          )
+                        : null;
+                      return { test, attempts, bestAttempt, attemptCount: attempts.length };
+                    }).filter(item => item.attemptCount > 0);
+
+                    return lessonTestsWithAttempts.length > 0 ? (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Bu Darsning Test Natijalari</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            {lessonTestsWithAttempts.map(({ test, bestAttempt, attemptCount }) => (
+                              <div 
+                                key={test.id} 
+                                className="flex items-center justify-between p-3 rounded-lg border"
+                                data-testid={`result-item-${test.id}`}
+                              >
+                                <div className="flex-1">
+                                  <p className="font-medium">{test.title}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    Urinishlar: {attemptCount} marta
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                  <div className="text-right">
+                                    <p className="font-semibold">{bestAttempt?.score || 0} ball</p>
+                                    <p className="text-xs text-muted-foreground">Eng yaxshi natija</p>
                                   </div>
-                                  <div className="flex items-center gap-4">
-                                    <div className="text-right">
-                                      <p className="font-semibold">{attempt.score} ball</p>
-                                    </div>
-                                    {attempt.isPassed ? (
-                                      <CheckCircle className="w-5 h-5 text-green-600" />
-                                    ) : (
-                                      <span className="text-sm text-destructive">O'tmadi</span>
-                                    )}
+                                  {bestAttempt?.isPassed ? (
+                                    <CheckCircle className="w-5 h-5 text-green-600" />
+                                  ) : (
+                                    <span className="text-sm text-destructive">O'tmadi</span>
+                                  )}
                                 </div>
                               </div>
-                            );
-                          })}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <Card>
-                      <CardContent className="py-8">
-                        <p className="text-center text-muted-foreground">Bu darsda hali test topshirmadingiz</p>
-                      </CardContent>
-                    </Card>
-                  )}
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <Card>
+                        <CardContent className="py-8">
+                          <p className="text-center text-muted-foreground">Bu darsda hali test topshirmadingiz</p>
+                        </CardContent>
+                      </Card>
+                    );
+                  })()}
                 </TabsContent>
               </Tabs>
             </div>
