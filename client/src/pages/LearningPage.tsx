@@ -1,19 +1,26 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PlayCircle, CheckCircle } from "lucide-react";
-import type { Course, Lesson } from "@shared/schema";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { PlayCircle, CheckCircle, FileText, ClipboardCheck } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { Course, Lesson, Assignment, Test } from "@shared/schema";
 
 export default function LearningPage() {
   const { courseId } = useParams<{ courseId: string }>();
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
+  const [submissionDialog, setSubmissionDialog] = useState<{ open: boolean; assignmentId: string | null }>({ open: false, assignmentId: null });
+  const [submissionForm, setSubmissionForm] = useState({ content: "", fileUrl: "" });
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -36,6 +43,37 @@ export default function LearningPage() {
   const { data: lessons } = useQuery<Lesson[]>({
     queryKey: ["/api/courses", courseId, "lessons"],
     enabled: !!courseId && isAuthenticated,
+  });
+
+  const { data: assignments } = useQuery<Assignment[]>({
+    queryKey: ["/api/courses", courseId, "assignments"],
+    enabled: !!courseId && isAuthenticated,
+  });
+
+  const { data: tests } = useQuery<Test[]>({
+    queryKey: ["/api/courses", courseId, "tests"],
+    enabled: !!courseId && isAuthenticated,
+  });
+
+  const submitAssignmentMutation = useMutation({
+    mutationFn: async () => {
+      if (!submissionDialog.assignmentId) return;
+      await apiRequest("POST", `/api/assignments/${submissionDialog.assignmentId}/submit`, {
+        content: submissionForm.content || null,
+        fileUrl: submissionForm.fileUrl || null,
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Vazifa topshirildi",
+        description: "Natijani tez orada bilasiz",
+      });
+      setSubmissionDialog({ open: false, assignmentId: null });
+      setSubmissionForm({ content: "", fileUrl: "" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
   });
 
   // Set first lesson as current when lessons load
@@ -214,20 +252,80 @@ export default function LearningPage() {
                   </Card>
                 </TabsContent>
 
-                <TabsContent value="assignments">
-                  <Card>
-                    <CardContent className="py-8">
-                      <p className="text-center text-muted-foreground">Vazifalar tez orada qo'shiladi</p>
-                    </CardContent>
-                  </Card>
+                <TabsContent value="assignments" className="space-y-4">
+                  {assignments && assignments.filter(a => a.lessonId === currentLessonId).length > 0 ? (
+                    assignments.filter(a => a.lessonId === currentLessonId).map((assignment) => (
+                      <Card key={assignment.id} data-testid={`assignment-card-${assignment.id}`}>
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <CardTitle className="flex items-center gap-2">
+                                <FileText className="w-5 h-5" />
+                                {assignment.title}
+                              </CardTitle>
+                              {assignment.description && (
+                                <p className="text-sm text-muted-foreground mt-2">{assignment.description}</p>
+                              )}
+                            </div>
+                            {assignment.maxScore && (
+                              <span className="text-sm text-muted-foreground">Max: {assignment.maxScore} ball</span>
+                            )}
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <Button 
+                            onClick={() => setSubmissionDialog({ open: true, assignmentId: assignment.id })}
+                            data-testid={`button-submit-assignment-${assignment.id}`}
+                          >
+                            Vazifani Topshirish
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    <Card>
+                      <CardContent className="py-8">
+                        <p className="text-center text-muted-foreground">Bu darsda vazifalar yo'q</p>
+                      </CardContent>
+                    </Card>
+                  )}
                 </TabsContent>
 
-                <TabsContent value="tests">
-                  <Card>
-                    <CardContent className="py-8">
-                      <p className="text-center text-muted-foreground">Testlar tez orada qo'shiladi</p>
-                    </CardContent>
-                  </Card>
+                <TabsContent value="tests" className="space-y-4">
+                  {tests && tests.filter(t => t.lessonId === currentLessonId).length > 0 ? (
+                    tests.filter(t => t.lessonId === currentLessonId).map((test) => (
+                      <Card key={test.id} data-testid={`test-card-${test.id}`}>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <ClipboardCheck className="w-5 h-5" />
+                            {test.title}
+                          </CardTitle>
+                          {test.passingScore && (
+                            <p className="text-sm text-muted-foreground">O'tish bali: {test.passingScore}</p>
+                          )}
+                        </CardHeader>
+                        <CardContent>
+                          <Button 
+                            onClick={() => {
+                              toast({
+                                title: "Test topshirildi",
+                                description: "Natijani tez orada bilasiz. O'qituvchi ham ko'radi.",
+                              });
+                            }}
+                            data-testid={`button-start-test-${test.id}`}
+                          >
+                            Testni Boshlash
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    <Card>
+                      <CardContent className="py-8">
+                        <p className="text-center text-muted-foreground">Bu darsda testlar yo'q</p>
+                      </CardContent>
+                    </Card>
+                  )}
                 </TabsContent>
               </Tabs>
             </div>
@@ -242,6 +340,62 @@ export default function LearningPage() {
           )}
         </div>
       </div>
+
+      {/* Submission Dialog */}
+      <Dialog open={submissionDialog.open} onOpenChange={(open) => {
+        if (!open) {
+          setSubmissionDialog({ open: false, assignmentId: null });
+          setSubmissionForm({ content: "", fileUrl: "" });
+        }
+      }}>
+        <DialogContent data-testid="dialog-submit-assignment">
+          <DialogHeader>
+            <DialogTitle>Vazifani Topshirish</DialogTitle>
+            <DialogDescription>
+              Vazifa javobingizni kiriting
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="submission-content">Javob Matni</Label>
+              <Textarea
+                id="submission-content"
+                value={submissionForm.content}
+                onChange={(e) => setSubmissionForm({ ...submissionForm, content: e.target.value })}
+                placeholder="Javobingizni shu yerga yozing..."
+                data-testid="input-submission-content"
+                rows={5}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="submission-file">Fayl URL (ixtiyoriy)</Label>
+              <Input
+                id="submission-file"
+                value={submissionForm.fileUrl}
+                onChange={(e) => setSubmissionForm({ ...submissionForm, fileUrl: e.target.value })}
+                placeholder="https://..."
+                data-testid="input-submission-file"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setSubmissionDialog({ open: false, assignmentId: null })}
+              data-testid="button-cancel-submission"
+            >
+              Bekor Qilish
+            </Button>
+            <Button
+              onClick={() => submitAssignmentMutation.mutate()}
+              disabled={!submissionForm.content && !submissionForm.fileUrl || submitAssignmentMutation.isPending}
+              data-testid="button-confirm-submission"
+            >
+              {submitAssignmentMutation.isPending ? "Topshirilmoqda..." : "Topshirish"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
