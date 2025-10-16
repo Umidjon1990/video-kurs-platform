@@ -938,6 +938,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const correctOptions = options.filter((o: any) => o.isCorrect).map((o: any) => o.id);
           const studentOptions = Array.isArray(studentAnswer) ? studentAnswer : [studentAnswer];
           
+          console.log('[MC GRADING]', {
+            questionId: question.id,
+            correctOptions: correctOptions.sort(),
+            studentOptions: studentOptions.sort(),
+            match: JSON.stringify(correctOptions.sort()) === JSON.stringify(studentOptions.sort())
+          });
+          
           if (JSON.stringify(correctOptions.sort()) === JSON.stringify(studentOptions.sort())) {
             totalScore += question.points;
           }
