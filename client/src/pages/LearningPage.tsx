@@ -375,36 +375,44 @@ export default function LearningPage() {
                 </TabsContent>
 
                 <TabsContent value="results" className="space-y-4">
-                  {testAttempts && testAttempts.length > 0 ? (
+                  {testAttempts && testAttempts.filter((attempt: any) => {
+                    const test = tests?.find(t => t.id === attempt.testId);
+                    return test?.lessonId === currentLessonId;
+                  }).length > 0 ? (
                     <Card>
                       <CardHeader>
-                        <CardTitle>Test Natijalari</CardTitle>
+                        <CardTitle>Bu Darsning Test Natijalari</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-3">
-                          {testAttempts.map((attempt: any) => {
-                            const test = tests?.find(t => t.id === attempt.testId);
-                            return (
-                              <div 
-                                key={attempt.id} 
-                                className="flex items-center justify-between p-3 rounded-lg border"
-                                data-testid={`result-item-${attempt.id}`}
-                              >
-                                <div className="flex-1">
-                                  <p className="font-medium">{test?.title || "Test"}</p>
-                                  <p className="text-sm text-muted-foreground">
-                                    {new Date(attempt.completedAt).toLocaleDateString('uz-UZ')}
-                                  </p>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                  <div className="text-right">
-                                    <p className="font-semibold">{attempt.score} ball</p>
+                          {testAttempts
+                            .filter((attempt: any) => {
+                              const test = tests?.find(t => t.id === attempt.testId);
+                              return test?.lessonId === currentLessonId;
+                            })
+                            .map((attempt: any) => {
+                              const test = tests?.find(t => t.id === attempt.testId);
+                              return (
+                                <div 
+                                  key={attempt.id} 
+                                  className="flex items-center justify-between p-3 rounded-lg border"
+                                  data-testid={`result-item-${attempt.id}`}
+                                >
+                                  <div className="flex-1">
+                                    <p className="font-medium">{test?.title || "Test"}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {new Date(attempt.completedAt).toLocaleDateString('uz-UZ')}
+                                    </p>
                                   </div>
-                                  {attempt.isPassed ? (
-                                    <CheckCircle className="w-5 h-5 text-green-600" />
-                                  ) : (
-                                    <span className="text-sm text-destructive">O'tmadi</span>
-                                  )}
+                                  <div className="flex items-center gap-4">
+                                    <div className="text-right">
+                                      <p className="font-semibold">{attempt.score} ball</p>
+                                    </div>
+                                    {attempt.isPassed ? (
+                                      <CheckCircle className="w-5 h-5 text-green-600" />
+                                    ) : (
+                                      <span className="text-sm text-destructive">O'tmadi</span>
+                                    )}
                                 </div>
                               </div>
                             );
@@ -415,7 +423,7 @@ export default function LearningPage() {
                   ) : (
                     <Card>
                       <CardContent className="py-8">
-                        <p className="text-center text-muted-foreground">Hali test topshirmadingiz</p>
+                        <p className="text-center text-muted-foreground">Bu darsda hali test topshirmadingiz</p>
                       </CardContent>
                     </Card>
                   )}
