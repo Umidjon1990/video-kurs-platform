@@ -50,6 +50,8 @@ export const courses = pgTable("courses", {
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  originalPrice: decimal("original_price", { precision: 10, scale: 2 }), // Asl narx
+  discountedPrice: decimal("discounted_price", { precision: 10, scale: 2 }), // Chegirmadagi narx
   instructorId: varchar("instructor_id").notNull().references(() => users.id),
   thumbnailUrl: varchar("thumbnail_url"),
   status: varchar("status", { length: 20 }).notNull().default('draft'), // draft, published
@@ -62,20 +64,42 @@ export const coursesRelations = relations(courses, ({ one, many }) => ({
     fields: [courses.instructorId],
     references: [users.id],
   }),
+  modules: many(modules),
   lessons: many(lessons),
   assignments: many(assignments),
   tests: many(tests),
   enrollments: many(enrollments),
 }));
 
+// Modules table (Bo'limlar)
+export const modules = pgTable("modules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: 'cascade' }),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  order: integer("order").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const modulesRelations = relations(modules, ({ one, many }) => ({
+  course: one(courses, {
+    fields: [modules.courseId],
+    references: [courses.id],
+  }),
+  lessons: many(lessons),
+}));
+
 // Lessons table
 export const lessons = pgTable("lessons", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: 'cascade' }),
+  moduleId: varchar("module_id").references(() => modules.id, { onDelete: 'cascade' }),
   title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
   videoUrl: text("video_url").notNull(),
   order: integer("order").notNull(),
   duration: integer("duration"), // in minutes
+  isDemo: boolean("is_demo").default(false), // Bepul demo dars
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -83,6 +107,10 @@ export const lessonsRelations = relations(lessons, ({ one, many }) => ({
   course: one(courses, {
     fields: [lessons.courseId],
     references: [courses.id],
+  }),
+  module: one(modules, {
+    fields: [lessons.moduleId],
+    references: [modules.id],
   }),
   assignments: many(assignments),
   tests: many(tests),
@@ -261,6 +289,11 @@ export const insertCourseSchema = createInsertSchema(courses).omit({
   updatedAt: true,
 });
 
+export const insertModuleSchema = createInsertSchema(modules).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertLessonSchema = createInsertSchema(lessons).omit({
   id: true,
   createdAt: true,
@@ -307,6 +340,9 @@ export type User = typeof users.$inferSelect;
 
 export type InsertCourse = z.infer<typeof insertCourseSchema>;
 export type Course = typeof courses.$inferSelect;
+
+export type InsertModule = z.infer<typeof insertModuleSchema>;
+export type Module = typeof modules.$inferSelect;
 
 export type InsertLesson = z.infer<typeof insertLessonSchema>;
 export type Lesson = typeof lessons.$inferSelect;

@@ -1,0 +1,95 @@
+📘 DARSLIK YARATISH MODULI — TO‘LIQ TAVSIF
+🎯 Asosiy maqsad:
+
+O‘qituvchiga yoki admin foydalanuvchiga yangi darslik (kurs) yaratish, unga modullar, mavzular, va darslar (video) qo‘shish imkonini berish.
+Har bir darslik avtomatik tarzda bepul demo dars bilan boshlanadi, qolgan darslar esa qulf holatida bo‘ladi (faqat to‘lovdan so‘ng ochiladi).
+
+🔧 1. Darslik yaratish oynasi (Create Course Form)
+
+Asosiy maydonlar:
+
+Maydon nomi	Tavsif	Izoh
+📘 Dars nomi	Darslikning to‘liq nomi	Masalan: “Arab Tili A1 Bosqichi – CEFR-PRO 1.1”
+🗒️ Dars haqida izoh	Darslikning umumiy tavsifi	Talaba uchun tushunarli tarzda 2–3 gap
+🖼️ Rasm yuklash	Darslikning muqovasi yoki banner rasmi	Saytda “kurs preview” sifatida chiqadi
+🧩 Modul qo‘shish tugmasi	“+ Modul qo‘shish” bosilganda yangi modul bo‘limi ochiladi	Har modul ichida darslar avtomatik hosil bo‘ladi
+🧠 2. Modul (bo‘lim) yaratish tuzilmasi
+
+Har bir modulda quyidagi qismlar mavjud bo‘ladi:
+
+Element	Tavsif
+🔢 Modul raqami / nomi	Masalan: “1-modul — Harflar bilan tanishuv”
+🧾 Modul ichidagi mavzular ro‘yxati	Foydalanuvchi har qatorda bitta mavzu nomini yozadi:
+“Alif harfi”, “Ba harfi”, “Tā harfi”
+⚙️ Avtomatik darslar yaratish	Har bir yozilgan qatordan tizim avtomatik tarzda darslar yaratadi (Lesson 1, Lesson 2, ...)
+🎞️ Dars tahriri (Edit)	Har bir avtomatik hosil bo‘lgan dars ustiga bosilganda, darsni tahrirlash oynasi ochiladi
+🎥 3. Dars tahrirlash oynasi (Lesson Edit Modal)
+
+Har bir dars ichida quyidagilar bo‘ladi:
+
+Maydon nomi	Tavsif
+🏷️ Dars nomi (auto)	Moduldagi tartib asosida avtomatik belgilanadi
+🧠 Dars izohi	Ushbu darsda nimalar o‘rganiladi (1–2 gap)
+🎞️ Video URL	YouTube, Vimeo, yoki Fayl server havolasi
+📎 Qo‘shimcha fayl yuklash	PDF, DOCX, yoki mashq fayllari
+🗝️ Kirish holati (status)	- Public (demo) — 1-dars uchun
+- Locked — 2,3,4,... darslar uchun
+💰 Sotib olish banneri (auto)	Qulfda turgan darslarda “Sotib olish” tugmasi chiqadi
+🧩 Test yoki mashq bog‘lash	Darsga tegishli test ID yoki mashq formasi qo‘shiladi
+🔓 4. Kirish holatlari (Access System)
+Holat	Tavsif
+Demo dars (Public)	1-dars ochiq bo‘ladi, har kim kirib ko‘ra oladi
+Qulfdagi darslar (Locked)	2-darsdan boshlab “Sotib oling” yozuvi chiqadi
+Premium foydalanuvchilar uchun (Unlocked)	To‘lov qilganlar uchun barcha darslar ochiladi
+Admin preview	Admin barcha darslarni tahrirlash va ko‘rish huquqiga ega
+📦 5. Tizim logikasi (Auto-generation)
+
+1️⃣ O‘qituvchi darslik nomi va rasmni kiritadi.
+2️⃣ “+ Modul qo‘shish” tugmasi bosilganda, tizim quyidagi oynani ochadi:
+
+Modul nomi: Arab tili kirish
+Mavzular ro‘yxati:
+1. Alif harfi
+2. Ba harfi
+3. Ta harfi
+4. Tha harfi
+
+
+➡️ Tizim avtomatik hosil qiladi:
+
+Lesson 1 — Alif harfi (demo)
+Lesson 2 — Ba harfi (locked)
+Lesson 3 — Ta harfi (locked)
+Lesson 4 — Tha harfi (locked)
+
+
+Har bir dars yonida “✏️ Tahrirlash” tugmasi bo‘ladi. Shu joyda video URL, tavsif, va fayl yuklanadi.
+
+🧩 6. Qo‘shimcha imkoniyatlar (optional)
+Funksiya	Tavsif
+🧠 AI yordamida mavzular yaratish	Darslik nomiga qarab tizim avtomatik modul va mavzularni taklif etadi
+📊 Modul statistikasi	Har moduldagi darslar soni, ko‘rishlar, testlar natijasi
+🎓 Sertifikat shabloni	Darslik tugatilganda avtomatik sertifikat generatsiyasi
+📈 Progress bar	Talabaning o‘qish foizini ko‘rsatadi
+🧾 Export	Kursni PDF yoki Excel formatida eksport qilish
+💡 Yakuniy natija (UX ko‘rinishi)
+
+Admin panelida:
+
+📘 CEFR-PRO A1
+   🧩 1-modul: Arab tili kirish
+      🎞️ Lesson 1 – Alif (Demo)
+      🔒 Lesson 2 – Ba (Locked)
+      🔒 Lesson 3 – Ta (Locked)
+   🧩 2-modul: So‘zlar va talaffuz
+      🔒 Lesson 1 – Ismlar
+      🔒 Lesson 2 – Fe’llar
+
+
+Talaba sahifasida:
+
+1-dars oynada ochiladi va bepul ko‘rsatiladi
+
+2–3–4-darslar qulf belgisi bilan chiqadi
+
+“📦 Kursni sotib olish” tugmasi paydo bo‘ladi
