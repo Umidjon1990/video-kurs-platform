@@ -69,6 +69,19 @@ export interface IStorage {
   updateTest(id: string, data: Partial<InsertTest>): Promise<Test>;
   deleteTest(id: string): Promise<void>;
   
+  // Question operations
+  createQuestion(question: InsertQuestion): Promise<Question>;
+  getQuestionsByTest(testId: string): Promise<Question[]>;
+  getQuestion(id: string): Promise<Question | undefined>;
+  updateQuestion(id: string, data: Partial<InsertQuestion>): Promise<Question>;
+  deleteQuestion(id: string): Promise<void>;
+  
+  // Question Option operations
+  createQuestionOption(option: InsertQuestionOption): Promise<QuestionOption>;
+  getOptionsByQuestion(questionId: string): Promise<QuestionOption[]>;
+  getQuestionOption(id: string): Promise<QuestionOption | undefined>;
+  deleteQuestionOption(id: string): Promise<void>;
+  
   // Enrollment operations
   createEnrollment(enrollment: InsertEnrollment): Promise<Enrollment>;
   getEnrollmentsByUser(userId: string): Promise<Enrollment[]>;
@@ -284,6 +297,67 @@ export class DatabaseStorage implements IStorage {
     await db.delete(tests).where(eq(tests.id, id));
   }
 
+  // Question operations
+  async createQuestion(questionData: InsertQuestion): Promise<Question> {
+    const [question] = await db.insert(questions).values(questionData).returning();
+    return question;
+  }
+
+  async getQuestionsByTest(testId: string): Promise<Question[]> {
+    return await db
+      .select()
+      .from(questions)
+      .where(eq(questions.testId, testId))
+      .orderBy(questions.order);
+  }
+
+  async getQuestion(id: string): Promise<Question | undefined> {
+    const [question] = await db
+      .select()
+      .from(questions)
+      .where(eq(questions.id, id));
+    return question;
+  }
+
+  async updateQuestion(id: string, data: Partial<InsertQuestion>): Promise<Question> {
+    const [question] = await db
+      .update(questions)
+      .set(data)
+      .where(eq(questions.id, id))
+      .returning();
+    return question;
+  }
+
+  async deleteQuestion(id: string): Promise<void> {
+    await db.delete(questions).where(eq(questions.id, id));
+  }
+
+  // Question Option operations
+  async createQuestionOption(optionData: InsertQuestionOption): Promise<QuestionOption> {
+    const [option] = await db.insert(questionOptions).values(optionData).returning();
+    return option;
+  }
+
+  async getOptionsByQuestion(questionId: string): Promise<QuestionOption[]> {
+    return await db
+      .select()
+      .from(questionOptions)
+      .where(eq(questionOptions.questionId, questionId))
+      .orderBy(questionOptions.order);
+  }
+
+  async getQuestionOption(id: string): Promise<QuestionOption | undefined> {
+    const [option] = await db
+      .select()
+      .from(questionOptions)
+      .where(eq(questionOptions.id, id));
+    return option;
+  }
+
+  async deleteQuestionOption(id: string): Promise<void> {
+    await db.delete(questionOptions).where(eq(questionOptions.id, id));
+  }
+
   // Enrollment operations
   async createEnrollment(enrollmentData: InsertEnrollment): Promise<Enrollment> {
     const [enrollment] = await db.insert(enrollments).values(enrollmentData).returning();
@@ -364,51 +438,6 @@ export class DatabaseStorage implements IStorage {
       .from(testAttempts)
       .where(eq(testAttempts.testId, testId))
       .orderBy(desc(testAttempts.completedAt));
-  }
-
-  // Question operations
-  async createQuestion(questionData: InsertQuestion): Promise<Question> {
-    const [question] = await db.insert(questions).values(questionData).returning();
-    return question;
-  }
-
-  async getQuestionsByTest(testId: string): Promise<Question[]> {
-    return await db
-      .select()
-      .from(questions)
-      .where(eq(questions.testId, testId))
-      .orderBy(questions.order);
-  }
-
-  async updateQuestion(id: string, questionData: Partial<InsertQuestion>): Promise<Question> {
-    const [question] = await db
-      .update(questions)
-      .set(questionData)
-      .where(eq(questions.id, id))
-      .returning();
-    return question;
-  }
-
-  async deleteQuestion(id: string): Promise<void> {
-    await db.delete(questions).where(eq(questions.id, id));
-  }
-
-  // Question option operations
-  async createQuestionOption(optionData: InsertQuestionOption): Promise<QuestionOption> {
-    const [option] = await db.insert(questionOptions).values(optionData).returning();
-    return option;
-  }
-
-  async getQuestionOptionsByQuestion(questionId: string): Promise<QuestionOption[]> {
-    return await db
-      .select()
-      .from(questionOptions)
-      .where(eq(questionOptions.questionId, questionId))
-      .orderBy(questionOptions.order);
-  }
-
-  async deleteQuestionOption(id: string): Promise<void> {
-    await db.delete(questionOptions).where(eq(questionOptions.id, id));
   }
 
   // Statistics

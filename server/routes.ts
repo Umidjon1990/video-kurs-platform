@@ -529,6 +529,221 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Questions API
+  app.get('/api/instructor/tests/:testId/questions', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { testId } = req.params;
+      const instructorId = req.user.claims.sub;
+      
+      const test = await storage.getTest(testId);
+      if (!test) {
+        return res.status(404).json({ message: "Test not found" });
+      }
+      
+      const course = await storage.getCourse(test.courseId);
+      if (course?.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+      }
+      
+      const questions = await storage.getQuestionsByTest(testId);
+      res.json(questions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/instructor/tests/:testId/questions', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { testId } = req.params;
+      const instructorId = req.user.claims.sub;
+      
+      const test = await storage.getTest(testId);
+      if (!test) {
+        return res.status(404).json({ message: "Test not found" });
+      }
+      
+      const course = await storage.getCourse(test.courseId);
+      if (course?.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+      }
+      
+      const questionData = insertQuestionSchema.parse({
+        ...req.body,
+        testId,
+      });
+      const question = await storage.createQuestion(questionData);
+      res.json(question);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.patch('/api/instructor/questions/:questionId', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { questionId } = req.params;
+      const instructorId = req.user.claims.sub;
+      
+      const question = await storage.getQuestion(questionId);
+      if (!question) {
+        return res.status(404).json({ message: "Question not found" });
+      }
+      
+      const test = await storage.getTest(question.testId);
+      if (!test) {
+        return res.status(404).json({ message: "Test not found" });
+      }
+      
+      const course = await storage.getCourse(test.courseId);
+      if (course?.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+      }
+      
+      const updatedQuestion = await storage.updateQuestion(questionId, req.body);
+      res.json(updatedQuestion);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete('/api/instructor/questions/:questionId', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { questionId } = req.params;
+      const instructorId = req.user.claims.sub;
+      
+      const question = await storage.getQuestion(questionId);
+      if (!question) {
+        return res.status(404).json({ message: "Question not found" });
+      }
+      
+      const test = await storage.getTest(question.testId);
+      if (!test) {
+        return res.status(404).json({ message: "Test not found" });
+      }
+      
+      const course = await storage.getCourse(test.courseId);
+      if (course?.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+      }
+      
+      await storage.deleteQuestion(questionId);
+      res.json({ message: "Question deleted" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Question Options API
+  app.get('/api/instructor/questions/:questionId/options', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { questionId } = req.params;
+      const instructorId = req.user.claims.sub;
+      
+      const question = await storage.getQuestion(questionId);
+      if (!question) {
+        return res.status(404).json({ message: "Question not found" });
+      }
+      
+      const test = await storage.getTest(question.testId);
+      if (!test) {
+        return res.status(404).json({ message: "Test not found" });
+      }
+      
+      const course = await storage.getCourse(test.courseId);
+      if (course?.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+      }
+      
+      const options = await storage.getOptionsByQuestion(questionId);
+      res.json(options);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/instructor/questions/:questionId/options', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { questionId } = req.params;
+      const instructorId = req.user.claims.sub;
+      
+      const question = await storage.getQuestion(questionId);
+      if (!question) {
+        return res.status(404).json({ message: "Question not found" });
+      }
+      
+      const test = await storage.getTest(question.testId);
+      if (!test) {
+        return res.status(404).json({ message: "Test not found" });
+      }
+      
+      const course = await storage.getCourse(test.courseId);
+      if (course?.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+      }
+      
+      const optionData = insertQuestionOptionSchema.parse({
+        ...req.body,
+        questionId,
+      });
+      const option = await storage.createQuestionOption(optionData);
+      res.json(option);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete('/api/instructor/options/:optionId', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { optionId } = req.params;
+      const instructorId = req.user.claims.sub;
+      
+      const option = await storage.getQuestionOption(optionId);
+      if (!option) {
+        return res.status(404).json({ message: "Option not found" });
+      }
+      
+      const question = await storage.getQuestion(option.questionId);
+      if (!question) {
+        return res.status(404).json({ message: "Question not found" });
+      }
+      
+      const test = await storage.getTest(question.testId);
+      if (!test) {
+        return res.status(404).json({ message: "Test not found" });
+      }
+      
+      const course = await storage.getCourse(test.courseId);
+      if (course?.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+      }
+      
+      await storage.deleteQuestionOption(optionId);
+      res.json({ message: "Option deleted" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ============ STUDENT ROUTES ============
   app.get('/api/courses', isAuthenticated, async (req, res) => {
     try {
