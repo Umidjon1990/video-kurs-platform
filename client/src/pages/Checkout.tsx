@@ -55,6 +55,7 @@ export default function Checkout() {
       const uploadRes = await fetch("/api/upload-receipt", {
         method: "POST",
         body: formData,
+        credentials: "include", // Include session cookie
       });
 
       if (!uploadRes.ok) {
