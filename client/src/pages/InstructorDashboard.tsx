@@ -24,7 +24,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video } from "lucide-react";
+import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import type { Course, Lesson, Assignment, Test } from "@shared/schema";
 
@@ -82,6 +83,7 @@ export default function InstructorDashboard() {
   const [matchingPairs, setMatchingPairs] = useState<{left: string, right: string}[]>([
     { left: "", right: "" }
   ]);
+  const [expandedTests, setExpandedTests] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -619,68 +621,88 @@ export default function InstructorDashboard() {
                     <p className="text-center text-muted-foreground py-8">Hali testlar yo'q</p>
                   ) : (
                     tests?.map((test) => (
-                      <div
+                      <Collapsible
                         key={test.id}
-                        className="flex items-center justify-between p-4 border rounded-lg gap-4"
-                        data-testid={`test-${test.id}`}
+                        open={expandedTests.has(test.id)}
+                        onOpenChange={(open) => {
+                          const newExpanded = new Set(expandedTests);
+                          if (open) {
+                            newExpanded.add(test.id);
+                          } else {
+                            newExpanded.delete(test.id);
+                          }
+                          setExpandedTests(newExpanded);
+                        }}
                       >
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold">{test.title}</h4>
-                          <span className="text-xs text-muted-foreground">
-                            O'tish bali: {test.passingScore || 'Ko\'rsatilmagan'}
-                          </span>
+                        <div className="border rounded-lg" data-testid={`test-${test.id}`}>
+                          <div className="flex items-center justify-between p-4 gap-4">
+                            <CollapsibleTrigger className="flex items-center gap-2 flex-1 min-w-0 text-left">
+                              <ChevronDown className={`w-4 h-4 transition-transform ${expandedTests.has(test.id) ? 'rotate-180' : ''}`} />
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-semibold">{test.title}</h4>
+                                <span className="text-xs text-muted-foreground">
+                                  O'tish bali: {test.passingScore || 'Ko\'rsatilmagan'}
+                                </span>
+                              </div>
+                            </CollapsibleTrigger>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedTest(test);
+                                  setQuestionForm({
+                                    type: "multiple_choice",
+                                    questionText: "",
+                                    points: "1",
+                                    correctAnswer: "",
+                                  });
+                                  setMcOptions([{ text: "", isCorrect: false }]);
+                                  setMatchingPairs([{ left: "", right: "" }]);
+                                  setIsAddQuestionOpen(true);
+                                }}
+                                data-testid={`button-add-question-${test.id}`}
+                              >
+                                <Plus className="w-4 h-4 mr-1" />
+                                Savol
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  setEditingTest(test);
+                                  setTestForm({
+                                    title: test.title,
+                                    passingScore: test.passingScore?.toString() || "",
+                                    lessonId: test.lessonId || "",
+                                  });
+                                  setIsAddTestOpen(true);
+                                }}
+                                data-testid={`button-edit-test-${test.id}`}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  if (confirm("Testni o'chirishga ishonchingiz komilmi?")) {
+                                    deleteTestMutation.mutate(test.id);
+                                  }
+                                }}
+                                data-testid={`button-delete-test-${test.id}`}
+                              >
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </div>
+                          <CollapsibleContent>
+                            <div className="px-4 pb-4 border-t pt-4">
+                              <QuestionsList testId={test.id} />
+                            </div>
+                          </CollapsibleContent>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedTest(test);
-                              setQuestionForm({
-                                type: "multiple_choice",
-                                questionText: "",
-                                points: "1",
-                                correctAnswer: "",
-                              });
-                              setMcOptions([{ text: "", isCorrect: false }]);
-                              setMatchingPairs([{ left: "", right: "" }]);
-                              setIsAddQuestionOpen(true);
-                            }}
-                            data-testid={`button-add-question-${test.id}`}
-                          >
-                            <Plus className="w-4 h-4 mr-1" />
-                            Savol
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setEditingTest(test);
-                              setTestForm({
-                                title: test.title,
-                                passingScore: test.passingScore?.toString() || "",
-                                lessonId: test.lessonId || "",
-                              });
-                              setIsAddTestOpen(true);
-                            }}
-                            data-testid={`button-edit-test-${test.id}`}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              if (confirm("Testni o'chirishga ishonchingiz komilmi?")) {
-                                deleteTestMutation.mutate(test.id);
-                              }
-                            }}
-                            data-testid={`button-delete-test-${test.id}`}
-                          >
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </div>
+                      </Collapsible>
                     ))
                   )}
                 </div>
@@ -1254,6 +1276,75 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function QuestionsList({ testId }: { testId: string }) {
+  const { toast } = useToast();
+  
+  const { data: questions, isLoading } = useQuery({
+    queryKey: ["/api/instructor/tests", testId, "questions"],
+    enabled: !!testId,
+  });
+
+  const deleteQuestionMutation = useMutation({
+    mutationFn: async (questionId: string) => {
+      await apiRequest("DELETE", `/api/instructor/questions/${questionId}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/instructor/tests", testId, "questions"] });
+      toast({ title: "Muvaffaqiyatli", description: "Savol o'chirildi" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const questionTypeLabels: Record<string, string> = {
+    multiple_choice: "Ko'p Tanlovli",
+    true_false: "To'g'ri/Noto'g'ri",
+    fill_blanks: "Bo'sh Joylarni To'ldirish",
+    matching: "Moslashtirish",
+    short_answer: "Qisqa Javob",
+    essay: "Insho",
+  };
+
+  if (isLoading) {
+    return <p className="text-sm text-muted-foreground">Yuklanmoqda...</p>;
+  }
+
+  if (!questions || questions.length === 0) {
+    return <p className="text-sm text-muted-foreground">Hali savollar yo'q</p>;
+  }
+
+  return (
+    <div className="space-y-2">
+      {questions.map((q: any, idx: number) => (
+        <div key={q.id} className="flex items-start justify-between p-3 bg-muted/50 rounded-lg gap-4" data-testid={`question-${q.id}`}>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-medium bg-primary/10 text-primary px-2 py-0.5 rounded">
+                {questionTypeLabels[q.type] || q.type}
+              </span>
+              <span className="text-xs text-muted-foreground">{q.points} ball</span>
+            </div>
+            <p className="text-sm">{q.questionText}</p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              if (confirm("Savolni o'chirishga ishonchingiz komilmi?")) {
+                deleteQuestionMutation.mutate(q.id);
+              }
+            }}
+            data-testid={`button-delete-question-${q.id}`}
+          >
+            <Trash2 className="w-4 h-4 text-destructive" />
+          </Button>
+        </div>
+      ))}
     </div>
   );
 }
