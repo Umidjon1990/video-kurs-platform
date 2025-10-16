@@ -1396,6 +1396,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const notifications = await storage.getNotificationsByUser(userId);
+      
+      // Prevent caching to ensure fresh data
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      
       res.json(notifications);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
