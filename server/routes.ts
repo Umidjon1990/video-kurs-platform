@@ -365,6 +365,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const assignmentData = insertAssignmentSchema.parse({
         ...req.body,
         courseId,
+        lessonId: req.body.lessonId === "none" ? null : req.body.lessonId,
       });
       const assignment = await storage.createAssignment(assignmentData);
       res.json(assignment);
@@ -467,6 +468,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const testData = insertTestSchema.parse({
         ...req.body,
         courseId,
+        lessonId: req.body.lessonId === "none" ? null : req.body.lessonId,
       });
       const test = await storage.createTest(testData);
       res.json(test);

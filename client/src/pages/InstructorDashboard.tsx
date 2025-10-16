@@ -818,7 +818,7 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
                   <SelectValue placeholder="Darsni tanlang" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tanlanmagan</SelectItem>
+                  <SelectItem value="none">Tanlanmagan</SelectItem>
                   {lessons?.map((lesson) => (
                     <SelectItem key={lesson.id} value={lesson.id}>
                       {lesson.title}
@@ -898,7 +898,7 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
                   <SelectValue placeholder="Darsni tanlang" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tanlanmagan</SelectItem>
+                  <SelectItem value="none">Tanlanmagan</SelectItem>
                   {lessons?.map((lesson) => (
                     <SelectItem key={lesson.id} value={lesson.id}>
                       {lesson.title}
