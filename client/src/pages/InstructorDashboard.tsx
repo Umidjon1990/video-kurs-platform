@@ -659,106 +659,135 @@ export default function InstructorDashboard() {
 
               <TabsContent value="tests" className="space-y-4">
                 <div className="max-h-96 overflow-y-auto space-y-4">
-                  {tests && tests.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8">Hali testlar yo'q</p>
+                  {lessons && lessons.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">Avval dars yarating</p>
                   ) : (
-                    tests?.map((test) => (
-                      <Collapsible
-                        key={test.id}
-                        open={expandedTests.has(test.id)}
-                        onOpenChange={(open) => {
-                          const newExpanded = new Set(expandedTests);
-                          if (open) {
-                            newExpanded.add(test.id);
-                          } else {
-                            newExpanded.delete(test.id);
-                          }
-                          setExpandedTests(newExpanded);
-                        }}
-                      >
-                        <div className="border rounded-lg" data-testid={`test-${test.id}`}>
-                          <div className="flex items-center justify-between p-4 gap-4">
-                            <CollapsibleTrigger className="flex items-center gap-2 flex-1 min-w-0 text-left">
-                              <ChevronDown className={`w-4 h-4 transition-transform ${expandedTests.has(test.id) ? 'rotate-180' : ''}`} />
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-semibold">{test.title}</h4>
-                                <span className="text-xs text-muted-foreground">
-                                  O'tish bali: {test.passingScore || 'Ko\'rsatilmagan'}
-                                </span>
-                              </div>
-                            </CollapsibleTrigger>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedTest(test);
-                                  setQuestionForm({
-                                    type: "multiple_choice",
-                                    questionText: "",
-                                    points: "1",
-                                    correctAnswer: "",
-                                  });
-                                  setMcOptions([{ text: "", isCorrect: false }]);
-                                  setMatchingPairs([{ left: "", right: "" }]);
-                                  setIsAddQuestionOpen(true);
-                                }}
-                                data-testid={`button-add-question-${test.id}`}
-                              >
-                                <Plus className="w-4 h-4 mr-1" />
-                                Savol
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  setEditingTest(test);
-                                  setTestForm({
-                                    title: test.title,
-                                    passingScore: test.passingScore?.toString() || "",
-                                    lessonId: test.lessonId || "",
-                                  });
-                                  setIsAddTestOpen(true);
-                                }}
-                                data-testid={`button-edit-test-${test.id}`}
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  if (confirm("Testni o'chirishga ishonchingiz komilmi?")) {
-                                    deleteTestMutation.mutate(test.id);
-                                  }
-                                }}
-                                data-testid={`button-delete-test-${test.id}`}
-                              >
-                                <Trash2 className="w-4 h-4 text-destructive" />
-                              </Button>
+                    lessons?.map((lesson) => (
+                      <Card key={lesson.id} data-testid={`lesson-tests-${lesson.id}`}>
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <CardTitle className="text-base">{lesson.title}</CardTitle>
+                              <p className="text-sm text-muted-foreground">
+                                {lesson.duration ? `${lesson.duration} daqiqa` : 'Davomiylik ko\'rsatilmagan'}
+                              </p>
                             </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setTestForm({ title: "", passingScore: "", lessonId: lesson.id });
+                                setEditingTest(null);
+                                setIsAddTestOpen(true);
+                              }}
+                              data-testid={`button-add-test-for-lesson-${lesson.id}`}
+                            >
+                              <Plus className="w-4 h-4 mr-2" />
+                              Test Qo'shish
+                            </Button>
                           </div>
-                          <CollapsibleContent>
-                            <div className="px-4 pb-4 border-t pt-4">
-                              <QuestionsList 
-                                testId={test.id}
-                                setEditingQuestion={setEditingQuestion}
-                                setQuestionForm={setQuestionForm}
-                                setMcOptions={setMcOptions}
-                                setMatchingPairs={setMatchingPairs}
-                                setIsAddQuestionOpen={setIsAddQuestionOpen}
-                              />
-                            </div>
-                          </CollapsibleContent>
-                        </div>
-                      </Collapsible>
+                        </CardHeader>
+                        <CardContent className="pt-0 space-y-3">
+                          {tests?.filter(t => t.lessonId === lesson.id).length === 0 ? (
+                            <p className="text-sm text-muted-foreground text-center py-2">Bu darsda hali test yo'q</p>
+                          ) : (
+                            tests?.filter(t => t.lessonId === lesson.id).map((test) => (
+                              <Collapsible
+                                key={test.id}
+                                open={expandedTests.has(test.id)}
+                                onOpenChange={(open) => {
+                                  const newExpanded = new Set(expandedTests);
+                                  if (open) {
+                                    newExpanded.add(test.id);
+                                  } else {
+                                    newExpanded.delete(test.id);
+                                  }
+                                  setExpandedTests(newExpanded);
+                                }}
+                              >
+                                <div className="border rounded-lg" data-testid={`test-${test.id}`}>
+                                  <div className="flex items-center justify-between p-3 gap-4">
+                                    <CollapsibleTrigger className="flex items-center gap-2 flex-1 min-w-0 text-left">
+                                      <ChevronDown className={`w-4 h-4 transition-transform ${expandedTests.has(test.id) ? 'rotate-180' : ''}`} />
+                                      <div className="flex-1 min-w-0">
+                                        <h4 className="font-semibold text-sm">{test.title}</h4>
+                                        <span className="text-xs text-muted-foreground">
+                                          O'tish bali: {test.passingScore || 'Ko\'rsatilmagan'}
+                                        </span>
+                                      </div>
+                                    </CollapsibleTrigger>
+                                    <div className="flex items-center gap-2">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          setSelectedTest(test);
+                                          setQuestionForm({
+                                            type: "multiple_choice",
+                                            questionText: "",
+                                            points: "1",
+                                            correctAnswer: "",
+                                          });
+                                          setMcOptions([{ text: "", isCorrect: false }]);
+                                          setMatchingPairs([{ left: "", right: "" }]);
+                                          setIsAddQuestionOpen(true);
+                                        }}
+                                        data-testid={`button-add-question-${test.id}`}
+                                      >
+                                        <Plus className="w-3 h-3 mr-1" />
+                                        Savol
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => {
+                                          setEditingTest(test);
+                                          setTestForm({
+                                            title: test.title,
+                                            passingScore: test.passingScore?.toString() || "",
+                                            lessonId: test.lessonId || "",
+                                          });
+                                          setIsAddTestOpen(true);
+                                        }}
+                                        data-testid={`button-edit-test-${test.id}`}
+                                      >
+                                        <Edit className="w-4 h-4" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => {
+                                          if (confirm("Testni o'chirishga ishonchingiz komilmi?")) {
+                                            deleteTestMutation.mutate(test.id);
+                                          }
+                                        }}
+                                        data-testid={`button-delete-test-${test.id}`}
+                                      >
+                                        <Trash2 className="w-4 h-4 text-destructive" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  <CollapsibleContent>
+                                    <div className="px-3 pb-3 border-t pt-3">
+                                      <QuestionsList 
+                                        testId={test.id}
+                                        setEditingQuestion={setEditingQuestion}
+                                        setQuestionForm={setQuestionForm}
+                                        setMcOptions={setMcOptions}
+                                        setMatchingPairs={setMatchingPairs}
+                                        setIsAddQuestionOpen={setIsAddQuestionOpen}
+                                      />
+                                    </div>
+                                  </CollapsibleContent>
+                                </div>
+                              </Collapsible>
+                            ))
+                          )}
+                        </CardContent>
+                      </Card>
                     ))
                   )}
                 </div>
-                <Button onClick={() => setIsAddTestOpen(true)} data-testid="button-add-test" className="w-full">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Test Qo'shish
-                </Button>
               </TabsContent>
             </Tabs>
           </DialogContent>
