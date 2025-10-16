@@ -626,7 +626,14 @@ export default function InstructorDashboard() {
                                   Savol
                                 </Button>
                               </div>
-                              <QuestionsList testId={test.id} />
+                              <QuestionsList 
+                                testId={test.id}
+                                setEditingQuestion={setEditingQuestion}
+                                setQuestionForm={setQuestionForm}
+                                setMcOptions={setMcOptions}
+                                setMatchingPairs={setMatchingPairs}
+                                setIsAddQuestionOpen={setIsAddQuestionOpen}
+                              />
                             </div>
                           ))}
                         </CardContent>
@@ -783,7 +790,14 @@ export default function InstructorDashboard() {
                           </div>
                           <CollapsibleContent>
                             <div className="px-4 pb-4 border-t pt-4">
-                              <QuestionsList testId={test.id} />
+                              <QuestionsList 
+                                testId={test.id}
+                                setEditingQuestion={setEditingQuestion}
+                                setQuestionForm={setQuestionForm}
+                                setMcOptions={setMcOptions}
+                                setMatchingPairs={setMatchingPairs}
+                                setIsAddQuestionOpen={setIsAddQuestionOpen}
+                              />
                             </div>
                           </CollapsibleContent>
                         </div>
@@ -1373,7 +1387,21 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
   );
 }
 
-function QuestionsList({ testId }: { testId: string }) {
+function QuestionsList({ 
+  testId, 
+  setEditingQuestion,
+  setQuestionForm,
+  setMcOptions,
+  setMatchingPairs,
+  setIsAddQuestionOpen 
+}: { 
+  testId: string;
+  setEditingQuestion: (q: any) => void;
+  setQuestionForm: (form: any) => void;
+  setMcOptions: (options: any[]) => void;
+  setMatchingPairs: (pairs: any[]) => void;
+  setIsAddQuestionOpen: (open: boolean) => void;
+}) {
   const { toast } = useToast();
   
   const { data: questions, isLoading } = useQuery<any[]>({
