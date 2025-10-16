@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown } from "lucide-react";
+import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, Download } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NotificationBell } from "@/components/NotificationBell";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -1802,36 +1802,66 @@ function GradingDialog({
   onSubmit, 
   isPending 
 }: any) {
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  
   if (!submission) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto" data-testid="dialog-grading">
-        <DialogHeader>
-          <DialogTitle>Vazifani Tekshirish</DialogTitle>
-          <DialogDescription>
-            O'quvchi: {submission.user.name} | Vazifa: {submission.assignment.title}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto" data-testid="dialog-grading">
+          <DialogHeader>
+            <DialogTitle>Vazifani Tekshirish</DialogTitle>
+            <DialogDescription>
+              O'quvchi: {submission.user.name} | Vazifa: {submission.assignment.title}
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-4">
-          <div>
-            <h4 className="font-medium mb-2">Yuborilgan matn:</h4>
-            <p className="text-sm text-muted-foreground bg-muted p-3 rounded">
-              {submission.submission.content || "Matn kiritilmagan"}
-            </p>
-          </div>
-
-          {submission.submission.imageUrls && submission.submission.imageUrls.length > 0 && (
+          <div className="space-y-4">
             <div>
-              <h4 className="font-medium mb-2">Rasmlar:</h4>
-              <div className="grid grid-cols-2 gap-2">
-                {submission.submission.imageUrls.map((url: string, i: number) => (
-                  <img key={i} src={url} alt={`Image ${i + 1}`} className="rounded border w-full h-32 object-cover" />
-                ))}
-              </div>
+              <h4 className="font-medium mb-2">Yuborilgan matn:</h4>
+              <p className="text-sm text-muted-foreground bg-muted p-3 rounded">
+                {submission.submission.content || "Matn kiritilmagan"}
+              </p>
             </div>
-          )}
+
+            {submission.submission.imageUrls && submission.submission.imageUrls.length > 0 && (
+              <div>
+                <h4 className="font-medium mb-2">Rasmlar:</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  {submission.submission.imageUrls.map((url: string, i: number) => (
+                    <div key={i} className="relative group">
+                      <img 
+                        src={url} 
+                        alt={`Image ${i + 1}`} 
+                        className="rounded border w-full h-48 object-cover cursor-pointer hover-elevate transition-all" 
+                        onClick={() => setSelectedImage(url)}
+                        data-testid={`image-submission-${i}`}
+                      />
+                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="h-8 w-8 p-0"
+                          onClick={() => setSelectedImage(url)}
+                          data-testid={`button-view-image-${i}`}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <a 
+                          href={url} 
+                          download={`rasm-${i + 1}.jpg`}
+                          className="inline-flex items-center justify-center h-8 w-8 rounded bg-secondary hover-elevate text-secondary-foreground"
+                          data-testid={`button-download-image-${i}`}
+                        >
+                          <Download className="h-4 w-4" />
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
           {submission.submission.audioUrls && submission.submission.audioUrls.length > 0 && (
             <div>
@@ -1924,6 +1954,30 @@ function GradingDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    
+    <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+      <DialogContent className="max-w-4xl p-2">
+        <div className="relative w-full">
+          <img 
+            src={selectedImage || ''} 
+            alt="To'liq rasm" 
+            className="w-full h-auto max-h-[80vh] object-contain rounded"
+            data-testid="image-fullview"
+          />
+          <div className="absolute top-4 right-4">
+            <a 
+              href={selectedImage || ''} 
+              download="rasm.jpg"
+              className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-background/90 hover-elevate text-foreground"
+              data-testid="button-download-fullimage"
+            >
+              <Download className="h-5 w-5" />
+            </a>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
 

@@ -7,6 +7,16 @@ This project is a comprehensive Learning Management System (LMS) platform design
 ## Recent Changes (October 16, 2025)
 
 ### Latest Updates
+- ✅ **Image Viewing & Download Enhancement** (Oct 16, 2025)
+  - ✅ **Instructor grading interface:**
+    - ✅ Larger image thumbnails (h-48) in submission view
+    - ✅ Click-to-zoom: Full-screen image viewer dialog
+    - ✅ Hover controls: View (Eye icon) and Download buttons
+    - ✅ Download functionality for individual images
+    - ✅ Better image display with object-cover and hover effects
+  - ✅ **Cache control fix:**
+    - ✅ Submissions endpoint now includes no-cache headers
+    - ✅ Ensures fresh data display in instructor panel
 - ✅ **Course Edit/Delete & Assignment Fixes** (Oct 16, 2025)
   - ✅ **Instructor course management:**
     - ✅ Edit dialog: update title, description, pricing, thumbnail
