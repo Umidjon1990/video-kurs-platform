@@ -126,7 +126,9 @@ export const enrollments = pgTable("enrollments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
   courseId: varchar("course_id").notNull().references(() => courses.id),
-  paymentStatus: varchar("payment_status", { length: 20 }).notNull().default('pending'), // pending, completed, failed
+  paymentMethod: varchar("payment_method", { length: 20 }), // naqd, karta, stripe
+  paymentProofUrl: text("payment_proof_url"), // Chek rasmi URL
+  paymentStatus: varchar("payment_status", { length: 20 }).notNull().default('pending'), // pending, approved, rejected
   enrolledAt: timestamp("enrolled_at").defaultNow(),
 });
 
