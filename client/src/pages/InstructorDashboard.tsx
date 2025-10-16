@@ -36,6 +36,8 @@ export default function InstructorDashboard() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [isCreateCourseOpen, setIsCreateCourseOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [deletingCourse, setDeletingCourse] = useState<Course | null>(null);
   const [isAddLessonOpen, setIsAddLessonOpen] = useState(false);
 
   const [courseForm, setCourseForm] = useState({
@@ -149,7 +151,12 @@ export default function InstructorDashboard() {
 
   const createCourseMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("POST", "/api/instructor/courses", {
+      const method = editingCourse ? "PUT" : "POST";
+      const url = editingCourse 
+        ? `/api/instructor/courses/${editingCourse.id}` 
+        : "/api/instructor/courses";
+      
+      await apiRequest(method, url, {
         ...courseForm,
         price: courseForm.discountedPrice || courseForm.price,
         originalPrice: courseForm.originalPrice,
@@ -158,9 +165,13 @@ export default function InstructorDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/instructor/courses"] });
-      toast({ title: "Muvaffaqiyatli", description: "Kurs yaratildi" });
+      toast({ 
+        title: "Muvaffaqiyatli", 
+        description: editingCourse ? "Kurs yangilandi" : "Kurs yaratildi" 
+      });
       setIsCreateCourseOpen(false);
       setCourseForm({ title: "", description: "", price: "", originalPrice: "", discountedPrice: "", thumbnailUrl: "" });
+      setEditingCourse(null);
     },
     onError: (error: Error) => {
       if (isUnauthorizedError(error)) {
@@ -174,6 +185,20 @@ export default function InstructorDashboard() {
         }, 500);
         return;
       }
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteCourseMutation = useMutation({
+    mutationFn: async (courseId: string) => {
+      await apiRequest("DELETE", `/api/instructor/courses/${courseId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/instructor/courses"] });
+      toast({ title: "Muvaffaqiyatli", description: "Kurs o'chirildi" });
+      setDeletingCourse(null);
+    },
+    onError: (error: Error) => {
       toast({ title: "Xatolik", description: error.message, variant: "destructive" });
     },
   });
@@ -527,7 +552,40 @@ export default function InstructorDashboard() {
                       <BookOpen className="w-12 h-12 text-muted-foreground" />
                     </div>
                   )}
-                  <CardTitle data-testid={`text-course-title-${course.id}`}>{course.title}</CardTitle>
+                  <div className="flex items-center justify-between gap-2">
+                    <CardTitle data-testid={`text-course-title-${course.id}`}>{course.title}</CardTitle>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setCourseForm({
+                            title: course.title,
+                            description: course.description || "",
+                            price: "",
+                            originalPrice: course.originalPrice?.toString() || "",
+                            discountedPrice: course.discountedPrice?.toString() || "",
+                            thumbnailUrl: course.thumbnailUrl || "",
+                          });
+                          setEditingCourse(course);
+                          setIsCreateCourseOpen(true);
+                        }}
+                        data-testid={`button-edit-${course.id}`}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setDeletingCourse(course);
+                        }}
+                        data-testid={`button-delete-${course.id}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-sm text-muted-foreground line-clamp-2">{course.description}</p>
@@ -1592,6 +1650,15 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
         onSubmit={() => gradingMutation.mutate()}
         isPending={gradingMutation.isPending}
       />
+
+      {/* Delete Course Dialog */}
+      <DeleteCourseDialog
+        course={deletingCourse}
+        open={!!deletingCourse}
+        onOpenChange={(open) => !open && setDeletingCourse(null)}
+        onConfirm={() => deletingCourse && deleteCourseMutation.mutate(deletingCourse.id)}
+        isPending={deleteCourseMutation.isPending}
+      />
     </div>
   );
 }
@@ -1853,6 +1920,50 @@ function GradingDialog({
             data-testid="button-submit-grading"
           >
             {isPending ? "Saqlanmoqda..." : "Baholash"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DeleteCourseDialog({
+  course,
+  open,
+  onOpenChange,
+  onConfirm,
+  isPending,
+}: {
+  course: Course | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+  isPending: boolean;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent data-testid="dialog-delete-course">
+        <DialogHeader>
+          <DialogTitle>Kursni o'chirish</DialogTitle>
+          <DialogDescription>
+            "{course?.title}" kursini o'chirishni xohlaysizmi? Bu amalni qaytarib bo'lmaydi.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            data-testid="button-cancel-delete"
+          >
+            Bekor qilish
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={onConfirm}
+            disabled={isPending}
+            data-testid="button-confirm-delete"
+          >
+            {isPending ? "O'chirilmoqda..." : "O'chirish"}
           </Button>
         </DialogFooter>
       </DialogContent>
