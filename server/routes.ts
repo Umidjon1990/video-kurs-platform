@@ -1261,11 +1261,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // O'quvchiga ogohlantirish yuborish
       const statusMessage = status === 'graded' ? 'Vazifangiz tekshirildi' : 'Vazifani qayta topshiring';
+      const scoreMessage = `${grade}/100 ball`;
+      const fullMessage = status === 'graded' 
+        ? `${scoreMessage}. ${feedback}`
+        : `${feedback}`;
       const notificationData = insertNotificationSchema.parse({
         userId: submission.userId,
         type: status === 'graded' ? 'assignment_graded' : 'revision_requested',
         title: statusMessage,
-        message: feedback,
+        message: fullMessage,
         relatedId: submission.id,
         isRead: false,
       });
