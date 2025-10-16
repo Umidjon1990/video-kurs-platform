@@ -1,0 +1,170 @@
+📥 “Vazifa & Natijalar” — Funktsional Spetsifikatsiya (kod emas)
+🎯 Maqsad
+
+O‘qituvchi paneli: Kurslar bo‘yicha kelgan vazifalarni qabul qilish, ko‘rish, baholash (ball + izoh), qaytarish; test natijalarini ko‘rish; kurs o‘quvchilari ro‘yxatini boshqarish; ogohlantirishlarni qabul qilish.
+
+O‘quvchi paneli: Vazifa yuborish (matn, rasm, audio, fayl), yuborilganlar holatini kuzatish; tekshirilib qaytgan natijalarni ko‘rish; ogohlantirishlarni olish.
+
+👩‍🏫 O‘qituvchi paneli — bo‘limlar va xususiyatlar
+1) “Vazifalar (Kurs bo‘yicha)” ro‘yxati
+
+Filtrlar:
+
+Kurs tanlash (faqat o‘qituvchiga biriktirilgan kurslar)
+
+Status: Yangi yuborilgan, Qayta topshirish kerak, Baholangan
+
+Sana oralig‘i
+
+Jadval ustunlari:
+
+Kurs nomi → ichida yaratilgan vazifalar konteksti bilan chiqsin
+
+O‘quvchi ismi
+
+Yuborilgan vaqt (soat/sana)
+
+Status (chip ko‘rinishida)
+
+Ko‘rish / Tekshirish (tugma)
+
+2) “Vazifani tekshirish” oynasi (detal ko‘rinish)
+
+Ko‘rinadigan tarkib:
+
+O‘quvchi ma’lumoti: ism, kurs, guruh (bo‘lsa), ro‘yxatga qo‘shilgan sanasi
+
+Vazifa tarkibi: matn, rasm(lar) preview, audio player, fayl linklari
+
+Baholash paneli:
+
+Ball (0–100)
+
+Izoh (o‘qituvchi fikri, tavsiya va xatolar)
+
+Status: Baholandi (RETURNED) yoki Qayta topshirish kerak (NEEDS_REVISION)
+
+Yuborish: saqlaganda o‘quvchiga “Vazifangiz tekshirildi” yoki “Qayta topshiring” ogohlantirishi boradi
+
+3) “Test natijalari” (kurs bo‘yicha)
+
+Filtrlar: Kurs, sana oralig‘i, o‘quvchi
+
+Jadval: O‘quvchi, dars/bo‘lim, ball, vaqt
+
+Detal: Savollar kesimida ko‘rish (ixtiyoriy, keyinchalik)
+
+4) “Kurs o‘quvchilari” ro‘yxati
+
+Jadval ustunlari: Ism, email (ixtiyoriy), “Qo‘shilgan sana”, umumiy topshirgan vazifalar, o‘rtacha ball
+
+Funktsiya: O‘quvchining profilini ochish (faoliyati, topshirgan vazifalari va baholari)
+
+5) Ogohlantirishlar (qo‘ng‘iroqcha + SMS ixtiyoriy)
+
+In-app qo‘ng‘iroqcha:
+
+Yangi vazifa yuborildi (ASSIGNMENT_SUBMITTED)
+
+Qayta topshirish keldi
+
+Yangi test natijasi mavjud
+
+SMS/Email (ixtiyoriy): hozircha yozib qo‘yilsin (keyin gateway ulanadi)
+
+👨‍🎓 O‘quvchi paneli — bo‘limlar va xususiyatlar
+1) “Vazifa yuborish”
+
+Kurs tanlash → shu kursdagi faol vazifalar ro‘yxati (muddat yaqinlari yuqorida)
+
+Yuborish formati:
+
+Matn (yozma)
+
+Rasm (bir nechta)
+
+Audio (player bilan)
+
+Fayl (PDF/DOC va boshqalar)
+
+Yuborilganda: “Vazifa yuborildi” xabari; o‘qituvchiga qo‘ng‘iroqcha ogohlantirishi boradi
+
+2) “Natijalar”
+
+Vazifalar natijalari: Vazifa nomi, yuborilgan sana, status, ball, izoh, “Qayta topshirish” (agar so‘ralgan bo‘lsa)
+
+Test natijalari: Kurs/dars, ball, vaqt (sorted by date)
+
+3) Ogohlantirishlar (qo‘ng‘iroqcha)
+
+Tiplar:
+
+“Vazifangiz tekshirildi” (ball + izoh bilan)
+
+“Qayta topshiring”
+
+“Test natijangiz tayyor”
+
+🧩 Oqim (flow) soddalashtirilgan
+
+O‘quvchi vazifa yuboradi → O‘qituvchiga in-app ogohlantirish tushadi (xohlasangiz SMS/email ham).
+
+O‘qituvchi tekshiradi, ball va izoh qo‘yadi → status (Baholandi yoki Qayta topshirish kerak) → O‘quvchiga ogohlantirish yuboriladi.
+
+O‘quvchi natijalar bo‘limida yangilangan holatni ko‘radi; kerak bo‘lsa qayta topshiradi.
+
+O‘quvchi test ishlaganida — natija darhol o‘z profilida ko‘rinadi; o‘qituvchi umumiy jadvalda kuzatadi.
+
+🗂️ Ma’lumot tarkibi (maydonlar nomi — tavsif sifatida, kod emas)
+
+Vazifa (Assignment): kurs, sarlavha, tavsif, deadline (ixtiyoriy), yaratuvchi o‘qituvchi, yaratilgan sana
+
+Yuborilgan vazifa (Submission): vazifa id, o‘quvchi, matn, rasm/audio/fayl linklari, status, ball, izoh, yuborilgan sana, baholangan sana
+
+Test natijasi (TestResult): o‘quvchi, kurs, dars (ixtiyoriy), ball, vaqt, qisqa tafsilot
+
+Ogohlantirish (Notification): foydalanuvchi, tur (yuborildi/baholandi/test tayyor), sarlavha, matn, ko‘rilgan-ko‘rilmagan holati, vaqt
+
+Kurs o‘quvchisi (Enrollment): o‘quvchi → kurs → qo‘shilgan sana, roli (STUDENT/TEACHER)
+
+✅ Validatsiya va qoidalar
+
+O‘qituvchi faqat o‘zi biriktirilgan kurslar bo‘yicha topshiriqlarni ko‘radi/tekshiradi.
+
+O‘quvchi faqat o‘zi yuborgan vazifalarni va o‘z test natijalarini ko‘ra oladi.
+
+Ball diapazoni: 0–100 (uzaytirish mumkin).
+
+“Qayta topshirish” so‘ralganda o‘quvchi takror yuborishi mumkin (eski holat saqlansin).
+
+Fayl turlari: rasm, audio, PDF/DOC; hajm limiti belgilansin.
+
+Notifikatsiya: hech bo‘lmaganda in-app qo‘ng‘iroqcha ishlasin (polling/SSE/WebSocket — implementatsiya tanlovi keyin).
+
+🖼️ UI ko‘rsatmalar (qisqa)
+
+Status chiplar:
+
+Yangi yuborilgan — kulrang/ko‘k
+
+Baholandi — yashil
+
+Qayta topshirish kerak — sariq
+
+Baholash modalidagi tugmalar: “Saqlash”, “Qaytarish”, “Qayta topshirishni so‘rash”.
+
+O‘quvchi natijalarida: Ball katta raqamda, izoh alohida blokda, qayta topshirish tugmasi bor.
+
+📋 Qabul mezonlari (Acceptance)
+
+O‘qituvchi panelida kurs bo‘yicha vazifalar tartibli ko‘rinadi (kursi, ismi, qachonligi).
+
+Yangi vazifa yuborilganda o‘qituvchiga ogohlantirish tushadi.
+
+O‘qituvchi vazifani ball + izoh bilan qaytarishi mumkin; o‘quvchiga “Vazifangiz tekshirildi” xabari boradi.
+
+O‘quvchilar test ishlaganda natija o‘quvchiga ko‘rinadi; o‘qituvchi kurs bo‘yicha umumiy test natijalarini ko‘radi.
+
+O‘qituvchi kurs o‘quvchilari ro‘yxatini (kim, qachon qo‘shilgan) ko‘rib turadi.
+
+O‘quvchi panelida vazifa yuborish (matn/rasm/audio/fayl) ishlaydi; tekshirilganlari natijalar bo‘limida aks etadi va ogohlantirish keladi.

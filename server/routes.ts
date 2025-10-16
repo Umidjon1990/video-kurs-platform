@@ -7,6 +7,7 @@ import Stripe from "stripe";
 import multer from "multer";
 import { writeFile } from "fs/promises";
 import { join } from "path";
+import { ObjectStorageService } from "./objectStorage";
 import {
   insertCourseSchema,
   insertLessonSchema,
@@ -17,9 +18,41 @@ import {
   insertTestAttemptSchema,
   insertQuestionSchema,
   insertQuestionOptionSchema,
+  insertNotificationSchema,
 } from "@shared/schema";
+import { z } from "zod";
 
-const upload = multer({ storage: multer.memoryStorage() });
+// Grading schema
+const gradingSchema = z.object({
+  grade: z.number().min(0).max(100),
+  feedback: z.string(),
+  status: z.enum(['graded', 'needs_revision']),
+});
+
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  }
+});
+
+// Object Storage setup
+const objectStorage = new ObjectStorageService();
+
+// File upload utility
+async function uploadSubmissionFile(
+  file: Express.Multer.File,
+  folder: string
+): Promise<string> {
+  const timestamp = Date.now();
+  const uniqueFilename = `${folder}/${timestamp}_${file.originalname}`;
+  
+  return await objectStorage.uploadToFolder(
+    file.buffer,
+    uniqueFilename,
+    file.mimetype
+  );
+}
 
 // Stripe setup
 const stripe = process.env.STRIPE_SECRET_KEY 
@@ -1069,6 +1102,195 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(attempt);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
+    }
+  });
+
+  // ============ FILE DOWNLOAD ROUTES ============
+  
+  // Download submission files (authenticated)
+  app.get('/submissions/*', isAuthenticated, async (req, res) => {
+    try {
+      const filePath = req.params[0]; // Get everything after /submissions/
+      const file = await objectStorage.searchPublicObject(`submissions/${filePath}`);
+      
+      if (!file) {
+        return res.status(404).json({ message: "Fayl topilmadi" });
+      }
+      
+      await objectStorage.downloadObject(file, res);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ============ SUBMISSION ROUTES ============
+  
+  // O'qituvchi - Kurs bo'yicha vazifalar
+  app.get('/api/instructor/submissions', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const instructorId = req.user.claims.sub;
+      const submissions = await storage.getSubmissionsByInstructor(instructorId);
+      res.json(submissions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // O'qituvchi - Vazifani baholash
+  app.post('/api/instructor/submissions/:id/grade', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const instructorId = req.user.claims.sub;
+      const { id } = req.params;
+      
+      // Validate request body with Zod
+      const validatedData = gradingSchema.parse(req.body);
+      const { grade, feedback, status } = validatedData;
+      
+      // Authorization check: ensure submission belongs to instructor's course
+      const submissions = await storage.getSubmissionsByInstructor(instructorId);
+      const submissionData = submissions.find((s: any) => s.submission.id === id);
+      
+      if (!submissionData) {
+        return res.status(403).json({ message: "Sizga bu vazifani baholash huquqi yo'q" });
+      }
+      
+      const submission = await storage.updateSubmissionGrade(id, grade, feedback, status);
+      
+      // O'quvchiga ogohlantirish yuborish
+      const statusMessage = status === 'graded' ? 'Vazifangiz tekshirildi' : 'Vazifani qayta topshiring';
+      const notificationData = insertNotificationSchema.parse({
+        userId: submission.userId,
+        type: status === 'graded' ? 'assignment_graded' : 'revision_requested',
+        title: statusMessage,
+        message: feedback,
+        relatedId: submission.id,
+        isRead: false,
+      });
+      await storage.createNotification(notificationData);
+      
+      res.json(submission);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // O'quvchi - Vazifa yuborish
+  app.post('/api/student/submissions', isAuthenticated, upload.fields([
+    { name: 'images', maxCount: 5 },
+    { name: 'audios', maxCount: 3 },
+    { name: 'files', maxCount: 3 }
+  ]), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { assignmentId, content } = req.body;
+      
+      // Validate assignment exists
+      const assignment = await storage.getAssignment(assignmentId);
+      if (!assignment) {
+        return res.status(404).json({ message: "Vazifa topilmadi" });
+      }
+      
+      // Upload files to Google Cloud Storage
+      const imageUrls: string[] = [];
+      const audioUrls: string[] = [];
+      const fileUrls: string[] = [];
+      
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      
+      if (files.images) {
+        for (const file of files.images) {
+          const url = await uploadSubmissionFile(file, 'submissions/images');
+          imageUrls.push(url);
+        }
+      }
+      
+      if (files.audios) {
+        for (const file of files.audios) {
+          const url = await uploadSubmissionFile(file, 'submissions/audios');
+          audioUrls.push(url);
+        }
+      }
+      
+      if (files.files) {
+        for (const file of files.files) {
+          const url = await uploadSubmissionFile(file, 'submissions/files');
+          fileUrls.push(url);
+        }
+      }
+      
+      const submission = await storage.createSubmission({
+        assignmentId,
+        userId,
+        content,
+        imageUrls,
+        audioUrls,
+        fileUrls,
+        status: 'new_submitted',
+      });
+      
+      // O'qituvchiga ogohlantirish yuborish
+      const course = await storage.getCourse(assignment.courseId);
+      if (course) {
+        const notificationData = insertNotificationSchema.parse({
+          userId: course.instructorId,
+          type: 'assignment_submitted',
+          title: 'Yangi vazifa yuborildi',
+          message: `${assignment.title} uchun yangi vazifa yuborildi`,
+          relatedId: submission.id,
+          isRead: false,
+        });
+        await storage.createNotification(notificationData);
+      }
+      
+      res.json(submission);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // O'quvchi - O'z vazifalari
+  app.get('/api/student/submissions', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const submissions = await storage.getSubmissionsByUser(userId);
+      res.json(submissions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ============ NOTIFICATION ROUTES ============
+  
+  // Ogohlantirishlarni olish
+  app.get('/api/notifications', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const notifications = await storage.getNotificationsByUser(userId);
+      res.json(notifications);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // O'qilgan deb belgilash
+  app.post('/api/notifications/:id/read', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const notification = await storage.markNotificationAsRead(id);
+      res.json(notification);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // O'qilmagan soni
+  app.get('/api/notifications/unread-count', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const count = await storage.getUnreadCount(userId);
+      res.json({ count });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   });
 

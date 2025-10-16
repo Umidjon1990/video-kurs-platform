@@ -10,6 +10,7 @@ import {
   testAttempts,
   questions,
   questionOptions,
+  notifications,
   type User,
   type UpsertUser,
   type Course,
@@ -30,6 +31,8 @@ import {
   type InsertQuestion,
   type QuestionOption,
   type InsertQuestionOption,
+  type Notification,
+  type InsertNotification,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";
@@ -95,11 +98,20 @@ export interface IStorage {
   // Submission operations
   createSubmission(submission: InsertSubmission): Promise<Submission>;
   getSubmissionsByAssignment(assignmentId: string): Promise<Submission[]>;
+  getSubmissionsByInstructor(instructorId: string): Promise<any[]>;
+  getSubmissionsByUser(userId: string): Promise<Submission[]>;
+  updateSubmissionGrade(submissionId: string, grade: number, feedback: string, status: string): Promise<Submission>;
   
   // Test Attempts
   createTestAttempt(attempt: InsertTestAttempt): Promise<TestAttempt>;
   getTestAttemptsByTest(testId: string): Promise<TestAttempt[]>;
   getTestAttemptsByUser(userId: string): Promise<TestAttempt[]>;
+  
+  // Notification operations
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  getNotificationsByUser(userId: string): Promise<Notification[]>;
+  markNotificationAsRead(notificationId: string): Promise<Notification>;
+  getUnreadCount(userId: string): Promise<number>;
   
   // Statistics
   getStats(): Promise<{
@@ -447,6 +459,57 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(submissions.submittedAt));
   }
 
+  async getSubmissionsByInstructor(instructorId: string): Promise<any[]> {
+    const result = await db
+      .select({
+        submission: submissions,
+        assignment: assignments,
+        course: courses,
+        user: {
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+        },
+      })
+      .from(submissions)
+      .innerJoin(assignments, eq(submissions.assignmentId, assignments.id))
+      .innerJoin(courses, eq(assignments.courseId, courses.id))
+      .innerJoin(users, eq(submissions.userId, users.id))
+      .where(eq(courses.instructorId, instructorId))
+      .orderBy(desc(submissions.submittedAt));
+    
+    return result;
+  }
+
+  async getSubmissionsByUser(userId: string): Promise<Submission[]> {
+    return await db
+      .select()
+      .from(submissions)
+      .where(eq(submissions.userId, userId))
+      .orderBy(desc(submissions.submittedAt));
+  }
+
+  async updateSubmissionGrade(
+    submissionId: string,
+    grade: number,
+    feedback: string,
+    status: string
+  ): Promise<Submission> {
+    const [submission] = await db
+      .update(submissions)
+      .set({
+        grade,
+        feedback,
+        status,
+        gradedAt: new Date(),
+      })
+      .where(eq(submissions.id, submissionId))
+      .returning();
+    
+    return submission;
+  }
+
   // Test attempt operations
   async createTestAttempt(attemptData: InsertTestAttempt): Promise<TestAttempt> {
     const [attempt] = await db.insert(testAttempts).values(attemptData).returning();
@@ -467,6 +530,42 @@ export class DatabaseStorage implements IStorage {
       .from(testAttempts)
       .where(eq(testAttempts.userId, userId))
       .orderBy(desc(testAttempts.completedAt));
+  }
+
+  // Notification operations
+  async createNotification(notificationData: InsertNotification): Promise<Notification> {
+    const [notification] = await db.insert(notifications).values(notificationData).returning();
+    return notification;
+  }
+
+  async getNotificationsByUser(userId: string): Promise<Notification[]> {
+    return await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt));
+  }
+
+  async markNotificationAsRead(notificationId: string): Promise<Notification> {
+    const [notification] = await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(eq(notifications.id, notificationId))
+      .returning();
+    
+    return notification;
+  }
+
+  async getUnreadCount(userId: string): Promise<number> {
+    const result = await db
+      .select()
+      .from(notifications)
+      .where(and(
+        eq(notifications.userId, userId),
+        eq(notifications.isRead, false)
+      ));
+    
+    return result.length;
   }
 
   // Statistics

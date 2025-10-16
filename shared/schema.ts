@@ -42,6 +42,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   enrollments: many(enrollments),
   submissions: many(submissions),
   testAttempts: many(testAttempts),
+  notifications: many(notifications),
 }));
 
 // Courses table
@@ -233,11 +234,15 @@ export const submissions = pgTable("submissions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   assignmentId: varchar("assignment_id").notNull().references(() => assignments.id, { onDelete: 'cascade' }),
   userId: varchar("user_id").notNull().references(() => users.id),
-  fileUrl: text("file_url"),
   content: text("content"),
+  imageUrls: text("image_urls").array(),
+  audioUrls: text("audio_urls").array(),
+  fileUrls: text("file_urls").array(),
+  status: varchar("status", { length: 20 }).notNull().default('new_submitted'), // new_submitted, graded, needs_revision
   grade: integer("grade"), // 0-100
   feedback: text("feedback"),
   submittedAt: timestamp("submitted_at").defaultNow(),
+  gradedAt: timestamp("graded_at"),
 });
 
 export const submissionsRelations = relations(submissions, ({ one }) => ({
@@ -247,6 +252,25 @@ export const submissionsRelations = relations(submissions, ({ one }) => ({
   }),
   user: one(users, {
     fields: [submissions.userId],
+    references: [users.id],
+  }),
+}));
+
+// Notifications table
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  type: varchar("type", { length: 50 }).notNull(), // assignment_submitted, assignment_graded, test_completed, revision_requested
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message"),
+  relatedId: varchar("related_id"), // ID of related entity (submission, test attempt, etc.)
+  isRead: boolean("is_read").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
     references: [users.id],
   }),
 }));
@@ -305,6 +329,11 @@ export const insertTestAttemptSchema = createInsertSchema(testAttempts).omit({
   completedAt: true,
 });
 
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+});
+
 // TypeScript types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -335,3 +364,6 @@ export type Enrollment = typeof enrollments.$inferSelect;
 
 export type InsertSubmission = z.infer<typeof insertSubmissionSchema>;
 export type Submission = typeof submissions.$inferSelect;
+
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;

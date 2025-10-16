@@ -139,6 +139,27 @@ export class ObjectStorageService {
 
     return `/receipts/${fileName}`;
   }
+
+  // Upload a file to a custom folder
+  async uploadToFolder(buffer: Buffer, filePath: string, contentType: string): Promise<string> {
+    const publicPaths = this.getPublicObjectSearchPaths();
+    const publicPath = publicPaths[0]; // Use first public path
+    const fullPath = `${publicPath}/${filePath}`;
+    
+    const { bucketName, objectName } = parseObjectPath(fullPath);
+    const bucket = objectStorageClient.bucket(bucketName);
+    const file = bucket.file(objectName);
+
+    // Upload the file
+    await file.save(buffer, {
+      contentType,
+      metadata: {
+        cacheControl: 'public, max-age=3600',
+      },
+    });
+
+    return `/${filePath}`;
+  }
 }
 
 function parseObjectPath(path: string): {
