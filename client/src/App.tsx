@@ -10,6 +10,7 @@ import AdminDashboard from "@/pages/AdminDashboard";
 import AdminPayments from "@/pages/AdminPayments";
 import InstructorDashboard from "@/pages/InstructorDashboard";
 import StudentCourses from "@/pages/StudentCourses";
+import StudentResults from "@/pages/StudentResults";
 import LearningPage from "@/pages/LearningPage";
 import Checkout from "@/pages/Checkout";
 import PaymentSuccess from "@/pages/PaymentSuccess";
@@ -49,6 +50,7 @@ function Router() {
           {user?.role === 'student' && (
             <>
               <Route path="/" component={StudentCourses} />
+              <Route path="/results" component={StudentResults} />
               <Route path="/checkout/:courseId" component={Checkout} />
               <Route path="/learn/:courseId" component={LearningPage} />
               <Route path="/payment-success" component={PaymentSuccess} />

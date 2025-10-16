@@ -22,7 +22,8 @@ export default function LearningPage() {
   const [, setLocation] = useLocation();
   const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
   const [submissionDialog, setSubmissionDialog] = useState<{ open: boolean; assignmentId: string | null }>({ open: false, assignmentId: null });
-  const [submissionForm, setSubmissionForm] = useState({ content: "", fileUrl: "" });
+  const [submissionForm, setSubmissionForm] = useState({ content: "" });
+  const [submissionFiles, setSubmissionFiles] = useState<{ images: File[], audio: File[], files: File[] }>({ images: [], audio: [], files: [] });
   const [testDialog, setTestDialog] = useState<{ open: boolean; testId: string | null }>({ open: false, testId: null });
   const [testAnswers, setTestAnswers] = useState<Record<string, any>>({});
 
@@ -114,10 +115,27 @@ export default function LearningPage() {
   const submitAssignmentMutation = useMutation({
     mutationFn: async () => {
       if (!submissionDialog.assignmentId) return;
-      await apiRequest("POST", `/api/assignments/${submissionDialog.assignmentId}/submit`, {
-        content: submissionForm.content || null,
-        fileUrl: submissionForm.fileUrl || null,
+      
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('content', submissionForm.content || '');
+      
+      // Add files
+      submissionFiles.images.forEach(file => formData.append('images', file));
+      submissionFiles.audio.forEach(file => formData.append('audio', file));
+      submissionFiles.files.forEach(file => formData.append('files', file));
+      
+      // Upload using fetch directly (not apiRequest since it's FormData)
+      const response = await fetch(`/api/student/assignments/${submissionDialog.assignmentId}/submit`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
       });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Yuborishda xatolik');
+      }
     },
     onSuccess: () => {
       toast({
@@ -125,7 +143,8 @@ export default function LearningPage() {
         description: "Natijani tez orada bilasiz",
       });
       setSubmissionDialog({ open: false, assignmentId: null });
-      setSubmissionForm({ content: "", fileUrl: "" });
+      setSubmissionForm({ content: "" });
+      setSubmissionFiles({ images: [], audio: [], files: [] });
     },
     onError: (error: Error) => {
       toast({ title: "Xatolik", description: error.message, variant: "destructive" });
@@ -575,14 +594,15 @@ export default function LearningPage() {
       <Dialog open={submissionDialog.open} onOpenChange={(open) => {
         if (!open) {
           setSubmissionDialog({ open: false, assignmentId: null });
-          setSubmissionForm({ content: "", fileUrl: "" });
+          setSubmissionForm({ content: "" });
+          setSubmissionFiles({ images: [], audio: [], files: [] });
         }
       }}>
-        <DialogContent data-testid="dialog-submit-assignment">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" data-testid="dialog-submit-assignment">
           <DialogHeader>
             <DialogTitle>Vazifani Topshirish</DialogTitle>
             <DialogDescription>
-              Vazifa javobingizni kiriting
+              Javobingizni kiriting va kerak bo'lsa fayllar yuklang (jami 5MB gacha)
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -597,28 +617,79 @@ export default function LearningPage() {
                 rows={5}
               />
             </div>
+            
             <div className="space-y-2">
-              <Label htmlFor="submission-file">Fayl URL (ixtiyoriy)</Label>
+              <Label htmlFor="submission-images">Rasmlar (ixtiyoriy)</Label>
               <Input
-                id="submission-file"
-                value={submissionForm.fileUrl}
-                onChange={(e) => setSubmissionForm({ ...submissionForm, fileUrl: e.target.value })}
-                placeholder="https://..."
-                data-testid="input-submission-file"
+                id="submission-images"
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || []);
+                  setSubmissionFiles({ ...submissionFiles, images: files });
+                }}
+                data-testid="input-submission-images"
               />
+              {submissionFiles.images.length > 0 && (
+                <p className="text-sm text-muted-foreground">{submissionFiles.images.length} ta rasm tanlandi</p>
+              )}
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="submission-audio">Audio fayllar (ixtiyoriy)</Label>
+              <Input
+                id="submission-audio"
+                type="file"
+                accept="audio/*"
+                multiple
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || []);
+                  setSubmissionFiles({ ...submissionFiles, audio: files });
+                }}
+                data-testid="input-submission-audio"
+              />
+              {submissionFiles.audio.length > 0 && (
+                <p className="text-sm text-muted-foreground">{submissionFiles.audio.length} ta audio fayl tanlandi</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="submission-files">Boshqa fayllar (ixtiyoriy)</Label>
+              <Input
+                id="submission-files"
+                type="file"
+                multiple
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || []);
+                  setSubmissionFiles({ ...submissionFiles, files });
+                }}
+                data-testid="input-submission-files"
+              />
+              {submissionFiles.files.length > 0 && (
+                <p className="text-sm text-muted-foreground">{submissionFiles.files.length} ta fayl tanlandi</p>
+              )}
+            </div>
+            
+            <p className="text-xs text-muted-foreground">
+              ⚠️ Barcha fayllar jami hajmi 5MB dan oshmasligi kerak
+            </p>
           </div>
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setSubmissionDialog({ open: false, assignmentId: null })}
+              onClick={() => {
+                setSubmissionDialog({ open: false, assignmentId: null });
+                setSubmissionForm({ content: "" });
+                setSubmissionFiles({ images: [], audio: [], files: [] });
+              }}
               data-testid="button-cancel-submission"
             >
               Bekor Qilish
             </Button>
             <Button
               onClick={() => submitAssignmentMutation.mutate()}
-              disabled={!submissionForm.content && !submissionForm.fileUrl || submitAssignmentMutation.isPending}
+              disabled={!submissionForm.content && submissionFiles.images.length === 0 && submissionFiles.audio.length === 0 && submissionFiles.files.length === 0 || submitAssignmentMutation.isPending}
               data-testid="button-confirm-submission"
             >
               {submitAssignmentMutation.isPending ? "Topshirilmoqda..." : "Topshirish"}

@@ -63,7 +63,14 @@ export default function StudentCourses() {
       <div className="border-b">
         <div className="flex h-16 items-center px-4 gap-4">
           <h1 className="text-2xl font-bold" data-testid="text-student-title">O'quv Platformasi</h1>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            <Button
+              variant="default"
+              onClick={() => setLocation("/results")}
+              data-testid="button-results"
+            >
+              Natijalarim
+            </Button>
             <Button
               variant="outline"
               onClick={() => window.location.href = "/api/logout"}

@@ -136,6 +136,16 @@ export default function InstructorDashboard() {
     enabled: !!selectedCourse,
   });
 
+  const { data: enrollments } = useQuery<any[]>({
+    queryKey: ["/api/courses", selectedCourse?.id, "enrollments"],
+    enabled: !!selectedCourse,
+  });
+
+  const { data: testAttempts } = useQuery<any[]>({
+    queryKey: ["/api/instructor/courses", selectedCourse?.id, "test-attempts"],
+    enabled: !!selectedCourse,
+  });
+
   const createCourseMutation = useMutation({
     mutationFn: async () => {
       await apiRequest("POST", "/api/instructor/courses", {
@@ -565,7 +575,7 @@ export default function InstructorDashboard() {
             </DialogHeader>
             
             <Tabs defaultValue="lessons" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="lessons" data-testid="tab-lessons">
                   <BookOpen className="w-4 h-4 mr-2" />
                   Darslar
@@ -581,6 +591,10 @@ export default function InstructorDashboard() {
                 <TabsTrigger value="submissions" data-testid="tab-submissions">
                   <ClipboardCheck className="w-4 h-4 mr-2" />
                   Yuborilganlar
+                </TabsTrigger>
+                <TabsTrigger value="students" data-testid="tab-students">
+                  <ClipboardCheck className="w-4 h-4 mr-2" />
+                  O'quvchilar
                 </TabsTrigger>
               </TabsList>
 
@@ -887,6 +901,76 @@ export default function InstructorDashboard() {
                           </Button>
                         </div>
                       ))}
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="students" className="space-y-4">
+                <div className="max-h-96 overflow-y-auto space-y-4">
+                  {!enrollments || enrollments.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">Hali o'quvchilar yo'q</p>
+                  ) : (
+                    <div className="space-y-4">
+                      <div>
+                        <h3 className="font-semibold mb-2">Yozilgan O'quvchilar</h3>
+                        <div className="space-y-2">
+                          {enrollments.map((enrollment: any) => (
+                            <div
+                              key={enrollment.id}
+                              className="flex items-center justify-between p-3 border rounded-lg"
+                              data-testid={`enrollment-${enrollment.id}`}
+                            >
+                              <div>
+                                <p className="font-medium">{enrollment.user?.name || 'Noma\'lum'}</p>
+                                <p className="text-sm text-muted-foreground">{enrollment.user?.email}</p>
+                              </div>
+                              <span className={`text-xs px-2 py-1 rounded ${
+                                enrollment.paymentStatus === 'confirmed' || enrollment.paymentStatus === 'approved'
+                                  ? 'bg-green-100 text-green-800'
+                                  : enrollment.paymentStatus === 'pending'
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {enrollment.paymentStatus === 'confirmed' || enrollment.paymentStatus === 'approved' ? 'To\'langan' :
+                                 enrollment.paymentStatus === 'pending' ? 'Kutilmoqda' : 'Rad etilgan'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {testAttempts && testAttempts.length > 0 && (
+                        <div>
+                          <h3 className="font-semibold mb-2">Test Natijalari</h3>
+                          <div className="space-y-2">
+                            {testAttempts.map((attempt: any) => (
+                              <div
+                                key={attempt.id}
+                                className="flex items-center justify-between p-3 border rounded-lg"
+                                data-testid={`attempt-${attempt.id}`}
+                              >
+                                <div className="flex-1">
+                                  <p className="font-medium">{attempt.user?.name || 'Noma\'lum'}</p>
+                                  <p className="text-sm text-muted-foreground">{attempt.test?.title}</p>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                  <div className="text-right">
+                                    <p className="text-sm font-medium">
+                                      {attempt.score} / {attempt.totalPoints}
+                                    </p>
+                                    <span className={`text-xs px-2 py-1 rounded ${
+                                      attempt.isPassed ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                    }`}>
+                                      {attempt.isPassed ? 'O\'tdi' : 'O\'tmadi'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
