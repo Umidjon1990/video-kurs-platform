@@ -981,7 +981,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const attempt = await storage.createTestAttempt(attemptData);
-      res.json({ ...attempt, percentage });
+      res.json({ 
+        ...attempt, 
+        score: totalScore,
+        percentage,
+        isPassed 
+      });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
