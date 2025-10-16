@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Bell } from "lucide-react";
+import { Bell, ChevronDown } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -9,6 +9,11 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { formatDistanceToNow } from "date-fns";
 import { uz } from "date-fns/locale";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -20,6 +25,7 @@ interface NotificationBellProps {
 
 export function NotificationBell({ onNotificationAction }: NotificationBellProps = {}) {
   const [open, setOpen] = useState(false);
+  const [isArchiveOpen, setIsArchiveOpen] = useState(false);
 
   const { data: notifications = [] } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
@@ -138,16 +144,21 @@ export function NotificationBell({ onNotificationAction }: NotificationBellProps
               </div>
               
               {archivedNotifications.length > 0 && (
-                <>
-                  <div className="px-4 py-2 bg-muted/30 border-t border-b">
-                    <p className="text-xs font-semibold text-muted-foreground">
-                      Arxiv ({archivedNotifications.length})
-                    </p>
-                  </div>
-                  <div className="divide-y">
-                    {archivedNotifications.map(renderNotification)}
-                  </div>
-                </>
+                <Collapsible open={isArchiveOpen} onOpenChange={setIsArchiveOpen}>
+                  <CollapsibleTrigger className="w-full" data-testid="button-toggle-archive">
+                    <div className="px-4 py-2 bg-muted/30 border-t border-b flex items-center justify-between hover-elevate">
+                      <p className="text-xs font-semibold text-muted-foreground">
+                        Arxiv ({archivedNotifications.length})
+                      </p>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${isArchiveOpen ? 'rotate-180' : ''}`} />
+                    </div>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="divide-y">
+                      {archivedNotifications.map(renderNotification)}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
               )}
             </>
           )}
