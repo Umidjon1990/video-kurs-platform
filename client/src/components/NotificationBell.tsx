@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Bell, ChevronDown } from "lucide-react";
+import { Bell, Trash2 } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -9,15 +9,11 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { formatDistanceToNow } from "date-fns";
 import { uz } from "date-fns/locale";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Notification } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 
 interface NotificationBellProps {
   onNotificationAction?: (notification: Notification) => void;
@@ -25,7 +21,7 @@ interface NotificationBellProps {
 
 export function NotificationBell({ onNotificationAction }: NotificationBellProps = {}) {
   const [open, setOpen] = useState(false);
-  const [isArchiveOpen, setIsArchiveOpen] = useState(false);
+  const { toast } = useToast();
 
   const { data: notifications = [] } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
@@ -47,10 +43,19 @@ export function NotificationBell({ onNotificationAction }: NotificationBellProps
     },
   });
 
+  const clearReadMutation = useMutation({
+    mutationFn: () => apiRequest("DELETE", "/api/notifications/clear-read"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      toast({
+        title: "Muvaffaqiyatli",
+        description: "O'qilgan ogohlantirishlar tozalandi",
+      });
+    },
+  });
+
   const unreadCount = notifications.filter((n) => !n.isRead).length;
-  
-  const recentNotifications = notifications.slice(0, 5);
-  const archivedNotifications = notifications.slice(5);
+  const readCount = notifications.filter((n) => n.isRead).length;
 
   const handleNotificationClick = (notification: Notification) => {
     if (!notification.isRead) {
@@ -118,16 +123,29 @@ export function NotificationBell({ onNotificationAction }: NotificationBellProps
       <PopoverContent className="w-80 p-0" align="end">
         <div className="flex items-center justify-between p-4 border-b">
           <h3 className="font-semibold">Ogohlantirishlar</h3>
-          {unreadCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => markAllAsReadMutation.mutate()}
-              data-testid="button-mark-all-read"
-            >
-              Barchasini o'qilgan qilish
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => markAllAsReadMutation.mutate()}
+                data-testid="button-mark-all-read"
+              >
+                Barchasini o'qilgan qilish
+              </Button>
+            )}
+            {readCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => clearReadMutation.mutate()}
+                data-testid="button-clear-read"
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Tozalash
+              </Button>
+            )}
+          </div>
         </div>
         <ScrollArea className="h-[400px]">
           {notifications.length === 0 ? (
@@ -138,29 +156,9 @@ export function NotificationBell({ onNotificationAction }: NotificationBellProps
               Ogohlantirishlar yo'q
             </div>
           ) : (
-            <>
-              <div className="divide-y">
-                {recentNotifications.map(renderNotification)}
-              </div>
-              
-              {archivedNotifications.length > 0 && (
-                <Collapsible open={isArchiveOpen} onOpenChange={setIsArchiveOpen}>
-                  <CollapsibleTrigger className="w-full" data-testid="button-toggle-archive">
-                    <div className="px-4 py-2 bg-muted/30 border-t border-b flex items-center justify-between hover-elevate">
-                      <p className="text-xs font-semibold text-muted-foreground">
-                        Arxiv ({archivedNotifications.length})
-                      </p>
-                      <ChevronDown className={`h-4 w-4 transition-transform ${isArchiveOpen ? 'rotate-180' : ''}`} />
-                    </div>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <div className="divide-y">
-                      {archivedNotifications.map(renderNotification)}
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
-              )}
-            </>
+            <div className="divide-y">
+              {notifications.map(renderNotification)}
+            </div>
           )}
         </ScrollArea>
       </PopoverContent>
