@@ -39,6 +39,7 @@ export function getSession() {
     cookie: {
       httpOnly: true,
       secure: true,
+      sameSite: 'none', // Required for cross-site auth to work in modern browsers
       maxAge: sessionTtl,
     },
   });
