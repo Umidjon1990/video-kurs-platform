@@ -94,6 +94,7 @@ export interface IStorage {
   // Enrollment operations
   createEnrollment(enrollment: InsertEnrollment): Promise<Enrollment>;
   getEnrollmentsByUser(userId: string): Promise<Enrollment[]>;
+  getEnrollmentsByCourse(courseId: string): Promise<Enrollment[]>;
   getEnrollmentByCourseAndUser(courseId: string, userId: string): Promise<Enrollment | null>;
   getEnrolledCourses(userId: string): Promise<Course[]>;
   getPendingPayments(): Promise<any[]>;
@@ -409,6 +410,17 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(enrollments)
       .where(eq(enrollments.userId, userId))
+      .orderBy(desc(enrollments.enrolledAt));
+  }
+
+  async getEnrollmentsByCourse(courseId: string): Promise<Enrollment[]> {
+    return await db
+      .select()
+      .from(enrollments)
+      .where(and(
+        eq(enrollments.courseId, courseId),
+        eq(enrollments.paymentStatus, 'approved')
+      ))
       .orderBy(desc(enrollments.enrolledAt));
   }
 

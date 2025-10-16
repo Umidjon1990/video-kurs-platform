@@ -19,6 +19,7 @@ import {
   insertQuestionSchema,
   insertQuestionOptionSchema,
   insertNotificationSchema,
+  insertAnnouncementSchema,
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -1296,6 +1297,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       await storage.deleteSubmission(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // O'qituvchi - E'lon yuborish (Announcement)
+  app.post('/api/instructor/announcements', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const instructorId = req.user.claims.sub;
+      
+      const announcementData = insertAnnouncementSchema.parse({
+        ...req.body,
+        instructorId,
+      });
+      
+      // Create announcement
+      const announcement = await storage.createAnnouncement(announcementData);
+      
+      // Send notifications based on targetType
+      const { targetType, targetId, title, message, priority } = announcementData;
+      let recipients: string[] = [];
+      
+      if (targetType === 'individual' && targetId) {
+        // Yakka tartibda - bitta o'quvchiga
+        recipients = [targetId];
+      } else if (targetType === 'course' && targetId) {
+        // Guruhga - kurs o'quvchilariga
+        const courseEnrollments = await storage.getEnrollmentsByCourse(targetId);
+        recipients = courseEnrollments.map(e => e.userId);
+      } else if (targetType === 'all') {
+        // Barchaga - barcha o'quvchilarga
+        const students = await storage.getUsersByRole('student');
+        recipients = students.map(s => s.id);
+      }
+      
+      // Create notifications for all recipients
+      const notificationPromises = recipients.map(userId => {
+        const notificationData = insertNotificationSchema.parse({
+          userId,
+          type: 'announcement',
+          title: `${priority === 'urgent' ? '🔴 MUHIM: ' : '📢 '}${title}`,
+          message,
+          relatedId: announcement.id,
+          isRead: false,
+        });
+        return storage.createNotification(notificationData);
+      });
+      
+      await Promise.all(notificationPromises);
+      
+      res.json({ 
+        ...announcement, 
+        recipientCount: recipients.length 
+      });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // O'qituvchi - E'lonlarni olish
+  app.get('/api/instructor/announcements', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const instructorId = req.user.claims.sub;
+      const announcements = await storage.getAnnouncementsByInstructor(instructorId);
+      res.json(announcements);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // O'qituvchi - E'lonni o'chirish
+  app.delete('/api/instructor/announcements/:id', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const instructorId = req.user.claims.sub;
+      const { id } = req.params;
+      
+      // Authorization check
+      const announcement = await storage.getAnnouncement(id);
+      if (!announcement) {
+        return res.status(404).json({ message: "E'lon topilmadi" });
+      }
+      if (announcement.instructorId !== instructorId) {
+        return res.status(403).json({ message: "Sizga bu e'lonni o'chirish huquqi yo'q" });
+      }
+      
+      await storage.deleteAnnouncement(id);
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
