@@ -360,14 +360,19 @@ export default function InstructorDashboard() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="video-url">Video URL</Label>
-              <Input
+              <Label htmlFor="video-url">Video URL yoki Embed Kod</Label>
+              <textarea
                 id="video-url"
                 value={lessonForm.videoUrl}
                 onChange={(e) => setLessonForm({ ...lessonForm, videoUrl: e.target.value })}
-                placeholder="https://youtube.com/watch?v=..."
+                placeholder='URL: https://kinescope.io/watch/123
+yoki Embed kod: <iframe src="..." ... ></iframe>'
                 data-testid="input-lesson-video"
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               />
+              <p className="text-xs text-muted-foreground">
+                Kinescope yoki YouTube'dan embed kodni yoki to'g'ridan-to'g'ri linkni kiriting
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="duration">Davomiyligi (daqiqa)</Label>
