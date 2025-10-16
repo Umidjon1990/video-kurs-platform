@@ -5,6 +5,7 @@ import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { NotificationBell } from "@/components/NotificationBell";
 import { FileText, ClipboardCheck, Home } from "lucide-react";
 
 export default function StudentResults() {
@@ -43,7 +44,8 @@ export default function StudentResults() {
             <Home className="w-5 h-5" />
           </Button>
           <h1 className="text-2xl font-bold" data-testid="text-results-title">Mening Natijalarim</h1>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            <NotificationBell />
             <Button
               variant="outline"
               onClick={() => window.location.href = "/api/logout"}

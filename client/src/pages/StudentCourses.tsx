@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CourseCard } from "@/components/CourseCard";
+import { NotificationBell } from "@/components/NotificationBell";
 import { useLocation } from "wouter";
 import type { Course } from "@shared/schema";
 
@@ -71,6 +72,7 @@ export default function StudentCourses() {
             >
               Natijalarim
             </Button>
+            <NotificationBell />
             <Button
               variant="outline"
               onClick={() => window.location.href = "/api/logout"}

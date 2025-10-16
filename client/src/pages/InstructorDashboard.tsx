@@ -27,6 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { NotificationBell } from "@/components/NotificationBell";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import type { Course, Lesson, Assignment, Test } from "@shared/schema";
 
@@ -478,7 +479,8 @@ export default function InstructorDashboard() {
       <div className="border-b">
         <div className="flex h-16 items-center px-4 gap-4">
           <h1 className="text-2xl font-bold" data-testid="text-instructor-title">O'qituvchi Paneli</h1>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            <NotificationBell />
             <Button
               variant="outline"
               onClick={() => window.location.href = "/api/logout"}
