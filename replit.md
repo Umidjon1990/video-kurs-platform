@@ -29,6 +29,29 @@ A comprehensive Learning Management System (LMS) platform for video-based course
     - ✅ Sanitized student endpoints (correctAnswer, isCorrect, correctPairs removed)
     - ✅ Server-side grading with full instructor data
     - ✅ Cache invalidation for real-time results updates
+- ✅ **Dual Pricing System with Discount Display - COMPLETE**
+  - ✅ Added originalPrice and discountedPrice fields to courses schema
+  - ✅ Instructor course creation UI: modern 2-column grid for price inputs
+  - ✅ Real-time discount percentage calculation and display
+  - ✅ Student UI: prominent discounted price with green discount badge
+  - ✅ Original price shown with strikethrough styling
+  - ✅ Backward compatible with courses having only regular price
+- ✅ **Module-Based Course Organization - COMPLETE**
+  - ✅ Modules schema: courseId, title, order, description
+  - ✅ Lessons linked to modules via moduleId field
+  - ✅ Instructor "Modullar" tab in course management (4-column grid)
+  - ✅ Module creation dialog with topics multi-line input
+  - ✅ Backend auto-generates lessons from topics list
+  - ✅ Module list displays lesson count per module
+- ✅ **Demo/Locked Lesson System - COMPLETE**
+  - ✅ Added isDemo boolean field to lessons schema
+  - ✅ First lesson of each module auto-marked as demo (free)
+  - ✅ Student UI: Lock icon on locked lessons, PlayCircle on accessible
+  - ✅ Demo badge (green) displayed on demo lessons
+  - ✅ Locked lessons are non-clickable with reduced opacity
+  - ✅ Access control: enrollment check (paymentStatus === 'confirmed')
+  - ✅ Locked lesson content shows paywall message with "Buy course" prompt
+  - ✅ Full course access granted after payment approval
 
 ## User Preferences
 
@@ -85,8 +108,9 @@ Preferred communication style: Simple, everyday language (Uzbek interface).
 
 **Data Models**
 - **Users**: Replit-authenticated users with role assignment (admin/instructor/student)
-- **Courses**: Instructor-created courses with pricing, thumbnails, and publication status
-- **Lessons**: Video-based lesson content organized within courses
+- **Courses**: Instructor-created courses with dual pricing (originalPrice, discountedPrice), thumbnails, and publication status
+- **Modules**: Course organization units with title, order, and description
+- **Lessons**: Video-based lesson content organized within modules, with isDemo flag for access control
 - **Assignments**: Submission-based assessments with grading and optional lesson linkage
 - **Tests**: Enhanced assessment system with multiple question types
 - **Questions**: Individual test questions with type-specific configuration (multiple choice, true/false, fill blanks, matching, short answer, essay)
@@ -98,7 +122,8 @@ Preferred communication style: Simple, everyday language (Uzbek interface).
 
 **Relational Design**
 - One-to-many relationships: Users → Courses (as instructors)
-- One-to-many: Courses → Lessons, Assignments, Tests
+- One-to-many: Courses → Modules → Lessons
+- One-to-many: Courses → Assignments, Tests
 - One-to-many: Tests → Questions → Question Options
 - Many-to-many: Users ↔ Courses (via Enrollments)
 - Tracking relationships: Users → Submissions, TestAttempts
@@ -198,13 +223,14 @@ Preferred communication style: Simple, everyday language (Uzbek interface).
 **PostgreSQL Tables**
 - sessions (Replit Auth session storage)
 - users (role: admin | instructor | student, replitId, email, name)
-- courses (instructorId, title, description, price, status, thumbnailUrl)
-- lessons (courseId, title, videoUrl, duration, order)
+- courses (instructorId, title, description, price, originalPrice, discountedPrice, status, thumbnailUrl)
+- modules (courseId, title, order, description)
+- lessons (courseId, moduleId [optional], title, videoUrl, duration, order, isDemo)
 - assignments (courseId, lessonId [optional], title, description, dueDate, maxScore)
 - tests (courseId, lessonId [optional], title, description, passingScore, isDraft, randomOrder)
 - questions (testId, type, questionText, points, order, mediaUrl, correctAnswer, config)
 - question_options (questionId, optionText, isCorrect, order)
-- test_attempts (testId, userId, answers, score, isPassed, completedAt, gradedAt)
+- test_attempts (testId, userId, answers, score, totalPoints, isPassed, completedAt, gradedAt)
 - enrollments (userId, courseId, paymentStatus, enrolledAt)
 - submissions (assignmentId, userId, content, fileUrl, score, submittedAt)
 
