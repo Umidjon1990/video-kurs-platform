@@ -68,6 +68,15 @@ export default function InstructorDashboard() {
     lessonId: "",
   });
 
+  const [isAddQuestionOpen, setIsAddQuestionOpen] = useState(false);
+  const [selectedTest, setSelectedTest] = useState<Test | null>(null);
+  const [questionForm, setQuestionForm] = useState({
+    type: "multiple_choice",
+    questionText: "",
+    points: "1",
+    correctAnswer: "",
+  });
+
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       toast({
@@ -560,6 +569,24 @@ export default function InstructorDashboard() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedTest(test);
+                              setQuestionForm({
+                                type: "multiple_choice",
+                                questionText: "",
+                                points: "1",
+                                correctAnswer: "",
+                              });
+                              setIsAddQuestionOpen(true);
+                            }}
+                            data-testid={`button-add-question-${test.id}`}
+                          >
+                            <Plus className="w-4 h-4 mr-1" />
+                            Savol
+                          </Button>
+                          <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => {
@@ -922,6 +949,106 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
               {addTestMutation.isPending 
                 ? (editingTest ? "Yangilanmoqda..." : "Qo'shilmoqda...") 
                 : (editingTest ? "Yangilash" : "Qo'shish")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Question Dialog */}
+      <Dialog open={isAddQuestionOpen} onOpenChange={setIsAddQuestionOpen}>
+        <DialogContent data-testid="dialog-add-question">
+          <DialogHeader>
+            <DialogTitle>Savol Qo'shish</DialogTitle>
+            <DialogDescription>
+              Test: {selectedTest?.title}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="question-type">Savol Turi</Label>
+              <Select 
+                value={questionForm.type} 
+                onValueChange={(value) => setQuestionForm({ ...questionForm, type: value })}
+              >
+                <SelectTrigger data-testid="select-question-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="multiple_choice">Ko'p Tanlovli (Multiple Choice)</SelectItem>
+                  <SelectItem value="true_false">To'g'ri/Noto'g'ri (True/False)</SelectItem>
+                  <SelectItem value="fill_blanks">Bo'sh Joylarni To'ldirish (Fill in Blanks)</SelectItem>
+                  <SelectItem value="matching">Moslashtirish (Matching)</SelectItem>
+                  <SelectItem value="short_answer">Qisqa Javob (Short Answer)</SelectItem>
+                  <SelectItem value="essay">Insho/Esse (Essay)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="question-text">Savol Matni</Label>
+              <Textarea
+                id="question-text"
+                value={questionForm.questionText}
+                onChange={(e) => setQuestionForm({ ...questionForm, questionText: e.target.value })}
+                placeholder="Savolingizni kiriting..."
+                data-testid="input-question-text"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="question-points">Ballar</Label>
+              <Input
+                id="question-points"
+                type="number"
+                value={questionForm.points}
+                onChange={(e) => setQuestionForm({ ...questionForm, points: e.target.value })}
+                placeholder="1"
+                data-testid="input-question-points"
+              />
+            </div>
+
+            {(questionForm.type === "true_false" || questionForm.type === "short_answer" || questionForm.type === "fill_blanks") && (
+              <div className="space-y-2">
+                <Label htmlFor="correct-answer">To'g'ri Javob</Label>
+                <Input
+                  id="correct-answer"
+                  value={questionForm.correctAnswer}
+                  onChange={(e) => setQuestionForm({ ...questionForm, correctAnswer: e.target.value })}
+                  placeholder={questionForm.type === "true_false" ? "true yoki false" : "To'g'ri javobni kiriting"}
+                  data-testid="input-correct-answer"
+                />
+              </div>
+            )}
+
+            <div className="p-3 bg-muted rounded-lg text-sm">
+              <p className="font-semibold mb-1">Eslatma:</p>
+              <p className="text-muted-foreground">
+                {questionForm.type === "multiple_choice" && "Variantlar keyinroq alohida qo'shiladi"}
+                {questionForm.type === "true_false" && "To'g'ri javobda 'true' yoki 'false' kiriting"}
+                {questionForm.type === "fill_blanks" && "Bo'sh joylar uchun [___] belgisini ishlating"}
+                {questionForm.type === "matching" && "Moslashtirish uchun elementlar keyinroq qo'shiladi"}
+                {questionForm.type === "short_answer" && "Qisqa javobda kalit so'zlarni kiriting"}
+                {questionForm.type === "essay" && "Insho uchun qo'lda baholash kerak bo'ladi"}
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsAddQuestionOpen(false)}
+              data-testid="button-cancel-add-question"
+            >
+              Bekor Qilish
+            </Button>
+            <Button
+              onClick={() => {
+                toast({ title: "Savol qo'shish funksiyasi", description: "Tez orada qo'shiladi" });
+                setIsAddQuestionOpen(false);
+              }}
+              disabled={!questionForm.questionText}
+              data-testid="button-confirm-add-question"
+            >
+              Qo'shish
             </Button>
           </DialogFooter>
         </DialogContent>
