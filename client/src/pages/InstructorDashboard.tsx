@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -49,6 +50,7 @@ export default function InstructorDashboard() {
     title: "",
     videoUrl: "",
     duration: "",
+    isDemo: false,
   });
 
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
@@ -179,7 +181,7 @@ export default function InstructorDashboard() {
         description: editingLesson ? "Dars yangilandi" : "Dars qo'shildi" 
       });
       setIsAddLessonOpen(false);
-      setLessonForm({ title: "", videoUrl: "", duration: "" });
+      setLessonForm({ title: "", videoUrl: "", duration: "", isDemo: false });
       setEditingLesson(null);
     },
     onError: (error: Error) => {
@@ -569,6 +571,7 @@ export default function InstructorDashboard() {
                                     title: lesson.title,
                                     videoUrl: lesson.videoUrl,
                                     duration: lesson.duration?.toString() || "",
+                                    isDemo: lesson.isDemo || false,
                                   });
                                   setIsAddLessonOpen(true);
                                 }}
@@ -892,7 +895,7 @@ export default function InstructorDashboard() {
         setIsAddLessonOpen(open);
         if (!open) {
           setEditingLesson(null);
-          setLessonForm({ title: "", videoUrl: "", duration: "" });
+          setLessonForm({ title: "", videoUrl: "", duration: "", isDemo: false });
         }
       }}>
         <DialogContent data-testid="dialog-add-lesson">
@@ -940,6 +943,17 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
                 placeholder="15"
                 data-testid="input-lesson-duration"
               />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="is-demo"
+                checked={lessonForm.isDemo}
+                onCheckedChange={(checked) => setLessonForm({ ...lessonForm, isDemo: checked === true })}
+                data-testid="checkbox-lesson-demo"
+              />
+              <Label htmlFor="is-demo" className="cursor-pointer">
+                Bu sinov darsi (bepul ko'rish mumkin)
+              </Label>
             </div>
           </div>
           <DialogFooter>
