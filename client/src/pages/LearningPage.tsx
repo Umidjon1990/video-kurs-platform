@@ -118,15 +118,16 @@ export default function LearningPage() {
       
       // Create FormData for file upload
       const formData = new FormData();
+      formData.append('assignmentId', submissionDialog.assignmentId);
       formData.append('content', submissionForm.content || '');
       
       // Add files
       submissionFiles.images.forEach(file => formData.append('images', file));
-      submissionFiles.audio.forEach(file => formData.append('audio', file));
+      submissionFiles.audio.forEach(file => formData.append('audios', file));
       submissionFiles.files.forEach(file => formData.append('files', file));
       
       // Upload using fetch directly (not apiRequest since it's FormData)
-      const response = await fetch(`/api/student/assignments/${submissionDialog.assignmentId}/submit`, {
+      const response = await fetch(`/api/student/submissions`, {
         method: 'POST',
         body: formData,
         credentials: 'include',
