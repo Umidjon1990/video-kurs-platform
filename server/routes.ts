@@ -241,7 +241,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Ruxsat yo'q" });
       }
       
-      const updateData = insertCourseSchema.partial().parse(req.body);
+      // SECURITY: Only allow editable fields - block instructorId, status, and other sensitive fields
+      const editableFields = insertCourseSchema.pick({
+        title: true,
+        description: true,
+        originalPrice: true,
+        discountedPrice: true,
+        thumbnailUrl: true,
+      }).partial();
+      
+      const updateData = editableFields.parse(req.body);
       const updatedCourse = await storage.updateCourse(courseId, updateData);
       res.json(updatedCourse);
     } catch (error: any) {
