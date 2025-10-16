@@ -2,6 +2,7 @@
 import {
   users,
   courses,
+  modules,
   lessons,
   assignments,
   tests,
@@ -14,6 +15,8 @@ import {
   type UpsertUser,
   type Course,
   type InsertCourse,
+  type Module,
+  type InsertModule,
   type Lesson,
   type InsertLesson,
   type Assignment,
@@ -47,6 +50,15 @@ export interface IStorage {
   getCoursesByInstructor(instructorId: string): Promise<Course[]>;
   getPublishedCourses(): Promise<Course[]>;
   updateCourseStatus(id: string, status: string): Promise<Course>;
+  updateCourse(id: string, data: Partial<InsertCourse>): Promise<Course>;
+  
+  // Module operations
+  createModule(module: InsertModule): Promise<Module>;
+  getModulesByCourse(courseId: string): Promise<Module[]>;
+  getModule(id: string): Promise<Module | undefined>;
+  updateModule(id: string, data: Partial<InsertModule>): Promise<Module>;
+  deleteModule(id: string): Promise<void>;
+  createLessonsFromTopics(moduleId: string, topics: string[]): Promise<Lesson[]>;
   
   // Lesson operations
   createLesson(lesson: InsertLesson): Promise<Lesson>;
@@ -179,6 +191,72 @@ export class DatabaseStorage implements IStorage {
       .where(eq(courses.id, id))
       .returning();
     return course;
+  }
+
+  async updateCourse(id: string, data: Partial<InsertCourse>): Promise<Course> {
+    const [course] = await db
+      .update(courses)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(courses.id, id))
+      .returning();
+    return course;
+  }
+
+  // Module operations
+  async createModule(moduleData: InsertModule): Promise<Module> {
+    const [module] = await db.insert(modules).values(moduleData).returning();
+    return module;
+  }
+
+  async getModulesByCourse(courseId: string): Promise<Module[]> {
+    return await db
+      .select()
+      .from(modules)
+      .where(eq(modules.courseId, courseId))
+      .orderBy(modules.order);
+  }
+
+  async getModule(id: string): Promise<Module | undefined> {
+    const [module] = await db
+      .select()
+      .from(modules)
+      .where(eq(modules.id, id));
+    return module;
+  }
+
+  async updateModule(id: string, data: Partial<InsertModule>): Promise<Module> {
+    const [module] = await db
+      .update(modules)
+      .set(data)
+      .where(eq(modules.id, id))
+      .returning();
+    return module;
+  }
+
+  async deleteModule(id: string): Promise<void> {
+    await db.delete(modules).where(eq(modules.id, id));
+  }
+
+  async createLessonsFromTopics(moduleId: string, topics: string[]): Promise<Lesson[]> {
+    const module = await this.getModule(moduleId);
+    if (!module) {
+      throw new Error("Module not found");
+    }
+
+    const createdLessons: Lesson[] = [];
+    for (let i = 0; i < topics.length; i++) {
+      const lessonData: InsertLesson = {
+        courseId: module.courseId,
+        moduleId: module.id,
+        title: topics[i],
+        videoUrl: "", // Will be filled later by instructor
+        order: i + 1,
+        isDemo: i === 0, // First lesson is demo
+      };
+      const lesson = await this.createLesson(lessonData);
+      createdLessons.push(lesson);
+    }
+    return createdLessons;
   }
 
   // Lesson operations

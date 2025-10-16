@@ -40,6 +40,8 @@ export default function InstructorDashboard() {
     title: "",
     description: "",
     price: "",
+    originalPrice: "",
+    discountedPrice: "",
     thumbnailUrl: "",
   });
 
@@ -123,14 +125,16 @@ export default function InstructorDashboard() {
     mutationFn: async () => {
       await apiRequest("POST", "/api/instructor/courses", {
         ...courseForm,
-        price: courseForm.price,
+        price: courseForm.discountedPrice || courseForm.price,
+        originalPrice: courseForm.originalPrice,
+        discountedPrice: courseForm.discountedPrice,
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/instructor/courses"] });
       toast({ title: "Muvaffaqiyatli", description: "Kurs yaratildi" });
       setIsCreateCourseOpen(false);
-      setCourseForm({ title: "", description: "", price: "", thumbnailUrl: "" });
+      setCourseForm({ title: "", description: "", price: "", originalPrice: "", discountedPrice: "", thumbnailUrl: "" });
     },
     onError: (error: Error) => {
       if (isUnauthorizedError(error)) {
@@ -822,16 +826,36 @@ export default function InstructorDashboard() {
                 data-testid="input-course-description"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="price">Narx ($)</Label>
-              <Input
-                id="price"
-                type="number"
-                value={courseForm.price}
-                onChange={(e) => setCourseForm({ ...courseForm, price: e.target.value })}
-                placeholder="99.99"
-                data-testid="input-course-price"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="originalPrice">Asl Narx ($)</Label>
+                <Input
+                  id="originalPrice"
+                  type="number"
+                  value={courseForm.originalPrice}
+                  onChange={(e) => setCourseForm({ ...courseForm, originalPrice: e.target.value })}
+                  placeholder="199.99"
+                  data-testid="input-course-original-price"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="discountedPrice">Chegirmadagi Narx ($)</Label>
+                <Input
+                  id="discountedPrice"
+                  type="number"
+                  value={courseForm.discountedPrice}
+                  onChange={(e) => {
+                    setCourseForm({ ...courseForm, discountedPrice: e.target.value, price: e.target.value });
+                  }}
+                  placeholder="99.99"
+                  data-testid="input-course-discounted-price"
+                />
+                {courseForm.originalPrice && courseForm.discountedPrice && (
+                  <p className="text-sm text-green-600 font-medium">
+                    {Math.round(((parseFloat(courseForm.originalPrice) - parseFloat(courseForm.discountedPrice)) / parseFloat(courseForm.originalPrice)) * 100)}% chegirma
+                  </p>
+                )}
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="thumbnail">Rasm URL (ixtiyoriy)</Label>
@@ -854,7 +878,7 @@ export default function InstructorDashboard() {
             </Button>
             <Button
               onClick={() => createCourseMutation.mutate()}
-              disabled={!courseForm.title || !courseForm.price || createCourseMutation.isPending}
+              disabled={!courseForm.title || (!courseForm.price && !courseForm.discountedPrice) || createCourseMutation.isPending}
               data-testid="button-confirm-create-course"
             >
               {createCourseMutation.isPending ? "Yaratilmoqda..." : "Yaratish"}
