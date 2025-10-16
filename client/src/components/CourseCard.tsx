@@ -53,8 +53,26 @@ export function CourseCard({ course, onEnroll, isEnrolled }: CourseCardProps) {
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0 flex items-center justify-between">
-        <div className="text-2xl font-bold text-primary" data-testid={`text-price-${course.id}`}>
-          ${course.price}
+        <div className="flex flex-col gap-1">
+          {course.originalPrice && course.discountedPrice ? (
+            <>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl font-bold text-primary" data-testid={`text-price-${course.id}`}>
+                  ${course.discountedPrice}
+                </span>
+                <Badge variant="secondary" className="bg-green-100 text-green-700" data-testid={`badge-discount-${course.id}`}>
+                  {Math.round(((parseFloat(course.originalPrice) - parseFloat(course.discountedPrice)) / parseFloat(course.originalPrice)) * 100)}% chegirma
+                </Badge>
+              </div>
+              <span className="text-sm text-muted-foreground line-through">
+                ${course.originalPrice}
+              </span>
+            </>
+          ) : (
+            <div className="text-2xl font-bold text-primary" data-testid={`text-price-${course.id}`}>
+              ${course.price}
+            </div>
+          )}
         </div>
         {onEnroll && !isEnrolled && (
           <Button 
