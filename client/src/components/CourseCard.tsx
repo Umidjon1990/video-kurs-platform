@@ -1,16 +1,17 @@
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Clock } from "lucide-react";
+import { BookOpen, Clock, Play } from "lucide-react";
 import type { Course } from "@shared/schema";
 
 interface CourseCardProps {
   course: Course & { instructor?: { firstName?: string; lastName?: string } };
   onEnroll?: (courseId: string) => void;
+  onViewDemo?: (courseId: string) => void;
   isEnrolled?: boolean;
 }
 
-export function CourseCard({ course, onEnroll, isEnrolled }: CourseCardProps) {
+export function CourseCard({ course, onEnroll, onViewDemo, isEnrolled }: CourseCardProps) {
   const instructorName = course.instructor 
     ? `${course.instructor.firstName || ''} ${course.instructor.lastName || ''}`.trim() || 'O\'qituvchi'
     : 'O\'qituvchi';
@@ -52,34 +53,47 @@ export function CourseCard({ course, onEnroll, isEnrolled }: CourseCardProps) {
           )}
         </div>
       </CardContent>
-      <CardFooter className="p-4 pt-0 flex items-center justify-between">
-        <div className="flex flex-col gap-1">
-          {course.originalPrice && course.discountedPrice ? (
-            <>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold text-primary" data-testid={`text-price-${course.id}`}>
-                  ${course.discountedPrice}
+      <CardFooter className="p-4 pt-0 flex flex-col gap-3">
+        <div className="flex items-center justify-between w-full">
+          <div className="flex flex-col gap-1">
+            {course.originalPrice && course.discountedPrice ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold text-primary" data-testid={`text-price-${course.id}`}>
+                    ${course.discountedPrice}
+                  </span>
+                  <Badge variant="secondary" className="bg-green-100 text-green-700" data-testid={`badge-discount-${course.id}`}>
+                    {Math.round(((parseFloat(course.originalPrice) - parseFloat(course.discountedPrice)) / parseFloat(course.originalPrice)) * 100)}% chegirma
+                  </Badge>
+                </div>
+                <span className="text-sm text-muted-foreground line-through">
+                  ${course.originalPrice}
                 </span>
-                <Badge variant="secondary" className="bg-green-100 text-green-700" data-testid={`badge-discount-${course.id}`}>
-                  {Math.round(((parseFloat(course.originalPrice) - parseFloat(course.discountedPrice)) / parseFloat(course.originalPrice)) * 100)}% chegirma
-                </Badge>
+              </>
+            ) : (
+              <div className="text-2xl font-bold text-primary" data-testid={`text-price-${course.id}`}>
+                ${course.price}
               </div>
-              <span className="text-sm text-muted-foreground line-through">
-                ${course.originalPrice}
-              </span>
-            </>
-          ) : (
-            <div className="text-2xl font-bold text-primary" data-testid={`text-price-${course.id}`}>
-              ${course.price}
-            </div>
+            )}
+          </div>
+          {onEnroll && !isEnrolled && (
+            <Button 
+              onClick={() => onEnroll(course.id)}
+              data-testid={`button-enroll-${course.id}`}
+            >
+              Sotib olish
+            </Button>
           )}
         </div>
-        {onEnroll && !isEnrolled && (
+        {onViewDemo && (
           <Button 
-            onClick={() => onEnroll(course.id)}
-            data-testid={`button-enroll-${course.id}`}
+            variant="outline"
+            className="w-full"
+            onClick={() => onViewDemo(course.id)}
+            data-testid={`button-view-demo-${course.id}`}
           >
-            Sotib olish
+            <Play className="w-4 h-4 mr-2" />
+            Sinov darsi ko'rish
           </Button>
         )}
       </CardFooter>

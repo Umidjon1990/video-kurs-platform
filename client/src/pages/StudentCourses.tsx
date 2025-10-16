@@ -6,12 +6,22 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CourseCard } from "@/components/CourseCard";
 import { useLocation } from "wouter";
-import type { Course } from "@shared/schema";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { PlayCircle } from "lucide-react";
+import type { Course, Lesson } from "@shared/schema";
 
 export default function StudentCourses() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
+  const [selectedCourseForDemo, setSelectedCourseForDemo] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -36,6 +46,11 @@ export default function StudentCourses() {
     enabled: isAuthenticated,
   });
 
+  const { data: demoLessons } = useQuery<Lesson[]>({
+    queryKey: ["/api/courses", selectedCourseForDemo, "demo-lessons"],
+    enabled: !!selectedCourseForDemo,
+  });
+
   const enrolledCourseIds = new Set(enrolledCourses?.map(c => c.id) || []);
 
   const handleEnroll = (courseId: string) => {
@@ -44,6 +59,10 @@ export default function StudentCourses() {
 
   const handleViewCourse = (courseId: string) => {
     setLocation(`/learn/${courseId}`);
+  };
+
+  const handleViewDemo = (courseId: string) => {
+    setSelectedCourseForDemo(courseId);
   };
 
   if (authLoading || allCoursesLoading || enrolledCoursesLoading) {
@@ -89,6 +108,7 @@ export default function StudentCourses() {
                     key={course.id}
                     course={course}
                     onEnroll={handleEnroll}
+                    onViewDemo={handleViewDemo}
                     isEnrolled={enrolledCourseIds.has(course.id)}
                   />
                 ))}
@@ -104,7 +124,11 @@ export default function StudentCourses() {
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {enrolledCourses?.map((course) => (
                   <div key={course.id} onClick={() => handleViewCourse(course.id)} className="cursor-pointer">
-                    <CourseCard course={course} isEnrolled={true} />
+                    <CourseCard 
+                      course={course} 
+                      onViewDemo={handleViewDemo}
+                      isEnrolled={true} 
+                    />
                   </div>
                 ))}
               </div>
@@ -112,6 +136,46 @@ export default function StudentCourses() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Demo Lessons Dialog */}
+      <Dialog open={!!selectedCourseForDemo} onOpenChange={(open) => !open && setSelectedCourseForDemo(null)}>
+        <DialogContent data-testid="dialog-demo-lessons">
+          <DialogHeader>
+            <DialogTitle>Sinov Darslari</DialogTitle>
+            <DialogDescription>
+              Kursning bepul sinov darslarini ko'ring
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 max-h-96 overflow-y-auto">
+            {demoLessons && demoLessons.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">Hali sinov darslari yo'q</p>
+            ) : (
+              demoLessons?.map((lesson) => (
+                <div
+                  key={lesson.id}
+                  className="flex items-center gap-3 p-3 border rounded-lg hover-elevate cursor-pointer"
+                  onClick={() => {
+                    setSelectedCourseForDemo(null);
+                    setLocation(`/learn/${selectedCourseForDemo}`);
+                  }}
+                  data-testid={`demo-lesson-${lesson.id}`}
+                >
+                  <PlayCircle className="w-5 h-5 text-primary flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-sm">{lesson.title}</h4>
+                    {lesson.duration && (
+                      <p className="text-xs text-muted-foreground">{lesson.duration} daqiqa</p>
+                    )}
+                  </div>
+                  <Badge variant="secondary" className="bg-green-100 text-green-700">
+                    Demo
+                  </Badge>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
