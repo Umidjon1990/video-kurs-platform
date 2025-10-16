@@ -93,22 +93,10 @@ export interface IStorage {
   createSubmission(submission: InsertSubmission): Promise<Submission>;
   getSubmissionsByAssignment(assignmentId: string): Promise<Submission[]>;
   
-  // Test result operations
   // Test Attempts
   createTestAttempt(attempt: InsertTestAttempt): Promise<TestAttempt>;
   getTestAttemptsByTest(testId: string): Promise<TestAttempt[]>;
   getTestAttemptsByUser(userId: string): Promise<TestAttempt[]>;
-  
-  // Questions
-  createQuestion(question: InsertQuestion): Promise<Question>;
-  getQuestionsByTest(testId: string): Promise<Question[]>;
-  updateQuestion(id: string, question: Partial<InsertQuestion>): Promise<Question>;
-  deleteQuestion(id: string): Promise<void>;
-  
-  // Question Options
-  createQuestionOption(option: InsertQuestionOption): Promise<QuestionOption>;
-  getQuestionOptionsByQuestion(questionId: string): Promise<QuestionOption[]>;
-  deleteQuestionOption(id: string): Promise<void>;
   
   // Statistics
   getStats(): Promise<{
