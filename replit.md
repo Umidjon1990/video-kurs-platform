@@ -14,17 +14,15 @@ A comprehensive Learning Management System (LMS) platform for video-based course
   - ✅ Removed "Modullar" tab from instructor dashboard
   - ✅ Simplified course structure: Courses → Lessons (direct relationship)
   - ✅ Successful database migration with npm run db:push
-- ✅ **Enhanced Demo Lesson System** (Oct 16, 2025)
-  - ✅ Instructor manually selects demo lessons via checkbox in lesson creation form
-  - ✅ isDemo checkbox added to Add/Edit Lesson dialog
-  - ✅ "View Demo Lessons" button added to all course cards (Play icon)
-  - ✅ Demo lessons dialog shows free preview lessons before purchase
-  - ✅ Backend API endpoint: `/api/courses/:courseId/demo-lessons`
-  - ✅ Green "Demo" badge displayed on demo lessons
-  - ✅ Student UI: Lock icon on locked lessons, PlayCircle on accessible lessons
-  - ✅ Locked lessons non-clickable with reduced opacity
-  - ✅ Access control: enrollment check (paymentStatus === 'confirmed')
-  - ✅ Paywall message for locked lesson content with purchase prompt
+- ✅ **Unified Course Preview & Learning Experience** (Oct 16, 2025)
+  - ✅ "Sinov darsi ko'rish" button redirects directly to course learning page
+  - ✅ Course learning page (LearningPage) displays ALL lessons in sidebar
+  - ✅ Demo lessons marked with green "Demo" badge - accessible to everyone
+  - ✅ Non-enrolled students see locked lessons with Lock icon
+  - ✅ Enrolled students (payment confirmed) see all lessons with PlayCircle icon
+  - ✅ Removed demo lessons dialog - simplified UX flow
+  - ✅ Students can preview course structure before purchase
+  - ✅ Seamless transition: "Sinov darsi" → Full course page → Demo/Locked visibility
 - ✅ **Navigation Improvements** (Oct 16, 2025)
   - ✅ Student panel back button routes to home page ("/")
   - ✅ Home icon button added to LearningPage header
