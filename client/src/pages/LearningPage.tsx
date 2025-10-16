@@ -1,0 +1,193 @@
+import { useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
+import { useParams } from "wouter";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PlayCircle, CheckCircle } from "lucide-react";
+import type { Course, Lesson } from "@shared/schema";
+
+export default function LearningPage() {
+  const { courseId } = useParams<{ courseId: string }>();
+  const { toast } = useToast();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      toast({
+        title: "Unauthorized",
+        description: "You are logged out. Logging in again...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+    }
+  }, [isAuthenticated, authLoading, toast]);
+
+  const { data: course, isLoading: courseLoading } = useQuery<Course>({
+    queryKey: ["/api/courses", courseId],
+    enabled: !!courseId && isAuthenticated,
+  });
+
+  const { data: lessons } = useQuery<Lesson[]>({
+    queryKey: ["/api/courses", courseId, "lessons"],
+    enabled: !!courseId && isAuthenticated,
+  });
+
+  if (authLoading || courseLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!course) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <p className="text-muted-foreground">Kurs topilmadi</p>
+      </div>
+    );
+  }
+
+  const currentLesson = lessons?.[0];
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="border-b">
+        <div className="flex h-16 items-center px-4 gap-4">
+          <h1 className="text-xl font-bold line-clamp-1" data-testid="text-course-title">{course.title}</h1>
+          <div className="ml-auto">
+            <Button
+              variant="outline"
+              onClick={() => window.history.back()}
+              data-testid="button-back"
+            >
+              Orqaga
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col lg:flex-row">
+        {/* Lessons Sidebar */}
+        <div className="lg:w-80 border-r bg-muted/30">
+          <div className="p-4">
+            <h3 className="font-semibold mb-4">Darslar</h3>
+            <div className="space-y-2">
+              {lessons && lessons.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Darslar hali qo'shilmagan</p>
+              ) : (
+                lessons?.map((lesson) => (
+                  <div
+                    key={lesson.id}
+                    className="flex items-center gap-3 p-3 rounded-lg hover-elevate cursor-pointer"
+                    data-testid={`lesson-item-${lesson.id}`}
+                  >
+                    <PlayCircle className="w-5 h-5 text-primary flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium line-clamp-1">{lesson.title}</p>
+                      {lesson.duration && (
+                        <p className="text-xs text-muted-foreground">{lesson.duration} daqiqa</p>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 p-8">
+          {currentLesson ? (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold mb-2" data-testid="text-lesson-title">{currentLesson.title}</h2>
+                <p className="text-muted-foreground">
+                  {currentLesson.duration ? `Davomiyligi: ${currentLesson.duration} daqiqa` : ''}
+                </p>
+              </div>
+
+              {/* Video Player */}
+              <Card>
+                <CardContent className="p-0">
+                  <div className="aspect-video bg-black rounded-lg flex items-center justify-center">
+                    {currentLesson.videoUrl.includes('youtube.com') || currentLesson.videoUrl.includes('youtu.be') ? (
+                      <iframe
+                        src={currentLesson.videoUrl.replace('watch?v=', 'embed/')}
+                        className="w-full h-full rounded-lg"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        data-testid="video-player"
+                      />
+                    ) : (
+                      <div className="text-white p-8 text-center">
+                        <p className="mb-4">Video URL:</p>
+                        <a 
+                          href={currentLesson.videoUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-primary underline"
+                          data-testid="video-link"
+                        >
+                          {currentLesson.videoUrl}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Tabs defaultValue="overview">
+                <TabsList>
+                  <TabsTrigger value="overview" data-testid="tab-overview">Umumiy Ma'lumot</TabsTrigger>
+                  <TabsTrigger value="assignments" data-testid="tab-assignments">Vazifalar</TabsTrigger>
+                  <TabsTrigger value="tests" data-testid="tab-tests">Testlar</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="overview" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Kurs Haqida</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground">{course.description || "Ma'lumot yo'q"}</p>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="assignments">
+                  <Card>
+                    <CardContent className="py-8">
+                      <p className="text-center text-muted-foreground">Vazifalar tez orada qo'shiladi</p>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="tests">
+                  <Card>
+                    <CardContent className="py-8">
+                      <p className="text-center text-muted-foreground">Testlar tez orada qo'shiladi</p>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="py-16">
+                <p className="text-center text-muted-foreground">
+                  Bu kursda hali darslar yo'q
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

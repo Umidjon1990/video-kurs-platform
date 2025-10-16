@@ -1,0 +1,404 @@
+import { useEffect, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { BookOpen, Plus, Edit, Trash2 } from "lucide-react";
+import { isUnauthorizedError } from "@/lib/authUtils";
+import type { Course, Lesson } from "@shared/schema";
+
+export default function InstructorDashboard() {
+  const { toast } = useToast();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const [isCreateCourseOpen, setIsCreateCourseOpen] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [isAddLessonOpen, setIsAddLessonOpen] = useState(false);
+
+  const [courseForm, setCourseForm] = useState({
+    title: "",
+    description: "",
+    price: "",
+    thumbnailUrl: "",
+  });
+
+  const [lessonForm, setLessonForm] = useState({
+    title: "",
+    videoUrl: "",
+    duration: "",
+  });
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      toast({
+        title: "Unauthorized",
+        description: "You are logged out. Logging in again...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+    }
+  }, [isAuthenticated, authLoading, toast]);
+
+  const { data: courses, isLoading: coursesLoading } = useQuery<Course[]>({
+    queryKey: ["/api/instructor/courses"],
+    enabled: isAuthenticated,
+  });
+
+  const { data: lessons } = useQuery<Lesson[]>({
+    queryKey: ["/api/instructor/courses", selectedCourse?.id, "lessons"],
+    enabled: !!selectedCourse,
+  });
+
+  const createCourseMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/instructor/courses", {
+        ...courseForm,
+        price: parseFloat(courseForm.price),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/instructor/courses"] });
+      toast({ title: "Muvaffaqiyatli", description: "Kurs yaratildi" });
+      setIsCreateCourseOpen(false);
+      setCourseForm({ title: "", description: "", price: "", thumbnailUrl: "" });
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const addLessonMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedCourse) return;
+      const nextOrder = (lessons?.length || 0) + 1;
+      await apiRequest("POST", `/api/instructor/courses/${selectedCourse.id}/lessons`, {
+        ...lessonForm,
+        order: nextOrder,
+        duration: lessonForm.duration ? parseInt(lessonForm.duration) : null,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/instructor/courses", selectedCourse?.id, "lessons"] });
+      toast({ title: "Muvaffaqiyatli", description: "Dars qo'shildi" });
+      setIsAddLessonOpen(false);
+      setLessonForm({ title: "", videoUrl: "", duration: "" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const publishCourseMutation = useMutation({
+    mutationFn: async (courseId: string) => {
+      await apiRequest("PATCH", `/api/instructor/courses/${courseId}/publish`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/instructor/courses"] });
+      toast({ title: "Muvaffaqiyatli", description: "Kurs e'lon qilindi" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+
+  if (authLoading || coursesLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="border-b">
+        <div className="flex h-16 items-center px-4 gap-4">
+          <h1 className="text-2xl font-bold" data-testid="text-instructor-title">O'qituvchi Paneli</h1>
+          <div className="ml-auto">
+            <Button
+              variant="outline"
+              onClick={() => window.location.href = "/api/logout"}
+              data-testid="button-logout"
+            >
+              Chiqish
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-8 space-y-8">
+        <div className="flex justify-between items-center">
+          <h2 className="text-3xl font-bold">Mening Kurslarim</h2>
+          <Button onClick={() => setIsCreateCourseOpen(true)} data-testid="button-create-course">
+            <Plus className="w-4 h-4 mr-2" />
+            Yangi Kurs
+          </Button>
+        </div>
+
+        {courses && courses.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <BookOpen className="w-16 h-16 text-muted-foreground mb-4" />
+              <p className="text-xl text-muted-foreground mb-4">Hali kurslar yo'q</p>
+              <Button onClick={() => setIsCreateCourseOpen(true)} data-testid="button-create-first-course">
+                Birinchi Kursni Yaratish
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {courses?.map((course) => (
+              <Card key={course.id} className="hover-elevate" data-testid={`card-course-${course.id}`}>
+                <CardHeader>
+                  {course.thumbnailUrl ? (
+                    <img
+                      src={course.thumbnailUrl}
+                      alt={course.title}
+                      className="w-full h-40 object-cover rounded-lg mb-4"
+                    />
+                  ) : (
+                    <div className="w-full h-40 bg-muted rounded-lg flex items-center justify-center mb-4">
+                      <BookOpen className="w-12 h-12 text-muted-foreground" />
+                    </div>
+                  )}
+                  <CardTitle data-testid={`text-course-title-${course.id}`}>{course.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground line-clamp-2">{course.description}</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg font-bold">${course.price}</span>
+                    <span className={`px-2 py-1 rounded text-xs ${
+                      course.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {course.status === 'published' ? "E'lon qilingan" : "Qoralama"}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => setSelectedCourse(course)}
+                      data-testid={`button-manage-${course.id}`}
+                    >
+                      Boshqarish
+                    </Button>
+                    {course.status === 'draft' && (
+                      <Button
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => publishCourseMutation.mutate(course.id)}
+                        data-testid={`button-publish-${course.id}`}
+                      >
+                        E'lon Qilish
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Course Lessons Dialog */}
+      {selectedCourse && (
+        <Dialog open={!!selectedCourse} onOpenChange={() => setSelectedCourse(null)}>
+          <DialogContent className="max-w-4xl" data-testid="dialog-course-lessons">
+            <DialogHeader>
+              <DialogTitle>{selectedCourse.title} - Darslar</DialogTitle>
+              <DialogDescription>Kurs darslarini boshqarish</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 max-h-96 overflow-y-auto">
+              {lessons && lessons.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">Hali darslar yo'q</p>
+              ) : (
+                lessons?.map((lesson) => (
+                  <div
+                    key={lesson.id}
+                    className="flex items-center justify-between p-4 border rounded-lg"
+                    data-testid={`lesson-${lesson.id}`}
+                  >
+                    <div>
+                      <h4 className="font-semibold">{lesson.title}</h4>
+                      <p className="text-sm text-muted-foreground">{lesson.videoUrl}</p>
+                    </div>
+                    <span className="text-sm text-muted-foreground">
+                      {lesson.duration ? `${lesson.duration} daqiqa` : '-'}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setIsAddLessonOpen(true)} data-testid="button-add-lesson">
+                <Plus className="w-4 h-4 mr-2" />
+                Dars Qo'shish
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Create Course Dialog */}
+      <Dialog open={isCreateCourseOpen} onOpenChange={setIsCreateCourseOpen}>
+        <DialogContent data-testid="dialog-create-course">
+          <DialogHeader>
+            <DialogTitle>Yangi Kurs Yaratish</DialogTitle>
+            <DialogDescription>Kurs ma'lumotlarini kiriting</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Kurs Nomi</Label>
+              <Input
+                id="title"
+                value={courseForm.title}
+                onChange={(e) => setCourseForm({ ...courseForm, title: e.target.value })}
+                placeholder="Masalan: Web Dasturlash Kursi"
+                data-testid="input-course-title"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Tavsif</Label>
+              <Textarea
+                id="description"
+                value={courseForm.description}
+                onChange={(e) => setCourseForm({ ...courseForm, description: e.target.value })}
+                placeholder="Kurs haqida ma'lumot..."
+                data-testid="input-course-description"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="price">Narx ($)</Label>
+              <Input
+                id="price"
+                type="number"
+                value={courseForm.price}
+                onChange={(e) => setCourseForm({ ...courseForm, price: e.target.value })}
+                placeholder="99.99"
+                data-testid="input-course-price"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="thumbnail">Rasm URL (ixtiyoriy)</Label>
+              <Input
+                id="thumbnail"
+                value={courseForm.thumbnailUrl}
+                onChange={(e) => setCourseForm({ ...courseForm, thumbnailUrl: e.target.value })}
+                placeholder="https://example.com/image.jpg"
+                data-testid="input-course-thumbnail"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsCreateCourseOpen(false)}
+              data-testid="button-cancel-create-course"
+            >
+              Bekor Qilish
+            </Button>
+            <Button
+              onClick={() => createCourseMutation.mutate()}
+              disabled={!courseForm.title || !courseForm.price || createCourseMutation.isPending}
+              data-testid="button-confirm-create-course"
+            >
+              {createCourseMutation.isPending ? "Yaratilmoqda..." : "Yaratish"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Lesson Dialog */}
+      <Dialog open={isAddLessonOpen} onOpenChange={setIsAddLessonOpen}>
+        <DialogContent data-testid="dialog-add-lesson">
+          <DialogHeader>
+            <DialogTitle>Yangi Dars Qo'shish</DialogTitle>
+            <DialogDescription>Dars ma'lumotlarini kiriting</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="lesson-title">Dars Nomi</Label>
+              <Input
+                id="lesson-title"
+                value={lessonForm.title}
+                onChange={(e) => setLessonForm({ ...lessonForm, title: e.target.value })}
+                placeholder="Masalan: Kirish"
+                data-testid="input-lesson-title"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="video-url">Video URL</Label>
+              <Input
+                id="video-url"
+                value={lessonForm.videoUrl}
+                onChange={(e) => setLessonForm({ ...lessonForm, videoUrl: e.target.value })}
+                placeholder="https://youtube.com/watch?v=..."
+                data-testid="input-lesson-video"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="duration">Davomiyligi (daqiqa)</Label>
+              <Input
+                id="duration"
+                type="number"
+                value={lessonForm.duration}
+                onChange={(e) => setLessonForm({ ...lessonForm, duration: e.target.value })}
+                placeholder="15"
+                data-testid="input-lesson-duration"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsAddLessonOpen(false)}
+              data-testid="button-cancel-add-lesson"
+            >
+              Bekor Qilish
+            </Button>
+            <Button
+              onClick={() => addLessonMutation.mutate()}
+              disabled={!lessonForm.title || !lessonForm.videoUrl || addLessonMutation.isPending}
+              data-testid="button-confirm-add-lesson"
+            >
+              {addLessonMutation.isPending ? "Qo'shilmoqda..." : "Qo'shish"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
