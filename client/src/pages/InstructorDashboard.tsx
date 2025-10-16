@@ -76,6 +76,12 @@ export default function InstructorDashboard() {
     points: "1",
     correctAnswer: "",
   });
+  const [mcOptions, setMcOptions] = useState<{text: string, isCorrect: boolean}[]>([
+    { text: "", isCorrect: false }
+  ]);
+  const [matchingPairs, setMatchingPairs] = useState<{left: string, right: string}[]>([
+    { left: "", right: "" }
+  ]);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -279,6 +285,63 @@ export default function InstructorDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/instructor/courses", selectedCourse?.id, "tests"] });
       toast({ title: "Muvaffaqiyatli", description: "Test o'chirildi" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Question mutations
+  const addQuestionMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedTest) return;
+      
+      // Get current questions to determine order
+      const existingQuestions = await fetch(`/api/instructor/tests/${selectedTest.id}/questions`).then(r => r.json());
+      const nextOrder = existingQuestions.length;
+      
+      // Prepare config based on question type
+      let config = {};
+      if (questionForm.type === "matching") {
+        // Filter pairs - keep only complete pairs (both sides filled)
+        const validPairs = matchingPairs.filter(p => p.left.trim() && p.right.trim());
+        const leftColumn = validPairs.map(p => p.left);
+        const rightColumn = validPairs.map(p => p.right);
+        const correctPairs = validPairs.map((_, i) => [i, i] as [number, number]);
+        config = { leftColumn, rightColumn, correctPairs };
+      }
+      
+      // Create question
+      const questionResponse: any = await apiRequest("POST", `/api/instructor/tests/${selectedTest.id}/questions`, {
+        type: questionForm.type,
+        questionText: questionForm.questionText,
+        points: parseInt(questionForm.points),
+        order: nextOrder,
+        correctAnswer: questionForm.correctAnswer || null,
+        config,
+      });
+      
+      // If multiple choice, add options
+      if (questionForm.type === "multiple_choice" && questionResponse?.id) {
+        for (let i = 0; i < mcOptions.length; i++) {
+          const option = mcOptions[i];
+          if (option.text.trim()) {
+            await apiRequest("POST", `/api/instructor/questions/${questionResponse.id}/options`, {
+              optionText: option.text,
+              isCorrect: option.isCorrect,
+              order: i,
+            });
+          }
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/instructor/tests", selectedTest?.id, "questions"] });
+      toast({ title: "Muvaffaqiyatli", description: "Savol qo'shildi" });
+      setIsAddQuestionOpen(false);
+      setQuestionForm({ type: "multiple_choice", questionText: "", points: "1", correctAnswer: "" });
+      setMcOptions([{ text: "", isCorrect: false }]);
+      setMatchingPairs([{ left: "", right: "" }]);
     },
     onError: (error: Error) => {
       toast({ title: "Xatolik", description: error.message, variant: "destructive" });
@@ -579,6 +642,8 @@ export default function InstructorDashboard() {
                                 points: "1",
                                 correctAnswer: "",
                               });
+                              setMcOptions([{ text: "", isCorrect: false }]);
+                              setMatchingPairs([{ left: "", right: "" }]);
                               setIsAddQuestionOpen(true);
                             }}
                             data-testid={`button-add-question-${test.id}`}
@@ -1007,23 +1072,162 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
               />
             </div>
 
-            {(questionForm.type === "true_false" || questionForm.type === "short_answer" || questionForm.type === "fill_blanks") && (
+            {/* Multiple Choice Options */}
+            {questionForm.type === "multiple_choice" && (
+              <div className="space-y-2">
+                <Label>Variantlar</Label>
+                <div className="space-y-2">
+                  {mcOptions.map((option, index) => (
+                    <div key={index} className="flex gap-2 items-center">
+                      <Input
+                        value={option.text}
+                        onChange={(e) => {
+                          const newOptions = [...mcOptions];
+                          newOptions[index].text = e.target.value;
+                          setMcOptions(newOptions);
+                        }}
+                        placeholder={`Variant ${index + 1}`}
+                        data-testid={`input-option-${index}`}
+                      />
+                      <label className="flex items-center gap-1 whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={option.isCorrect}
+                          onChange={(e) => {
+                            const newOptions = [...mcOptions];
+                            newOptions[index].isCorrect = e.target.checked;
+                            setMcOptions(newOptions);
+                          }}
+                          data-testid={`checkbox-correct-${index}`}
+                        />
+                        <span className="text-sm">To'g'ri</span>
+                      </label>
+                      {mcOptions.length > 1 && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setMcOptions(mcOptions.filter((_, i) => i !== index))}
+                          data-testid={`button-remove-option-${index}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMcOptions([...mcOptions, { text: "", isCorrect: false }])}
+                    data-testid="button-add-option"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Variant Qo'shish
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* True/False Toggle */}
+            {questionForm.type === "true_false" && (
+              <div className="space-y-2">
+                <Label>To'g'ri Javob</Label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="trueFalseAnswer"
+                      checked={questionForm.correctAnswer === "true"}
+                      onChange={() => setQuestionForm({ ...questionForm, correctAnswer: "true" })}
+                      data-testid="radio-true"
+                    />
+                    <span>To'g'ri (True)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="trueFalseAnswer"
+                      checked={questionForm.correctAnswer === "false"}
+                      onChange={() => setQuestionForm({ ...questionForm, correctAnswer: "false" })}
+                      data-testid="radio-false"
+                    />
+                    <span>Noto'g'ri (False)</span>
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {/* Fill in Blanks & Short Answer */}
+            {(questionForm.type === "short_answer" || questionForm.type === "fill_blanks") && (
               <div className="space-y-2">
                 <Label htmlFor="correct-answer">To'g'ri Javob</Label>
                 <Input
                   id="correct-answer"
                   value={questionForm.correctAnswer}
                   onChange={(e) => setQuestionForm({ ...questionForm, correctAnswer: e.target.value })}
-                  placeholder={questionForm.type === "true_false" ? "true yoki false" : "To'g'ri javobni kiriting"}
+                  placeholder={questionForm.type === "fill_blanks" ? "Bo'sh joy to'ldirilishi kerak bo'lgan so'z" : "To'g'ri javob yoki kalit so'zlar"}
                   data-testid="input-correct-answer"
                 />
+              </div>
+            )}
+
+            {/* Matching Pairs */}
+            {questionForm.type === "matching" && (
+              <div className="space-y-2">
+                <Label>Moslashtirish Juftliklari</Label>
+                <div className="space-y-2">
+                  {matchingPairs.map((pair, index) => (
+                    <div key={index} className="grid grid-cols-2 gap-2">
+                      <Input
+                        value={pair.left}
+                        onChange={(e) => {
+                          const newPairs = [...matchingPairs];
+                          newPairs[index].left = e.target.value;
+                          setMatchingPairs(newPairs);
+                        }}
+                        placeholder="Chap tomon"
+                        data-testid={`input-match-left-${index}`}
+                      />
+                      <div className="flex gap-2 items-center">
+                        <Input
+                          value={pair.right}
+                          onChange={(e) => {
+                            const newPairs = [...matchingPairs];
+                            newPairs[index].right = e.target.value;
+                            setMatchingPairs(newPairs);
+                          }}
+                          placeholder="O'ng tomon"
+                          data-testid={`input-match-right-${index}`}
+                        />
+                        {matchingPairs.length > 1 && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setMatchingPairs(matchingPairs.filter((_, i) => i !== index))}
+                            data-testid={`button-remove-pair-${index}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMatchingPairs([...matchingPairs, { left: "", right: "" }])}
+                    data-testid="button-add-pair"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Juftlik Qo'shish
+                  </Button>
+                </div>
               </div>
             )}
 
             <div className="p-3 bg-muted rounded-lg text-sm">
               <p className="font-semibold mb-1">Eslatma:</p>
               <p className="text-muted-foreground">
-                {questionForm.type === "multiple_choice" && "Variantlar keyinroq alohida qo'shiladi"}
+                {questionForm.type === "multiple_choice" && "Kamida bitta to'g'ri variant belgilang"}
                 {questionForm.type === "true_false" && "To'g'ri javobda 'true' yoki 'false' kiriting"}
                 {questionForm.type === "fill_blanks" && "Bo'sh joylar uchun [___] belgisini ishlating"}
                 {questionForm.type === "matching" && "Moslashtirish uchun elementlar keyinroq qo'shiladi"}
@@ -1041,14 +1245,11 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
               Bekor Qilish
             </Button>
             <Button
-              onClick={() => {
-                toast({ title: "Savol qo'shish funksiyasi", description: "Tez orada qo'shiladi" });
-                setIsAddQuestionOpen(false);
-              }}
-              disabled={!questionForm.questionText}
+              onClick={() => addQuestionMutation.mutate()}
+              disabled={!questionForm.questionText || addQuestionMutation.isPending}
               data-testid="button-confirm-add-question"
             >
-              Qo'shish
+              {addQuestionMutation.isPending ? "Qo'shilmoqda..." : "Qo'shish"}
             </Button>
           </DialogFooter>
         </DialogContent>
