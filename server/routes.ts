@@ -77,6 +77,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/admin/pending-payments', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const pendingPayments = await storage.getPendingPayments();
+      res.json(pendingPayments);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch('/api/admin/payments/:enrollmentId/approve', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { enrollmentId } = req.params;
+      const enrollment = await storage.updateEnrollmentStatus(enrollmentId, 'approved');
+      res.json(enrollment);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch('/api/admin/payments/:enrollmentId/reject', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { enrollmentId } = req.params;
+      const enrollment = await storage.updateEnrollmentStatus(enrollmentId, 'rejected');
+      res.json(enrollment);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ============ INSTRUCTOR ROUTES ============
   app.get('/api/instructor/courses', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
@@ -328,11 +357,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/student/enroll', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { courseId, paymentIntentId } = req.body;
+      const { courseId, paymentMethod, paymentProofUrl, paymentIntentId } = req.body;
       
-      // SECURITY: Payment is required unless Stripe is not configured
+      // Manual payment (naqd/karta)
+      if (paymentMethod && (paymentMethod === 'naqd' || paymentMethod === 'karta')) {
+        if (!paymentProofUrl) {
+          return res.status(400).json({ message: "To'lov cheki rasmi talab qilinadi" });
+        }
+        
+        const enrollmentData = insertEnrollmentSchema.parse({
+          userId,
+          courseId,
+          paymentMethod,
+          paymentProofUrl,
+          paymentStatus: 'pending', // Admin tasdiqini kutadi
+        });
+        
+        const enrollment = await storage.createEnrollment(enrollmentData);
+        return res.json(enrollment);
+      }
+      
+      // Stripe payment
       if (!stripe) {
-        return res.status(500).json({ message: "Payment system not configured" });
+        return res.status(500).json({ message: "Stripe kalitlari sozlanmagan. Iltimos adminstratorga murojaat qiling." });
       }
       
       if (!paymentIntentId) {
@@ -353,7 +400,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const enrollmentData = insertEnrollmentSchema.parse({
         userId,
         courseId,
-        paymentStatus: 'completed',
+        paymentMethod: 'stripe',
+        paymentStatus: 'approved', // Stripe auto-approved
       });
       
       const enrollment = await storage.createEnrollment(enrollmentData);

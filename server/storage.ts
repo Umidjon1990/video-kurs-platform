@@ -58,6 +58,8 @@ export interface IStorage {
   createEnrollment(enrollment: InsertEnrollment): Promise<Enrollment>;
   getEnrollmentsByUser(userId: string): Promise<Enrollment[]>;
   getEnrolledCourses(userId: string): Promise<Course[]>;
+  getPendingPayments(): Promise<any[]>;
+  updateEnrollmentStatus(enrollmentId: string, status: string): Promise<Enrollment>;
   
   // Submission operations
   createSubmission(submission: InsertSubmission): Promise<Submission>;
@@ -213,11 +215,37 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(courses, eq(enrollments.courseId, courses.id))
       .where(and(
         eq(enrollments.userId, userId),
-        eq(enrollments.paymentStatus, 'completed')
+        eq(enrollments.paymentStatus, 'approved')
       ))
       .orderBy(desc(enrollments.enrolledAt));
     
     return result.map(r => r.course);
+  }
+
+  async getPendingPayments(): Promise<any[]> {
+    const result = await db
+      .select({
+        enrollment: enrollments,
+        course: courses,
+        user: users,
+      })
+      .from(enrollments)
+      .innerJoin(courses, eq(enrollments.courseId, courses.id))
+      .innerJoin(users, eq(enrollments.userId, users.id))
+      .where(eq(enrollments.paymentStatus, 'pending'))
+      .orderBy(desc(enrollments.enrolledAt));
+    
+    return result;
+  }
+
+  async updateEnrollmentStatus(enrollmentId: string, status: string): Promise<Enrollment> {
+    const [enrollment] = await db
+      .update(enrollments)
+      .set({ paymentStatus: status })
+      .where(eq(enrollments.id, enrollmentId))
+      .returning();
+    
+    return enrollment;
   }
 
   // Submission operations
