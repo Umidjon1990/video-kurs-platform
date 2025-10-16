@@ -1283,7 +1283,7 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
 function QuestionsList({ testId }: { testId: string }) {
   const { toast } = useToast();
   
-  const { data: questions, isLoading } = useQuery({
+  const { data: questions, isLoading } = useQuery<any[]>({
     queryKey: ["/api/instructor/tests", testId, "questions"],
     enabled: !!testId,
   });
