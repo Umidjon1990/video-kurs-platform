@@ -929,7 +929,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalPoints += question.points;
         const studentAnswer = answers[question.id];
         
-        if (!studentAnswer) continue;
+        // Skip if no answer or empty array
+        if (!studentAnswer || (Array.isArray(studentAnswer) && studentAnswer.length === 0)) continue;
         
         // Auto-grading logic based on question type
         if (question.type === 'multiple_choice') {

@@ -649,8 +649,10 @@ function TestQuestionInput({ question, value, onChange }: { question: any; value
               value={value?.[leftIdx]?.[1] ?? ""}
               onChange={(e) => {
                 const current = Array.isArray(value) ? [...value] : [];
-                current[leftIdx] = [leftIdx, parseInt(e.target.value)];
-                onChange(current);
+                if (e.target.value) {
+                  current[leftIdx] = [leftIdx, parseInt(e.target.value)];
+                  onChange(current);
+                }
               }}
               data-testid={`select-match-${leftIdx}`}
             >
