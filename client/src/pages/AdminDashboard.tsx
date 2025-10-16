@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -15,32 +15,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Users, BookOpen, DollarSign, UserPlus } from "lucide-react";
-import { isUnauthorizedError } from "@/lib/authUtils";
+import { Users, BookOpen } from "lucide-react";
 import type { User } from "@shared/schema";
 
 export default function AdminDashboard() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
-  const [newUserEmail, setNewUserEmail] = useState("");
-  const [newUserRole, setNewUserRole] = useState<"instructor" | "student">("instructor");
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -63,44 +49,6 @@ export default function AdminDashboard() {
   const { data: users } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
     enabled: isAuthenticated,
-  });
-
-  const addUserMutation = useMutation({
-    mutationFn: async () => {
-      await apiRequest("POST", "/api/admin/users", {
-        email: newUserEmail,
-        role: newUserRole,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
-      toast({
-        title: "Muvaffaqiyatli",
-        description: "Foydalanuvchi qo'shildi",
-      });
-      setIsAddUserOpen(false);
-      setNewUserEmail("");
-      setNewUserRole("instructor");
-    },
-    onError: (error: Error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      toast({
-        title: "Xatolik",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
   });
 
   const updateRoleMutation = useMutation({
@@ -174,15 +122,12 @@ export default function AdminDashboard() {
         {/* Users Management */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-2">
               <CardTitle>Foydalanuvchilar Boshqaruvi</CardTitle>
-              <Button
-                onClick={() => setIsAddUserOpen(true)}
-                data-testid="button-add-user"
-              >
-                <UserPlus className="w-4 h-4 mr-2" />
-                Foydalanuvchi Qo'shish
-              </Button>
+              <p className="text-sm text-muted-foreground">
+                Foydalanuvchilar Replit Auth orqali avtomatik yaratiladi. 
+                Siz faqat mavjud foydalanuvchilarning rolini o'zgartira olasiz.
+              </p>
             </div>
           </CardHeader>
           <CardContent>
@@ -230,59 +175,6 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Add User Dialog */}
-      <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
-        <DialogContent data-testid="dialog-add-user">
-          <DialogHeader>
-            <DialogTitle>Yangi Foydalanuvchi Qo'shish</DialogTitle>
-            <DialogDescription>
-              Foydalanuvchi emailini kiriting va rol tanlang
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={newUserEmail}
-                onChange={(e) => setNewUserEmail(e.target.value)}
-                placeholder="user@example.com"
-                data-testid="input-user-email"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="role">Rol</Label>
-              <Select value={newUserRole} onValueChange={(v) => setNewUserRole(v as any)}>
-                <SelectTrigger data-testid="select-user-role">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="instructor">O'qituvchi</SelectItem>
-                  <SelectItem value="student">O'quvchi</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsAddUserOpen(false)}
-              data-testid="button-cancel-add-user"
-            >
-              Bekor Qilish
-            </Button>
-            <Button
-              onClick={() => addUserMutation.mutate()}
-              disabled={!newUserEmail || addUserMutation.isPending}
-              data-testid="button-confirm-add-user"
-            >
-              {addUserMutation.isPending ? "Qo'shilmoqda..." : "Qo'shish"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
