@@ -925,12 +925,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let totalScore = 0;
       let totalPoints = 0;
       
+      console.log('[GRADING START]', { testId, totalQuestions: questions.length });
+      
       for (const question of questions) {
         totalPoints += question.points;
         const studentAnswer = answers[question.id];
         
+        console.log('[QUESTION]', { 
+          id: question.id, 
+          type: question.type, 
+          points: question.points,
+          studentAnswer 
+        });
+        
         // Skip if no answer or empty array
-        if (!studentAnswer || (Array.isArray(studentAnswer) && studentAnswer.length === 0)) continue;
+        if (!studentAnswer || (Array.isArray(studentAnswer) && studentAnswer.length === 0)) {
+          console.log('[SKIP] No answer');
+          continue;
+        }
         
         // Auto-grading logic based on question type
         if (question.type === 'multiple_choice') {
@@ -947,6 +959,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (JSON.stringify(correctOptions.sort()) === JSON.stringify(studentOptions.sort())) {
             totalScore += question.points;
+            console.log('[SCORE ADDED]', { points: question.points, totalScore });
+          } else {
+            console.log('[NO SCORE] Answer incorrect');
           }
         } else if (question.type === 'true_false') {
           if (studentAnswer === question.correctAnswer) {
@@ -978,6 +993,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const percentage = totalPoints > 0 ? (totalScore / totalPoints) * 100 : 0;
       const isPassed = test.passingScore ? percentage >= test.passingScore : false;
+      
+      console.log('[GRADING COMPLETE]', { totalScore, totalPoints, percentage, isPassed });
       
       const attemptData = insertTestAttemptSchema.parse({
         testId,
