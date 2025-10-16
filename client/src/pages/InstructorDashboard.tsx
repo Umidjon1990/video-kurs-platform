@@ -95,6 +95,8 @@ export default function InstructorDashboard() {
 
   const [isGradingOpen, setIsGradingOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<any | null>(null);
+  const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);
+  const [detailSubmission, setDetailSubmission] = useState<any | null>(null);
   const [gradingForm, setGradingForm] = useState({
     score: "",
     feedback: "",
@@ -511,9 +513,16 @@ export default function InstructorDashboard() {
                   // Find submission in current submissions
                   const submission = submissions?.find((s: any) => s.submission.id === notification.relatedId);
                   if (submission) {
-                    setSubmissionToGrade(submission);
-                    setGradingForm({ score: "", feedback: "", status: "graded" });
-                    setIsGradingOpen(true);
+                    // Check if already graded
+                    if (submission.submission.status === 'pending') {
+                      setSelectedSubmission(submission);
+                      setGradingForm({ score: "", feedback: "", status: "graded" });
+                      setIsGradingOpen(true);
+                    } else {
+                      // Already graded, show detail view
+                      setDetailSubmission(submission);
+                      setIsDetailViewOpen(true);
+                    }
                   } else {
                     toast({ 
                       title: "Ogohlantirish", 
@@ -1668,6 +1677,126 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
         onSubmit={() => gradingMutation.mutate()}
         isPending={gradingMutation.isPending}
       />
+
+      {/* Submission Detail View Dialog */}
+      <Dialog open={isDetailViewOpen} onOpenChange={setIsDetailViewOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" data-testid="dialog-submission-detail-instructor">
+          <DialogHeader>
+            <DialogTitle>Vazifa Detallari</DialogTitle>
+          </DialogHeader>
+
+          {detailSubmission && (
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold text-lg mb-1">{detailSubmission.assignment?.title}</h3>
+                <p className="text-sm text-muted-foreground">
+                  O'quvchi: {detailSubmission.user?.name || detailSubmission.user?.email}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="text-sm">
+                  <span className="font-medium">Holat:</span>
+                  <Badge 
+                    className="ml-2"
+                    variant={
+                      detailSubmission.submission.status === 'graded' ? 'default' :
+                      detailSubmission.submission.status === 'needs_revision' ? 'secondary' :
+                      'outline'
+                    }
+                  >
+                    {detailSubmission.submission.status === 'graded' ? '✅ Tekshirilgan' :
+                     detailSubmission.submission.status === 'needs_revision' ? '⚠️ Qayta topshirish' :
+                     '⏳ Kutilmoqda'}
+                  </Badge>
+                </div>
+              </div>
+
+              {detailSubmission.submission.score !== null && (
+                <div className="bg-primary/10 p-4 rounded-lg">
+                  <p className="text-sm text-muted-foreground mb-1">Baho</p>
+                  <p className="text-4xl font-bold text-primary">{detailSubmission.submission.score}</p>
+                  <p className="text-sm text-muted-foreground mt-1">100 balldan</p>
+                </div>
+              )}
+
+              <div>
+                <h4 className="font-medium mb-2">O'quvchi javobi:</h4>
+                <div className="bg-muted p-4 rounded-lg">
+                  <p className="text-sm">{detailSubmission.submission.content || "Matn kiritilmagan"}</p>
+                </div>
+              </div>
+
+              {detailSubmission.submission.imageUrls && detailSubmission.submission.imageUrls.length > 0 && (
+                <div>
+                  <h4 className="font-medium mb-2">Yuklangan rasmlar:</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {detailSubmission.submission.imageUrls.map((url: string, i: number) => (
+                      <img key={i} src={url} alt={`Image ${i + 1}`} className="rounded border w-full h-32 object-cover" />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {detailSubmission.submission.audioUrls && detailSubmission.submission.audioUrls.length > 0 && (
+                <div>
+                  <h4 className="font-medium mb-2">Audio fayllar:</h4>
+                  {detailSubmission.submission.audioUrls.map((url: string, i: number) => (
+                    <audio key={i} controls className="w-full mb-2">
+                      <source src={url} />
+                    </audio>
+                  ))}
+                </div>
+              )}
+
+              {detailSubmission.submission.fileUrls && detailSubmission.submission.fileUrls.length > 0 && (
+                <div>
+                  <h4 className="font-medium mb-2">Fayllar:</h4>
+                  {detailSubmission.submission.fileUrls.map((url: string, i: number) => (
+                    <a 
+                      key={i} 
+                      href={url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="block text-sm text-primary hover:underline mb-1"
+                    >
+                      📎 Fayl {i + 1}
+                    </a>
+                  ))}
+                </div>
+              )}
+
+              {detailSubmission.submission.feedback && (
+                <div className="border-t pt-4">
+                  <h4 className="font-medium mb-2">Sizning izohingiz:</h4>
+                  <div className="bg-muted p-4 rounded-lg">
+                    <p className="text-sm">{detailSubmission.submission.feedback}</p>
+                  </div>
+                </div>
+              )}
+
+              {detailSubmission.submission.submittedAt && (
+                <div className="text-sm text-muted-foreground">
+                  Topshirilgan vaqt: {new Date(detailSubmission.submission.submittedAt).toLocaleString('uz-UZ')}
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDetailViewOpen(false);
+                setDetailSubmission(null);
+              }}
+              data-testid="button-close-detail"
+            >
+              Yopish
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Course Dialog */}
       <DeleteCourseDialog
