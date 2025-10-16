@@ -1207,6 +1207,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // O'qituvchi - Kurs bo'yicha vazifalar (course-specific)
+  app.get('/api/instructor/courses/:courseId/submissions', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const instructorId = req.user.claims.sub;
+      const { courseId } = req.params;
+      
+      // Verify course belongs to instructor
+      const course = await storage.getCourse(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Kurs topilmadi" });
+      }
+      if (course.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Ruxsat yo'q" });
+        }
+      }
+      
+      const allSubmissions = await storage.getSubmissionsByInstructor(instructorId);
+      // Filter by course
+      const courseSubmissions = allSubmissions.filter((s: any) => s.courseId === courseId);
+      res.json(courseSubmissions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // O'qituvchi - Vazifani baholash
   app.post('/api/instructor/submissions/:id/grade', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
