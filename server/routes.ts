@@ -925,22 +925,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let totalScore = 0;
       let totalPoints = 0;
       
-      console.log('[GRADING START]', { testId, totalQuestions: questions.length });
-      
       for (const question of questions) {
         totalPoints += question.points;
         const studentAnswer = answers[question.id];
         
-        console.log('[QUESTION]', { 
-          id: question.id, 
-          type: question.type, 
-          points: question.points,
-          studentAnswer 
-        });
-        
         // Skip if no answer or empty array
         if (!studentAnswer || (Array.isArray(studentAnswer) && studentAnswer.length === 0)) {
-          console.log('[SKIP] No answer');
           continue;
         }
         
@@ -950,18 +940,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const correctOptions = options.filter((o: any) => o.isCorrect).map((o: any) => o.id);
           const studentOptions = Array.isArray(studentAnswer) ? studentAnswer : [studentAnswer];
           
-          console.log('[MC GRADING]', {
-            questionId: question.id,
-            correctOptions: correctOptions.sort(),
-            studentOptions: studentOptions.sort(),
-            match: JSON.stringify(correctOptions.sort()) === JSON.stringify(studentOptions.sort())
-          });
-          
           if (JSON.stringify(correctOptions.sort()) === JSON.stringify(studentOptions.sort())) {
             totalScore += question.points;
-            console.log('[SCORE ADDED]', { points: question.points, totalScore });
-          } else {
-            console.log('[NO SCORE] Answer incorrect');
           }
         } else if (question.type === 'true_false') {
           if (studentAnswer === question.correctAnswer) {
@@ -993,8 +973,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const percentage = totalPoints > 0 ? (totalScore / totalPoints) * 100 : 0;
       const isPassed = test.passingScore ? percentage >= test.passingScore : false;
-      
-      console.log('[GRADING COMPLETE]', { totalScore, totalPoints, percentage, isPassed });
       
       const attemptData = insertTestAttemptSchema.parse({
         testId,

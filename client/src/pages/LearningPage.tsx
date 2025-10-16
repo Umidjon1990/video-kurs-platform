@@ -71,9 +71,10 @@ export default function LearningPage() {
   const submitTestMutation = useMutation({
     mutationFn: async () => {
       if (!testDialog.testId) return;
-      return await apiRequest("POST", `/api/student/tests/${testDialog.testId}/submit`, {
+      const response = await apiRequest("POST", `/api/student/tests/${testDialog.testId}/submit`, {
         answers: testAnswers,
       });
+      return await response.json();
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/student/test-attempts'] });
