@@ -339,8 +339,8 @@ export default function InstructorDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/instructor/tests", selectedTest?.id, "questions"] });
-      toast({ title: "Muvaffaqiyatli", description: "Savol qo'shildi" });
-      setIsAddQuestionOpen(false);
+      toast({ title: "Muvaffaqiyatli", description: "Savol qo'shildi. Yana qo'shishingiz mumkin!" });
+      // Dialog yopilmaydi - foydalanuvchi bir nechta savol qo'sha oladi
       setQuestionForm({ type: "multiple_choice", questionText: "", points: "1", correctAnswer: "" });
       setMcOptions([{ text: "", isCorrect: false }]);
       setMatchingPairs([{ left: "", right: "" }]);
