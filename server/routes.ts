@@ -269,6 +269,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch('/api/instructor/lessons/:lessonId', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { lessonId } = req.params;
+      const instructorId = req.user.claims.sub;
+      
+      // Get lesson and verify ownership
+      const lesson = await storage.getLesson(lessonId);
+      if (!lesson) {
+        return res.status(404).json({ message: "Lesson not found" });
+      }
+      
+      const course = await storage.getCourse(lesson.courseId);
+      if (course?.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+      }
+      
+      const updatedLesson = await storage.updateLesson(lessonId, req.body);
+      res.json(updatedLesson);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete('/api/instructor/lessons/:lessonId', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { lessonId } = req.params;
+      const instructorId = req.user.claims.sub;
+      
+      // Get lesson and verify ownership
+      const lesson = await storage.getLesson(lessonId);
+      if (!lesson) {
+        return res.status(404).json({ message: "Lesson not found" });
+      }
+      
+      const course = await storage.getCourse(lesson.courseId);
+      if (course?.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+      }
+      
+      await storage.deleteLesson(lessonId);
+      res.json({ message: "Lesson deleted" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get('/api/instructor/courses/:courseId/assignments', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
       const { courseId } = req.params;

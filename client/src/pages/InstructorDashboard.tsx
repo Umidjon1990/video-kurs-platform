@@ -47,6 +47,8 @@ export default function InstructorDashboard() {
     duration: "",
   });
 
+  const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
+
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       toast({
@@ -102,18 +104,45 @@ export default function InstructorDashboard() {
   const addLessonMutation = useMutation({
     mutationFn: async () => {
       if (!selectedCourse) return;
-      const nextOrder = (lessons?.length || 0) + 1;
-      await apiRequest("POST", `/api/instructor/courses/${selectedCourse.id}/lessons`, {
-        ...lessonForm,
-        order: nextOrder,
-        duration: lessonForm.duration ? parseInt(lessonForm.duration) : null,
-      });
+      
+      if (editingLesson) {
+        // Update existing lesson
+        await apiRequest("PATCH", `/api/instructor/lessons/${editingLesson.id}`, {
+          ...lessonForm,
+          duration: lessonForm.duration ? parseInt(lessonForm.duration) : null,
+        });
+      } else {
+        // Create new lesson
+        const nextOrder = (lessons?.length || 0) + 1;
+        await apiRequest("POST", `/api/instructor/courses/${selectedCourse.id}/lessons`, {
+          ...lessonForm,
+          order: nextOrder,
+          duration: lessonForm.duration ? parseInt(lessonForm.duration) : null,
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/instructor/courses", selectedCourse?.id, "lessons"] });
-      toast({ title: "Muvaffaqiyatli", description: "Dars qo'shildi" });
+      toast({ 
+        title: "Muvaffaqiyatli", 
+        description: editingLesson ? "Dars yangilandi" : "Dars qo'shildi" 
+      });
       setIsAddLessonOpen(false);
       setLessonForm({ title: "", videoUrl: "", duration: "" });
+      setEditingLesson(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteLessonMutation = useMutation({
+    mutationFn: async (lessonId: string) => {
+      await apiRequest("DELETE", `/api/instructor/lessons/${lessonId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/instructor/courses", selectedCourse?.id, "lessons"] });
+      toast({ title: "Muvaffaqiyatli", description: "Dars o'chirildi" });
     },
     onError: (error: Error) => {
       toast({ title: "Xatolik", description: error.message, variant: "destructive" });
@@ -248,16 +277,46 @@ export default function InstructorDashboard() {
                 lessons?.map((lesson) => (
                   <div
                     key={lesson.id}
-                    className="flex items-center justify-between p-4 border rounded-lg"
+                    className="flex items-center justify-between p-4 border rounded-lg gap-4"
                     data-testid={`lesson-${lesson.id}`}
                   >
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <h4 className="font-semibold">{lesson.title}</h4>
-                      <p className="text-sm text-muted-foreground">{lesson.videoUrl}</p>
+                      <p className="text-sm text-muted-foreground truncate">{lesson.videoUrl}</p>
+                      <span className="text-xs text-muted-foreground">
+                        {lesson.duration ? `${lesson.duration} daqiqa` : 'Davomiylik ko\'rsatilmagan'}
+                      </span>
                     </div>
-                    <span className="text-sm text-muted-foreground">
-                      {lesson.duration ? `${lesson.duration} daqiqa` : '-'}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setEditingLesson(lesson);
+                          setLessonForm({
+                            title: lesson.title,
+                            videoUrl: lesson.videoUrl,
+                            duration: lesson.duration?.toString() || "",
+                          });
+                          setIsAddLessonOpen(true);
+                        }}
+                        data-testid={`button-edit-lesson-${lesson.id}`}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          if (confirm("Darsni o'chirishga ishonchingiz komilmi?")) {
+                            deleteLessonMutation.mutate(lesson.id);
+                          }
+                        }}
+                        data-testid={`button-delete-lesson-${lesson.id}`}
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
                 ))
               )}
@@ -342,11 +401,21 @@ export default function InstructorDashboard() {
       </Dialog>
 
       {/* Add Lesson Dialog */}
-      <Dialog open={isAddLessonOpen} onOpenChange={setIsAddLessonOpen}>
+      <Dialog open={isAddLessonOpen} onOpenChange={(open) => {
+        setIsAddLessonOpen(open);
+        if (!open) {
+          setEditingLesson(null);
+          setLessonForm({ title: "", videoUrl: "", duration: "" });
+        }
+      }}>
         <DialogContent data-testid="dialog-add-lesson">
           <DialogHeader>
-            <DialogTitle>Yangi Dars Qo'shish</DialogTitle>
-            <DialogDescription>Dars ma'lumotlarini kiriting</DialogDescription>
+            <DialogTitle>
+              {editingLesson ? "Darsni Tahrirlash" : "Yangi Dars Qo'shish"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingLesson ? "Dars ma'lumotlarini yangilang" : "Dars ma'lumotlarini kiriting"}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -399,7 +468,9 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
               disabled={!lessonForm.title || !lessonForm.videoUrl || addLessonMutation.isPending}
               data-testid="button-confirm-add-lesson"
             >
-              {addLessonMutation.isPending ? "Qo'shilmoqda..." : "Qo'shish"}
+              {addLessonMutation.isPending 
+                ? (editingLesson ? "Yangilanmoqda..." : "Qo'shilmoqda...") 
+                : (editingLesson ? "Yangilash" : "Qo'shish")}
             </Button>
           </DialogFooter>
         </DialogContent>
