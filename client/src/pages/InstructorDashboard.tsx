@@ -71,6 +71,7 @@ export default function InstructorDashboard() {
 
   const [isAddQuestionOpen, setIsAddQuestionOpen] = useState(false);
   const [selectedTest, setSelectedTest] = useState<Test | null>(null);
+  const [editingQuestion, setEditingQuestion] = useState<any | null>(null);
   const [questionForm, setQuestionForm] = useState({
     type: "multiple_choice",
     questionText: "",
@@ -298,52 +299,101 @@ export default function InstructorDashboard() {
     mutationFn: async () => {
       if (!selectedTest) return;
       
-      // Get current questions to determine order
-      const existingQuestions = await fetch(`/api/instructor/tests/${selectedTest.id}/questions`).then(r => r.json());
-      const nextOrder = existingQuestions.length;
-      
-      // Prepare config based on question type
-      let config = {};
-      if (questionForm.type === "matching") {
-        // Filter pairs - keep only complete pairs (both sides filled)
-        const validPairs = matchingPairs.filter(p => p.left.trim() && p.right.trim());
-        const leftColumn = validPairs.map(p => p.left);
-        const rightColumn = validPairs.map(p => p.right);
-        const correctPairs = validPairs.map((_, i) => [i, i] as [number, number]);
-        config = { leftColumn, rightColumn, correctPairs };
-      }
-      
-      // Create question
-      const questionResponse: any = await apiRequest("POST", `/api/instructor/tests/${selectedTest.id}/questions`, {
-        type: questionForm.type,
-        questionText: questionForm.questionText,
-        points: parseInt(questionForm.points),
-        order: nextOrder,
-        correctAnswer: questionForm.correctAnswer || null,
-        config,
-      });
-      
-      // If multiple choice, add options
-      if (questionForm.type === "multiple_choice" && questionResponse?.id) {
-        for (let i = 0; i < mcOptions.length; i++) {
-          const option = mcOptions[i];
-          if (option.text.trim()) {
-            await apiRequest("POST", `/api/instructor/questions/${questionResponse.id}/options`, {
-              optionText: option.text,
-              isCorrect: option.isCorrect,
-              order: i,
-            });
+      if (editingQuestion) {
+        // UPDATE mode
+        let config = {};
+        if (questionForm.type === "matching") {
+          const validPairs = matchingPairs.filter(p => p.left.trim() && p.right.trim());
+          const leftColumn = validPairs.map(p => p.left);
+          const rightColumn = validPairs.map(p => p.right);
+          const correctPairs = validPairs.map((_, i) => [i, i] as [number, number]);
+          config = { leftColumn, rightColumn, correctPairs };
+        }
+        
+        await apiRequest("PUT", `/api/instructor/questions/${editingQuestion.id}`, {
+          type: questionForm.type,
+          questionText: questionForm.questionText,
+          points: parseInt(questionForm.points),
+          correctAnswer: questionForm.correctAnswer || null,
+          config,
+        });
+        
+        // Update multiple choice options if needed
+        if (questionForm.type === "multiple_choice") {
+          // Delete old options
+          const oldOptions = await fetch(`/api/instructor/questions/${editingQuestion.id}/options`).then(r => r.json());
+          for (const opt of oldOptions) {
+            await apiRequest("DELETE", `/api/instructor/questions/${editingQuestion.id}/options/${opt.id}`, {});
+          }
+          
+          // Add new options
+          for (let i = 0; i < mcOptions.length; i++) {
+            const option = mcOptions[i];
+            if (option.text.trim()) {
+              await apiRequest("POST", `/api/instructor/questions/${editingQuestion.id}/options`, {
+                optionText: option.text,
+                isCorrect: option.isCorrect,
+                order: i,
+              });
+            }
+          }
+        }
+      } else {
+        // CREATE mode
+        const existingQuestions = await fetch(`/api/instructor/tests/${selectedTest.id}/questions`).then(r => r.json());
+        const nextOrder = existingQuestions.length;
+        
+        let config = {};
+        if (questionForm.type === "matching") {
+          const validPairs = matchingPairs.filter(p => p.left.trim() && p.right.trim());
+          const leftColumn = validPairs.map(p => p.left);
+          const rightColumn = validPairs.map(p => p.right);
+          const correctPairs = validPairs.map((_, i) => [i, i] as [number, number]);
+          config = { leftColumn, rightColumn, correctPairs };
+        }
+        
+        const questionResponse: any = await apiRequest("POST", `/api/instructor/tests/${selectedTest.id}/questions`, {
+          type: questionForm.type,
+          questionText: questionForm.questionText,
+          points: parseInt(questionForm.points),
+          order: nextOrder,
+          correctAnswer: questionForm.correctAnswer || null,
+          config,
+        });
+        
+        if (questionForm.type === "multiple_choice" && questionResponse?.id) {
+          for (let i = 0; i < mcOptions.length; i++) {
+            const option = mcOptions[i];
+            if (option.text.trim()) {
+              await apiRequest("POST", `/api/instructor/questions/${questionResponse.id}/options`, {
+                optionText: option.text,
+                isCorrect: option.isCorrect,
+                order: i,
+              });
+            }
           }
         }
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/instructor/tests", selectedTest?.id, "questions"] });
-      toast({ title: "Muvaffaqiyatli", description: "Savol qo'shildi. Yana qo'shishingiz mumkin!" });
-      // Dialog yopilmaydi - foydalanuvchi bir nechta savol qo'sha oladi
-      setQuestionForm({ type: "multiple_choice", questionText: "", points: "1", correctAnswer: "" });
-      setMcOptions([{ text: "", isCorrect: false }]);
-      setMatchingPairs([{ left: "", right: "" }]);
+      toast({ 
+        title: "Muvaffaqiyatli", 
+        description: editingQuestion ? "Savol yangilandi" : "Savol qo'shildi. Yana qo'shishingiz mumkin!" 
+      });
+      if (!editingQuestion) {
+        // Faqat yangi savol qo'shganda dialog ochiq qoladi
+        setQuestionForm({ type: "multiple_choice", questionText: "", points: "1", correctAnswer: "" });
+        setMcOptions([{ text: "", isCorrect: false }]);
+        setMatchingPairs([{ left: "", right: "" }]);
+      } else {
+        // Tahrirlashda dialog yopiladi
+        setIsAddQuestionOpen(false);
+        setEditingQuestion(null);
+        setQuestionForm({ type: "multiple_choice", questionText: "", points: "1", correctAnswer: "" });
+        setMcOptions([{ text: "", isCorrect: false }]);
+        setMatchingPairs([{ left: "", right: "" }]);
+      }
     },
     onError: (error: Error) => {
       toast({ title: "Xatolik", description: error.message, variant: "destructive" });
@@ -1080,7 +1130,7 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
       <Dialog open={isAddQuestionOpen} onOpenChange={setIsAddQuestionOpen}>
         <DialogContent data-testid="dialog-add-question">
           <DialogHeader>
-            <DialogTitle>Savol Qo'shish</DialogTitle>
+            <DialogTitle>{editingQuestion ? "Savolni Tahrirlash" : "Savol Qo'shish"}</DialogTitle>
             <DialogDescription>
               Test: {selectedTest?.title}
             </DialogDescription>
@@ -1296,7 +1346,13 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setIsAddQuestionOpen(false)}
+              onClick={() => {
+                setIsAddQuestionOpen(false);
+                setEditingQuestion(null);
+                setQuestionForm({ type: "multiple_choice", questionText: "", points: "1", correctAnswer: "" });
+                setMcOptions([{ text: "", isCorrect: false }]);
+                setMatchingPairs([{ left: "", right: "" }]);
+              }}
               data-testid="button-cancel-add-question"
             >
               Bekor Qilish
@@ -1306,7 +1362,9 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
               disabled={!questionForm.questionText || addQuestionMutation.isPending}
               data-testid="button-confirm-add-question"
             >
-              {addQuestionMutation.isPending ? "Qo'shilmoqda..." : "Qo'shish"}
+              {addQuestionMutation.isPending 
+                ? (editingQuestion ? "Yangilanmoqda..." : "Qo'shilmoqda...") 
+                : (editingQuestion ? "Saqlash" : "Qo'shish")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1369,18 +1427,54 @@ function QuestionsList({ testId }: { testId: string }) {
             </div>
             <p className="text-sm">{q.questionText}</p>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              if (confirm("Savolni o'chirishga ishonchingiz komilmi?")) {
-                deleteQuestionMutation.mutate(q.id);
-              }
-            }}
-            data-testid={`button-delete-question-${q.id}`}
-          >
-            <Trash2 className="w-4 h-4 text-destructive" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={async () => {
+                setEditingQuestion(q);
+                setQuestionForm({
+                  type: q.type,
+                  questionText: q.questionText,
+                  points: q.points.toString(),
+                  correctAnswer: q.correctAnswer || "",
+                });
+                
+                // Load options for multiple choice
+                if (q.type === "multiple_choice") {
+                  const options = await fetch(`/api/instructor/questions/${q.id}/options`).then(r => r.json());
+                  setMcOptions(options.map((opt: any) => ({ text: opt.optionText, isCorrect: opt.isCorrect })));
+                }
+                
+                // Load matching pairs
+                if (q.type === "matching" && q.config) {
+                  const config = q.config as any;
+                  const pairs = config.leftColumn.map((left: string, i: number) => ({
+                    left,
+                    right: config.rightColumn[i] || ""
+                  }));
+                  setMatchingPairs(pairs);
+                }
+                
+                setIsAddQuestionOpen(true);
+              }}
+              data-testid={`button-edit-question-${q.id}`}
+            >
+              <Edit className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                if (confirm("Savolni o'chirishga ishonchingiz komilmi?")) {
+                  deleteQuestionMutation.mutate(q.id);
+                }
+              }}
+              data-testid={`button-delete-question-${q.id}`}
+            >
+              <Trash2 className="w-4 h-4 text-destructive" />
+            </Button>
+          </div>
         </div>
       ))}
     </div>
