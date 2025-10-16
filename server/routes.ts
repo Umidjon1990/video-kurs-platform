@@ -895,6 +895,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get student test attempts (results)
+  app.get('/api/student/test-attempts', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const attempts = await storage.getTestAttemptsByUser(userId);
+      res.json(attempts);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   //Test attempt submission (student)
   app.post('/api/student/tests/:testId/submit', isAuthenticated, async (req: any, res) => {
     try {

@@ -78,7 +78,7 @@ export interface IStorage {
   
   // Question Option operations
   createQuestionOption(option: InsertQuestionOption): Promise<QuestionOption>;
-  getOptionsByQuestion(questionId: string): Promise<QuestionOption[]>;
+  getQuestionOptionsByQuestion(questionId: string): Promise<QuestionOption[]>;
   getQuestionOption(id: string): Promise<QuestionOption | undefined>;
   deleteQuestionOption(id: string): Promise<void>;
   
@@ -97,6 +97,7 @@ export interface IStorage {
   // Test Attempts
   createTestAttempt(attempt: InsertTestAttempt): Promise<TestAttempt>;
   getTestAttemptsByTest(testId: string): Promise<TestAttempt[]>;
+  getTestAttemptsByUser(userId: string): Promise<TestAttempt[]>;
   
   // Questions
   createQuestion(question: InsertQuestion): Promise<Question>;
@@ -338,7 +339,7 @@ export class DatabaseStorage implements IStorage {
     return option;
   }
 
-  async getOptionsByQuestion(questionId: string): Promise<QuestionOption[]> {
+  async getQuestionOptionsByQuestion(questionId: string): Promise<QuestionOption[]> {
     return await db
       .select()
       .from(questionOptions)
@@ -437,6 +438,14 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(testAttempts)
       .where(eq(testAttempts.testId, testId))
+      .orderBy(desc(testAttempts.completedAt));
+  }
+
+  async getTestAttemptsByUser(userId: string): Promise<TestAttempt[]> {
+    return await db
+      .select()
+      .from(testAttempts)
+      .where(eq(testAttempts.userId, userId))
       .orderBy(desc(testAttempts.completedAt));
   }
 

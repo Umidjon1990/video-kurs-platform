@@ -57,6 +57,11 @@ export default function LearningPage() {
     enabled: !!courseId && isAuthenticated,
   });
 
+  const { data: testAttempts } = useQuery<any[]>({
+    queryKey: ["/api/student/test-attempts"],
+    enabled: isAuthenticated,
+  });
+
   const { data: testQuestions } = useQuery<any[]>({
     queryKey: ["/api/tests", testDialog.testId, "questions"],
     enabled: !!testDialog.testId && testDialog.open,
@@ -70,6 +75,7 @@ export default function LearningPage() {
       });
     },
     onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/student/test-attempts'] });
       toast({
         title: data.isPassed ? "Test muvaffaqiyatli o'tildi!" : "Test topshirildi",
         description: `Ball: ${data.score}/${data.percentage.toFixed(0)}%`,
@@ -266,6 +272,7 @@ export default function LearningPage() {
                   <TabsTrigger value="overview" data-testid="tab-overview">Umumiy Ma'lumot</TabsTrigger>
                   <TabsTrigger value="assignments" data-testid="tab-assignments">Vazifalar</TabsTrigger>
                   <TabsTrigger value="tests" data-testid="tab-tests">Testlar</TabsTrigger>
+                  <TabsTrigger value="results" data-testid="tab-results">Natijalar</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="overview" className="space-y-4">
@@ -348,6 +355,53 @@ export default function LearningPage() {
                     <Card>
                       <CardContent className="py-8">
                         <p className="text-center text-muted-foreground">Bu darsda testlar yo'q</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="results" className="space-y-4">
+                  {testAttempts && testAttempts.length > 0 ? (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Test Natijalari</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {testAttempts.map((attempt: any) => {
+                            const test = tests?.find(t => t.id === attempt.testId);
+                            return (
+                              <div 
+                                key={attempt.id} 
+                                className="flex items-center justify-between p-3 rounded-lg border"
+                                data-testid={`result-item-${attempt.id}`}
+                              >
+                                <div className="flex-1">
+                                  <p className="font-medium">{test?.title || "Test"}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {new Date(attempt.completedAt).toLocaleDateString('uz-UZ')}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                  <div className="text-right">
+                                    <p className="font-semibold">{attempt.score} ball</p>
+                                  </div>
+                                  {attempt.isPassed ? (
+                                    <CheckCircle className="w-5 h-5 text-green-600" />
+                                  ) : (
+                                    <span className="text-sm text-destructive">O'tmadi</span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <Card>
+                      <CardContent className="py-8">
+                        <p className="text-center text-muted-foreground">Hali test topshirmadingiz</p>
                       </CardContent>
                     </Card>
                   )}
