@@ -7,6 +7,19 @@ This project is a comprehensive Learning Management System (LMS) platform design
 ## Recent Changes (October 16, 2025)
 
 ### Latest Updates
+- ✅ **Course Edit/Delete & Assignment Fixes** (Oct 16, 2025)
+  - ✅ **Instructor course management:**
+    - ✅ Edit dialog: update title, description, pricing, thumbnail
+    - ✅ Delete confirmation dialog with course title verification
+    - ✅ Security: Only editable fields allowed (no instructorId/status changes)
+    - ✅ PUT/DELETE endpoints with ownership verification
+  - ✅ **Assignment creation fixes:**
+    - ✅ Fixed dueDate validation: converts string to Date on backend
+    - ✅ Works with both POST and PATCH endpoints
+  - ✅ **Notification improvements:**
+    - ✅ Student submission → Instructor notification
+    - ✅ Shows student name and assignment title
+    - ✅ Type: 'assignment_submission'
 - ✅ **Assignment Grading & Results System - COMPLETE** (Oct 16, 2025)
   - ✅ **O'qituvchi paneli:**
     - ✅ "Vazifalar" tab: student submissions ro'yxati with grading dialog

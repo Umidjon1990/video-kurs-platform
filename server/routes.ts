@@ -1126,6 +1126,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const submission = await storage.createSubmission(submissionData);
+      
+      // Create notification for instructor
+      const assignment = await storage.getAssignment(assignmentId);
+      if (assignment) {
+        const course = await storage.getCourse(assignment.courseId);
+        if (course) {
+          const student = await storage.getUser(userId);
+          await storage.createNotification({
+            userId: course.instructorId,
+            type: 'assignment_submission',
+            title: 'Yangi vazifa topshirildi',
+            message: `${student?.firstName || 'O\'quvchi'} "${assignment.title}" vazifasini topshirdi`,
+          });
+        }
+      }
+      
       res.json(submission);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
