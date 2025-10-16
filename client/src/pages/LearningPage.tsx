@@ -87,9 +87,10 @@ export default function LearningPage() {
           description: "Natijani tez orada bilib olasiz (insho qo'lda baholanadi)",
         });
       } else {
+        const percentage = data.percentage || 0;
         toast({
           title: data.isPassed ? "Test muvaffaqiyatli o'tildi! ✅" : "Test topshirildi",
-          description: `Sizning ballingiz: ${data.score} (${data.percentage.toFixed(0)}%)`,
+          description: `Sizning ballingiz: ${data.score} (${percentage.toFixed(0)}%)`,
           variant: data.isPassed ? "default" : "destructive",
         });
       }
