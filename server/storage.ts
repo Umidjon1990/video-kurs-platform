@@ -11,6 +11,7 @@ import {
   questions,
   questionOptions,
   notifications,
+  announcements,
   type User,
   type UpsertUser,
   type Course,
@@ -33,6 +34,8 @@ import {
   type InsertQuestionOption,
   type Notification,
   type InsertNotification,
+  type Announcement,
+  type InsertAnnouncement,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";
@@ -117,6 +120,13 @@ export interface IStorage {
   clearReadNotifications(userId: string): Promise<void>;
   clearAllNotifications(userId: string): Promise<void>;
   getUnreadCount(userId: string): Promise<number>;
+  
+  // Announcement operations
+  createAnnouncement(announcement: InsertAnnouncement): Promise<Announcement>;
+  getAnnouncementsByInstructor(instructorId: string): Promise<Announcement[]>;
+  getAllAnnouncements(): Promise<Announcement[]>;
+  getAnnouncement(id: string): Promise<Announcement | undefined>;
+  deleteAnnouncement(id: string): Promise<void>;
   
   // Statistics
   getStats(): Promise<{
@@ -604,6 +614,46 @@ export class DatabaseStorage implements IStorage {
       ));
     
     return result.length;
+  }
+
+  // Announcement operations
+  async createAnnouncement(announcement: InsertAnnouncement): Promise<Announcement> {
+    const [newAnnouncement] = await db
+      .insert(announcements)
+      .values(announcement)
+      .returning();
+    return newAnnouncement;
+  }
+
+  async getAnnouncementsByInstructor(instructorId: string): Promise<Announcement[]> {
+    const result = await db
+      .select()
+      .from(announcements)
+      .where(eq(announcements.instructorId, instructorId))
+      .orderBy(desc(announcements.createdAt));
+    return result;
+  }
+
+  async getAllAnnouncements(): Promise<Announcement[]> {
+    const result = await db
+      .select()
+      .from(announcements)
+      .orderBy(desc(announcements.createdAt));
+    return result;
+  }
+
+  async getAnnouncement(id: string): Promise<Announcement | undefined> {
+    const [announcement] = await db
+      .select()
+      .from(announcements)
+      .where(eq(announcements.id, id));
+    return announcement;
+  }
+
+  async deleteAnnouncement(id: string): Promise<void> {
+    await db
+      .delete(announcements)
+      .where(eq(announcements.id, id));
   }
 
   // Statistics
