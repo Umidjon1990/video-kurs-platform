@@ -952,7 +952,10 @@ export default function InstructorDashboard() {
                           <div className="flex-1 min-w-0">
                             <h4 className="font-semibold">{item.assignment.title}</h4>
                             <p className="text-sm text-muted-foreground">
-                              O'quvchi: {item.user.name}
+                              O'quvchi: {item.user.name || item.user.email}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Email: {item.user.email}
                             </p>
                             <div className="flex items-center gap-2 mt-1">
                               <span className={`text-xs px-2 py-1 rounded ${
