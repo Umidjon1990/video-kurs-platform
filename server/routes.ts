@@ -228,6 +228,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put('/api/instructor/courses/:courseId', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { courseId } = req.params;
+      const instructorId = req.user.claims.sub;
+      
+      const course = await storage.getCourse(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Kurs topilmadi" });
+      }
+      if (course.instructorId !== instructorId) {
+        return res.status(403).json({ message: "Ruxsat yo'q" });
+      }
+      
+      const updateData = insertCourseSchema.partial().parse(req.body);
+      const updatedCourse = await storage.updateCourse(courseId, updateData);
+      res.json(updatedCourse);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete('/api/instructor/courses/:courseId', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { courseId } = req.params;
+      const instructorId = req.user.claims.sub;
+      
+      const course = await storage.getCourse(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Kurs topilmadi" });
+      }
+      if (course.instructorId !== instructorId) {
+        return res.status(403).json({ message: "Ruxsat yo'q" });
+      }
+      
+      await storage.deleteCourse(courseId);
+      res.json({ message: "Kurs o'chirildi" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.patch('/api/instructor/courses/:courseId/publish', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
       const { courseId } = req.params;

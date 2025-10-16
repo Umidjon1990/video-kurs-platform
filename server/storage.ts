@@ -51,6 +51,7 @@ export interface IStorage {
   getPublishedCourses(): Promise<Course[]>;
   updateCourseStatus(id: string, status: string): Promise<Course>;
   updateCourse(id: string, data: Partial<InsertCourse>): Promise<Course>;
+  deleteCourse(id: string): Promise<void>;
   
   // Lesson operations
   createLesson(lesson: InsertLesson): Promise<Lesson>;
@@ -203,6 +204,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(courses.id, id))
       .returning();
     return course;
+  }
+
+  async deleteCourse(id: string): Promise<void> {
+    await db.delete(courses).where(eq(courses.id, id));
   }
 
   // Lesson operations
