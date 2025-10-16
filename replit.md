@@ -6,7 +6,30 @@ A comprehensive Learning Management System (LMS) platform for video-based course
 
 ## Recent Changes (October 16, 2025)
 
-### Completed Features
+### Latest Updates
+- ✅ **Modules System Removed** (Oct 16, 2025)
+  - ✅ Removed modules table from database schema
+  - ✅ Removed moduleId field from lessons table
+  - ✅ Removed all module-related backend operations (storage, routes)
+  - ✅ Removed "Modullar" tab from instructor dashboard
+  - ✅ Simplified course structure: Courses → Lessons (direct relationship)
+  - ✅ Successful database migration with npm run db:push
+- ✅ **Enhanced Demo Lesson System** (Oct 16, 2025)
+  - ✅ Instructor manually selects demo lessons via checkbox in lesson creation form
+  - ✅ isDemo checkbox added to Add/Edit Lesson dialog
+  - ✅ "View Demo Lessons" button added to all course cards (Play icon)
+  - ✅ Demo lessons dialog shows free preview lessons before purchase
+  - ✅ Backend API endpoint: `/api/courses/:courseId/demo-lessons`
+  - ✅ Green "Demo" badge displayed on demo lessons
+  - ✅ Student UI: Lock icon on locked lessons, PlayCircle on accessible lessons
+  - ✅ Locked lessons non-clickable with reduced opacity
+  - ✅ Access control: enrollment check (paymentStatus === 'confirmed')
+  - ✅ Paywall message for locked lesson content with purchase prompt
+- ✅ **Navigation Improvements** (Oct 16, 2025)
+  - ✅ Student panel back button routes to home page ("/")
+  - ✅ Home icon button added to LearningPage header
+
+### Previously Completed Features
 - ✅ Assignment and Test linkage to specific lessons via optional lessonId field
 - ✅ Instructor dashboard: lesson selection dropdowns for assignments/tests
 - ✅ Student submission workflow: dialog-based assignment submission form
@@ -36,22 +59,6 @@ A comprehensive Learning Management System (LMS) platform for video-based course
   - ✅ Student UI: prominent discounted price with green discount badge
   - ✅ Original price shown with strikethrough styling
   - ✅ Backward compatible with courses having only regular price
-- ✅ **Module-Based Course Organization - COMPLETE**
-  - ✅ Modules schema: courseId, title, order, description
-  - ✅ Lessons linked to modules via moduleId field
-  - ✅ Instructor "Modullar" tab in course management (4-column grid)
-  - ✅ Module creation dialog with topics multi-line input
-  - ✅ Backend auto-generates lessons from topics list
-  - ✅ Module list displays lesson count per module
-- ✅ **Demo/Locked Lesson System - COMPLETE**
-  - ✅ Added isDemo boolean field to lessons schema
-  - ✅ First lesson of each module auto-marked as demo (free)
-  - ✅ Student UI: Lock icon on locked lessons, PlayCircle on accessible
-  - ✅ Demo badge (green) displayed on demo lessons
-  - ✅ Locked lessons are non-clickable with reduced opacity
-  - ✅ Access control: enrollment check (paymentStatus === 'confirmed')
-  - ✅ Locked lesson content shows paywall message with "Buy course" prompt
-  - ✅ Full course access granted after payment approval
 
 ## User Preferences
 
@@ -224,8 +231,7 @@ Preferred communication style: Simple, everyday language (Uzbek interface).
 - sessions (Replit Auth session storage)
 - users (role: admin | instructor | student, replitId, email, name)
 - courses (instructorId, title, description, price, originalPrice, discountedPrice, status, thumbnailUrl)
-- modules (courseId, title, order, description)
-- lessons (courseId, moduleId [optional], title, videoUrl, duration, order, isDemo)
+- lessons (courseId, title, videoUrl, duration, order, isDemo)
 - assignments (courseId, lessonId [optional], title, description, dueDate, maxScore)
 - tests (courseId, lessonId [optional], title, description, passingScore, isDraft, randomOrder)
 - questions (testId, type, questionText, points, order, mediaUrl, correctAnswer, config)
