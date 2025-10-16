@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PlayCircle, CheckCircle, FileText, ClipboardCheck, Lock, Home } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { NotificationBell } from "@/components/NotificationBell";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Course, Lesson, Assignment, Test } from "@shared/schema";
 
@@ -190,7 +191,8 @@ export default function LearningPage() {
             <Home className="w-5 h-5" />
           </Button>
           <h1 className="text-xl font-bold line-clamp-1" data-testid="text-course-title">{course.title}</h1>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            <NotificationBell />
             <Button
               variant="outline"
               onClick={() => window.location.href = "/api/logout"}
