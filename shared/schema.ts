@@ -43,6 +43,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   submissions: many(submissions),
   testAttempts: many(testAttempts),
   notifications: many(notifications),
+  announcements: many(announcements),
 }));
 
 // Courses table
@@ -275,6 +276,24 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   }),
 }));
 
+// Announcements table - E'lonlar (O'qituvchi yuboradi)
+export const announcements = pgTable("announcements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  instructorId: varchar("instructor_id").notNull().references(() => users.id),
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  priority: varchar("priority", { length: 20 }).notNull().default('normal'), // normal, urgent
+  targetType: varchar("target_type", { length: 20 }).notNull(), // individual, course, all
+  targetId: varchar("target_id"), // userId or courseId (null if targetType is 'all')
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const announcementsRelations = relations(announcements, ({ one }) => ({
+  instructor: one(users, {
+    fields: [announcements.instructorId],
+    references: [users.id],
+  }),
+}));
 
 // Zod schemas for validation
 export const insertUserSchema = createInsertSchema(users).omit({
@@ -334,6 +353,11 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
   createdAt: true,
 });
 
+export const insertAnnouncementSchema = createInsertSchema(announcements).omit({
+  id: true,
+  createdAt: true,
+});
+
 // TypeScript types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -367,3 +391,6 @@ export type Submission = typeof submissions.$inferSelect;
 
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Notification = typeof notifications.$inferSelect;
+
+export type InsertAnnouncement = z.infer<typeof insertAnnouncementSchema>;
+export type Announcement = typeof announcements.$inferSelect;
