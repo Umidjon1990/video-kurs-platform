@@ -274,10 +274,18 @@ export default function LearningPage() {
                     <CardContent className="p-0">
                   <div className="aspect-video bg-black rounded-lg overflow-hidden">
                     {(() => {
-                      const videoContent = currentLesson.videoUrl;
+                      const videoContent = currentLesson.videoUrl?.trim() || '';
+                      
+                      if (!videoContent) {
+                        return (
+                          <div className="text-white p-8 text-center flex items-center justify-center h-full">
+                            <p>Video URL kiritilmagan</p>
+                          </div>
+                        );
+                      }
                       
                       // Check if it's an iframe embed code
-                      if (videoContent.trim().startsWith('<iframe')) {
+                      if (videoContent.startsWith('<iframe') || videoContent.startsWith('<embed')) {
                         return (
                           <div 
                             className="w-full h-full"
@@ -287,14 +295,41 @@ export default function LearningPage() {
                         );
                       }
                       
-                      // Check if it's a YouTube URL
+                      // Parse YouTube URLs
                       if (videoContent.includes('youtube.com') || videoContent.includes('youtu.be')) {
-                        const embedUrl = videoContent.includes('embed') 
-                          ? videoContent 
-                          : videoContent.replace('watch?v=', 'embed/');
+                        let videoId = '';
+                        
+                        // Extract video ID from different YouTube URL formats
+                        if (videoContent.includes('youtube.com/watch?v=')) {
+                          videoId = videoContent.split('watch?v=')[1]?.split('&')[0];
+                        } else if (videoContent.includes('youtube.com/embed/')) {
+                          videoId = videoContent.split('embed/')[1]?.split('?')[0];
+                        } else if (videoContent.includes('youtu.be/')) {
+                          videoId = videoContent.split('youtu.be/')[1]?.split('?')[0];
+                        }
+                        
+                        if (videoId) {
+                          return (
+                            <iframe
+                              src={`https://www.youtube.com/embed/${videoId}`}
+                              className="w-full h-full"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                              data-testid="video-player"
+                            />
+                          );
+                        }
+                      }
+                      
+                      // Check for Kinescope, Vimeo and other video platforms
+                      if (videoContent.includes('kinescope.io') || 
+                          videoContent.includes('vimeo.com') ||
+                          videoContent.includes('player.vimeo.com') ||
+                          videoContent.includes('dailymotion.com') ||
+                          videoContent.includes('wistia.com')) {
                         return (
                           <iframe
-                            src={embedUrl}
+                            src={videoContent}
                             className="w-full h-full"
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                             allowFullScreen
@@ -303,8 +338,9 @@ export default function LearningPage() {
                         );
                       }
                       
-                      // Check if it's a Kinescope or other direct URL
-                      if (videoContent.includes('kinescope') || videoContent.includes('vimeo')) {
+                      // Try to treat as direct video URL or iframe src
+                      // Check if it looks like a valid URL
+                      if (videoContent.startsWith('http://') || videoContent.startsWith('https://')) {
                         return (
                           <iframe
                             src={videoContent}
@@ -320,7 +356,7 @@ export default function LearningPage() {
                       return (
                         <div className="text-white p-8 text-center flex items-center justify-center h-full">
                           <div>
-                            <p className="mb-4">Video URL yoki Embed kod kiriting:</p>
+                            <p className="mb-4">Video format tanilmadi. Havola:</p>
                             <a 
                               href={currentLesson.videoUrl} 
                               target="_blank" 
