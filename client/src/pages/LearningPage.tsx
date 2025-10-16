@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PlayCircle, CheckCircle, FileText, ClipboardCheck } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Course, Lesson, Assignment, Test } from "@shared/schema";
 
@@ -531,22 +532,29 @@ export default function LearningPage() {
 }
 
 function TestQuestionInput({ question, value, onChange }: { question: any; value: any; onChange: (value: any) => void }) {
-  const { data: mcOptions } = useQuery<any[]>({
+  const { data: mcOptions, isLoading: optionsLoading } = useQuery<any[]>({
     queryKey: ["/api/questions", question.id, "options"],
     enabled: question.type === "multiple_choice",
   });
 
   if (question.type === "multiple_choice") {
+    if (optionsLoading) {
+      return <p className="text-sm text-muted-foreground">Variantlar yuklanmoqda...</p>;
+    }
+    
+    if (!mcOptions || mcOptions.length === 0) {
+      return <p className="text-sm text-muted-foreground">Variantlar mavjud emas</p>;
+    }
+    
     return (
-      <div className="space-y-2">
-        {mcOptions?.map((opt) => (
-          <label key={opt.id} className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
+      <div className="space-y-3">
+        {mcOptions.map((opt) => (
+          <div key={opt.id} className="flex items-start gap-3 p-3 rounded-lg border hover-elevate" data-testid={`option-${opt.id}`}>
+            <Checkbox
               checked={Array.isArray(value) && value.includes(opt.id)}
-              onChange={(e) => {
+              onCheckedChange={(checked) => {
                 const current = Array.isArray(value) ? value : [];
-                if (e.target.checked) {
+                if (checked) {
                   onChange([...current, opt.id]);
                 } else {
                   onChange(current.filter((id: string) => id !== opt.id));
@@ -554,8 +562,10 @@ function TestQuestionInput({ question, value, onChange }: { question: any; value
               }}
               data-testid={`checkbox-option-${opt.id}`}
             />
-            <span>{opt.optionText}</span>
-          </label>
+            <label className="flex-1 cursor-pointer text-sm leading-relaxed">
+              {opt.optionText}
+            </label>
+          </div>
         ))}
       </div>
     );
