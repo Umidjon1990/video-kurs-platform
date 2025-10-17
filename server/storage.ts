@@ -709,6 +709,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getConversations(userId: string, role: string): Promise<any[]> {
+    console.log('[STORAGE] getConversations called - userId:', userId, 'role:', role);
+    
     // Get conversations with last message and user info
     if (role === 'student') {
       const result = await db
@@ -727,6 +729,8 @@ export class DatabaseStorage implements IStorage {
         .leftJoin(users, eq(conversations.instructorId, users.id))
         .where(eq(conversations.studentId, userId))
         .orderBy(desc(conversations.lastMessageAt));
+      
+      console.log('[STORAGE] Student conversations found:', result.length);
       return result;
     } else {
       const result = await db
