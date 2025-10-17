@@ -1390,6 +1390,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== CHAT (Private Messaging) ====================
+  
+  // Get or create conversation
+  app.post('/api/chat/conversations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { instructorId, studentId } = req.body;
+      
+      // Determine who is the student and who is the instructor
+      let finalStudentId = studentId;
+      let finalInstructorId = instructorId;
+      
+      if (req.user.claims.role === 'student') {
+        finalStudentId = userId;
+        finalInstructorId = instructorId;
+      } else {
+        finalStudentId = studentId;
+        finalInstructorId = userId;
+      }
+      
+      const conversation = await storage.getOrCreateConversation(finalStudentId, finalInstructorId);
+      res.json(conversation);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get user's conversations
+  app.get('/api/chat/conversations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const role = req.user.claims.role || 'student';
+      const conversations = await storage.getConversations(userId, role);
+      res.json(conversations);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get messages in a conversation
+  app.get('/api/chat/conversations/:id/messages', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const messages = await storage.getMessages(id);
+      res.json(messages);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Send message
+  app.post('/api/chat/conversations/:id/messages', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.claims.sub;
+      const { content } = req.body;
+      
+      const message = await storage.sendMessage(id, userId, content);
+      res.json(message);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Mark messages as read
+  app.patch('/api/chat/conversations/:id/read', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.claims.sub;
+      
+      await storage.markMessagesAsRead(id, userId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get unread message count
+  app.get('/api/chat/unread-count', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const count = await storage.getUnreadMessageCount(userId);
+      res.json({ count });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // O'quvchi - Vazifa yuborish
   app.post('/api/student/submissions', isAuthenticated, upload.fields([
     { name: 'images', maxCount: 5 },
