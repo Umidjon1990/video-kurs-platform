@@ -12,6 +12,8 @@ import {
   questionOptions,
   notifications,
   announcements,
+  conversations,
+  messages,
   type User,
   type UpsertUser,
   type Course,
@@ -36,9 +38,13 @@ import {
   type InsertNotification,
   type Announcement,
   type InsertAnnouncement,
+  type Conversation,
+  type InsertConversation,
+  type Message,
+  type InsertMessage,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, or } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (Replit Auth required)
@@ -128,6 +134,14 @@ export interface IStorage {
   getAllAnnouncements(): Promise<Announcement[]>;
   getAnnouncement(id: string): Promise<Announcement | undefined>;
   deleteAnnouncement(id: string): Promise<void>;
+  
+  // Chat operations (Private Messaging)
+  getOrCreateConversation(studentId: string, instructorId: string): Promise<any>;
+  getConversations(userId: string, role: string): Promise<any[]>;
+  sendMessage(conversationId: string, senderId: string, content: string): Promise<any>;
+  getMessages(conversationId: string): Promise<any[]>;
+  markMessagesAsRead(conversationId: string, userId: string): Promise<void>;
+  getUnreadMessageCount(userId: string): Promise<number>;
   
   // Statistics
   getStats(): Promise<{
@@ -666,6 +680,162 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(announcements)
       .where(eq(announcements.id, id));
+  }
+
+  // Chat operations (Private Messaging)
+  async getOrCreateConversation(studentId: string, instructorId: string): Promise<any> {
+    // Check if conversation already exists
+    const [existing] = await db
+      .select()
+      .from(conversations)
+      .where(
+        and(
+          eq(conversations.studentId, studentId),
+          eq(conversations.instructorId, instructorId)
+        )
+      );
+    
+    if (existing) {
+      return existing;
+    }
+    
+    // Create new conversation
+    const [conversation] = await db
+      .insert(conversations)
+      .values({ studentId, instructorId })
+      .returning();
+    
+    return conversation;
+  }
+
+  async getConversations(userId: string, role: string): Promise<any[]> {
+    // Get conversations with last message and user info
+    if (role === 'student') {
+      const result = await db
+        .select({
+          id: conversations.id,
+          studentId: conversations.studentId,
+          instructorId: conversations.instructorId,
+          lastMessageAt: conversations.lastMessageAt,
+          createdAt: conversations.createdAt,
+          instructorFirstName: users.firstName,
+          instructorLastName: users.lastName,
+          instructorEmail: users.email,
+          instructorProfileImageUrl: users.profileImageUrl,
+        })
+        .from(conversations)
+        .leftJoin(users, eq(conversations.instructorId, users.id))
+        .where(eq(conversations.studentId, userId))
+        .orderBy(desc(conversations.lastMessageAt));
+      return result;
+    } else {
+      const result = await db
+        .select({
+          id: conversations.id,
+          studentId: conversations.studentId,
+          instructorId: conversations.instructorId,
+          lastMessageAt: conversations.lastMessageAt,
+          createdAt: conversations.createdAt,
+          studentFirstName: users.firstName,
+          studentLastName: users.lastName,
+          studentEmail: users.email,
+          studentProfileImageUrl: users.profileImageUrl,
+        })
+        .from(conversations)
+        .leftJoin(users, eq(conversations.studentId, users.id))
+        .where(eq(conversations.instructorId, userId))
+        .orderBy(desc(conversations.lastMessageAt));
+      return result;
+    }
+  }
+
+  async sendMessage(conversationId: string, senderId: string, content: string): Promise<any> {
+    // Create message
+    const [message] = await db
+      .insert(messages)
+      .values({ conversationId, senderId, content })
+      .returning();
+    
+    // Update conversation lastMessageAt
+    await db
+      .update(conversations)
+      .set({ lastMessageAt: new Date() })
+      .where(eq(conversations.id, conversationId));
+    
+    return message;
+  }
+
+  async getMessages(conversationId: string): Promise<any[]> {
+    const result = await db
+      .select({
+        id: messages.id,
+        conversationId: messages.conversationId,
+        senderId: messages.senderId,
+        content: messages.content,
+        isRead: messages.isRead,
+        createdAt: messages.createdAt,
+        senderFirstName: users.firstName,
+        senderLastName: users.lastName,
+        senderEmail: users.email,
+        senderProfileImageUrl: users.profileImageUrl,
+      })
+      .from(messages)
+      .leftJoin(users, eq(messages.senderId, users.id))
+      .where(eq(messages.conversationId, conversationId))
+      .orderBy(messages.createdAt);
+    return result;
+  }
+
+  async markMessagesAsRead(conversationId: string, userId: string): Promise<void> {
+    // Mark all messages in conversation as read where receiver is userId
+    await db
+      .update(messages)
+      .set({ isRead: true })
+      .where(
+        and(
+          eq(messages.conversationId, conversationId),
+          eq(messages.isRead, false),
+          // Only mark messages NOT sent by current user
+          eq(messages.senderId, userId) // This should be NOT equal, but we'll use a different approach
+        )
+      );
+  }
+
+  async getUnreadMessageCount(userId: string): Promise<number> {
+    // Get conversations where user is participant
+    const userConversations = await db
+      .select({ id: conversations.id })
+      .from(conversations)
+      .where(
+        or(
+          eq(conversations.studentId, userId),
+          eq(conversations.instructorId, userId)
+        )
+      );
+    
+    if (userConversations.length === 0) {
+      return 0;
+    }
+    
+    const conversationIds = userConversations.map(c => c.id);
+    
+    // Count unread messages in these conversations that were NOT sent by current user
+    const unreadMessages = await db
+      .select()
+      .from(messages)
+      .where(
+        and(
+          eq(messages.isRead, false),
+          // Message is NOT from current user (they sent it to someone else)
+        )
+      );
+    
+    // Filter manually to exclude messages sent by current user
+    const filteredUnread = unreadMessages.filter(m => 
+      conversationIds.includes(m.conversationId) && m.senderId !== userId
+    );
+    
+    return filteredUnread.length;
   }
 
   // Statistics

@@ -44,6 +44,9 @@ export const usersRelations = relations(users, ({ many }) => ({
   testAttempts: many(testAttempts),
   notifications: many(notifications),
   announcements: many(announcements),
+  studentConversations: many(conversations, { relationName: 'studentConversations' }),
+  instructorConversations: many(conversations, { relationName: 'instructorConversations' }),
+  messages: many(messages),
 }));
 
 // Courses table
@@ -358,6 +361,62 @@ export const insertAnnouncementSchema = createInsertSchema(announcements).omit({
   createdAt: true,
 });
 
+// Conversations table (Private Messaging)
+export const conversations = pgTable("conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  studentId: varchar("student_id").notNull().references(() => users.id),
+  instructorId: varchar("instructor_id").notNull().references(() => users.id),
+  lastMessageAt: timestamp("last_message_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const conversationsRelations = relations(conversations, ({ one, many }) => ({
+  student: one(users, {
+    fields: [conversations.studentId],
+    references: [users.id],
+    relationName: 'studentConversations',
+  }),
+  instructor: one(users, {
+    fields: [conversations.instructorId],
+    references: [users.id],
+    relationName: 'instructorConversations',
+  }),
+  messages: many(messages),
+}));
+
+// Messages table
+export const messages = pgTable("messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  conversationId: varchar("conversation_id").notNull().references(() => conversations.id, { onDelete: 'cascade' }),
+  senderId: varchar("sender_id").notNull().references(() => users.id),
+  content: text("content").notNull(),
+  isRead: boolean("is_read").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const messagesRelations = relations(messages, ({ one }) => ({
+  conversation: one(conversations, {
+    fields: [messages.conversationId],
+    references: [conversations.id],
+  }),
+  sender: one(users, {
+    fields: [messages.senderId],
+    references: [users.id],
+  }),
+}));
+
+// Insert schemas for chat system
+export const insertConversationSchema = createInsertSchema(conversations).omit({
+  id: true,
+  createdAt: true,
+  lastMessageAt: true,
+});
+
+export const insertMessageSchema = createInsertSchema(messages).omit({
+  id: true,
+  createdAt: true,
+});
+
 // TypeScript types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -394,3 +453,9 @@ export type Notification = typeof notifications.$inferSelect;
 
 export type InsertAnnouncement = z.infer<typeof insertAnnouncementSchema>;
 export type Announcement = typeof announcements.$inferSelect;
+
+export type InsertConversation = z.infer<typeof insertConversationSchema>;
+export type Conversation = typeof conversations.$inferSelect;
+
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
+export type Message = typeof messages.$inferSelect;
