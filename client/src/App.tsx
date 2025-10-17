@@ -14,6 +14,7 @@ import StudentResults from "@/pages/StudentResults";
 import LearningPage from "@/pages/LearningPage";
 import Checkout from "@/pages/Checkout";
 import PaymentSuccess from "@/pages/PaymentSuccess";
+import ChatPage from "@/pages/ChatPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -43,7 +44,11 @@ function Router() {
           
           {/* Instructor Routes */}
           {user?.role === 'instructor' && (
-            <Route path="/" component={InstructorDashboard} />
+            <>
+              <Route path="/" component={InstructorDashboard} />
+              <Route path="/chat" component={ChatPage} />
+              <Route path="/chat/:conversationId" component={ChatPage} />
+            </>
           )}
           
           {/* Student Routes */}
@@ -54,6 +59,8 @@ function Router() {
               <Route path="/checkout/:courseId" component={Checkout} />
               <Route path="/learn/:courseId" component={LearningPage} />
               <Route path="/payment-success" component={PaymentSuccess} />
+              <Route path="/chat" component={ChatPage} />
+              <Route path="/chat/:conversationId" component={ChatPage} />
             </>
           )}
         </>

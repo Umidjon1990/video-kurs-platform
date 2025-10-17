@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CourseCard } from "@/components/CourseCard";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useLocation } from "wouter";
+import { MessageCircle } from "lucide-react";
 import type { Course } from "@shared/schema";
 
 export default function StudentCourses() {
@@ -71,6 +72,14 @@ export default function StudentCourses() {
               data-testid="button-results"
             >
               Natijalarim
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setLocation("/chat")}
+              data-testid="button-chat"
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              Chat
             </Button>
             <NotificationBell />
             <Button
