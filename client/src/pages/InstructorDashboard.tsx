@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, Download } from "lucide-react";
+import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, Download, Megaphone, Users, User } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NotificationBell } from "@/components/NotificationBell";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -75,6 +75,15 @@ export default function InstructorDashboard() {
     title: "",
     passingScore: "",
     lessonId: "",
+  });
+
+  const [isAnnouncementOpen, setIsAnnouncementOpen] = useState(false);
+  const [announcementForm, setAnnouncementForm] = useState({
+    title: "",
+    message: "",
+    priority: "normal",
+    targetType: "all",
+    targetId: "",
   });
 
   const [isAddQuestionOpen, setIsAddQuestionOpen] = useState(false);
@@ -507,6 +516,29 @@ export default function InstructorDashboard() {
     },
   });
 
+  const sendAnnouncementMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("POST", "/api/instructor/announcements", data);
+    },
+    onSuccess: (data: any) => {
+      setIsAnnouncementOpen(false);
+      setAnnouncementForm({
+        title: "",
+        message: "",
+        priority: "normal",
+        targetType: "all",
+        targetId: "",
+      });
+      toast({ 
+        title: "E'lon yuborildi!", 
+        description: `${data.recipientCount} kishiga yuborildi` 
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+
   if (authLoading || coursesLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -561,10 +593,16 @@ export default function InstructorDashboard() {
       <div className="p-8 space-y-8">
         <div className="flex justify-between items-center">
           <h2 className="text-3xl font-bold">Mening Kurslarim</h2>
-          <Button onClick={() => setIsCreateCourseOpen(true)} data-testid="button-create-course">
-            <Plus className="w-4 h-4 mr-2" />
-            Yangi Kurs
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setIsAnnouncementOpen(true)} variant="outline" data-testid="button-announcement">
+              <Megaphone className="w-4 h-4 mr-2" />
+              E'lon Yuborish
+            </Button>
+            <Button onClick={() => setIsCreateCourseOpen(true)} data-testid="button-create-course">
+              <Plus className="w-4 h-4 mr-2" />
+              Yangi Kurs
+            </Button>
+          </div>
         </div>
 
         {courses && courses.length === 0 ? (
@@ -1708,6 +1746,135 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
         onSubmit={() => gradingMutation.mutate()}
         isPending={gradingMutation.isPending}
       />
+
+      {/* Announcement Dialog */}
+      <Dialog open={isAnnouncementOpen} onOpenChange={setIsAnnouncementOpen}>
+        <DialogContent data-testid="dialog-announcement">
+          <DialogHeader>
+            <DialogTitle>E'lon Yuborish</DialogTitle>
+            <DialogDescription>
+              O'quvchilarga muhim xabar yuboring
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label>Sarlavha</Label>
+              <Input
+                value={announcementForm.title}
+                onChange={(e) => setAnnouncementForm({ ...announcementForm, title: e.target.value })}
+                placeholder="E'lon sarlavhasi"
+                data-testid="input-announcement-title"
+              />
+            </div>
+
+            <div>
+              <Label>Xabar</Label>
+              <Textarea
+                value={announcementForm.message}
+                onChange={(e) => setAnnouncementForm({ ...announcementForm, message: e.target.value })}
+                placeholder="Xabar matni..."
+                rows={4}
+                data-testid="input-announcement-message"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Muhimlik darajasi</Label>
+                <Select
+                  value={announcementForm.priority}
+                  onValueChange={(value) => setAnnouncementForm({ ...announcementForm, priority: value })}
+                >
+                  <SelectTrigger data-testid="select-priority">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="normal">Oddiy</SelectItem>
+                    <SelectItem value="urgent">Muhim</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Kimga yuborish</Label>
+                <Select
+                  value={announcementForm.targetType}
+                  onValueChange={(value) => {
+                    setAnnouncementForm({ 
+                      ...announcementForm, 
+                      targetType: value,
+                      targetId: value === 'all' ? '' : announcementForm.targetId
+                    });
+                  }}
+                >
+                  <SelectTrigger data-testid="select-target-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4" />
+                        Barchaga
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="course">
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="w-4 h-4" />
+                        Kurs o'quvchilariga
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="individual">
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4" />
+                        Yakka tartibda
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {announcementForm.targetType === 'course' && (
+              <div>
+                <Label>Kursni tanlang</Label>
+                <Select
+                  value={announcementForm.targetId}
+                  onValueChange={(value) => setAnnouncementForm({ ...announcementForm, targetId: value })}
+                >
+                  <SelectTrigger data-testid="select-course">
+                    <SelectValue placeholder="Kursni tanlang" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {courses?.map((course) => (
+                      <SelectItem key={course.id} value={course.id}>
+                        {course.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsAnnouncementOpen(false)}
+              data-testid="button-cancel-announcement"
+            >
+              Bekor qilish
+            </Button>
+            <Button
+              onClick={() => sendAnnouncementMutation.mutate(announcementForm)}
+              disabled={sendAnnouncementMutation.isPending || !announcementForm.title || !announcementForm.message}
+              data-testid="button-send-announcement"
+            >
+              {sendAnnouncementMutation.isPending ? "Yuborilmoqda..." : "Yuborish"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Submission Detail View Dialog */}
       <Dialog open={isDetailViewOpen} onOpenChange={setIsDetailViewOpen}>
