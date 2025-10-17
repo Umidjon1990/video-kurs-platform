@@ -44,7 +44,7 @@ import {
   type InsertMessage,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, or } from "drizzle-orm";
+import { eq, and, desc, or, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (Replit Auth required)
@@ -149,6 +149,11 @@ export interface IStorage {
     studentCount: number;
     courseCount: number;
   }>;
+  getTrends(): Promise<Array<{
+    date: string;
+    enrollments: number;
+    revenue: number;
+  }>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -842,16 +847,123 @@ export class DatabaseStorage implements IStorage {
     return filteredUnread.length;
   }
 
+  // Get enrollment and revenue trends (last 7 days) - optimized single query
+  async getTrends() {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+    
+    // Single query for all enrollments in the last 7 days
+    const allEnrollments = await db
+      .select({
+        enrolledAt: enrollments.enrolledAt,
+        price: courses.price,
+        discountedPrice: courses.discountedPrice,
+      })
+      .from(enrollments)
+      .leftJoin(courses, eq(enrollments.courseId, courses.id))
+      .where(
+        and(
+          or(
+            eq(enrollments.paymentStatus, 'confirmed'),
+            eq(enrollments.paymentStatus, 'approved')
+          ),
+          sql`${enrollments.enrolledAt} >= ${sevenDaysAgo}`
+        )
+      );
+    
+    // Group by day
+    const trendsByDay = new Map<string, { enrollments: number; revenue: number }>();
+    
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+      const dateKey = date.toISOString().split('T')[0];
+      trendsByDay.set(dateKey, { enrollments: 0, revenue: 0 });
+    }
+    
+    // Aggregate data
+    allEnrollments.forEach(({ enrolledAt, price, discountedPrice }) => {
+      if (!enrolledAt) return;
+      
+      const dateKey = new Date(enrolledAt).toISOString().split('T')[0];
+      const existing = trendsByDay.get(dateKey);
+      
+      if (existing) {
+        existing.enrollments += 1;
+        existing.revenue += Number(discountedPrice) || Number(price) || 0;
+      }
+    });
+    
+    // Convert to array
+    return Array.from(trendsByDay.entries()).map(([date, data]) => ({
+      date,
+      enrollments: data.enrollments,
+      revenue: data.revenue,
+    }));
+  }
+
   // Statistics
   async getStats() {
     const instructors = await this.getUsersByRole('instructor');
     const students = await this.getUsersByRole('student');
     const allCourses = await db.select().from(courses);
+    
+    // Calculate total revenue from confirmed enrollments with course prices
+    const confirmedEnrollments = await db
+      .select({
+        enrollment: enrollments,
+        course: courses,
+      })
+      .from(enrollments)
+      .leftJoin(courses, eq(enrollments.courseId, courses.id))
+      .where(
+        or(
+          eq(enrollments.paymentStatus, 'confirmed'),
+          eq(enrollments.paymentStatus, 'approved')
+        )
+      );
+    
+    const totalRevenue = confirmedEnrollments.reduce((sum, { enrollment, course }) => {
+      // Use discounted price if available, otherwise original price
+      const price = Number(course?.discountedPrice) || Number(course?.price) || 0;
+      return sum + price;
+    }, 0);
+    
+    // Get total enrollments count
+    const totalEnrollments = confirmedEnrollments.length;
+    
+    // Calculate growth indicators (last 7 days vs previous 7 days)
+    const now = new Date();
+    const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const previous7Days = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    
+    const recentEnrollments = confirmedEnrollments.filter(({ enrollment }) => 
+      enrollment.enrolledAt && new Date(enrollment.enrolledAt) >= last7Days
+    ).length;
+    
+    const previousEnrollments = confirmedEnrollments.filter(({ enrollment }) => {
+      const date = enrollment.enrolledAt ? new Date(enrollment.enrolledAt) : null;
+      return date && date >= previous7Days && date < last7Days;
+    }).length;
+    
+    // Calculate growth properly - avoid misleading 100% when both periods are zero
+    let enrollmentGrowth = 0;
+    if (previousEnrollments > 0) {
+      enrollmentGrowth = ((recentEnrollments - previousEnrollments) / previousEnrollments) * 100;
+    } else if (recentEnrollments > 0) {
+      // Special case: no previous data but have new enrollments - cap at 100%
+      enrollmentGrowth = 100;
+    }
+    // If both are zero, growth remains 0
 
     return {
       instructorCount: instructors.length,
       studentCount: students.length,
       courseCount: allCourses.length,
+      totalRevenue,
+      totalEnrollments,
+      enrollmentGrowth: Math.round(enrollmentGrowth * 10) / 10, // Round to 1 decimal
+      recentEnrollments, // Last 7 days
     };
   }
 }

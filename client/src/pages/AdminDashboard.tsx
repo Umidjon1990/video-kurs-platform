@@ -21,9 +21,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Users, BookOpen, CreditCard } from "lucide-react";
+import { Users, BookOpen, CreditCard, DollarSign, UserCheck, TrendingUp } from "lucide-react";
 import { useLocation } from "wouter";
 import type { User } from "@shared/schema";
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 export default function AdminDashboard() {
   const { toast } = useToast();
@@ -47,6 +58,10 @@ export default function AdminDashboard() {
     instructorCount: number;
     courseCount: number;
     studentCount: number;
+    totalRevenue: number;
+    totalEnrollments: number;
+    enrollmentGrowth: number;
+    recentEnrollments: number;
   }>({
     queryKey: ["/api/admin/stats"],
     enabled: isAuthenticated,
@@ -54,6 +69,15 @@ export default function AdminDashboard() {
 
   const { data: users } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
+    enabled: isAuthenticated,
+  });
+
+  const { data: trends, isLoading: trendsLoading } = useQuery<Array<{
+    date: string;
+    enrollments: number;
+    revenue: number;
+  }>>({
+    queryKey: ["/api/admin/trends"],
     enabled: isAuthenticated,
   });
 
@@ -113,25 +137,151 @@ export default function AdminDashboard() {
 
       <div className="p-8 space-y-8">
         {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatsCard
-            title="Jami O'qituvchilar"
-            value={stats?.instructorCount || 0}
-            icon={Users}
-            testId="stats-instructors"
+            title="Jami Daromad"
+            value={`${(stats?.totalRevenue || 0).toLocaleString('uz-UZ')} so'm`}
+            icon={DollarSign}
+            testId="stats-revenue"
+            description="Tasdiqlangan to'lovlar"
+          />
+          <StatsCard
+            title="Ro'yxatdan O'tganlar"
+            value={stats?.totalEnrollments || 0}
+            icon={UserCheck}
+            testId="stats-enrollments"
+            trend={{
+              value: stats?.enrollmentGrowth || 0,
+              isPositive: true
+            }}
+            description={`Oxirgi 7 kun: ${stats?.recentEnrollments || 0}`}
           />
           <StatsCard
             title="Jami Kurslar"
             value={stats?.courseCount || 0}
             icon={BookOpen}
             testId="stats-courses"
+            description="Faol kurslar"
           />
           <StatsCard
-            title="Jami O'quvchilar"
-            value={stats?.studentCount || 0}
+            title="Jami Foydalanuvchilar"
+            value={(stats?.instructorCount || 0) + (stats?.studentCount || 0)}
             icon={Users}
-            testId="stats-students"
+            testId="stats-users"
+            description={`${stats?.instructorCount || 0} o'qituvchi, ${stats?.studentCount || 0} o'quvchi`}
           />
+        </div>
+
+        {/* Charts */}
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* Enrollment Trend */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="w-5 h-5" />
+                Ro'yxatdan O'tishlar Trendi
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {trendsLoading ? (
+                <div className="h-[300px] flex items-center justify-center">
+                  <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+                </div>
+              ) : !trends || trends.length === 0 ? (
+                <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                  Ma'lumot topilmadi
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={trends}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis 
+                    dataKey="date" 
+                    className="text-xs"
+                    tickFormatter={(value) => {
+                      const date = new Date(value);
+                      return `${date.getDate()}/${date.getMonth() + 1}`;
+                    }}
+                  />
+                  <YAxis className="text-xs" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                    labelFormatter={(value) => {
+                      const date = new Date(value);
+                      return date.toLocaleDateString('uz-UZ');
+                    }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="enrollments"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2}
+                    dot={{ fill: 'hsl(var(--primary))' }}
+                    name="Ro'yxatdan o'tganlar"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Revenue Trend */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="w-5 h-5" />
+                Daromad Trendi
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {trendsLoading ? (
+                <div className="h-[300px] flex items-center justify-center">
+                  <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+                </div>
+              ) : !trends || trends.length === 0 ? (
+                <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                  Ma'lumot topilmadi
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={trends}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis 
+                    dataKey="date" 
+                    className="text-xs"
+                    tickFormatter={(value) => {
+                      const date = new Date(value);
+                      return `${date.getDate()}/${date.getMonth() + 1}`;
+                    }}
+                  />
+                  <YAxis className="text-xs" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                    labelFormatter={(value) => {
+                      const date = new Date(value);
+                      return date.toLocaleDateString('uz-UZ');
+                    }}
+                    formatter={(value: number) => [`${value.toLocaleString('uz-UZ')} so'm`, 'Daromad']}
+                  />
+                  <Bar
+                    dataKey="revenue"
+                    fill="hsl(var(--primary))"
+                    radius={[8, 8, 0, 0]}
+                    name="Daromad"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Users Management */}

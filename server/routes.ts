@@ -143,6 +143,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/admin/trends', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const trends = await storage.getTrends();
+      res.json(trends);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get('/api/admin/users', isAuthenticated, isAdmin, async (req, res) => {
     try {
       const instructors = await storage.getUsersByRole('instructor');
