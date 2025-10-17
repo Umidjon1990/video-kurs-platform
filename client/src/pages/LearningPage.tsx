@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PlayCircle, CheckCircle, FileText, ClipboardCheck, Lock, Home } from "lucide-react";
+import { PlayCircle, CheckCircle, FileText, ClipboardCheck, Lock, Home, MessageCircle } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { NotificationBell } from "@/components/NotificationBell";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -153,6 +153,19 @@ export default function LearningPage() {
     },
   });
 
+  const startChatMutation = useMutation({
+    mutationFn: async () => {
+      if (!course?.instructorId) return;
+      return apiRequest('POST', '/api/chat/conversations', { instructorId: course.instructorId });
+    },
+    onSuccess: (data: any) => {
+      setLocation(`/chat/${data.id}`);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+
   // Set first lesson as current when lessons load
   useEffect(() => {
     if (lessons && lessons.length > 0 && !currentLessonId) {
@@ -192,6 +205,15 @@ export default function LearningPage() {
           </Button>
           <h1 className="text-xl font-bold line-clamp-1" data-testid="text-course-title">{course.title}</h1>
           <div className="ml-auto flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => startChatMutation.mutate()}
+              disabled={startChatMutation.isPending}
+              data-testid="button-chat-instructor"
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              O'qituvchiga Xabar
+            </Button>
             <NotificationBell />
             <Button
               variant="outline"
