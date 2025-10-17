@@ -26,11 +26,12 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, Download, Megaphone, Users, User, MessageCircle } from "lucide-react";
+import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, Download, Megaphone, Users, User, MessageCircle, TrendingUp, Award, Activity } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NotificationBell } from "@/components/NotificationBell";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import type { Course, Lesson, Assignment, Test, InstructorCourseWithCounts } from "@shared/schema";
+import type { Course, Lesson, Assignment, Test, InstructorCourseWithCounts, CourseAnalytics } from "@shared/schema";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 export default function InstructorDashboard() {
   const { toast } = useToast();
@@ -102,6 +103,7 @@ export default function InstructorDashboard() {
     { left: "", right: "" }
   ]);
   const [expandedTests, setExpandedTests] = useState<Set<string>>(new Set());
+  const [expandedAnalytics, setExpandedAnalytics] = useState<Set<string>>(new Set());
 
   const [isGradingOpen, setIsGradingOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<any | null>(null);
@@ -717,6 +719,40 @@ export default function InstructorDashboard() {
                       {course.status === 'published' ? "E'lon qilingan" : "Qoralama"}
                     </Badge>
                   </div>
+                  
+                  {/* Analytics Panel - Collapsible */}
+                  <Collapsible 
+                    open={expandedAnalytics.has(course.id)}
+                    onOpenChange={() => {
+                      const newSet = new Set(expandedAnalytics);
+                      if (newSet.has(course.id)) {
+                        newSet.delete(course.id);
+                      } else {
+                        newSet.add(course.id);
+                      }
+                      setExpandedAnalytics(newSet);
+                    }}
+                  >
+                    <CollapsibleTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-between"
+                        data-testid={`button-analytics-${course.id}`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <TrendingUp className="w-4 h-4" />
+                          Statistika
+                        </span>
+                        <ChevronDown className={`w-4 h-4 transition-transform ${expandedAnalytics.has(course.id) ? 'rotate-180' : ''}`} />
+                      </Button>
+                    </CollapsibleTrigger>
+                    
+                    <CollapsibleContent className="pt-4">
+                      <CourseAnalyticsPanel courseId={course.id} />
+                    </CollapsibleContent>
+                  </Collapsible>
+                  
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
@@ -2408,5 +2444,133 @@ function DeleteCourseDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function CourseAnalyticsPanel({ courseId }: { courseId: string }) {
+  const { data: analytics, isLoading } = useQuery<CourseAnalytics>({
+    queryKey: ["/api/instructor/courses", courseId, "analytics"],
+    enabled: !!courseId,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!analytics) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        Ma'lumot topilmadi
+      </div>
+    );
+  }
+
+  const totalEnrollments = analytics.enrollmentTrend.reduce((sum, item) => sum + item.count, 0);
+
+  return (
+    <div className="space-y-4 border-t pt-4">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Jami O'quvchilar</p>
+                <p className="text-2xl font-bold">{analytics.totalStudents}</p>
+              </div>
+              <Users className="w-8 h-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Faol O'quvchilar</p>
+                <p className="text-2xl font-bold">{analytics.activeStudents}</p>
+              </div>
+              <Activity className="w-8 h-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Completion Rate */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium">Tugatish darajasi</p>
+            <span className="text-lg font-bold">{analytics.completionRate}%</span>
+          </div>
+          <div className="w-full bg-muted rounded-full h-2">
+            <div 
+              className="bg-primary h-2 rounded-full transition-all" 
+              style={{ width: `${Math.min(analytics.completionRate, 100)}%` }}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Scores */}
+      <div className="grid grid-cols-2 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Award className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Test bali</p>
+            </div>
+            <p className="text-2xl font-bold">{analytics.averageTestScore.toFixed(1)}</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Award className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Vazifa bali</p>
+            </div>
+            <p className="text-2xl font-bold">{analytics.averageAssignmentScore.toFixed(1)}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Enrollment Trend Chart */}
+      {totalEnrollments > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Ro'yxatdan o'tish tendensiyasi (14 kun)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={analytics.enrollmentTrend}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis 
+                  dataKey="date" 
+                  className="text-xs"
+                  tickFormatter={(date) => new Date(date).toLocaleDateString('uz-UZ', { month: 'short', day: 'numeric' })}
+                />
+                <YAxis className="text-xs" />
+                <Tooltip 
+                  labelFormatter={(date) => new Date(date).toLocaleDateString('uz-UZ')}
+                  formatter={(value) => [`${value} o'quvchi`, 'Ro\'yxatdan o\'tganlar']}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="count" 
+                  stroke="hsl(var(--primary))" 
+                  strokeWidth={2}
+                  dot={{ fill: "hsl(var(--primary))" }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }

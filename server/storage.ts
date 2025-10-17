@@ -43,9 +43,10 @@ import {
   type Message,
   type InsertMessage,
   type InstructorCourseWithCounts,
+  type CourseAnalytics,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, or, sql } from "drizzle-orm";
+import { eq, and, desc, or, sql, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (Replit Auth required)
@@ -155,6 +156,9 @@ export interface IStorage {
     enrollments: number;
     revenue: number;
   }>>;
+  
+  // Course Analytics
+  getCourseAnalytics(courseId: string): Promise<CourseAnalytics>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -999,6 +1003,200 @@ export class DatabaseStorage implements IStorage {
       totalEnrollments,
       enrollmentGrowth: Math.round(enrollmentGrowth * 10) / 10, // Round to 1 decimal
       recentEnrollments, // Last 7 days
+    };
+  }
+
+  // Course Analytics
+  async getCourseAnalytics(courseId: string): Promise<CourseAnalytics> {
+    const now = new Date();
+    const fourteenDaysAgo = new Date(now.getTime() - 13 * 24 * 60 * 60 * 1000);
+    fourteenDaysAgo.setHours(0, 0, 0, 0);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // Get all confirmed enrollments for this course
+    const courseEnrollments = await db
+      .select({
+        userId: enrollments.userId,
+        enrolledAt: enrollments.enrolledAt,
+      })
+      .from(enrollments)
+      .where(
+        and(
+          eq(enrollments.courseId, courseId),
+          or(
+            eq(enrollments.paymentStatus, 'confirmed'),
+            eq(enrollments.paymentStatus, 'approved')
+          )
+        )
+      );
+
+    const totalStudents = courseEnrollments.length;
+
+    // Calculate enrollment trend (last 14 days)
+    const enrollmentTrendMap = new Map<string, number>();
+    for (let i = 13; i >= 0; i--) {
+      const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+      const dateKey = date.toISOString().split('T')[0];
+      enrollmentTrendMap.set(dateKey, 0);
+    }
+
+    courseEnrollments.forEach(({ enrolledAt }) => {
+      if (!enrolledAt) return;
+      const dateKey = new Date(enrolledAt).toISOString().split('T')[0];
+      const current = enrollmentTrendMap.get(dateKey);
+      if (current !== undefined) {
+        enrollmentTrendMap.set(dateKey, current + 1);
+      }
+    });
+
+    const enrollmentTrend = Array.from(enrollmentTrendMap.entries()).map(([date, count]) => ({
+      date,
+      count,
+    }));
+
+    if (totalStudents === 0) {
+      return {
+        enrollmentTrend,
+        completionRate: 0,
+        averageTestScore: 0,
+        averageAssignmentScore: 0,
+        totalStudents: 0,
+        activeStudents: 0,
+      };
+    }
+
+    const studentIds = courseEnrollments.map(e => e.userId);
+
+    // Get all tests for this course
+    const courseTests = await db
+      .select({ id: tests.id })
+      .from(tests)
+      .where(eq(tests.courseId, courseId));
+
+    const testIds = courseTests.map(t => t.id);
+
+    // Calculate completion rate and average test score
+    let completedStudentsCount = 0;
+    let totalTestScore = 0;
+    let testAttemptCount = 0;
+
+    if (testIds.length > 0) {
+      const allTestAttempts = await db
+        .select({
+          userId: testAttempts.userId,
+          score: testAttempts.score,
+          totalPoints: testAttempts.totalPoints,
+          isPassed: testAttempts.isPassed,
+        })
+        .from(testAttempts)
+        .where(
+          and(
+            inArray(testAttempts.testId, testIds),
+            inArray(testAttempts.userId, studentIds)
+          )
+        );
+
+      // Count students who passed at least one test
+      const passedStudents = new Set(
+        allTestAttempts.filter((a: any) => a.isPassed).map((a: any) => a.userId)
+      );
+      completedStudentsCount = passedStudents.size;
+
+      // Calculate average test score
+      allTestAttempts.forEach((attempt: any) => {
+        if (attempt.score !== null && attempt.totalPoints !== null && attempt.totalPoints > 0) {
+          totalTestScore += (attempt.score / attempt.totalPoints) * 100;
+          testAttemptCount++;
+        }
+      });
+    }
+
+    const completionRate = totalStudents > 0 ? (completedStudentsCount / totalStudents) * 100 : 0;
+    const averageTestScore = testAttemptCount > 0 ? totalTestScore / testAttemptCount : 0;
+
+    // Get all assignments for this course
+    const courseAssignments = await db
+      .select({ id: assignments.id })
+      .from(assignments)
+      .where(eq(assignments.courseId, courseId));
+
+    const assignmentIds = courseAssignments.map(a => a.id);
+
+    // Calculate average assignment score
+    let totalAssignmentScore = 0;
+    let assignmentCount = 0;
+
+    if (assignmentIds.length > 0) {
+      const assignmentSubmissions = await db
+        .select({
+          grade: submissions.grade,
+        })
+        .from(submissions)
+        .where(
+          and(
+            inArray(submissions.assignmentId, assignmentIds),
+            inArray(submissions.userId, studentIds),
+            sql`${submissions.grade} IS NOT NULL`
+          )
+        );
+
+      assignmentSubmissions.forEach(sub => {
+        if (sub.grade !== null) {
+          totalAssignmentScore += sub.grade;
+          assignmentCount++;
+        }
+      });
+    }
+
+    const averageAssignmentScore = assignmentCount > 0 ? totalAssignmentScore / assignmentCount : 0;
+
+    // Calculate active students (with submissions or test attempts in last 7 days)
+    const recentActivity = assignmentIds.length > 0
+      ? await db
+          .select({
+            userId: submissions.userId,
+            submittedAt: submissions.submittedAt,
+          })
+          .from(submissions)
+          .where(
+            and(
+              inArray(submissions.assignmentId, assignmentIds),
+              inArray(submissions.userId, studentIds),
+              sql`${submissions.submittedAt} >= ${sevenDaysAgo}`
+            )
+          )
+      : [];
+
+    const recentTestActivity = testIds.length > 0
+      ? await db
+          .select({
+            userId: testAttempts.userId,
+            completedAt: testAttempts.completedAt,
+          })
+          .from(testAttempts)
+          .where(
+            and(
+              inArray(testAttempts.testId, testIds),
+              inArray(testAttempts.userId, studentIds),
+              sql`${testAttempts.completedAt} >= ${sevenDaysAgo}`
+            )
+          )
+      : [];
+
+    const activeStudentSet = new Set([
+      ...recentActivity.map(a => a.userId),
+      ...recentTestActivity.map(a => a.userId),
+    ]);
+
+    const activeStudents = activeStudentSet.size;
+
+    return {
+      enrollmentTrend,
+      completionRate: Math.round(completionRate * 10) / 10,
+      averageTestScore: Math.round(averageTestScore * 10) / 10,
+      averageAssignmentScore: Math.round(averageAssignmentScore * 10) / 10,
+      totalStudents,
+      activeStudents,
     };
   }
 }

@@ -465,3 +465,13 @@ export type Conversation = typeof conversations.$inferSelect;
 
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
+
+// Course Analytics type (for instructor dashboard)
+export type CourseAnalytics = {
+  enrollmentTrend: { date: string; count: number }[];
+  completionRate: number; // percentage 0-100
+  averageTestScore: number; // 0-100
+  averageAssignmentScore: number; // 0-100
+  totalStudents: number;
+  activeStudents: number; // students with recent activity (last 7 days)
+};

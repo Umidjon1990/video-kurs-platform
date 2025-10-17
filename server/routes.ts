@@ -1400,6 +1400,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== COURSE ANALYTICS ====================
+  
+  // Get course analytics (enrollment trends, completion rate, scores)
+  app.get('/api/instructor/courses/:courseId/analytics', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const instructorId = req.user.claims.sub;
+      const { courseId } = req.params;
+      
+      // Verify course belongs to instructor
+      const course = await storage.getCourse(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Kurs topilmadi" });
+      }
+      if (course.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Ruxsat yo'q" });
+        }
+      }
+      
+      const analytics = await storage.getCourseAnalytics(courseId);
+      res.json(analytics);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ==================== CHAT (Private Messaging) ====================
   
   // Get or create conversation
