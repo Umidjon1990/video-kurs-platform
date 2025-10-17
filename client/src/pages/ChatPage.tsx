@@ -22,13 +22,13 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch conversations
-  const { data: conversations, isLoading: isLoadingConversations } = useQuery({
+  const { data: conversations, isLoading: isLoadingConversations } = useQuery<any[]>({
     queryKey: ['/api/chat/conversations'],
     refetchInterval: 10000, // Poll every 10 seconds
   });
 
   // Fetch messages for selected conversation
-  const { data: messages, isLoading: isLoadingMessages } = useQuery({
+  const { data: messages, isLoading: isLoadingMessages } = useQuery<any[]>({
     queryKey: ['/api/chat/conversations', conversationId, 'messages'],
     enabled: !!conversationId,
     refetchInterval: 5000, // Poll every 5 seconds for real-time feel
