@@ -161,11 +161,14 @@ export default function LearningPage() {
       return apiRequest('POST', '/api/chat/conversations', { instructorId: course.instructorId });
     },
     onSuccess: (data: any) => {
+      console.log('[CHAT] Conversation created:', data);
       if (data?.id) {
-        setLocation(`/chat/${data.id}`);
+        console.log('[CHAT] Navigating to:', `/chat/${data.id}`);
+        window.location.href = `/chat/${data.id}`;
       }
     },
     onError: (error: Error) => {
+      console.error('[CHAT] Error creating conversation:', error);
       toast({ title: "Xatolik", description: error.message, variant: "destructive" });
     },
   });
