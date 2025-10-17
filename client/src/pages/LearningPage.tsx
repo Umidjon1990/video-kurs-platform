@@ -155,11 +155,15 @@ export default function LearningPage() {
 
   const startChatMutation = useMutation({
     mutationFn: async () => {
-      if (!course?.instructorId) return;
+      if (!course?.instructorId) {
+        throw new Error("O'qituvchi topilmadi");
+      }
       return apiRequest('POST', '/api/chat/conversations', { instructorId: course.instructorId });
     },
     onSuccess: (data: any) => {
-      setLocation(`/chat/${data.id}`);
+      if (data?.id) {
+        setLocation(`/chat/${data.id}`);
+      }
     },
     onError: (error: Error) => {
       toast({ title: "Xatolik", description: error.message, variant: "destructive" });

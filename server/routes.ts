@@ -1398,16 +1398,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const { instructorId, studentId } = req.body;
       
-      // Determine who is the student and who is the instructor
-      let finalStudentId = studentId;
-      let finalInstructorId = instructorId;
+      // Get user role from database to ensure accuracy
+      const currentUser = await storage.getUser(userId);
+      if (!currentUser) {
+        return res.status(401).json({ message: "User not found" });
+      }
       
-      if (req.user.claims.role === 'student') {
+      // Determine who is the student and who is the instructor
+      let finalStudentId: string;
+      let finalInstructorId: string;
+      
+      if (currentUser.role === 'student') {
         finalStudentId = userId;
         finalInstructorId = instructorId;
-      } else {
+      } else if (currentUser.role === 'instructor') {
         finalStudentId = studentId;
         finalInstructorId = userId;
+      } else {
+        return res.status(400).json({ message: "Invalid role for chat" });
+      }
+      
+      // Validate both IDs are present
+      if (!finalStudentId || !finalInstructorId) {
+        return res.status(400).json({ message: "Missing required participant IDs" });
       }
       
       const conversation = await storage.getOrCreateConversation(finalStudentId, finalInstructorId);
