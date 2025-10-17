@@ -153,25 +153,10 @@ export default function LearningPage() {
     },
   });
 
-  const startChatMutation = useMutation({
-    mutationFn: async () => {
-      if (!course?.instructorId) {
-        throw new Error("O'qituvchi topilmadi");
-      }
-      return apiRequest('POST', '/api/chat/conversations', { instructorId: course.instructorId });
-    },
-    onSuccess: (data: any) => {
-      console.log('[CHAT] Conversation created:', data);
-      if (data?.id) {
-        console.log('[CHAT] Navigating to:', `/chat/${data.id}`);
-        window.location.href = `/chat/${data.id}`;
-      }
-    },
-    onError: (error: Error) => {
-      console.error('[CHAT] Error creating conversation:', error);
-      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
-    },
-  });
+  const handleStartChat = () => {
+    // Navigate to chat page - it will handle conversation creation
+    setLocation('/chat');
+  };
 
   // Set first lesson as current when lessons load
   useEffect(() => {
@@ -214,8 +199,7 @@ export default function LearningPage() {
           <div className="ml-auto flex items-center gap-2">
             <Button
               variant="outline"
-              onClick={() => startChatMutation.mutate()}
-              disabled={startChatMutation.isPending}
+              onClick={handleStartChat}
               data-testid="button-chat-instructor"
             >
               <MessageCircle className="w-4 h-4 mr-2" />
