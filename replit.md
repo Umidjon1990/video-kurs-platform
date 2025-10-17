@@ -4,9 +4,27 @@
 
 This project is a comprehensive Learning Management System (LMS) platform designed for video-based courses. It caters to three distinct user roles: Administrators, Instructors, and Students. The platform's primary purpose is to facilitate course creation, delivery, and student progress tracking. Key capabilities include course management, lesson creation, various assessment types (assignments and tests), and a manual payment processing system with admin approval. The entire user interface is localized in Uzbek language. The platform aims to provide a professional, trust-building, and scannable learning experience for all users.
 
-## Recent Changes (October 16, 2025)
+## Recent Changes (October 17, 2025)
 
 ### Latest Updates
+- ✅ **Announcement System - COMPLETE** (Oct 17, 2025)
+  - ✅ **Backend Implementation:**
+    - ✅ Announcements table with priority levels (normal/urgent)
+    - ✅ Three targeting modes: individual student, course group, all students
+    - ✅ POST /api/instructor/announcements - Send announcement with auto-notification
+    - ✅ GET /api/instructor/announcements - List instructor's announcements
+    - ✅ DELETE /api/instructor/announcements/:id - Delete announcement
+  - ✅ **Notification Integration:**
+    - ✅ Individual → Single notification to student
+    - ✅ Course → Notifications to all enrolled students
+    - ✅ All → Notifications to all students in system
+    - ✅ Returns recipient count for confirmation
+  - ✅ **Frontend UI:**
+    - ✅ E'lon yuborish dialog in InstructorDashboard
+    - ✅ Target type selector (Yakka/Guruh/Barcha)
+    - ✅ Course selector for group targeting
+    - ✅ Priority level (Normal/Muhim)
+    - ✅ E'lonlar ro'yxati with delete functionality
 - ✅ **Tozalash (Clear) Functionality** (Oct 16, 2025)
   - ✅ **NotificationBell Tozalash:**
     - ✅ "Tozalash" button always visible when notifications exist
