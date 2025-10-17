@@ -44,6 +44,7 @@ import {
   type InsertMessage,
   type InstructorCourseWithCounts,
   type CourseAnalytics,
+  type StudentCourseProgress,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, sql, inArray } from "drizzle-orm";
@@ -159,6 +160,9 @@ export interface IStorage {
   
   // Course Analytics
   getCourseAnalytics(courseId: string): Promise<CourseAnalytics>;
+  
+  // Student Progress Tracking
+  getStudentProgress(userId: string): Promise<StudentCourseProgress[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1198,6 +1202,147 @@ export class DatabaseStorage implements IStorage {
       totalStudents,
       activeStudents,
     };
+  }
+
+  // Student Progress Tracking (Optimized - batched queries)
+  async getStudentProgress(userId: string): Promise<StudentCourseProgress[]> {
+    // 1. Get all enrolled courses
+    const enrolledCourses = await db
+      .select({ course: courses })
+      .from(enrollments)
+      .innerJoin(courses, eq(enrollments.courseId, courses.id))
+      .where(
+        and(
+          eq(enrollments.userId, userId),
+          eq(enrollments.paymentStatus, 'approved')
+        )
+      )
+      .orderBy(desc(enrollments.enrolledAt));
+
+    if (enrolledCourses.length === 0) {
+      return [];
+    }
+
+    const courseIds = enrolledCourses.map(e => e.course.id);
+
+    // 2. Batch fetch all lessons for all courses
+    const allLessons = await db
+      .select({
+        courseId: lessons.courseId,
+        id: lessons.id,
+        title: lessons.title,
+        order: lessons.order,
+      })
+      .from(lessons)
+      .where(inArray(lessons.courseId, courseIds));
+
+    // 3. Batch fetch all assignments for all courses
+    const allAssignments = await db
+      .select({
+        courseId: assignments.courseId,
+        id: assignments.id,
+      })
+      .from(assignments)
+      .where(inArray(assignments.courseId, courseIds));
+
+    const assignmentIds = allAssignments.map(a => a.id);
+
+    // 4. Batch fetch all submissions by this user
+    const allSubmissions = assignmentIds.length > 0
+      ? await db
+          .select({
+            assignmentId: submissions.assignmentId,
+            grade: submissions.grade,
+          })
+          .from(submissions)
+          .where(
+            and(
+              inArray(submissions.assignmentId, assignmentIds),
+              eq(submissions.userId, userId)
+            )
+          )
+      : [];
+
+    // 5. Batch fetch all tests for all courses
+    const allTests = await db
+      .select({
+        courseId: tests.courseId,
+        id: tests.id,
+      })
+      .from(tests)
+      .where(inArray(tests.courseId, courseIds));
+
+    const testIds = allTests.map(t => t.id);
+
+    // 6. Batch fetch all test attempts by this user
+    const allTestAttempts = testIds.length > 0
+      ? await db
+          .select({
+            testId: testAttempts.testId,
+            score: testAttempts.score,
+            totalPoints: testAttempts.totalPoints,
+          })
+          .from(testAttempts)
+          .where(
+            and(
+              inArray(testAttempts.testId, testIds),
+              eq(testAttempts.userId, userId)
+            )
+          )
+      : [];
+
+    // 7. Combine data in memory for each course
+    const progressData: StudentCourseProgress[] = enrolledCourses.map(({ course }) => {
+      const courseLessons = allLessons.filter(l => l.courseId === course.id);
+      const courseAssignments = allAssignments.filter(a => a.courseId === course.id);
+      const courseAssignmentIds = courseAssignments.map(a => a.id);
+      const courseSubmissions = allSubmissions.filter(s => courseAssignmentIds.includes(s.assignmentId));
+      
+      const courseTests = allTests.filter(t => t.courseId === course.id);
+      const courseTestIds = courseTests.map(t => t.id);
+      const courseTestAttempts = allTestAttempts.filter(a => courseTestIds.includes(a.testId));
+      
+      const completedTests = new Set(courseTestAttempts.map(a => a.testId)).size;
+      
+      const averageTestScore = courseTestAttempts.length > 0
+        ? Math.round(
+            (courseTestAttempts.reduce((sum, t) => sum + (t.score || 0), 0) / courseTestAttempts.length) * 10
+          ) / 10
+        : 0;
+
+      const gradedSubmissions = courseSubmissions.filter(s => s.grade !== null);
+      const averageAssignmentScore = gradedSubmissions.length > 0
+        ? Math.round(
+            (gradedSubmissions.reduce((sum, s) => sum + (s.grade || 0), 0) / gradedSubmissions.length) * 10
+          ) / 10
+        : 0;
+
+      const totalItems = courseLessons.length + courseAssignments.length + courseTests.length;
+      const completedItems = courseSubmissions.length + completedTests;
+      const progressPercentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+
+      const nextLesson = courseLessons.sort((a, b) => (a.order || 0) - (b.order || 0))[0];
+
+      return {
+        course,
+        totalLessons: courseLessons.length,
+        totalAssignments: courseAssignments.length,
+        submittedAssignments: courseSubmissions.length,
+        totalTests: courseTests.length,
+        completedTests,
+        averageTestScore,
+        averageAssignmentScore,
+        progressPercentage,
+        nextLesson: nextLesson ? {
+          id: nextLesson.id,
+          title: nextLesson.title,
+          courseId: nextLesson.courseId,
+          order: nextLesson.order,
+        } as Lesson : undefined,
+      };
+    });
+
+    return progressData;
   }
 }
 

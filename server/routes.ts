@@ -896,6 +896,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Student Progress Tracking
+  app.get('/api/student/progress', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const progress = await storage.getStudentProgress(userId);
+      res.json(progress);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get('/api/student/enrollment/:courseId', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

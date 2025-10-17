@@ -430,6 +430,20 @@ export type InstructorCourseWithCounts = Course & {
   lessonsCount: number;
 };
 
+// Student course progress type
+export type StudentCourseProgress = {
+  course: Course;
+  totalLessons: number;
+  totalAssignments: number;
+  submittedAssignments: number;
+  totalTests: number;
+  completedTests: number;
+  averageTestScore: number;
+  averageAssignmentScore: number;
+  progressPercentage: number;
+  nextLesson?: Lesson;
+};
+
 export type InsertLesson = z.infer<typeof insertLessonSchema>;
 export type Lesson = typeof lessons.$inferSelect;
 

@@ -5,10 +5,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CourseCard } from "@/components/CourseCard";
+import { ProgressCard } from "@/components/ProgressCard";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useLocation } from "wouter";
 import { MessageCircle } from "lucide-react";
-import type { Course } from "@shared/schema";
+import type { Course, StudentCourseProgress } from "@shared/schema";
 
 export default function StudentCourses() {
   const { toast } = useToast();
@@ -38,6 +39,11 @@ export default function StudentCourses() {
     enabled: isAuthenticated,
   });
 
+  const { data: progressData, isLoading: progressLoading } = useQuery<StudentCourseProgress[]>({
+    queryKey: ["/api/student/progress"],
+    enabled: isAuthenticated,
+  });
+
   const enrolledCourseIds = new Set(enrolledCourses?.map(c => c.id) || []);
 
   const handleEnroll = (courseId: string) => {
@@ -52,7 +58,15 @@ export default function StudentCourses() {
     setLocation(`/learn/${courseId}`);
   };
 
-  if (authLoading || allCoursesLoading || enrolledCoursesLoading) {
+  const handleContinue = (courseId: string, lessonId?: string) => {
+    if (lessonId) {
+      setLocation(`/learn/${courseId}?lesson=${lessonId}`);
+    } else {
+      setLocation(`/learn/${courseId}`);
+    }
+  };
+
+  if (authLoading || allCoursesLoading || enrolledCoursesLoading || progressLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -125,15 +139,29 @@ export default function StudentCourses() {
               <p className="text-center text-muted-foreground py-16">Hali hech qanday kursga yozilmagansiz</p>
             ) : (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {enrolledCourses?.map((course) => (
-                  <div key={course.id} onClick={() => handleViewCourse(course.id)} className="cursor-pointer">
-                    <CourseCard 
-                      course={course} 
-                      onViewDemo={handleViewDemo}
-                      isEnrolled={true} 
-                    />
-                  </div>
-                ))}
+                {enrolledCourses?.map((course) => {
+                  const progress = progressData?.find(p => p.course.id === course.id);
+                  
+                  if (progress) {
+                    return (
+                      <ProgressCard 
+                        key={course.id}
+                        progress={progress}
+                        onContinue={handleContinue}
+                      />
+                    );
+                  }
+                  
+                  return (
+                    <div key={course.id} onClick={() => handleViewCourse(course.id)} className="cursor-pointer">
+                      <CourseCard 
+                        course={course} 
+                        onViewDemo={handleViewDemo}
+                        isEnrolled={true} 
+                      />
+                    </div>
+                  );
+                })}
               </div>
             )}
           </TabsContent>
