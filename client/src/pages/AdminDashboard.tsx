@@ -152,7 +152,7 @@ export default function AdminDashboard() {
             testId="stats-enrollments"
             trend={{
               value: stats?.enrollmentGrowth || 0,
-              isPositive: true
+              isPositive: (stats?.enrollmentGrowth || 0) > 0
             }}
             description={`Oxirgi 7 kun: ${stats?.recentEnrollments || 0}`}
           />
