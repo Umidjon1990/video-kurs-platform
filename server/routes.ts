@@ -1434,8 +1434,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/chat/conversations', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const role = req.user.claims.role || 'student';
-      const conversations = await storage.getConversations(userId, role);
+      
+      // Get user role from database to ensure accuracy
+      const currentUser = await storage.getUser(userId);
+      if (!currentUser) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      
+      const conversations = await storage.getConversations(userId, currentUser.role);
       res.json(conversations);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
