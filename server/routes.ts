@@ -1441,9 +1441,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "User not found" });
       }
       
+      console.log('[CHAT DEBUG] Getting conversations for user:', userId, 'role:', currentUser.role);
       const conversations = await storage.getConversations(userId, currentUser.role);
+      console.log('[CHAT DEBUG] Found conversations:', conversations.length);
       res.json(conversations);
     } catch (error: any) {
+      console.error('[CHAT DEBUG] Error:', error);
       res.status(500).json({ message: error.message });
     }
   });
