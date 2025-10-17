@@ -42,6 +42,7 @@ import {
   type InsertConversation,
   type Message,
   type InsertMessage,
+  type InstructorCourseWithCounts,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, sql } from "drizzle-orm";
@@ -56,7 +57,7 @@ export interface IStorage {
   // Course operations
   createCourse(course: InsertCourse): Promise<Course>;
   getCourse(id: string): Promise<Course | undefined>;
-  getCoursesByInstructor(instructorId: string): Promise<Course[]>;
+  getCoursesByInstructor(instructorId: string): Promise<InstructorCourseWithCounts[]>;
   getPublishedCourses(): Promise<Course[]>;
   updateCourseStatus(id: string, status: string): Promise<Course>;
   updateCourse(id: string, data: Partial<InsertCourse>): Promise<Course>;
@@ -206,12 +207,46 @@ export class DatabaseStorage implements IStorage {
     return course;
   }
 
-  async getCoursesByInstructor(instructorId: string): Promise<Course[]> {
-    return await db
+  async getCoursesByInstructor(instructorId: string): Promise<InstructorCourseWithCounts[]> {
+    const instructorCourses = await db
       .select()
       .from(courses)
       .where(eq(courses.instructorId, instructorId))
       .orderBy(desc(courses.createdAt));
+    
+    // Get enrollments and lessons count for each course
+    const coursesWithCounts = await Promise.all(
+      instructorCourses.map(async (course) => {
+        const [enrollmentCount, lessonCount] = await Promise.all([
+          db
+            .select({ count: sql<number>`count(*)::int` })
+            .from(enrollments)
+            .where(
+              and(
+                eq(enrollments.courseId, course.id),
+                or(
+                  eq(enrollments.paymentStatus, 'confirmed'),
+                  eq(enrollments.paymentStatus, 'approved')
+                )
+              )
+            )
+            .then(result => result[0]?.count || 0),
+          db
+            .select({ count: sql<number>`count(*)::int` })
+            .from(lessons)
+            .where(eq(lessons.courseId, course.id))
+            .then(result => result[0]?.count || 0)
+        ]);
+        
+        return {
+          ...course,
+          enrollmentsCount: enrollmentCount,
+          lessonsCount: lessonCount,
+        };
+      })
+    );
+    
+    return coursesWithCounts;
   }
 
   async getPublishedCourses(): Promise<Course[]> {

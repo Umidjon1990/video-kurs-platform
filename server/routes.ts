@@ -20,6 +20,7 @@ import {
   insertQuestionOptionSchema,
   insertNotificationSchema,
   insertAnnouncementSchema,
+  type InstructorCourseWithCounts,
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -217,7 +218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/instructor/courses', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
       const instructorId = req.user.claims.sub;
-      const courses = await storage.getCoursesByInstructor(instructorId);
+      const courses: InstructorCourseWithCounts[] = await storage.getCoursesByInstructor(instructorId);
       res.json(courses);
     } catch (error: any) {
       res.status(500).json({ message: error.message });

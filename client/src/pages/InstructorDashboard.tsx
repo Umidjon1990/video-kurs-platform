@@ -30,7 +30,7 @@ import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronD
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NotificationBell } from "@/components/NotificationBell";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import type { Course, Lesson, Assignment, Test } from "@shared/schema";
+import type { Course, Lesson, Assignment, Test, InstructorCourseWithCounts } from "@shared/schema";
 
 export default function InstructorDashboard() {
   const { toast } = useToast();
@@ -126,7 +126,7 @@ export default function InstructorDashboard() {
     }
   }, [isAuthenticated, authLoading, toast]);
 
-  const { data: courses, isLoading: coursesLoading } = useQuery<Course[]>({
+  const { data: courses, isLoading: coursesLoading } = useQuery<InstructorCourseWithCounts[]>({
     queryKey: ["/api/instructor/courses"],
     enabled: isAuthenticated,
   });
@@ -676,13 +676,46 @@ export default function InstructorDashboard() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-sm text-muted-foreground line-clamp-2">{course.description}</p>
+                  
+                  {/* Stats */}
+                  <div className="flex gap-4 text-sm">
+                    <div className="flex items-center gap-1">
+                      <Users className="w-4 h-4 text-muted-foreground" />
+                      <span data-testid={`text-enrollments-${course.id}`}>
+                        {course.enrollmentsCount || 0} o'quvchi
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Video className="w-4 h-4 text-muted-foreground" />
+                      <span data-testid={`text-lessons-${course.id}`}>
+                        {course.lessonsCount || 0} dars
+                      </span>
+                    </div>
+                  </div>
+                  
                   <div className="flex items-center justify-between">
-                    <span className="text-lg font-bold">${course.price}</span>
-                    <span className={`px-2 py-1 rounded text-xs ${
-                      course.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                    }`}>
+                    <div className="flex flex-col">
+                      {course.discountedPrice && Number(course.discountedPrice) < Number(course.price) ? (
+                        <>
+                          <span className="text-lg font-bold">
+                            {Number(course.discountedPrice).toLocaleString('uz-UZ')} so'm
+                          </span>
+                          <span className="text-sm text-muted-foreground line-through">
+                            {Number(course.price).toLocaleString('uz-UZ')} so'm
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-lg font-bold">
+                          {Number(course.price).toLocaleString('uz-UZ')} so'm
+                        </span>
+                      )}
+                    </div>
+                    <Badge 
+                      variant={course.status === 'published' ? 'default' : 'secondary'}
+                      data-testid={`badge-status-${course.id}`}
+                    >
                       {course.status === 'published' ? "E'lon qilingan" : "Qoralama"}
-                    </span>
+                    </Badge>
                   </div>
                   <div className="flex gap-2">
                     <Button

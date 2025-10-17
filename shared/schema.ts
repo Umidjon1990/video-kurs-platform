@@ -424,6 +424,12 @@ export type User = typeof users.$inferSelect;
 export type InsertCourse = z.infer<typeof insertCourseSchema>;
 export type Course = typeof courses.$inferSelect;
 
+// Extended course type with aggregated counts (for instructor dashboard)
+export type InstructorCourseWithCounts = Course & {
+  enrollmentsCount: number;
+  lessonsCount: number;
+};
+
 export type InsertLesson = z.infer<typeof insertLessonSchema>;
 export type Lesson = typeof lessons.$inferSelect;
 
