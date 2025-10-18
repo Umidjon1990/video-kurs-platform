@@ -43,6 +43,7 @@ function Router() {
           {user?.role === 'admin' && (
             <>
               <Route path="/" component={AdminDashboard} />
+              <Route path="/admin" component={AdminDashboard} />
               <Route path="/admin/payments" component={AdminPayments} />
               <Route path="/admin/cms" component={AdminCMSPage} />
             </>
