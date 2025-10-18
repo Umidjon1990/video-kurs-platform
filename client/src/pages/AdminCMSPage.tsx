@@ -39,6 +39,8 @@ export default function AdminCMSPage() {
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [contactAddress, setContactAddress] = useState("");
+  const [contactTelegram, setContactTelegram] = useState("");
+  const [certificateUrls, setCertificateUrls] = useState("");
   
   // Testimonial dialog state
   const [testimonialDialogOpen, setTestimonialDialogOpen] = useState(false);
@@ -85,6 +87,8 @@ export default function AdminCMSPage() {
         if (setting.key === "contact_email") setContactEmail(setting.value || "");
         if (setting.key === "contact_phone") setContactPhone(setting.value || "");
         if (setting.key === "contact_address") setContactAddress(setting.value || "");
+        if (setting.key === "contact_telegram") setContactTelegram(setting.value || "");
+        if (setting.key === "certificate_urls") setCertificateUrls(setting.value || "");
       });
     }
   }, [siteSettings]);
@@ -182,6 +186,8 @@ export default function AdminCMSPage() {
     updateSettingMutation.mutate({ key: "contact_email", value: contactEmail });
     updateSettingMutation.mutate({ key: "contact_phone", value: contactPhone });
     updateSettingMutation.mutate({ key: "contact_address", value: contactAddress });
+    updateSettingMutation.mutate({ key: "contact_telegram", value: contactTelegram });
+    updateSettingMutation.mutate({ key: "certificate_urls", value: certificateUrls });
   };
 
   const resetTestimonialForm = () => {
@@ -315,6 +321,35 @@ export default function AdminCMSPage() {
                     value={contactAddress}
                     onChange={(e) => setContactAddress(e.target.value)}
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="contact-telegram">Telegram</Label>
+                  <Input
+                    id="contact-telegram"
+                    data-testid="input-contact-telegram"
+                    placeholder="https://t.me/username"
+                    value={contactTelegram}
+                    onChange={(e) => setContactTelegram(e.target.value)}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Telegram kanal yoki guruh havolasi (masalan: https://t.me/your_channel)
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="certificate-urls">Guvohnoma va Litsenziya Rasmlari</Label>
+                  <Textarea
+                    id="certificate-urls"
+                    data-testid="input-certificate-urls"
+                    placeholder="Har bir qatorda bitta rasm URL'ini kiriting&#10;https://example.com/certificate1.jpg&#10;https://example.com/certificate2.jpg"
+                    value={certificateUrls}
+                    onChange={(e) => setCertificateUrls(e.target.value)}
+                    rows={5}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Har bir qatorda bitta rasm URL'ini kiriting. Bu rasmlar bosh sahifada carousel ko'rinishida ko'rsatiladi.
+                  </p>
                 </div>
 
                 <Button
