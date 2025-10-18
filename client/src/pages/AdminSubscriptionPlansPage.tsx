@@ -313,28 +313,26 @@ export default function AdminSubscriptionPlansPage() {
 
                 {/* Dynamic Features */}
                 {plan.features.dynamicFeatures && plan.features.dynamicFeatures.filter((f: any) => f.enabled).length > 0 && (
-                  <div className="space-y-2 pt-2 border-t">
-                    <h4 className="text-xs font-semibold text-muted-foreground">Qo'shimcha</h4>
+                  <>
                     {plan.features.dynamicFeatures.filter((f: any) => f.enabled).map((feature: any, idx: number) => (
                       <div key={idx} className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-blue-600" />
+                        <CheckCircle className="w-4 h-4 text-green-600" />
                         <span className="text-sm">{feature.label}</span>
                       </div>
                     ))}
-                  </div>
+                  </>
                 )}
 
                 {/* Custom Features */}
                 {plan.features.customFeatures && plan.features.customFeatures.length > 0 && (
-                  <div className="space-y-2 pt-2 border-t">
-                    <h4 className="text-xs font-semibold text-muted-foreground">Boshqa</h4>
+                  <>
                     {plan.features.customFeatures.map((feature: string, idx: number) => (
                       <div key={idx} className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-purple-600" />
+                        <CheckCircle className="w-4 h-4 text-green-600" />
                         <span className="text-sm">{feature}</span>
                       </div>
                     ))}
-                  </div>
+                  </>
                 )}
 
                 {/* Bonuses */}
