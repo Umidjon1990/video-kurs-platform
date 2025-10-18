@@ -25,7 +25,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, MessageSquare, Save, Trash2, Plus, Star, Edit, ArrowLeft } from "lucide-react";
+import { Settings, MessageSquare, Save, Trash2, Plus, Star, Edit, ArrowLeft, Upload, X } from "lucide-react";
 import type { SiteSetting, Testimonial } from "@shared/schema";
 import { useLocation } from "wouter";
 
@@ -41,6 +41,18 @@ export default function AdminCMSPage() {
   const [contactAddress, setContactAddress] = useState("");
   const [contactTelegram, setContactTelegram] = useState("");
   const [certificateUrls, setCertificateUrls] = useState("");
+  
+  // Certificate upload state
+  const [uploadingCertificate, setUploadingCertificate] = useState(false);
+  const [uploadedCertificates, setUploadedCertificates] = useState<string[]>([]);
+  
+  // Load uploaded certificates from certificateUrls
+  useEffect(() => {
+    if (certificateUrls) {
+      const urls = certificateUrls.split('\n').filter(url => url.trim());
+      setUploadedCertificates(urls);
+    }
+  }, [certificateUrls]);
   
   // Testimonial dialog state
   const [testimonialDialogOpen, setTestimonialDialogOpen] = useState(false);
@@ -180,6 +192,79 @@ export default function AdminCMSPage() {
       });
     },
   });
+
+  // Handle certificate file upload
+  const handleCertificateUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Xatolik",
+        description: "Faqat rasm fayllari qabul qilinadi",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Xatolik",
+        description: "Fayl hajmi 5MB dan oshmasligi kerak",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploadingCertificate(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/admin/upload-certificate', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Fayl yuklashda xatolik');
+      }
+
+      const data = await response.json();
+      const newUrl = data.url;
+
+      // Add to uploaded certificates
+      const updatedUrls = [...uploadedCertificates, newUrl];
+      setUploadedCertificates(updatedUrls);
+      setCertificateUrls(updatedUrls.join('\n'));
+
+      toast({
+        title: "Muvaffaqiyatli",
+        description: "Rasm yuklandi",
+      });
+
+      // Clear the file input
+      event.target.value = '';
+    } catch (error: any) {
+      toast({
+        title: "Xatolik",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingCertificate(false);
+    }
+  };
+
+  // Remove certificate from list
+  const handleRemoveCertificate = (index: number) => {
+    const updatedUrls = uploadedCertificates.filter((_, i) => i !== index);
+    setUploadedCertificates(updatedUrls);
+    setCertificateUrls(updatedUrls.join('\n'));
+  };
 
   const saveSiteSettings = () => {
     updateSettingMutation.mutate({ key: "about_us", value: aboutUs });
@@ -337,19 +422,71 @@ export default function AdminCMSPage() {
                   </p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="certificate-urls">Guvohnoma va Litsenziya Rasmlari</Label>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label>Guvohnoma va Litsenziya Rasmlari</Label>
+                    <div>
+                      <input
+                        type="file"
+                        id="certificate-upload"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={handleCertificateUpload}
+                        data-testid="input-upload-certificate"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => document.getElementById('certificate-upload')?.click()}
+                        disabled={uploadingCertificate}
+                        data-testid="button-upload-certificate"
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        {uploadingCertificate ? "Yuklanmoqda..." : "Rasm Yuklash"}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {uploadedCertificates.length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {uploadedCertificates.map((url, index) => (
+                        <div
+                          key={index}
+                          className="relative group rounded-lg overflow-hidden border bg-card aspect-[4/5]"
+                          data-testid={`preview-certificate-${index}`}
+                        >
+                          <img
+                            src={url}
+                            alt={`Sertifikat ${index + 1}`}
+                            className="w-full h-full object-contain"
+                          />
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => handleRemoveCertificate(index)}
+                            data-testid={`button-remove-certificate-${index}`}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <p className="text-sm text-muted-foreground">
+                    Rasm yuklang yoki quyida URL kiriting. Rasmlar bosh sahifada carousel ko'rinishida ko'rsatiladi.
+                  </p>
+
                   <Textarea
                     id="certificate-urls"
                     data-testid="input-certificate-urls"
-                    placeholder="Har bir qatorda bitta rasm URL'ini kiriting&#10;https://example.com/certificate1.jpg&#10;https://example.com/certificate2.jpg"
+                    placeholder="Yoki qo'lda URL kiriting (har bir qatorda bitta)&#10;https://example.com/certificate1.jpg"
                     value={certificateUrls}
                     onChange={(e) => setCertificateUrls(e.target.value)}
-                    rows={5}
+                    rows={3}
                   />
-                  <p className="text-sm text-muted-foreground">
-                    Har bir qatorda bitta rasm URL'ini kiriting. Bu rasmlar bosh sahifada carousel ko'rinishida ko'rsatiladi.
-                  </p>
                 </div>
 
                 <Button

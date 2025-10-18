@@ -1735,6 +1735,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ============ SITE SETTINGS & TESTIMONIALS (CMS) ============
   
+  // Admin: Upload certificate image
+  app.post('/api/admin/upload-certificate', isAdmin, upload.single('file'), async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "Fayl yuklanmadi" });
+      }
+
+      // Validate file type (only images)
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(req.file.mimetype)) {
+        return res.status(400).json({ message: "Faqat rasm fayllari (JPG, PNG, WEBP) qabul qilinadi" });
+      }
+
+      // Validate file size (max 5MB)
+      if (req.file.size > 5 * 1024 * 1024) {
+        return res.status(400).json({ message: "Fayl hajmi 5MB dan oshmasligi kerak" });
+      }
+
+      // Generate safe filename using UUID
+      const crypto = await import('crypto');
+      const fileExt = req.file.mimetype.split('/')[1];
+      const safeFileName = `certificate-${crypto.randomUUID()}.${fileExt}`;
+      
+      // Upload to public certificates folder
+      const filePath = await uploadSubmissionFile(
+        { ...req.file, originalname: safeFileName } as Express.Multer.File,
+        'certificates'
+      );
+
+      // Return the full URL
+      const fullUrl = `${req.protocol}://${req.get('host')}${filePath}`;
+      res.json({ url: fullUrl, path: filePath });
+    } catch (error: any) {
+      console.error("Certificate upload error:", error);
+      res.status(500).json({ message: error.message || "Fayl yuklashda xatolik" });
+    }
+  });
+  
   // Public: Get all site settings (for HomePage)
   app.get('/api/site-settings', async (_req, res) => {
     try {
