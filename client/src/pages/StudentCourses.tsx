@@ -203,17 +203,21 @@ export default function StudentCourses() {
                           {plan.description}
                         </CardDescription>
                       )}
-                      <div className="pt-4">
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-4xl font-bold" data-testid={`text-plan-price-${plan.id}`}>
-                            {plan.price.toLocaleString('uz-UZ')}
-                          </span>
-                          <span className="text-muted-foreground">so'm</span>
+                      {plan.price && (
+                        <div className="pt-4">
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-4xl font-bold" data-testid={`text-plan-price-${plan.id}`}>
+                              {plan.price.toLocaleString('uz-UZ')}
+                            </span>
+                            <span className="text-muted-foreground">so'm</span>
+                          </div>
+                          {plan.duration && (
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {plan.duration} {plan.durationType === 'month' ? 'oylik' : 'yillik'}
+                            </p>
+                          )}
                         </div>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {plan.duration} {plan.durationType === 'month' ? 'oylik' : 'yillik'}
-                        </p>
-                      </div>
+                      )}
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="space-y-3">
