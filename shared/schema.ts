@@ -299,6 +299,27 @@ export const announcementsRelations = relations(announcements, ({ one }) => ({
   }),
 }));
 
+// Site Settings table - Sayt sozlamalari (Admin boshqaradi)
+export const siteSettings = pgTable("site_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: varchar("key", { length: 100 }).notNull().unique(), // about_us, contact_email, contact_phone, contact_address, etc.
+  value: text("value"), // JSON string or plain text
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Testimonials table - Talabalar fikrlari (Admin boshqaradi)
+export const testimonials = pgTable("testimonials", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  studentName: varchar("student_name", { length: 255 }).notNull(),
+  studentRole: varchar("student_role", { length: 255 }), // Talaba, Dasturchi, etc.
+  content: text("content").notNull(),
+  avatarUrl: varchar("avatar_url"),
+  rating: integer("rating").default(5), // 1-5 stars
+  isPublished: boolean("is_published").default(true),
+  order: integer("order").default(0), // For sorting
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Zod schemas for validation
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -418,6 +439,17 @@ export const insertMessageSchema = createInsertSchema(messages).omit({
   createdAt: true,
 });
 
+// Insert schemas for site settings and testimonials
+export const insertSiteSettingSchema = createInsertSchema(siteSettings).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export const insertTestimonialSchema = createInsertSchema(testimonials).omit({
+  id: true,
+  createdAt: true,
+});
+
 // TypeScript types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -480,6 +512,12 @@ export type Conversation = typeof conversations.$inferSelect;
 
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
+
+export type InsertSiteSetting = z.infer<typeof insertSiteSettingSchema>;
+export type SiteSetting = typeof siteSettings.$inferSelect;
+
+export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;
+export type Testimonial = typeof testimonials.$inferSelect;
 
 // Course Analytics type (for instructor dashboard)
 export type CourseAnalytics = {
