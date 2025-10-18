@@ -4,12 +4,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CourseCard } from "@/components/CourseCard";
 import { ProgressCard } from "@/components/ProgressCard";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useLocation } from "wouter";
-import { MessageCircle } from "lucide-react";
-import type { Course, StudentCourseProgress } from "@shared/schema";
+import { MessageCircle, CheckCircle, Star } from "lucide-react";
+import type { Course, StudentCourseProgress, SubscriptionPlan } from "@shared/schema";
 
 export default function StudentCourses() {
   const { toast } = useToast();
@@ -44,6 +45,11 @@ export default function StudentCourses() {
     enabled: isAuthenticated,
   });
 
+  const { data: subscriptionPlans, isLoading: plansLoading } = useQuery<any[]>({
+    queryKey: ["/api/subscription-plans"],
+    enabled: isAuthenticated,
+  });
+
   const enrolledCourseIds = new Set(enrolledCourses?.map(c => c.id) || []);
 
   const handleEnroll = (courseId: string) => {
@@ -66,7 +72,7 @@ export default function StudentCourses() {
     }
   };
 
-  if (authLoading || allCoursesLoading || enrolledCoursesLoading || progressLoading) {
+  if (authLoading || allCoursesLoading || enrolledCoursesLoading || progressLoading || plansLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -112,6 +118,7 @@ export default function StudentCourses() {
           <TabsList>
             <TabsTrigger value="all" data-testid="tab-all-courses">Barcha Kurslar</TabsTrigger>
             <TabsTrigger value="enrolled" data-testid="tab-my-courses">Mening Kurslarim</TabsTrigger>
+            <TabsTrigger value="plans" data-testid="tab-subscription-plans">Tariflar</TabsTrigger>
           </TabsList>
 
           <TabsContent value="all" className="space-y-4">
@@ -162,6 +169,125 @@ export default function StudentCourses() {
                     </div>
                   );
                 })}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="plans" className="space-y-4">
+            <div className="space-y-2">
+              <h2 className="text-3xl font-bold">Obuna Tariflari</h2>
+              <p className="text-muted-foreground">
+                O'zingizga mos tarifni tanlang va kurs xarid qilishda chegirmalardan foydalaning
+              </p>
+            </div>
+            
+            {!subscriptionPlans || subscriptionPlans.length === 0 ? (
+              <p className="text-center text-muted-foreground py-16">Hozircha tariflar yo'q</p>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {subscriptionPlans?.map((plan) => (
+                  <Card key={plan.id} className="relative" data-testid={`card-plan-${plan.id}`}>
+                    {plan.isPopular && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                        <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-xs font-semibold">
+                          Mashhur
+                        </span>
+                      </div>
+                    )}
+                    <CardHeader>
+                      <CardTitle className="text-2xl" data-testid={`text-plan-name-${plan.id}`}>
+                        {plan.name}
+                      </CardTitle>
+                      {plan.description && (
+                        <CardDescription data-testid={`text-plan-description-${plan.id}`}>
+                          {plan.description}
+                        </CardDescription>
+                      )}
+                      <div className="pt-4">
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-4xl font-bold" data-testid={`text-plan-price-${plan.id}`}>
+                            {plan.price.toLocaleString('uz-UZ')}
+                          </span>
+                          <span className="text-muted-foreground">so'm</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {plan.duration} {plan.durationType === 'month' ? 'oylik' : 'yillik'}
+                        </p>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-3">
+                        {/* Base Features */}
+                        {plan.features?.tests && (
+                          <div className="flex items-start gap-2">
+                            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm">
+                              {plan.features.testsLabel || 'Testlar'}: {plan.features.tests === -1 ? 'Cheksiz' : plan.features.tests}
+                            </span>
+                          </div>
+                        )}
+                        {plan.features?.assignments && (
+                          <div className="flex items-start gap-2">
+                            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm">
+                              {plan.features.assignmentsLabel || 'Topshiriqlar'}: {plan.features.assignments === -1 ? 'Cheksiz' : plan.features.assignments}
+                            </span>
+                          </div>
+                        )}
+                        {plan.features?.certificate && (
+                          <div className="flex items-start gap-2">
+                            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm">{plan.features.certificateLabel || 'Sertifikat'}</span>
+                          </div>
+                        )}
+                        {plan.features?.liveClassesPerWeek !== undefined && plan.features.liveClassesPerWeek > 0 && (
+                          <div className="flex items-start gap-2">
+                            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm">
+                              {plan.features.liveClassesLabel || 'Jonli darslar'}: {plan.features.liveClassesPerWeek}/hafta
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Dynamic Features */}
+                        {plan.features?.dynamicFeatures?.map((feature: any, idx: number) => (
+                          <div key={idx} className="flex items-start gap-2">
+                            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm">{feature.label}</span>
+                          </div>
+                        ))}
+
+                        {/* Custom Features */}
+                        {plan.features?.customFeatures?.map((feature: any, idx: number) => (
+                          <div key={idx} className="flex items-start gap-2">
+                            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm">{feature}</span>
+                          </div>
+                        ))}
+
+                        {/* Bonuses */}
+                        {plan.features?.bonuses && plan.features.bonuses.length > 0 && (
+                          <div className="pt-2 border-t">
+                            {plan.features.bonuses.map((bonus: any, idx: number) => (
+                              <div key={idx} className="flex items-start gap-2">
+                                <Star className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
+                                <span className="text-sm font-medium">{bonus}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <Button 
+                        className="w-full"
+                        variant={plan.isPopular ? "default" : "outline"}
+                        data-testid={`button-select-plan-${plan.id}`}
+                      >
+                        Tanlash
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             )}
           </TabsContent>
