@@ -7,6 +7,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import HomePage from "@/pages/HomePage";
 import Landing from "@/pages/Landing";
+import Login from "@/pages/Login";
+import Register from "@/pages/Register";
 import AdminDashboard from "@/pages/AdminDashboard";
 import AdminPayments from "@/pages/AdminPayments";
 import AdminCMSPage from "@/pages/AdminCMSPage";
@@ -35,6 +37,8 @@ function Router() {
     <Switch>
       {/* Public Routes - accessible to everyone */}
       <Route path="/explore" component={HomePage} />
+      <Route path="/login" component={Login} />
+      <Route path="/register" component={Register} />
       
       {!isAuthenticated ? (
         <Route path="/" component={HomePage} />

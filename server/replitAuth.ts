@@ -2,10 +2,12 @@
 import * as client from "openid-client";
 import { Strategy, type VerifyFunction } from "openid-client/passport";
 import passport from "passport";
+import { Strategy as LocalStrategy } from "passport-local";
 import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
+import bcrypt from "bcryptjs";
 import { storage } from "./storage";
 
 if (!process.env.REPLIT_DOMAINS) {
@@ -113,6 +115,53 @@ export async function setupAuth(app: Express) {
     passport.use(strategy);
   }
 
+  // Local Strategy for phone/email + password login
+  passport.use('local', new LocalStrategy(
+    {
+      usernameField: 'username', // can be phone or email
+      passwordField: 'password'
+    },
+    async (username, password, done) => {
+      try {
+        // Find user by phone or email
+        const user = await storage.getUserByPhoneOrEmail(username);
+        
+        if (!user) {
+          return done(null, false, { message: 'Foydalanuvchi topilmadi' });
+        }
+        
+        if (!user.passwordHash) {
+          return done(null, false, { message: 'Parol sozlanmagan' });
+        }
+        
+        // Compare password
+        const isMatch = await bcrypt.compare(password, user.passwordHash);
+        if (!isMatch) {
+          return done(null, false, { message: 'Parol noto\'g\'ri' });
+        }
+        
+        // Create user object for session (same format as OIDC)
+        const sessionUser = {
+          claims: {
+            sub: user.id,
+            email: user.email,
+            first_name: user.firstName,
+            last_name: user.lastName,
+            profile_image_url: user.profileImageUrl,
+            role: user.role, // Include role for access checks
+          },
+          access_token: null,
+          refresh_token: null,
+          expires_at: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), // 1 week
+        };
+        
+        return done(null, sessionUser);
+      } catch (error) {
+        return done(error);
+      }
+    }
+  ));
+
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
@@ -145,7 +194,24 @@ export async function setupAuth(app: Express) {
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const user = req.user as any;
 
-  if (!req.isAuthenticated() || !user.expires_at) {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  // For local auth (no access_token), just check if authenticated
+  if (!user.access_token) {
+    // Local auth session - check if expired
+    if (user.expires_at) {
+      const now = Math.floor(Date.now() / 1000);
+      if (now > user.expires_at) {
+        return res.status(401).json({ message: "Session expired" });
+      }
+    }
+    return next();
+  }
+
+  // OIDC auth session - check expiry and refresh if needed
+  if (!user.expires_at) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
@@ -172,29 +238,51 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
 };
 
 export const isAdmin: RequestHandler = async (req, res, next) => {
-  const userId = (req.user as any)?.claims?.sub;
-  if (!userId) {
+  const user = req.user as any;
+  if (!user?.claims) {
     return res.status(401).json({ message: "Unauthorized" });
   }
   
-  const user = await storage.getUser(userId);
-  if (user?.role !== 'admin') {
+  // Use role from session claims if available (local auth)
+  if (user.claims.role) {
+    if (user.claims.role !== 'admin') {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+    return next();
+  }
+  
+  // Fallback to DB for OIDC sessions (no role in claims)
+  const dbUser = await storage.getUser(user.claims.sub);
+  if (!dbUser || dbUser.role !== 'admin') {
     return res.status(403).json({ message: "Forbidden" });
   }
   
+  // Cache role in session for next requests
+  user.claims.role = dbUser.role;
   next();
 };
 
 export const isInstructor: RequestHandler = async (req, res, next) => {
-  const userId = (req.user as any)?.claims?.sub;
-  if (!userId) {
+  const user = req.user as any;
+  if (!user?.claims) {
     return res.status(401).json({ message: "Unauthorized" });
   }
   
-  const user = await storage.getUser(userId);
-  if (user?.role !== 'instructor' && user?.role !== 'admin') {
+  // Use role from session claims if available (local auth)
+  if (user.claims.role) {
+    if (user.claims.role !== 'instructor' && user.claims.role !== 'admin') {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+    return next();
+  }
+  
+  // Fallback to DB for OIDC sessions (no role in claims)
+  const dbUser = await storage.getUser(user.claims.sub);
+  if (!dbUser || (dbUser.role !== 'instructor' && dbUser.role !== 'admin')) {
     return res.status(403).json({ message: "Forbidden" });
   }
   
+  // Cache role in session for next requests
+  user.claims.role = dbUser.role;
   next();
 };

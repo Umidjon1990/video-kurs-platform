@@ -64,6 +64,7 @@ import { eq, and, desc, or, sql, inArray } from "drizzle-orm";
 export interface IStorage {
   // User operations (Replit Auth required)
   getUser(id: string): Promise<User | undefined>;
+  getUserByPhoneOrEmail(username: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   updateUserRole(userId: string, role: string): Promise<User>;
   getUsersByRole(role: string): Promise<User[]>;
@@ -200,6 +201,15 @@ export class DatabaseStorage implements IStorage {
   // User operations
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByPhoneOrEmail(username: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(or(eq(users.phone, username), eq(users.email, username)))
+      .limit(1);
     return user;
   }
 

@@ -9,6 +9,8 @@ import { writeFile } from "fs/promises";
 import { join } from "path";
 import { ObjectStorageService } from "./objectStorage";
 import { db } from "./db";
+import bcrypt from "bcryptjs";
+import passport from "passport";
 import { users, courses, lessons, assignments, tests, questions, enrollments, submissions, testAttempts, notifications, conversations, messages, siteSettings, testimonials, subscriptionPlans, coursePlanPricing, userSubscriptions } from "@shared/schema";
 import { eq, and, or, desc, sql, count, avg, inArray } from "drizzle-orm";
 import {
@@ -63,7 +65,7 @@ async function uploadSubmissionFile(
 
 // Stripe setup
 const stripe = process.env.STRIPE_SECRET_KEY 
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2023-10-16" })
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2025-09-30.clover" })
   : null;
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -101,6 +103,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
+  });
+
+  // Local Auth: Register
+  app.post('/api/auth/register', async (req, res) => {
+    try {
+      const { phone, email, password, firstName, lastName } = req.body;
+      
+      // Server-side validation
+      const registerSchema = z.object({
+        phone: z.string().optional(),
+        email: z.string().email().optional(),
+        password: z.string().min(6, 'Parol kamida 6 belgidan iborat bo\'lishi kerak'),
+        firstName: z.string().optional(),
+        lastName: z.string().optional(),
+      }).refine(
+        (data) => data.phone || data.email,
+        { message: 'Telefon yoki email kiritish shart' }
+      );
+      
+      const validatedData = registerSchema.parse({ phone, email, password, firstName, lastName });
+      
+      // Check if user exists
+      if (validatedData.phone) {
+        const existingUser = await storage.getUserByPhoneOrEmail(validatedData.phone);
+        if (existingUser) {
+          return res.status(400).json({ message: 'Bu telefon raqam allaqachon ro\'yxatdan o\'tgan' });
+        }
+      }
+      
+      if (validatedData.email) {
+        const existingUser = await storage.getUserByPhoneOrEmail(validatedData.email);
+        if (existingUser) {
+          return res.status(400).json({ message: 'Bu email allaqachon ro\'yxatdan o\'tgan' });
+        }
+      }
+      
+      // Hash password
+      const passwordHash = await bcrypt.hash(validatedData.password, 10);
+      
+      // Create user
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          phone: validatedData.phone || null,
+          email: validatedData.email || null,
+          passwordHash,
+          firstName: validatedData.firstName || null,
+          lastName: validatedData.lastName || null,
+          role: 'student', // Default to student
+        })
+        .returning();
+      
+      // Remove password from response
+      const { passwordHash: _, ...userWithoutPassword } = newUser;
+      
+      res.json({ message: 'Ro\'yxatdan o\'tish muvaffaqiyatli', user: userWithoutPassword });
+    } catch (error: any) {
+      console.error('Register error:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Local Auth: Login
+  app.post('/api/auth/login', (req, res, next) => {
+    passport.authenticate('local', async (err: any, user: any, info: any) => {
+      if (err) {
+        return res.status(500).json({ message: err.message });
+      }
+      if (!user) {
+        return res.status(401).json({ message: info?.message || 'Login xato' });
+      }
+      req.logIn(user, async (err) => {
+        if (err) {
+          return res.status(500).json({ message: err.message });
+        }
+        // Fetch full user data from database
+        const fullUser = await storage.getUser(user.claims.sub);
+        return res.json({ 
+          message: 'Login muvaffaqiyatli', 
+          user: fullUser 
+        });
+      });
+    })(req, res, next);
   });
 
   // File upload endpoint for payment receipts
