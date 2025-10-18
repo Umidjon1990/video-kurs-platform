@@ -431,7 +431,7 @@ export default function AdminSubscriptionPlansPage() {
 
       {/* Add/Edit Plan Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent data-testid="dialog-plan">
+        <DialogContent className="max-h-[90vh] overflow-y-auto" data-testid="dialog-plan">
           <DialogHeader>
             <DialogTitle>
               {editingPlan ? "Tarifni Tahrirlash" : "Yangi Tarif Yaratish"}
