@@ -178,6 +178,14 @@ export default function AdminSubscriptionPlansPage() {
     );
   };
 
+  const handlePlanChange = (planId: string, field: string, value: any) => {
+    setPlans(
+      plans.map((p) =>
+        p.id === planId ? { ...p, [field]: value } : p
+      )
+    );
+  };
+
   const handleSave = (plan: any) => {
     updatePlanMutation.mutate(plan);
   };
