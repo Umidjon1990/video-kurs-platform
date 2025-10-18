@@ -1776,10 +1776,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fileExt = req.file.mimetype.split('/')[1];
       const safeFileName = `certificate-${crypto.randomUUID()}.${fileExt}`;
       
-      // Upload to public certificates folder
-      const filePath = await uploadSubmissionFile(
-        { ...req.file, originalname: safeFileName } as Express.Multer.File,
-        'certificates'
+      // Upload directly to Object Storage without timestamp
+      const filePath = await objectStorage.uploadToFolder(
+        req.file.buffer,
+        `certificates/${safeFileName}`,
+        req.file.mimetype
       );
 
       // Return the full URL
