@@ -7,6 +7,24 @@ This project is a comprehensive Learning Management System (LMS) platform design
 ## Recent Changes (October 18, 2025)
 
 ### Latest Updates
+- ✅ **Certificate Image Upload System - COMPLETE** (Oct 18, 2025)
+  - ✅ **Backend API:**
+    - ✅ POST /api/admin/upload-certificate - Upload certificate images to Replit Object Storage
+    - Server-side validation: file type (JPG/PNG/WEBP), max 5MB size
+    - UUID-based secure filenames, stored in 'certificates' folder
+    - Returns full URL for immediate use
+  - ✅ **Admin CMS Enhancement:**
+    - ✅ File upload button with hidden input (data-testid="button-upload-certificate")
+    - ✅ Real-time image preview grid (2 cols mobile, 4 cols desktop)
+    - ✅ Hover-delete functionality with X button (opacity transition)
+    - ✅ Toast notifications with reminder to save ("Saqlash tugmasini bosing!")
+    - ✅ Aspect ratio 4:5 for certificate cards
+    - ✅ Manual URL input still supported (textarea fallback)
+  - ✅ **Mobile Reliability:**
+    - ✅ Switched from external hosting (Google Drive/Dropbox) to Replit Object Storage
+    - ✅ Eliminates CORS and authentication issues
+    - ✅ All certificates now load reliably on mobile devices
+    - ✅ Image error handling with placeholder fallbacks
 - ✅ **Admin CMS & Public HomePage Enhancement - COMPLETE** (Oct 18, 2025)
   - ✅ **Database Schema:**
     - ✅ Site Settings table: Key-value storage for About Us, Contact info, Telegram, Certificate URLs
@@ -21,7 +39,7 @@ This project is a comprehensive Learning Management System (LMS) platform design
     - ✅ DELETE /api/admin/testimonials/:id (admin) - Delete testimonial
   - ✅ **Admin CMS Page (/admin/cms):**
     - ✅ Two-tab interface: Site Settings & Testimonials
-    - ✅ Site Settings: About Us (textarea), Contact (email, phone, address, Telegram), Certificates (textarea - multiline URLs)
+    - ✅ Site Settings: About Us (textarea), Contact (email, phone, address, Telegram), Certificates with image upload
     - ✅ Testimonials CRUD: Name, role, content, rating (1-5), order, publish toggle
     - ✅ Navigation from AdminDashboard via "Sayt Boshqaruvi" button (with ArrowLeft icon)
   - ✅ **Public HomePage Enhancements:**

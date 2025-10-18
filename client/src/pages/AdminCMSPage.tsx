@@ -51,6 +51,8 @@ export default function AdminCMSPage() {
     if (certificateUrls) {
       const urls = certificateUrls.split('\n').filter(url => url.trim());
       setUploadedCertificates(urls);
+    } else {
+      setUploadedCertificates([]);
     }
   }, [certificateUrls]);
   
@@ -243,7 +245,7 @@ export default function AdminCMSPage() {
 
       toast({
         title: "Muvaffaqiyatli",
-        description: "Rasm yuklandi",
+        description: "Rasm yuklandi. Saqlash tugmasini bosing!",
       });
 
       // Clear the file input
