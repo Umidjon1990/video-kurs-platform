@@ -1980,14 +1980,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const { name, displayName, description, features } = req.body;
       
-      console.log('📝 UPDATE PLAN REQUEST:', {
-        id,
-        name,
-        displayName,
-        dynamicFeatures: features?.dynamicFeatures,
-        fullFeatures: JSON.stringify(features, null, 2)
-      });
-      
       // Build update object dynamically
       const updateData: any = {};
       if (name !== undefined) updateData.name = name;

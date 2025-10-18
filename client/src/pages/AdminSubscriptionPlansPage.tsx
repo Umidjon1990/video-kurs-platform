@@ -16,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Save, Plus, Edit, Trash2, X } from "lucide-react";
+import { ArrowLeft, Save, Plus, Edit, Trash2, X, CheckCircle, Star } from "lucide-react";
 import { useLocation } from "wouter";
 
 export default function AdminSubscriptionPlansPage() {
@@ -71,33 +71,10 @@ export default function AdminSubscriptionPlansPage() {
     }
   }, [subscriptionPlans]);
 
-  const updatePlanMutation = useMutation({
-    mutationFn: async (plan: any) => {
-      await apiRequest("PUT", `/api/admin/subscription-plans/${plan.id}`, {
-        features: plan.features,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/subscription-plans"] });
-      toast({
-        title: "Saqlandi",
-        description: "Tarif xususiyatlari yangilandi",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Xatolik",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
   const createPlanMutation = useMutation({
     mutationFn: async () => {
       if (editingPlan) {
         // Update existing plan
-        console.log('🚀 FRONTEND: Updating plan with dynamicFeatures:', planForm.dynamicFeatures);
         await apiRequest("PUT", `/api/admin/subscription-plans/${editingPlan.id}`, {
           name: planForm.name,
           displayName: planForm.displayName,
@@ -216,9 +193,6 @@ export default function AdminSubscriptionPlansPage() {
     );
   };
 
-  const handleSave = (plan: any) => {
-    updatePlanMutation.mutate(plan);
-  };
 
   if (authLoading || isLoading) {
     return (
@@ -304,92 +278,73 @@ export default function AdminSubscriptionPlansPage() {
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor={`${plan.id}-tests`} className="text-sm">
-                    Testlar
-                  </Label>
-                  <Switch
-                    id={`${plan.id}-tests`}
-                    checked={plan.features.hasTests}
-                    onCheckedChange={(checked) =>
-                      handleFeatureChange(plan.id, "hasTests", checked)
-                    }
-                    data-testid={`switch-${plan.name}-tests`}
-                  />
+              <CardContent className="space-y-3">
+                <div className="text-sm text-muted-foreground mb-3">
+                  Tahrirlash uchun "Edit" tugmasini bosing
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <Label htmlFor={`${plan.id}-assignments`} className="text-sm">
-                    Vazifalar
-                  </Label>
-                  <Switch
-                    id={`${plan.id}-assignments`}
-                    checked={plan.features.hasAssignments}
-                    onCheckedChange={(checked) =>
-                      handleFeatureChange(plan.id, "hasAssignments", checked)
-                    }
-                    data-testid={`switch-${plan.name}-assignments`}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Label htmlFor={`${plan.id}-certificate`} className="text-sm">
-                    Sertifikat
-                  </Label>
-                  <Switch
-                    id={`${plan.id}-certificate`}
-                    checked={plan.features.hasCertificate}
-                    onCheckedChange={(checked) =>
-                      handleFeatureChange(plan.id, "hasCertificate", checked)
-                    }
-                    data-testid={`switch-${plan.name}-certificate`}
-                  />
-                </div>
-
+                {/* Base Features */}
                 <div className="space-y-2">
-                  <Label htmlFor={`${plan.id}-live-classes`} className="text-sm">
-                    Haftada jonli darslar
-                  </Label>
-                  <Input
-                    id={`${plan.id}-live-classes`}
-                    type="number"
-                    min="0"
-                    max="7"
-                    value={plan.features.liveClassesPerWeek}
-                    onChange={(e) =>
-                      handleFeatureChange(
-                        plan.id,
-                        "liveClassesPerWeek",
-                        parseInt(e.target.value) || 0
-                      )
-                    }
-                    data-testid={`input-${plan.name}-live-classes`}
-                  />
+                  {plan.features.hasTests && (
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      <span className="text-sm">{plan.features.testsLabel || "Testlar"}</span>
+                    </div>
+                  )}
+                  {plan.features.hasAssignments && (
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      <span className="text-sm">{plan.features.assignmentsLabel || "Vazifalar"}</span>
+                    </div>
+                  )}
+                  {plan.features.hasCertificate && (
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      <span className="text-sm">{plan.features.certificateLabel || "Sertifikat"}</span>
+                    </div>
+                  )}
+                  {plan.features.liveClassesPerWeek > 0 && (
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      <span className="text-sm">Haftada {plan.features.liveClassesPerWeek} ta jonli dars</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Dynamic Features */}
-                {plan.features.dynamicFeatures && plan.features.dynamicFeatures.length > 0 && (
+                {plan.features.dynamicFeatures && plan.features.dynamicFeatures.filter((f: any) => f.enabled).length > 0 && (
                   <div className="space-y-2 pt-2 border-t">
-                    <Label className="text-xs text-muted-foreground">Qo'shimcha xususiyatlar</Label>
-                    {plan.features.dynamicFeatures.map((feature: any, idx: number) => (
-                      <div key={idx} className="flex items-center justify-between">
-                        <Label className="text-sm">{feature.label}</Label>
-                        <Switch
-                          checked={feature.enabled}
-                          onCheckedChange={(checked) => {
-                            const newDynamic = [...plan.features.dynamicFeatures];
-                            newDynamic[idx].enabled = checked;
-                            setPlans(
-                              plans.map((p) =>
-                                p.id === plan.id
-                                  ? { ...p, features: { ...p.features, dynamicFeatures: newDynamic } }
-                                  : p
-                              )
-                            );
-                          }}
-                          data-testid={`switch-${plan.name}-dynamic-${idx}`}
-                        />
+                    <h4 className="text-xs font-semibold text-muted-foreground">Qo'shimcha</h4>
+                    {plan.features.dynamicFeatures.filter((f: any) => f.enabled).map((feature: any, idx: number) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-blue-600" />
+                        <span className="text-sm">{feature.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Custom Features */}
+                {plan.features.customFeatures && plan.features.customFeatures.length > 0 && (
+                  <div className="space-y-2 pt-2 border-t">
+                    <h4 className="text-xs font-semibold text-muted-foreground">Boshqa</h4>
+                    {plan.features.customFeatures.map((feature: string, idx: number) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-purple-600" />
+                        <span className="text-sm">{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Bonuses */}
+                {plan.features.bonuses && plan.features.bonuses.length > 0 && (
+                  <div className="space-y-2 pt-2 border-t">
+                    <h4 className="text-xs font-semibold text-muted-foreground">Bonuslar</h4>
+                    {plan.features.bonuses.map((bonus: string, idx: number) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <Star className="w-4 h-4 text-yellow-600 fill-yellow-600" />
+                        <span className="text-sm">{bonus}</span>
                       </div>
                     ))}
                   </div>
@@ -617,11 +572,9 @@ export default function AdminSubscriptionPlansPage() {
                 <Button
                   onClick={() => {
                     if (newDynamicFeature.trim()) {
-                      const newFeatures = [...planForm.dynamicFeatures, { enabled: true, label: newDynamicFeature.trim() }];
-                      console.log('➕ ADDING dynamic feature:', newDynamicFeature.trim(), 'Total:', newFeatures);
                       setPlanForm({ 
                         ...planForm, 
-                        dynamicFeatures: newFeatures
+                        dynamicFeatures: [...planForm.dynamicFeatures, { enabled: true, label: newDynamicFeature.trim() }]
                       });
                       setNewDynamicFeature("");
                     }
