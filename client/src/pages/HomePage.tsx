@@ -291,6 +291,15 @@ export default function HomePage() {
             {courses.map((course) => {
               const discountPercent = calculateDiscount(course.originalPrice, course.discountedPrice);
               const displayPrice = course.discountedPrice || course.price;
+              
+              // Auto-convert Google Drive thumbnail URL
+              let thumbnailUrl = course.thumbnailUrl;
+              if (thumbnailUrl && thumbnailUrl.includes('drive.google.com/file/d/')) {
+                const match = thumbnailUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                if (match && match[1]) {
+                  thumbnailUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+                }
+              }
 
               return (
                 <Card
@@ -301,9 +310,9 @@ export default function HomePage() {
                 >
                   {/* Thumbnail */}
                   <div className="h-48 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-b overflow-hidden">
-                    {course.thumbnailUrl ? (
+                    {thumbnailUrl ? (
                       <img
-                        src={course.thumbnailUrl}
+                        src={thumbnailUrl}
                         alt={course.title}
                         className="w-full h-full object-cover"
                         loading="lazy"
@@ -437,7 +446,27 @@ export default function HomePage() {
 
       {/* Certificates Carousel */}
       {getSetting("certificate_urls") && getSetting("certificate_urls").trim() && (() => {
-        const certificateList = getSetting("certificate_urls").split('\n').filter(url => url.trim());
+        // Auto-convert Google Drive URLs to direct image format
+        const convertGoogleDriveUrl = (url: string): string => {
+          const trimmedUrl = url.trim();
+          
+          // Check if it's a Google Drive URL
+          if (trimmedUrl.includes('drive.google.com/file/d/')) {
+            // Extract FILE_ID from: https://drive.google.com/file/d/FILE_ID/view...
+            const match = trimmedUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+            if (match && match[1]) {
+              return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+            }
+          }
+          
+          // Return original URL if not Google Drive or already converted
+          return trimmedUrl;
+        };
+        
+        const certificateList = getSetting("certificate_urls")
+          .split('\n')
+          .filter(url => url.trim())
+          .map(convertGoogleDriveUrl);
         
         // Simple CSS-based auto-scroll - no measurement needed
         return (
