@@ -30,12 +30,13 @@ The system uses Drizzle ORM with PostgreSQL (Neon Serverless) for type-safe data
 -   **Grading Workflow**: Integrated notification system from student submission to instructor grading and student result viewing.
 -   **Course Structure**: Simplified to Courses directly linking to Lessons, with demo lessons accessible to all.
 -   **Payment Flow**: Manual payment system requiring student receipt upload and admin approval, evolving into a subscription-based model.
--   **Subscription System**: Three subscription plans (Oddiy, Standard, Premium) with per-course pricing.
+-   **Subscription System**: Flexible subscription plan management with admin-controlled creation, editing, and deletion. Each plan supports customizable features (tests, assignments, certificates, live classes), custom feature labels, additional custom features, and bonuses. Plans are linked to course pricing.
 -   **Notification System**: Real-time, in-app notifications with unread counts and polling.
 -   **Video Player Support**: Enhanced compatibility with various video platforms (YouTube, Kinescope, Vimeo, Dailymotion, Wistia) and generic HTTPS video URLs.
 -   **Private Messaging**: A chat system enabling direct communication between students and instructors with unread indicators and real-time polling.
 -   **Announcement System**: Instructors can send announcements targeting individual students, course groups, or all students, with notification integration.
 -   **CMS & Homepage Enhancements**: Dynamic "About Us", "Contact Us", Testimonials, and Certificates sections managed via Admin CMS, with certificate image upload to Replit Object Storage.
+-   **Admin Subscription Management**: Comprehensive admin interface for subscription plan CRUD operations, including feature toggles, custom feature labels, bonus management, and dynamic feature additions. Supports both switch-based and text-based feature customization.
 
 ## External Dependencies
 
