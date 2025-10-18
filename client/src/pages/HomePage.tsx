@@ -3,10 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, BookOpen, Users, Award, TrendingUp } from "lucide-react";
+import { Search, Filter, BookOpen, Users, Award, TrendingUp, Star, Mail, Phone, MapPin } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { Course, User } from "@shared/schema";
+import type { Course, User, SiteSetting, Testimonial } from "@shared/schema";
 
 type PublicCourse = Course & {
   instructor: User;
@@ -52,6 +52,31 @@ export default function HomePage() {
       return response.json();
     },
   });
+
+  // Fetch site settings
+  const { data: siteSettings } = useQuery<SiteSetting[]>({
+    queryKey: ["/api/site-settings"],
+    queryFn: async () => {
+      const response = await fetch("/api/site-settings");
+      if (!response.ok) throw new Error("Failed to fetch settings");
+      return response.json();
+    },
+  });
+
+  // Fetch testimonials
+  const { data: testimonials } = useQuery<Testimonial[]>({
+    queryKey: ["/api/testimonials"],
+    queryFn: async () => {
+      const response = await fetch("/api/testimonials");
+      if (!response.ok) throw new Error("Failed to fetch testimonials");
+      return response.json();
+    },
+  });
+
+  // Helper to get setting value
+  const getSetting = (key: string) => {
+    return siteSettings?.find(s => s.key === key)?.value || "";
+  };
 
   const formatPrice = (price: string | null) => {
     if (!price || parseFloat(price) === 0) return "Bepul";
@@ -329,6 +354,125 @@ export default function HomePage() {
           </div>
         )}
       </div>
+
+      {/* Testimonials Section */}
+      {testimonials && testimonials.length > 0 && (
+        <div className="bg-muted/30 border-y">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold mb-2">Talabalarimiz Fikrlari</h2>
+              <p className="text-muted-foreground">
+                Minglab talabalar bizga ishonishdi va karyeralarini qurishdi
+              </p>
+            </div>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {testimonials.slice(0, 6).map((testimonial) => (
+                <Card key={testimonial.id} data-testid={`card-testimonial-${testimonial.id}`}>
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
+                        {testimonial.studentName.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <h4 className="font-semibold">{testimonial.studentName}</h4>
+                        {testimonial.studentRole && (
+                          <p className="text-sm text-muted-foreground">{testimonial.studentRole}</p>
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex gap-1 mb-3">
+                      {Array.from({ length: testimonial.rating || 5 }).map((_, i) => (
+                        <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                      ))}
+                    </div>
+                    <p className="text-sm text-muted-foreground italic">
+                      "{testimonial.content}"
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* About Us Section */}
+      {getSetting("about_us") && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-3xl font-bold mb-6">Biz Haqimizda</h2>
+            <p className="text-lg text-muted-foreground whitespace-pre-line">
+              {getSetting("about_us")}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Contact Section */}
+      {(getSetting("contact_email") || getSetting("contact_phone") || getSetting("contact_address")) && (
+        <div className="bg-muted/30 border-t">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold mb-2">Bog'lanish</h2>
+              <p className="text-muted-foreground">
+                Savollaringiz bormi? Biz bilan bog'laning!
+              </p>
+            </div>
+            <div className="grid gap-8 md:grid-cols-3 max-w-4xl mx-auto">
+              {getSetting("contact_email") && (
+                <Card className="text-center">
+                  <CardContent className="pt-6">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                      <Mail className="w-6 h-6 text-primary" />
+                    </div>
+                    <h3 className="font-semibold mb-2">Email</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {getSetting("contact_email")}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+              {getSetting("contact_phone") && (
+                <Card className="text-center">
+                  <CardContent className="pt-6">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                      <Phone className="w-6 h-6 text-primary" />
+                    </div>
+                    <h3 className="font-semibold mb-2">Telefon</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {getSetting("contact_phone")}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+              {getSetting("contact_address") && (
+                <Card className="text-center">
+                  <CardContent className="pt-6">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                      <MapPin className="w-6 h-6 text-primary" />
+                    </div>
+                    <h3 className="font-semibold mb-2">Manzil</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {getSetting("contact_address")}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Footer */}
+      <footer className="border-t bg-background">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center text-sm text-muted-foreground">
+            © {new Date().getFullYear()} Video Kurslar Platformasi. Barcha huquqlar himoyalangan.
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
