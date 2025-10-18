@@ -8,7 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Upload, CheckCircle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ArrowLeft, Upload, CheckCircle, ExternalLink } from "lucide-react";
 import type { Course } from "@shared/schema";
 
 export default function Checkout() {
@@ -22,6 +29,8 @@ export default function Checkout() {
   const [isUploading, setIsUploading] = useState(false);
   const [receiptPreview, setReceiptPreview] = useState<string>("");
   const [enrollmentSuccess, setEnrollmentSuccess] = useState(false);
+  const [showPaymeDialog, setShowPaymeDialog] = useState(false);
+  const [paymePhone, setPaymePhone] = useState("");
 
   const { data: course } = useQuery<Course>({
     queryKey: ["/api/courses", courseId],
@@ -225,36 +234,19 @@ export default function Checkout() {
               {paymentMethod === "payme" && (
                 <div className="space-y-3 p-4 bg-muted/50 rounded-lg border">
                   <div className="space-y-3">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Payme Orqali To'lash</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Payme orqali to'lov qilish uchun quyidagi havola orqali ro'yxatdan o'ting yoki hisobingizga kiring:
-                      </p>
-                      <a
-                        href="https://merchant.payme.uz/auth/sign-up"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 text-primary hover:underline font-medium"
-                        data-testid="link-payme"
-                      >
-                        merchant.payme.uz/auth/sign-up
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                      </a>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="payme-amount" className="text-sm font-medium">
-                        To'lov Summasi
-                      </Label>
-                      <Input
-                        id="payme-amount"
-                        value={`${course.price} so'm`}
-                        readOnly
-                        className="font-semibold"
-                        data-testid="input-payme-amount"
-                      />
-                    </div>
+                    <Label className="text-sm font-medium">Payme Orqali To'lash</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Payme orqali to'lov qilish uchun quyidagi tugmani bosing
+                    </p>
+                    <Button
+                      type="button"
+                      variant="default"
+                      className="w-full"
+                      onClick={() => setShowPaymeDialog(true)}
+                      data-testid="button-open-payme"
+                    >
+                      Payme To'lovini Ochish
+                    </Button>
                     <p className="text-xs text-muted-foreground">
                       To'lovni amalga oshirgandan so'ng chek rasmini yuklang
                     </p>
@@ -316,6 +308,103 @@ export default function Checkout() {
           </Card>
         </div>
       </div>
+
+      {/* Payme Payment Dialog */}
+      <Dialog open={showPaymeDialog} onOpenChange={setShowPaymeDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Payme Orqali To'lash</DialogTitle>
+            <DialogDescription>
+              Payme orqali to'lov qilish uchun quyidagi ma'lumotlarni kiriting
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="payme-amount-dialog">To'lov Summasi</Label>
+              <Input
+                id="payme-amount-dialog"
+                value={`${course.price} so'm`}
+                readOnly
+                className="font-semibold text-lg"
+                data-testid="input-payme-amount-dialog"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="payme-phone">Telefon Raqam</Label>
+              <Input
+                id="payme-phone"
+                type="tel"
+                placeholder="+998 90 123 45 67"
+                value={paymePhone}
+                onChange={(e) => setPaymePhone(e.target.value)}
+                data-testid="input-payme-phone"
+              />
+              <p className="text-xs text-muted-foreground">
+                Payme hisobingiz bilan bog'langan telefon raqam
+              </p>
+            </div>
+
+            <div className="space-y-2 p-4 bg-muted/50 rounded-lg border">
+              <div className="flex items-start gap-2">
+                <div className="flex-1">
+                  <p className="text-sm font-medium mb-1">Payme Merchant</p>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Ro'yxatdan o'tish yoki kirish uchun:
+                  </p>
+                  <a
+                    href="https://merchant.payme.uz/auth/sign-up"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-primary hover:underline text-sm font-medium"
+                    data-testid="link-payme-dialog"
+                  >
+                    merchant.payme.uz
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+              <p className="text-sm text-blue-900 dark:text-blue-100">
+                <strong>Yo'riqnoma:</strong>
+              </p>
+              <ol className="text-xs text-blue-800 dark:text-blue-200 mt-2 space-y-1 list-decimal list-inside">
+                <li>Yuqoridagi havola orqali Payme merchant'ga kiring</li>
+                <li>To'lovni amalga oshiring ({course.price} so'm)</li>
+                <li>To'lov cheki rasmini saqlang</li>
+                <li>Ushbu oynani yoping va chek rasmini yuklang</li>
+              </ol>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowPaymeDialog(false)}
+              className="flex-1"
+              data-testid="button-close-payme-dialog"
+            >
+              Yopish
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                setShowPaymeDialog(false);
+                toast({
+                  title: "Ma'lumot",
+                  description: "Endi to'lov cheki rasmini yuklang",
+                });
+              }}
+              className="flex-1"
+              data-testid="button-continue-payme"
+            >
+              Davom Ettirish
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
