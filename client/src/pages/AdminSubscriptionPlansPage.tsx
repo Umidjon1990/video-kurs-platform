@@ -97,6 +97,7 @@ export default function AdminSubscriptionPlansPage() {
     mutationFn: async () => {
       if (editingPlan) {
         // Update existing plan
+        console.log('🚀 FRONTEND: Updating plan with dynamicFeatures:', planForm.dynamicFeatures);
         await apiRequest("PUT", `/api/admin/subscription-plans/${editingPlan.id}`, {
           name: planForm.name,
           displayName: planForm.displayName,
@@ -618,9 +619,11 @@ export default function AdminSubscriptionPlansPage() {
                 <Button
                   onClick={() => {
                     if (newDynamicFeature.trim()) {
+                      const newFeatures = [...planForm.dynamicFeatures, { enabled: true, label: newDynamicFeature.trim() }];
+                      console.log('➕ ADDING dynamic feature:', newDynamicFeature.trim(), 'Total:', newFeatures);
                       setPlanForm({ 
                         ...planForm, 
-                        dynamicFeatures: [...planForm.dynamicFeatures, { enabled: true, label: newDynamicFeature.trim() }] 
+                        dynamicFeatures: newFeatures
                       });
                       setNewDynamicFeature("");
                     }
