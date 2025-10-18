@@ -16,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Save, Plus, Edit, Trash2 } from "lucide-react";
+import { ArrowLeft, Save, Plus, Edit, Trash2, X } from "lucide-react";
 import { useLocation } from "wouter";
 
 export default function AdminSubscriptionPlansPage() {
@@ -35,7 +35,9 @@ export default function AdminSubscriptionPlansPage() {
     hasAssignments: false,
     hasCertificate: false,
     liveClassesPerWeek: 0,
+    bonuses: [] as string[], // Array of bonus descriptions
   });
+  const [newBonus, setNewBonus] = useState("");
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -86,17 +88,35 @@ export default function AdminSubscriptionPlansPage() {
 
   const createPlanMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("POST", "/api/admin/subscription-plans", {
-        name: planForm.name,
-        displayName: planForm.displayName,
-        description: planForm.description,
-        features: {
-          hasTests: planForm.hasTests,
-          hasAssignments: planForm.hasAssignments,
-          hasCertificate: planForm.hasCertificate,
-          liveClassesPerWeek: planForm.liveClassesPerWeek,
-        },
-      });
+      if (editingPlan) {
+        // Update existing plan
+        await apiRequest("PUT", `/api/admin/subscription-plans/${editingPlan.id}`, {
+          name: planForm.name,
+          displayName: planForm.displayName,
+          description: planForm.description,
+          features: {
+            hasTests: planForm.hasTests,
+            hasAssignments: planForm.hasAssignments,
+            hasCertificate: planForm.hasCertificate,
+            liveClassesPerWeek: planForm.liveClassesPerWeek,
+            bonuses: planForm.bonuses,
+          },
+        });
+      } else {
+        // Create new plan
+        await apiRequest("POST", "/api/admin/subscription-plans", {
+          name: planForm.name,
+          displayName: planForm.displayName,
+          description: planForm.description,
+          features: {
+            hasTests: planForm.hasTests,
+            hasAssignments: planForm.hasAssignments,
+            hasCertificate: planForm.hasCertificate,
+            liveClassesPerWeek: planForm.liveClassesPerWeek,
+            bonuses: planForm.bonuses,
+          },
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/subscription-plans"] });
@@ -109,11 +129,14 @@ export default function AdminSubscriptionPlansPage() {
         hasAssignments: false,
         hasCertificate: false,
         liveClassesPerWeek: 0,
+        bonuses: [],
       });
+      setNewBonus("");
+      const wasEditing = editingPlan !== null;
       setEditingPlan(null);
       toast({
         title: "Muvaffaqiyatli",
-        description: editingPlan ? "Tarif yangilandi" : "Yangi tarif yaratildi",
+        description: wasEditing ? "Tarif yangilandi" : "Yangi tarif yaratildi",
       });
     },
     onError: (error: Error) => {
@@ -208,10 +231,35 @@ export default function AdminSubscriptionPlansPage() {
           {plans.map((plan) => (
             <Card key={plan.id} data-testid={`card-plan-${plan.name}`}>
               <CardHeader>
-                <CardTitle>{getPlanDisplayName(plan.name)}</CardTitle>
-                <CardDescription>
-                  Tarif xususiyatlarini sozlang
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>{getPlanDisplayName(plan.name)}</CardTitle>
+                    <CardDescription>
+                      Tarif xususiyatlarini sozlang
+                    </CardDescription>
+                  </div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => {
+                      setEditingPlan(plan);
+                      setPlanForm({
+                        name: plan.name,
+                        displayName: plan.displayName,
+                        description: plan.description || "",
+                        hasTests: plan.features.hasTests,
+                        hasAssignments: plan.features.hasAssignments,
+                        hasCertificate: plan.features.hasCertificate,
+                        liveClassesPerWeek: plan.features.liveClassesPerWeek,
+                        bonuses: plan.features.bonuses || [],
+                      });
+                      setIsDialogOpen(true);
+                    }}
+                    data-testid={`button-edit-${plan.name}`}
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -410,6 +458,58 @@ export default function AdminSubscriptionPlansPage() {
                 />
               </div>
             </div>
+
+            <div className="space-y-3 border p-4 rounded-md">
+              <h4 className="font-semibold text-sm">Bonuslar</h4>
+              
+              <div className="space-y-2">
+                {planForm.bonuses.map((bonus, index) => (
+                  <div key={index} className="flex items-center gap-2" data-testid={`bonus-item-${index}`}>
+                    <div className="flex-1 text-sm bg-muted p-2 rounded-md">
+                      {bonus}
+                    </div>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => {
+                        const newBonuses = planForm.bonuses.filter((_, i) => i !== index);
+                        setPlanForm({ ...planForm, bonuses: newBonuses });
+                      }}
+                      data-testid={`button-remove-bonus-${index}`}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-2">
+                <Input
+                  value={newBonus}
+                  onChange={(e) => setNewBonus(e.target.value)}
+                  placeholder="Yangi bonus kiriting"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newBonus.trim()) {
+                      setPlanForm({ ...planForm, bonuses: [...planForm.bonuses, newBonus.trim()] });
+                      setNewBonus("");
+                    }
+                  }}
+                  data-testid="input-new-bonus"
+                />
+                <Button
+                  onClick={() => {
+                    if (newBonus.trim()) {
+                      setPlanForm({ ...planForm, bonuses: [...planForm.bonuses, newBonus.trim()] });
+                      setNewBonus("");
+                    }
+                  }}
+                  disabled={!newBonus.trim()}
+                  data-testid="button-add-bonus"
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
           </div>
 
           <DialogFooter>
@@ -426,7 +526,9 @@ export default function AdminSubscriptionPlansPage() {
                   hasAssignments: false,
                   hasCertificate: false,
                   liveClassesPerWeek: 0,
+                  bonuses: [],
                 });
+                setNewBonus("");
               }}
               data-testid="button-cancel-plan"
             >

@@ -1974,16 +1974,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin: Update subscription plan features
+  // Admin: Update subscription plan
   app.put('/api/admin/subscription-plans/:id', isAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      const { features } = req.body;
+      const { name, displayName, description, features } = req.body;
       
-      // Update plan features in database
+      // Build update object dynamically
+      const updateData: any = {};
+      if (name !== undefined) updateData.name = name;
+      if (displayName !== undefined) updateData.displayName = displayName;
+      if (description !== undefined) updateData.description = description;
+      if (features !== undefined) updateData.features = features;
+      
+      // Update plan in database
       const [updatedPlan] = await db
         .update(subscriptionPlans)
-        .set({ features })
+        .set(updateData)
         .where(eq(subscriptionPlans.id, id))
         .returning();
       
