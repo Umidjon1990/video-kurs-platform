@@ -437,7 +437,7 @@ export default function HomePage() {
             </div>
             <div className="relative overflow-hidden">
               <div 
-                className="flex gap-6 animate-certificate-scroll"
+                className="flex gap-6 animate-certificate-scroll pl-4"
                 style={{
                   width: 'max-content',
                 }}
@@ -452,7 +452,7 @@ export default function HomePage() {
                     <img
                       src={url.trim()}
                       alt={`Sertifikat ${(index % certificateList.length) + 1}`}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain bg-white"
                       onError={(e) => {
                         e.currentTarget.src = "https://via.placeholder.com/256x320?text=Sertifikat";
                       }}
