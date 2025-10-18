@@ -423,51 +423,47 @@ export default function HomePage() {
       )}
 
       {/* Certificates Carousel */}
-      {getSetting("certificate_urls") && getSetting("certificate_urls").trim() && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-2">Litsenziya va Guvohnomalar</h2>
-            <p className="text-muted-foreground">
-              Bizning professional sertifikatlarimiz
-            </p>
+      {getSetting("certificate_urls") && getSetting("certificate_urls").trim() && (() => {
+        const certificateList = getSetting("certificate_urls").split('\n').filter(url => url.trim());
+        
+        // Simple CSS-based auto-scroll - no measurement needed
+        return (
+          <div className="w-full overflow-hidden py-16 bg-muted/30 border-y">
+            <div className="text-center mb-12 px-4">
+              <h2 className="text-3xl font-bold mb-2">Litsenziya va Guvohnomalar</h2>
+              <p className="text-muted-foreground">
+                Bizning professional sertifikatlarimiz
+              </p>
+            </div>
+            <div className="relative overflow-hidden">
+              <div 
+                className="flex gap-6 animate-certificate-scroll"
+                style={{
+                  width: 'max-content',
+                }}
+              >
+                {/* Triple the content for smooth infinite loop */}
+                {certificateList.concat(certificateList, certificateList).map((url, index) => (
+                  <div
+                    key={index}
+                    className="flex-shrink-0 w-64 h-80 rounded-lg overflow-hidden border bg-card shadow-lg"
+                    data-testid={`certificate-${index % certificateList.length}`}
+                  >
+                    <img
+                      src={url.trim()}
+                      alt={`Sertifikat ${(index % certificateList.length) + 1}`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = "https://via.placeholder.com/256x320?text=Sertifikat";
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-          <div className="relative overflow-hidden">
-            <motion.div
-              className="flex gap-6"
-              animate={{
-                x: [0, -1000],
-              }}
-              transition={{
-                x: {
-                  repeat: Infinity,
-                  repeatType: "loop",
-                  duration: 20,
-                  ease: "linear",
-                },
-              }}
-            >
-              {getSetting("certificate_urls").split('\n').filter(url => url.trim()).concat(
-                getSetting("certificate_urls").split('\n').filter(url => url.trim())
-              ).map((url, index) => (
-                <div
-                  key={index}
-                  className="flex-shrink-0 w-64 h-80 rounded-lg overflow-hidden border bg-card"
-                  data-testid={`certificate-${index}`}
-                >
-                  <img
-                    src={url.trim()}
-                    alt={`Sertifikat ${index + 1}`}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = "https://via.placeholder.com/256x320?text=Sertifikat";
-                    }}
-                  />
-                </div>
-              ))}
-            </motion.div>
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* About Us Section */}
       {getSetting("about_us") && (

@@ -9,7 +9,7 @@ This project is a comprehensive Learning Management System (LMS) platform design
 ### Latest Updates
 - ✅ **Admin CMS & Public HomePage Enhancement - COMPLETE** (Oct 18, 2025)
   - ✅ **Database Schema:**
-    - ✅ Site Settings table: Key-value storage for About Us, Contact info
+    - ✅ Site Settings table: Key-value storage for About Us, Contact info, Telegram, Certificate URLs
     - ✅ Testimonials table: Student reviews with name, role, content, rating, order, publish status
   - ✅ **Backend API:**
     - ✅ GET /api/site-settings (public) - Fetch all site settings
@@ -21,13 +21,28 @@ This project is a comprehensive Learning Management System (LMS) platform design
     - ✅ DELETE /api/admin/testimonials/:id (admin) - Delete testimonial
   - ✅ **Admin CMS Page (/admin/cms):**
     - ✅ Two-tab interface: Site Settings & Testimonials
-    - ✅ Site Settings: About Us (textarea), Contact (email, phone, address)
+    - ✅ Site Settings: About Us (textarea), Contact (email, phone, address, Telegram), Certificates (textarea - multiline URLs)
     - ✅ Testimonials CRUD: Name, role, content, rating (1-5), order, publish toggle
-    - ✅ Navigation from AdminDashboard via "Sayt Boshqaruvi" button
+    - ✅ Navigation from AdminDashboard via "Sayt Boshqaruvi" button (with ArrowLeft icon)
   - ✅ **Public HomePage Enhancements:**
     - ✅ Testimonials section: Student reviews with avatars, ratings, cards (max 6 displayed)
+    - ✅ **Contact section with clickable links**:
+      - Email: mailto: link (click to open email client)
+      - Phone: tel: link (click to call)
+      - Telegram: external link with target="_blank" and rel="noopener noreferrer"
+      - Address: static display (no link)
+      - Responsive grid: md:grid-cols-2 lg:grid-cols-4
+      - Cards have hover-elevate effect
+    - ✅ **Certificates Carousel** (auto horizontal scroll):
+      - CSS-based infinite loop animation (30s duration)
+      - Triple content duplication for seamless loop (translateX calc(-100% / 3))
+      - 256px × 320px cards with shadow, rounded corners
+      - Image fallback to placeholder on error
+    - ✅ **Animations** (framer-motion):
+      - Hero section: fade-in + slide-up (duration: 0.6s)
+      - Hero title: fade + slide-up (delay: 0.2s)
+      - Hero subtitle: fade-in (delay: 0.4s)
     - ✅ About Us section: Dynamic content from site settings
-    - ✅ Contact section: Email, Phone, Address cards with icons
     - ✅ Footer: Copyright notice
     - ✅ Modern design with alternating backgrounds (muted/30 for sections)
 - ✅ **UI/UX Modernization - COMPLETE** (Oct 17, 2025)
