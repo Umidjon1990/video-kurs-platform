@@ -136,6 +136,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Serve public certificate images
+  app.get('/certificates/:fileName', async (req, res) => {
+    try {
+      const { ObjectStorageService } = await import('./objectStorage');
+      const objectStorage = new ObjectStorageService();
+      const file = await objectStorage.searchPublicObject(`certificates/${req.params.fileName}`);
+      
+      if (!file) {
+        return res.status(404).json({ error: "File not found" });
+      }
+      
+      await objectStorage.downloadObject(file, res);
+    } catch (error: any) {
+      console.error("Download error:", error);
+      res.status(500).json({ error: "Error downloading file" });
+    }
+  });
+
   // ============ ADMIN ROUTES ============
   app.get('/api/admin/stats', isAuthenticated, isAdmin, async (req, res) => {
     try {
