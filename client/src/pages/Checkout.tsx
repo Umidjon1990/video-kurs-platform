@@ -311,58 +311,91 @@ export default function Checkout() {
 
       {/* Payme Payment Dialog */}
       <Dialog open={showPaymeDialog} onOpenChange={setShowPaymeDialog}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh]">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Payme Orqali To'lash</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <span className="text-2xl">💳</span>
+              Payme Orqali To'lash
+            </DialogTitle>
             <DialogDescription>
-              Payme merchant orqali to'lov qiling va chek rasmini saqlang
+              To'lovni bajarish uchun quyidagi qadamlarni bajaring
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            {/* Payment Info */}
-            <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg border">
-              <div>
-                <Label className="text-sm text-muted-foreground">To'lov Summasi</Label>
-                <p className="text-2xl font-bold text-primary">{course.price} so'm</p>
-              </div>
-              <div>
-                <Label htmlFor="payme-phone-quick" className="text-sm text-muted-foreground">
-                  Telefon (ixtiyoriy)
-                </Label>
-                <Input
-                  id="payme-phone-quick"
-                  type="tel"
-                  placeholder="+998 90 123 45 67"
-                  value={paymePhone}
-                  onChange={(e) => setPaymePhone(e.target.value)}
-                  className="mt-1"
-                  data-testid="input-payme-phone-quick"
-                />
-              </div>
+            {/* Payment Amount Card */}
+            <div className="p-6 bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg border-2 border-primary/20 text-center">
+              <p className="text-sm text-muted-foreground mb-2">To'lov Summasi</p>
+              <p className="text-4xl font-bold text-primary">{course.price}</p>
+              <p className="text-sm text-muted-foreground mt-1">so'm</p>
             </div>
 
-            {/* Payme iframe */}
-            <div className="border rounded-lg overflow-hidden" style={{ height: '500px' }}>
-              <iframe
-                src="https://merchant.payme.uz/auth/sign-up"
-                className="w-full h-full"
-                title="Payme Merchant"
-                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
-                data-testid="iframe-payme"
+            {/* Open Payme Button */}
+            <Button
+              type="button"
+              size="lg"
+              className="w-full h-14 text-lg"
+              onClick={() => {
+                window.open('https://merchant.payme.uz/auth/sign-up', '_blank', 'width=800,height=900');
+                toast({
+                  title: "Payme oynasi ochildi",
+                  description: "Yangi oynada to'lovni bajaring",
+                });
+              }}
+              data-testid="button-open-payme-window"
+            >
+              <ExternalLink className="w-5 h-5 mr-2" />
+              Payme'ni Ochish
+            </Button>
+
+            {/* Phone Number (Optional) */}
+            <div className="space-y-2">
+              <Label htmlFor="payme-phone-modal" className="text-sm">
+                Telefon Raqam (ixtiyoriy)
+              </Label>
+              <Input
+                id="payme-phone-modal"
+                type="tel"
+                placeholder="+998 90 123 45 67"
+                value={paymePhone}
+                onChange={(e) => setPaymePhone(e.target.value)}
+                data-testid="input-payme-phone-modal"
               />
+              <p className="text-xs text-muted-foreground">
+                Payme hisobingiz bilan bog'langan telefon
+              </p>
             </div>
 
             {/* Instructions */}
-            <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-              <p className="text-sm text-blue-900 dark:text-blue-100 font-medium mb-2">
-                📋 Yo'riqnoma:
+            <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-3 flex items-center gap-2">
+                <span>📋</span>
+                Qadma-qadamli yo'riqnoma:
               </p>
-              <ol className="text-xs text-blue-800 dark:text-blue-200 space-y-1 list-decimal list-inside">
-                <li>Yuqoridagi oynada Payme merchant'ga kiring yoki ro'yxatdan o'ting</li>
-                <li>To'lovni amalga oshiring: <strong>{course.price} so'm</strong></li>
-                <li>To'lov cheki rasmini saqlang yoki screenshot oling</li>
-                <li>Ushbu oynani yoping va asosiy sahifada chek rasmini yuklang</li>
+              <ol className="text-sm text-blue-800 dark:text-blue-200 space-y-2 list-decimal list-inside">
+                <li>
+                  <strong>"Payme'ni Ochish"</strong> tugmasini bosing
+                </li>
+                <li>
+                  Yangi oynada <strong>ro'yxatdan o'ting</strong> yoki <strong>kiring</strong>
+                </li>
+                <li>
+                  <strong>{course.price} so'm</strong> to'lovni bajaring
+                </li>
+                <li>
+                  To'lov cheki <strong>rasmini saqlang</strong> yoki screenshot oling
+                </li>
+                <li>
+                  Ushbu oynani yoping va asosiy sahifada <strong>chek rasmini yuklang</strong>
+                </li>
               </ol>
+            </div>
+
+            {/* Success Note */}
+            <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-green-800 dark:text-green-200">
+                To'lovni bajarib bo'lgach, chek rasmini yuklang va admin tasdiqlashini kuting
+              </p>
             </div>
           </div>
           <div className="flex gap-2">
@@ -380,14 +413,14 @@ export default function Checkout() {
               onClick={() => {
                 setShowPaymeDialog(false);
                 toast({
-                  title: "To'lov bajarildi",
-                  description: "Endi chek rasmini yuklang va yuborish tugmasini bosing",
+                  title: "To'lov bajarildi ✓",
+                  description: "Chek rasmini yuklang va 'Yuborish' tugmasini bosing",
                 });
               }}
               className="flex-1"
-              data-testid="button-continue-payme"
+              data-testid="button-done-payme"
             >
-              To'lov Bajarildi
+              ✓ To'lov Bajarildi
             </Button>
           </div>
         </DialogContent>
