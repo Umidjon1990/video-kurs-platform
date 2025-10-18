@@ -311,70 +311,57 @@ export default function Checkout() {
 
       {/* Payme Payment Dialog */}
       <Dialog open={showPaymeDialog} onOpenChange={setShowPaymeDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-4xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Payme Orqali To'lash</DialogTitle>
             <DialogDescription>
-              Payme orqali to'lov qilish uchun quyidagi ma'lumotlarni kiriting
+              Payme merchant orqali to'lov qiling va chek rasmini saqlang
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="payme-amount-dialog">To'lov Summasi</Label>
-              <Input
-                id="payme-amount-dialog"
-                value={`${course.price} so'm`}
-                readOnly
-                className="font-semibold text-lg"
-                data-testid="input-payme-amount-dialog"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="payme-phone">Telefon Raqam</Label>
-              <Input
-                id="payme-phone"
-                type="tel"
-                placeholder="+998 90 123 45 67"
-                value={paymePhone}
-                onChange={(e) => setPaymePhone(e.target.value)}
-                data-testid="input-payme-phone"
-              />
-              <p className="text-xs text-muted-foreground">
-                Payme hisobingiz bilan bog'langan telefon raqam
-              </p>
-            </div>
-
-            <div className="space-y-2 p-4 bg-muted/50 rounded-lg border">
-              <div className="flex items-start gap-2">
-                <div className="flex-1">
-                  <p className="text-sm font-medium mb-1">Payme Merchant</p>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    Ro'yxatdan o'tish yoki kirish uchun:
-                  </p>
-                  <a
-                    href="https://merchant.payme.uz/auth/sign-up"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-primary hover:underline text-sm font-medium"
-                    data-testid="link-payme-dialog"
-                  >
-                    merchant.payme.uz
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
+            {/* Payment Info */}
+            <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg border">
+              <div>
+                <Label className="text-sm text-muted-foreground">To'lov Summasi</Label>
+                <p className="text-2xl font-bold text-primary">{course.price} so'm</p>
+              </div>
+              <div>
+                <Label htmlFor="payme-phone-quick" className="text-sm text-muted-foreground">
+                  Telefon (ixtiyoriy)
+                </Label>
+                <Input
+                  id="payme-phone-quick"
+                  type="tel"
+                  placeholder="+998 90 123 45 67"
+                  value={paymePhone}
+                  onChange={(e) => setPaymePhone(e.target.value)}
+                  className="mt-1"
+                  data-testid="input-payme-phone-quick"
+                />
               </div>
             </div>
 
+            {/* Payme iframe */}
+            <div className="border rounded-lg overflow-hidden" style={{ height: '500px' }}>
+              <iframe
+                src="https://merchant.payme.uz/auth/sign-up"
+                className="w-full h-full"
+                title="Payme Merchant"
+                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
+                data-testid="iframe-payme"
+              />
+            </div>
+
+            {/* Instructions */}
             <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-              <p className="text-sm text-blue-900 dark:text-blue-100">
-                <strong>Yo'riqnoma:</strong>
+              <p className="text-sm text-blue-900 dark:text-blue-100 font-medium mb-2">
+                📋 Yo'riqnoma:
               </p>
-              <ol className="text-xs text-blue-800 dark:text-blue-200 mt-2 space-y-1 list-decimal list-inside">
-                <li>Yuqoridagi havola orqali Payme merchant'ga kiring</li>
-                <li>To'lovni amalga oshiring ({course.price} so'm)</li>
-                <li>To'lov cheki rasmini saqlang</li>
-                <li>Ushbu oynani yoping va chek rasmini yuklang</li>
+              <ol className="text-xs text-blue-800 dark:text-blue-200 space-y-1 list-decimal list-inside">
+                <li>Yuqoridagi oynada Payme merchant'ga kiring yoki ro'yxatdan o'ting</li>
+                <li>To'lovni amalga oshiring: <strong>{course.price} so'm</strong></li>
+                <li>To'lov cheki rasmini saqlang yoki screenshot oling</li>
+                <li>Ushbu oynani yoping va asosiy sahifada chek rasmini yuklang</li>
               </ol>
             </div>
           </div>
@@ -393,14 +380,14 @@ export default function Checkout() {
               onClick={() => {
                 setShowPaymeDialog(false);
                 toast({
-                  title: "Ma'lumot",
-                  description: "Endi to'lov cheki rasmini yuklang",
+                  title: "To'lov bajarildi",
+                  description: "Endi chek rasmini yuklang va yuborish tugmasini bosing",
                 });
               }}
               className="flex-1"
               data-testid="button-continue-payme"
             >
-              Davom Ettirish
+              To'lov Bajarildi
             </Button>
           </div>
         </DialogContent>
