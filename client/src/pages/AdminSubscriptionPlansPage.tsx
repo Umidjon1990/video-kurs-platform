@@ -362,6 +362,33 @@ export default function AdminSubscriptionPlansPage() {
                   />
                 </div>
 
+                {/* Dynamic Features */}
+                {plan.features.dynamicFeatures && plan.features.dynamicFeatures.length > 0 && (
+                  <div className="space-y-2 pt-2 border-t">
+                    <Label className="text-xs text-muted-foreground">Qo'shimcha xususiyatlar</Label>
+                    {plan.features.dynamicFeatures.map((feature: any, idx: number) => (
+                      <div key={idx} className="flex items-center justify-between">
+                        <Label className="text-sm">{feature.label}</Label>
+                        <Switch
+                          checked={feature.enabled}
+                          onCheckedChange={(checked) => {
+                            const newDynamic = [...plan.features.dynamicFeatures];
+                            newDynamic[idx].enabled = checked;
+                            setPlans(
+                              plans.map((p) =>
+                                p.id === plan.id
+                                  ? { ...p, features: { ...p.features, dynamicFeatures: newDynamic } }
+                                  : p
+                              )
+                            );
+                          }}
+                          data-testid={`switch-${plan.name}-dynamic-${idx}`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div className="flex gap-2">
                   <Button
                     onClick={() => handleSave(plan)}
