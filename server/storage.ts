@@ -263,10 +263,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(courses.instructorId, instructorId))
       .orderBy(desc(courses.createdAt));
     
-    // Get enrollments and lessons count for each course
+    // Get enrollments, lessons count, and planPricing for each course
     const coursesWithCounts = await Promise.all(
       instructorCourses.map(async (course) => {
-        const [enrollmentCount, lessonCount] = await Promise.all([
+        const [enrollmentCount, lessonCount, planPricing] = await Promise.all([
           db
             .select({ count: sql<number>`count(*)::int` })
             .from(enrollments)
@@ -284,13 +284,24 @@ export class DatabaseStorage implements IStorage {
             .select({ count: sql<number>`count(*)::int` })
             .from(lessons)
             .where(eq(lessons.courseId, course.id))
-            .then(result => result[0]?.count || 0)
+            .then(result => result[0]?.count || 0),
+          db
+            .select({
+              pricing: coursePlanPricing,
+              plan: subscriptionPlans,
+            })
+            .from(coursePlanPricing)
+            .innerJoin(subscriptionPlans, eq(coursePlanPricing.planId, subscriptionPlans.id))
+            .where(eq(coursePlanPricing.courseId, course.id))
+            .orderBy(subscriptionPlans.order)
+            .then(results => results.map(r => ({ ...r.pricing, plan: r.plan })))
         ]);
         
         return {
           ...course,
           enrollmentsCount: enrollmentCount,
           lessonsCount: lessonCount,
+          planPricing,
         };
       })
     );
@@ -313,7 +324,7 @@ export class DatabaseStorage implements IStorage {
     maxPrice?: number;
     instructorId?: string;
     hasDiscount?: boolean;
-  }): Promise<Array<Course & { instructor: User; enrollmentsCount: number }>> {
+  }): Promise<Array<Course & { instructor: User; enrollmentsCount: number; planPricing?: Array<CoursePlanPricing & { plan: SubscriptionPlan }> }>> {
     let query = db
       .select({
         course: courses,
@@ -366,27 +377,40 @@ export class DatabaseStorage implements IStorage {
       .where(and(...conditions))
       .orderBy(desc(courses.createdAt));
 
-    // Get enrollments count for each course
+    // Get enrollments count and planPricing for each course
     const coursesWithCounts = await Promise.all(
       results.map(async ({ course, instructor }) => {
-        const enrollmentCount = await db
-          .select({ count: sql<number>`count(*)::int` })
-          .from(enrollments)
-          .where(
-            and(
-              eq(enrollments.courseId, course.id),
-              or(
-                eq(enrollments.paymentStatus, 'confirmed'),
-                eq(enrollments.paymentStatus, 'approved')
+        const [enrollmentCount, planPricing] = await Promise.all([
+          db
+            .select({ count: sql<number>`count(*)::int` })
+            .from(enrollments)
+            .where(
+              and(
+                eq(enrollments.courseId, course.id),
+                or(
+                  eq(enrollments.paymentStatus, 'confirmed'),
+                  eq(enrollments.paymentStatus, 'approved')
+                )
               )
             )
-          )
-          .then(result => result[0]?.count || 0);
+            .then(result => result[0]?.count || 0),
+          db
+            .select({
+              pricing: coursePlanPricing,
+              plan: subscriptionPlans,
+            })
+            .from(coursePlanPricing)
+            .innerJoin(subscriptionPlans, eq(coursePlanPricing.planId, subscriptionPlans.id))
+            .where(eq(coursePlanPricing.courseId, course.id))
+            .orderBy(subscriptionPlans.order)
+            .then(results => results.map(r => ({ ...r.pricing, plan: r.plan })))
+        ]);
 
         return {
           ...course,
           instructor,
           enrollmentsCount: enrollmentCount,
+          planPricing,
         };
       })
     );

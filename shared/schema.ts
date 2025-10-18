@@ -556,6 +556,7 @@ export type Course = typeof courses.$inferSelect;
 export type InstructorCourseWithCounts = Course & {
   enrollmentsCount: number;
   lessonsCount: number;
+  planPricing?: Array<CoursePlanPricing & { plan: SubscriptionPlan }>;
 };
 
 // Student course progress type
