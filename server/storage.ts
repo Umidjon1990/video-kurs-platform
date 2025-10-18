@@ -265,6 +265,94 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(courses.createdAt));
   }
 
+  async getPublicCourses(filters?: {
+    search?: string;
+    category?: string;
+    minPrice?: number;
+    maxPrice?: number;
+    instructorId?: string;
+    hasDiscount?: boolean;
+  }): Promise<Array<Course & { instructor: User; enrollmentsCount: number }>> {
+    let query = db
+      .select({
+        course: courses,
+        instructor: users,
+      })
+      .from(courses)
+      .innerJoin(users, eq(courses.instructorId, users.id))
+      .where(eq(courses.status, 'published'))
+      .$dynamic();
+
+    // Apply filters
+    const conditions = [eq(courses.status, 'published')];
+
+    if (filters?.search) {
+      conditions.push(
+        or(
+          sql`LOWER(${courses.title}) LIKE LOWER(${`%${filters.search}%`})`,
+          sql`LOWER(${courses.description}) LIKE LOWER(${`%${filters.search}%`})`
+        )!
+      );
+    }
+
+    if (filters?.category) {
+      conditions.push(eq(courses.category, filters.category));
+    }
+
+    if (filters?.minPrice !== undefined) {
+      conditions.push(sql`CAST(${courses.price} AS DECIMAL) >= ${filters.minPrice}`);
+    }
+
+    if (filters?.maxPrice !== undefined) {
+      conditions.push(sql`CAST(${courses.price} AS DECIMAL) <= ${filters.maxPrice}`);
+    }
+
+    if (filters?.instructorId) {
+      conditions.push(eq(courses.instructorId, filters.instructorId));
+    }
+
+    if (filters?.hasDiscount) {
+      conditions.push(sql`${courses.discountedPrice} IS NOT NULL`);
+    }
+
+    const results = await db
+      .select({
+        course: courses,
+        instructor: users,
+      })
+      .from(courses)
+      .innerJoin(users, eq(courses.instructorId, users.id))
+      .where(and(...conditions))
+      .orderBy(desc(courses.createdAt));
+
+    // Get enrollments count for each course
+    const coursesWithCounts = await Promise.all(
+      results.map(async ({ course, instructor }) => {
+        const enrollmentCount = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(enrollments)
+          .where(
+            and(
+              eq(enrollments.courseId, course.id),
+              or(
+                eq(enrollments.paymentStatus, 'confirmed'),
+                eq(enrollments.paymentStatus, 'approved')
+              )
+            )
+          )
+          .then(result => result[0]?.count || 0);
+
+        return {
+          ...course,
+          instructor,
+          enrollmentsCount: enrollmentCount,
+        };
+      })
+    );
+
+    return coursesWithCounts;
+  }
+
   async updateCourseStatus(id: string, status: string): Promise<Course> {
     const [course] = await db
       .update(courses)

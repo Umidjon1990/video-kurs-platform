@@ -843,6 +843,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ PUBLIC ROUTES (No Auth Required) ============
+  // Public courses endpoint with filters
+  app.get('/api/courses/public', async (req, res) => {
+    try {
+      const { search, category, minPrice, maxPrice, instructorId, hasDiscount } = req.query;
+      
+      const filters = {
+        search: search as string | undefined,
+        category: category as string | undefined,
+        minPrice: minPrice ? parseFloat(minPrice as string) : undefined,
+        maxPrice: maxPrice ? parseFloat(maxPrice as string) : undefined,
+        instructorId: instructorId as string | undefined,
+        hasDiscount: hasDiscount === 'true' ? true : undefined,
+      };
+
+      const courses = await storage.getPublicCourses(filters);
+      res.json(courses);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ============ STUDENT ROUTES ============
   app.get('/api/courses', isAuthenticated, async (req, res) => {
     try {
