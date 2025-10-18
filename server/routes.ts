@@ -78,6 +78,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch user" });
     }
   });
+  
+  app.patch('/api/auth/profile', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { telegramUsername } = req.body;
+      
+      // Update user profile
+      const [updatedUser] = await db
+        .update(users)
+        .set({ 
+          telegramUsername,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId))
+        .returning();
+      
+      res.json(updatedUser);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
 
   // File upload endpoint for payment receipts
   app.post('/api/upload-receipt', isAuthenticated, upload.single('file'), async (req: any, res) => {

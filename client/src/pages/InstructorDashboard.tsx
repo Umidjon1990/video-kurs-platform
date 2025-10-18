@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, Download, Megaphone, Users, User, MessageCircle, TrendingUp, Award, Activity } from "lucide-react";
+import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, Download, Megaphone, Users, User, MessageCircle, TrendingUp, Award, Activity, Settings } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NotificationBell } from "@/components/NotificationBell";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -35,7 +35,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 export default function InstructorDashboard() {
   const { toast } = useToast();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const [isCreateCourseOpen, setIsCreateCourseOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
@@ -86,6 +86,11 @@ export default function InstructorDashboard() {
     priority: "normal",
     targetType: "all",
     targetId: "",
+  });
+  
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settingsForm, setSettingsForm] = useState({
+    telegramUsername: "",
   });
 
   const [isAddQuestionOpen, setIsAddQuestionOpen] = useState(false);
@@ -546,6 +551,32 @@ export default function InstructorDashboard() {
       toast({ title: "Xatolik", description: error.message, variant: "destructive" });
     },
   });
+  
+  const updateSettingsMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("PATCH", "/api/auth/profile", settingsForm);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      setIsSettingsOpen(false);
+      toast({ 
+        title: "Saqlandi", 
+        description: "Sozlamalar muvaffaqiyatli yangilandi" 
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+  
+  // Load user settings when dialog opens
+  useEffect(() => {
+    if (isSettingsOpen && user) {
+      setSettingsForm({
+        telegramUsername: (user as any).telegramUsername || "",
+      });
+    }
+  }, [isSettingsOpen, user]);
 
   if (authLoading || coursesLoading) {
     return (
@@ -561,6 +592,14 @@ export default function InstructorDashboard() {
         <div className="flex h-16 items-center px-4 gap-4">
           <h1 className="text-2xl font-bold" data-testid="text-instructor-title">O'qituvchi Paneli</h1>
           <div className="ml-auto flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsSettingsOpen(true)}
+              data-testid="button-settings"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Sozlamalar
+            </Button>
             <Button
               variant="outline"
               onClick={() => window.location.href = "/chat"}
@@ -1983,6 +2022,51 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
               data-testid="button-send-announcement"
             >
               {sendAnnouncementMutation.isPending ? "Yuborilmoqda..." : "Yuborish"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Settings Dialog */}
+      <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+        <DialogContent data-testid="dialog-settings">
+          <DialogHeader>
+            <DialogTitle>Sozlamalar</DialogTitle>
+            <DialogDescription>
+              Profil sozlamalarini yangilang
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="telegramUsername">Telegram Username</Label>
+              <Input
+                id="telegramUsername"
+                value={settingsForm.telegramUsername}
+                onChange={(e) => setSettingsForm({ ...settingsForm, telegramUsername: e.target.value })}
+                placeholder="@username"
+                data-testid="input-telegram-username"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                O'quvchilar jonli darsga ulashish uchun @ bilan kiriting
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsSettingsOpen(false)}
+              data-testid="button-cancel-settings"
+            >
+              Bekor qilish
+            </Button>
+            <Button
+              onClick={() => updateSettingsMutation.mutate()}
+              disabled={updateSettingsMutation.isPending}
+              data-testid="button-save-settings"
+            >
+              {updateSettingsMutation.isPending ? "Saqlanmoqda..." : "Saqlash"}
             </Button>
           </DialogFooter>
         </DialogContent>
