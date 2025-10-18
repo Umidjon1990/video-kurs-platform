@@ -25,7 +25,7 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// Users table - Replit Auth integration with role extension
+// Users table - Dual Auth: Replit Auth + Phone/Email
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),
@@ -33,6 +33,11 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   role: varchar("role", { length: 20 }).notNull().default('student'), // admin, instructor, student
+  // Dual-auth fields
+  phone: varchar("phone").unique(), // Telefon raqam (login uchun)
+  passwordHash: varchar("password_hash"), // Hashed password
+  // Instructor fields
+  telegramUsername: varchar("telegram_username"), // Jonli dars uchun
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -47,6 +52,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   studentConversations: many(conversations, { relationName: 'studentConversations' }),
   instructorConversations: many(conversations, { relationName: 'instructorConversations' }),
   messages: many(messages),
+  userSubscriptions: many(userSubscriptions),
 }));
 
 // Courses table
@@ -74,6 +80,8 @@ export const coursesRelations = relations(courses, ({ one, many }) => ({
   assignments: many(assignments),
   tests: many(tests),
   enrollments: many(enrollments),
+  planPricing: many(coursePlanPricing),
+  userSubscriptions: many(userSubscriptions),
 }));
 
 // Lessons table
@@ -217,7 +225,8 @@ export const enrollments = pgTable("enrollments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
   courseId: varchar("course_id").notNull().references(() => courses.id),
-  paymentMethod: varchar("payment_method", { length: 20 }), // naqd, karta, stripe
+  planId: varchar("plan_id").references(() => subscriptionPlans.id), // Tanlangan tarif
+  paymentMethod: varchar("payment_method", { length: 20 }), // karta, payme
   paymentProofUrl: text("payment_proof_url"), // Chek rasmi URL
   paymentStatus: varchar("payment_status", { length: 20 }).notNull().default('pending'), // pending, approved, rejected
   enrolledAt: timestamp("enrolled_at").defaultNow(),
@@ -231,6 +240,75 @@ export const enrollmentsRelations = relations(enrollments, ({ one }) => ({
   course: one(courses, {
     fields: [enrollments.courseId],
     references: [courses.id],
+  }),
+}));
+
+// Subscription Plans table - 3 tarif (Oddiy, Standard, Premium)
+export const subscriptionPlans = pgTable("subscription_plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 50 }).notNull().unique(), // oddiy, standard, premium
+  displayName: varchar("display_name", { length: 100 }).notNull(), // Oddiy, Standard, Premium
+  description: text("description"),
+  features: jsonb("features").notNull(), // {hasTests: true, hasAssignments: false, hasCertificate: false, liveClassesPerWeek: 0}
+  order: integer("order").notNull(), // Display order
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const subscriptionPlansRelations = relations(subscriptionPlans, ({ many }) => ({
+  coursePricing: many(coursePlanPricing),
+  userSubscriptions: many(userSubscriptions),
+}));
+
+// Course Plan Pricing - Har bir kurs uchun 3 xil narx (oddiy, standard, premium)
+export const coursePlanPricing = pgTable("course_plan_pricing", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: 'cascade' }),
+  planId: varchar("plan_id").notNull().references(() => subscriptionPlans.id),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const coursePlanPricingRelations = relations(coursePlanPricing, ({ one }) => ({
+  course: one(courses, {
+    fields: [coursePlanPricing.courseId],
+    references: [courses.id],
+  }),
+  plan: one(subscriptionPlans, {
+    fields: [coursePlanPricing.planId],
+    references: [subscriptionPlans.id],
+  }),
+}));
+
+// User Subscriptions - Foydalanuvchi obunalari (30 kunlik)
+export const userSubscriptions = pgTable("user_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  courseId: varchar("course_id").notNull().references(() => courses.id),
+  planId: varchar("plan_id").notNull().references(() => subscriptionPlans.id),
+  enrollmentId: varchar("enrollment_id").notNull().references(() => enrollments.id),
+  startDate: timestamp("start_date").notNull(), // To'lov tasdiqlangan sana
+  endDate: timestamp("end_date").notNull(), // 30 kundan keyin
+  status: varchar("status", { length: 20 }).notNull().default('active'), // active, expired, cancelled
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const userSubscriptionsRelations = relations(userSubscriptions, ({ one }) => ({
+  user: one(users, {
+    fields: [userSubscriptions.userId],
+    references: [users.id],
+  }),
+  course: one(courses, {
+    fields: [userSubscriptions.courseId],
+    references: [courses.id],
+  }),
+  plan: one(subscriptionPlans, {
+    fields: [userSubscriptions.planId],
+    references: [subscriptionPlans.id],
+  }),
+  enrollment: one(enrollments, {
+    fields: [userSubscriptions.enrollmentId],
+    references: [enrollments.id],
   }),
 }));
 
@@ -450,6 +528,23 @@ export const insertTestimonialSchema = createInsertSchema(testimonials).omit({
   createdAt: true,
 });
 
+// Insert schemas for subscription system
+export const insertSubscriptionPlanSchema = createInsertSchema(subscriptionPlans).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCoursePlanPricingSchema = createInsertSchema(coursePlanPricing).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUserSubscriptionSchema = createInsertSchema(userSubscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // TypeScript types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -518,6 +613,15 @@ export type SiteSetting = typeof siteSettings.$inferSelect;
 
 export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;
 export type Testimonial = typeof testimonials.$inferSelect;
+
+export type InsertSubscriptionPlan = z.infer<typeof insertSubscriptionPlanSchema>;
+export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
+
+export type InsertCoursePlanPricing = z.infer<typeof insertCoursePlanPricingSchema>;
+export type CoursePlanPricing = typeof coursePlanPricing.$inferSelect;
+
+export type InsertUserSubscription = z.infer<typeof insertUserSubscriptionSchema>;
+export type UserSubscription = typeof userSubscriptions.$inferSelect;
 
 // Course Analytics type (for instructor dashboard)
 export type CourseAnalytics = {
