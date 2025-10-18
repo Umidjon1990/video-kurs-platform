@@ -138,6 +138,11 @@ export default function InstructorDashboard() {
     queryKey: ["/api/instructor/courses"],
     enabled: isAuthenticated,
   });
+  
+  const { data: subscriptionPlans } = useQuery<any[]>({
+    queryKey: ["/api/subscription-plans"],
+    enabled: isAuthenticated,
+  });
 
   const { data: lessons } = useQuery<Lesson[]>({
     queryKey: ["/api/instructor/courses", selectedCourse?.id, "lessons"],
@@ -1318,7 +1323,18 @@ export default function InstructorDashboard() {
                     placeholder="100000"
                     data-testid="input-price-oddiy"
                   />
-                  <p className="text-xs text-muted-foreground">Dars + Test</p>
+                  {subscriptionPlans?.find(p => p.name === 'oddiy') && (
+                    <div className="text-xs text-muted-foreground space-y-0.5">
+                      <div className="flex items-center gap-1">
+                        <span>✓ Darslar</span>
+                      </div>
+                      {subscriptionPlans.find(p => p.name === 'oddiy').features.hasTests && (
+                        <div className="flex items-center gap-1">
+                          <span>✓ Testlar</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="priceStandard" className="text-xs">Standard</Label>
@@ -1330,7 +1346,28 @@ export default function InstructorDashboard() {
                     placeholder="200000"
                     data-testid="input-price-standard"
                   />
-                  <p className="text-xs text-muted-foreground">+ Vazifa + 1x jonli</p>
+                  {subscriptionPlans?.find(p => p.name === 'standard') && (
+                    <div className="text-xs text-muted-foreground space-y-0.5">
+                      <div className="flex items-center gap-1">
+                        <span>✓ Darslar + Testlar</span>
+                      </div>
+                      {subscriptionPlans.find(p => p.name === 'standard').features.hasAssignments && (
+                        <div className="flex items-center gap-1">
+                          <span>✓ Vazifalar</span>
+                        </div>
+                      )}
+                      {subscriptionPlans.find(p => p.name === 'standard').features.hasCertificate && (
+                        <div className="flex items-center gap-1">
+                          <span>✓ Sertifikat</span>
+                        </div>
+                      )}
+                      {subscriptionPlans.find(p => p.name === 'standard').features.liveClassesPerWeek > 0 && (
+                        <div className="flex items-center gap-1">
+                          <span>✓ Haftada {subscriptionPlans.find(p => p.name === 'standard').features.liveClassesPerWeek}x jonli dars</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="pricePremium" className="text-xs">Premium</Label>
@@ -1342,7 +1379,28 @@ export default function InstructorDashboard() {
                     placeholder="300000"
                     data-testid="input-price-premium"
                   />
-                  <p className="text-xs text-muted-foreground">+ 2x jonli dars</p>
+                  {subscriptionPlans?.find(p => p.name === 'premium') && (
+                    <div className="text-xs text-muted-foreground space-y-0.5">
+                      <div className="flex items-center gap-1">
+                        <span>✓ Darslar + Testlar</span>
+                      </div>
+                      {subscriptionPlans.find(p => p.name === 'premium').features.hasAssignments && (
+                        <div className="flex items-center gap-1">
+                          <span>✓ Vazifalar</span>
+                        </div>
+                      )}
+                      {subscriptionPlans.find(p => p.name === 'premium').features.hasCertificate && (
+                        <div className="flex items-center gap-1">
+                          <span>✓ Sertifikat</span>
+                        </div>
+                      )}
+                      {subscriptionPlans.find(p => p.name === 'premium').features.liveClassesPerWeek > 0 && (
+                        <div className="flex items-center gap-1">
+                          <span>✓ Haftada {subscriptionPlans.find(p => p.name === 'premium').features.liveClassesPerWeek}x jonli dars</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
