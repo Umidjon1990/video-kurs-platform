@@ -13,11 +13,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { Course, User, SiteSetting, Testimonial } from "@shared/schema";
+import type { Course, User, SiteSetting, Testimonial, CoursePlanPricing, SubscriptionPlan } from "@shared/schema";
 
 type PublicCourse = Course & {
   instructor: User;
   enrollmentsCount: number;
+  planPricing?: Array<CoursePlanPricing & { plan: SubscriptionPlan }>;
 };
 
 export default function HomePage() {
@@ -365,29 +366,51 @@ export default function HomePage() {
                     </div>
                   </CardContent>
 
-                  <CardFooter className="flex items-center justify-between">
-                    <div>
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-2xl font-bold">
-                          {formatPrice(displayPrice)}
-                        </span>
-                        {discountPercent && (
-                          <Badge variant="destructive" className="text-xs">
-                            -{discountPercent}%
-                          </Badge>
+                  <CardFooter className="flex flex-col gap-3">
+                    {/* Pricing by Plan */}
+                    {course.planPricing && course.planPricing.length > 0 ? (
+                      <div className="w-full space-y-2">
+                        <p className="text-xs font-semibold text-muted-foreground">Tariflar:</p>
+                        <div className="grid gap-1.5">
+                          {course.planPricing.map((pricing) => (
+                            <div 
+                              key={pricing.id} 
+                              className="flex items-center justify-between text-sm"
+                              data-testid={`pricing-${course.id}-${pricing.plan.name}`}
+                            >
+                              <span className="text-muted-foreground">{pricing.plan.displayName}</span>
+                              <span className="font-semibold text-primary">
+                                {Number(pricing.price).toLocaleString('uz-UZ')} so'm
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-full">
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-2xl font-bold">
+                            {formatPrice(displayPrice)}
+                          </span>
+                          {discountPercent && (
+                            <Badge variant="destructive" className="text-xs">
+                              -{discountPercent}%
+                            </Badge>
+                          )}
+                        </div>
+                        {course.originalPrice && course.discountedPrice && (
+                          <span className="text-sm text-muted-foreground line-through">
+                            {formatPrice(course.originalPrice)}
+                          </span>
                         )}
                       </div>
-                      {course.originalPrice && course.discountedPrice && (
-                        <span className="text-sm text-muted-foreground line-through">
-                          {formatPrice(course.originalPrice)}
-                        </span>
-                      )}
-                    </div>
+                    )}
                     <Button
                       onClick={(e) => {
                         e.stopPropagation();
                         window.location.href = "/api/login";
                       }}
+                      className="w-full"
                       data-testid={`button-enroll-${course.id}`}
                     >
                       Yozilish

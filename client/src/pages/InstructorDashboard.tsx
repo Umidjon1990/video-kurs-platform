@@ -746,23 +746,47 @@ export default function InstructorDashboard() {
                     </div>
                   </div>
                   
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col">
-                      {course.discountedPrice && Number(course.discountedPrice) < Number(course.price) ? (
-                        <>
+                  {/* Pricing by Plan */}
+                  {course.planPricing && course.planPricing.length > 0 ? (
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-muted-foreground">Tariflar:</p>
+                      <div className="grid gap-2">
+                        {course.planPricing.map((pricing) => (
+                          <div 
+                            key={pricing.id} 
+                            className="flex items-center justify-between p-2 bg-muted/50 rounded-md"
+                            data-testid={`pricing-${course.id}-${pricing.plan.name}`}
+                          >
+                            <span className="text-sm font-medium">{pricing.plan.displayName}</span>
+                            <span className="text-sm font-bold text-primary">
+                              {Number(pricing.price).toLocaleString('uz-UZ')} so'm
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        {course.discountedPrice && Number(course.discountedPrice) < Number(course.price) ? (
+                          <>
+                            <span className="text-lg font-bold">
+                              {Number(course.discountedPrice).toLocaleString('uz-UZ')} so'm
+                            </span>
+                            <span className="text-sm text-muted-foreground line-through">
+                              {Number(course.price).toLocaleString('uz-UZ')} so'm
+                            </span>
+                          </>
+                        ) : (
                           <span className="text-lg font-bold">
-                            {Number(course.discountedPrice).toLocaleString('uz-UZ')} so'm
-                          </span>
-                          <span className="text-sm text-muted-foreground line-through">
                             {Number(course.price).toLocaleString('uz-UZ')} so'm
                           </span>
-                        </>
-                      ) : (
-                        <span className="text-lg font-bold">
-                          {Number(course.price).toLocaleString('uz-UZ')} so'm
-                        </span>
-                      )}
+                        )}
+                      </div>
                     </div>
+                  )}
+                  
+                  <div className="flex items-center justify-end">
                     <Badge 
                       variant={course.status === 'published' ? 'default' : 'secondary'}
                       data-testid={`badge-status-${course.id}`}
