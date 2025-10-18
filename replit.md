@@ -4,9 +4,32 @@
 
 This project is a comprehensive Learning Management System (LMS) platform designed for video-based courses, supporting Administrators, Instructors, and Students. Its purpose is to facilitate course creation, delivery, and student progress tracking through course management, lesson creation, diverse assessment types (assignments and tests), and a manual payment processing system with admin approval. The platform aims to provide a professional, trust-building, and scannable learning experience, localized in Uzbek language.
 
-## Recent Changes (October 17, 2025)
+## Recent Changes (October 18, 2025)
 
 ### Latest Updates
+- ✅ **Admin CMS & Public HomePage Enhancement - COMPLETE** (Oct 18, 2025)
+  - ✅ **Database Schema:**
+    - ✅ Site Settings table: Key-value storage for About Us, Contact info
+    - ✅ Testimonials table: Student reviews with name, role, content, rating, order, publish status
+  - ✅ **Backend API:**
+    - ✅ GET /api/site-settings (public) - Fetch all site settings
+    - ✅ PUT /api/admin/site-settings (admin) - Upsert site setting
+    - ✅ GET /api/testimonials (public) - Fetch published testimonials
+    - ✅ GET /api/admin/testimonials (admin) - All testimonials (including unpublished)
+    - ✅ POST /api/admin/testimonials (admin) - Create testimonial
+    - ✅ PUT /api/admin/testimonials/:id (admin) - Update testimonial
+    - ✅ DELETE /api/admin/testimonials/:id (admin) - Delete testimonial
+  - ✅ **Admin CMS Page (/admin/cms):**
+    - ✅ Two-tab interface: Site Settings & Testimonials
+    - ✅ Site Settings: About Us (textarea), Contact (email, phone, address)
+    - ✅ Testimonials CRUD: Name, role, content, rating (1-5), order, publish toggle
+    - ✅ Navigation from AdminDashboard via "Sayt Boshqaruvi" button
+  - ✅ **Public HomePage Enhancements:**
+    - ✅ Testimonials section: Student reviews with avatars, ratings, cards (max 6 displayed)
+    - ✅ About Us section: Dynamic content from site settings
+    - ✅ Contact section: Email, Phone, Address cards with icons
+    - ✅ Footer: Copyright notice
+    - ✅ Modern design with alternating backgrounds (muted/30 for sections)
 - ✅ **UI/UX Modernization - COMPLETE** (Oct 17, 2025)
   - ✅ **Admin Dashboard Enhancement** (Task 1-2):
     - Modern stats cards with trend indicators (revenue, enrollments, growth with arrows)
