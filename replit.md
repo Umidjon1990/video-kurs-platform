@@ -7,6 +7,22 @@ This project is a comprehensive Learning Management System (LMS) platform design
 ## Recent Changes (October 18, 2025)
 
 ### Latest Updates
+- 🚧 **Subscription-Based Pricing System - IN PROGRESS** (Oct 18, 2025)
+  - ✅ **Database Schema**:
+    - ✅ subscription_plans table: 3 plans (Oddiy, Standard, Premium) with features JSON
+    - ✅ course_plan_pricing table: Links courses to 3 different prices per plan
+    - ✅ user_subscriptions table: Tracks 30-day subscriptions per user
+    - ✅ Users table: Added phone, passwordHash (dual-auth), telegramUsername
+    - ✅ Enrollments table: Added planId field
+  - ✅ **Seed Data**: 3 subscription plans created (Oddiy, Standard, Premium)
+  - ✅ **Backend API**:
+    - ✅ POST /api/instructor/courses - Accepts 3 prices, creates coursePlanPricing records
+    - ✅ Storage funksiyalar: getSubscriptionPlans, createCoursePlanPricing, getCoursePlanPricing
+  - ✅ **Instructor Dashboard**:
+    - ✅ Course creation form: 3 tarif narxlari input (Oddiy, Standard, Premium)
+    - ✅ Category selector added
+    - ✅ Grid layout for pricing inputs with plan descriptions
+  - ⏸️ **Pending**: Student enrollment flow, subscription lifecycle, payment methods (Karta/Payme)
 - ✅ **Certificate Image Upload System - COMPLETE** (Oct 18, 2025)
   - ✅ **Backend API:**
     - ✅ POST /api/admin/upload-certificate - Upload certificate images to Replit Object Storage

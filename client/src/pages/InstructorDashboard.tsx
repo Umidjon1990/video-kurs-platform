@@ -45,9 +45,10 @@ export default function InstructorDashboard() {
   const [courseForm, setCourseForm] = useState({
     title: "",
     description: "",
-    price: "",
-    originalPrice: "",
-    discountedPrice: "",
+    category: "",
+    priceOddiy: "",
+    priceStandard: "",
+    pricePremium: "",
     thumbnailUrl: "",
   });
 
@@ -171,10 +172,15 @@ export default function InstructorDashboard() {
         : "/api/instructor/courses";
       
       await apiRequest(method, url, {
-        ...courseForm,
-        price: courseForm.discountedPrice || courseForm.price,
-        originalPrice: courseForm.originalPrice,
-        discountedPrice: courseForm.discountedPrice,
+        title: courseForm.title,
+        description: courseForm.description,
+        category: courseForm.category,
+        thumbnailUrl: courseForm.thumbnailUrl,
+        pricing: {
+          oddiy: courseForm.priceOddiy,
+          standard: courseForm.priceStandard,
+          premium: courseForm.pricePremium,
+        }
       });
     },
     onSuccess: () => {
@@ -184,7 +190,7 @@ export default function InstructorDashboard() {
         description: editingCourse ? "Kurs yangilandi" : "Kurs yaratildi" 
       });
       setIsCreateCourseOpen(false);
-      setCourseForm({ title: "", description: "", price: "", originalPrice: "", discountedPrice: "", thumbnailUrl: "" });
+      setCourseForm({ title: "", description: "", category: "", priceOddiy: "", priceStandard: "", pricePremium: "", thumbnailUrl: "" });
       setEditingCourse(null);
     },
     onError: (error: Error) => {
@@ -651,9 +657,10 @@ export default function InstructorDashboard() {
                           setCourseForm({
                             title: course.title,
                             description: course.description || "",
-                            price: "",
-                            originalPrice: course.originalPrice?.toString() || "",
-                            discountedPrice: course.discountedPrice?.toString() || "",
+                            category: course.category || "",
+                            priceOddiy: "",
+                            priceStandard: "",
+                            pricePremium: "",
                             thumbnailUrl: course.thumbnailUrl || "",
                           });
                           setEditingCourse(course);
@@ -1241,35 +1248,63 @@ export default function InstructorDashboard() {
                 data-testid="input-course-description"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="originalPrice">Asl Narx ($)</Label>
-                <Input
-                  id="originalPrice"
-                  type="number"
-                  value={courseForm.originalPrice}
-                  onChange={(e) => setCourseForm({ ...courseForm, originalPrice: e.target.value })}
-                  placeholder="199.99"
-                  data-testid="input-course-original-price"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="discountedPrice">Chegirmadagi Narx ($)</Label>
-                <Input
-                  id="discountedPrice"
-                  type="number"
-                  value={courseForm.discountedPrice}
-                  onChange={(e) => {
-                    setCourseForm({ ...courseForm, discountedPrice: e.target.value, price: e.target.value });
-                  }}
-                  placeholder="99.99"
-                  data-testid="input-course-discounted-price"
-                />
-                {courseForm.originalPrice && courseForm.discountedPrice && (
-                  <p className="text-sm text-green-600 font-medium">
-                    {Math.round(((parseFloat(courseForm.originalPrice) - parseFloat(courseForm.discountedPrice)) / parseFloat(courseForm.originalPrice)) * 100)}% chegirma
-                  </p>
-                )}
+            <div className="space-y-2">
+              <Label htmlFor="category">Kategoriya</Label>
+              <Select
+                value={courseForm.category}
+                onValueChange={(value) => setCourseForm({ ...courseForm, category: value })}
+              >
+                <SelectTrigger data-testid="select-course-category">
+                  <SelectValue placeholder="Kategoriyani tanlang" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="IT">IT</SelectItem>
+                  <SelectItem value="Design">Dizayn</SelectItem>
+                  <SelectItem value="Business">Biznes</SelectItem>
+                  <SelectItem value="Language">Til</SelectItem>
+                  <SelectItem value="Marketing">Marketing</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-3 border p-4 rounded-md">
+              <h4 className="font-semibold text-sm">Tarif Narxlari (so'm)</h4>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="priceOddiy" className="text-xs">Oddiy</Label>
+                  <Input
+                    id="priceOddiy"
+                    type="number"
+                    value={courseForm.priceOddiy}
+                    onChange={(e) => setCourseForm({ ...courseForm, priceOddiy: e.target.value })}
+                    placeholder="100000"
+                    data-testid="input-price-oddiy"
+                  />
+                  <p className="text-xs text-muted-foreground">Dars + Test</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="priceStandard" className="text-xs">Standard</Label>
+                  <Input
+                    id="priceStandard"
+                    type="number"
+                    value={courseForm.priceStandard}
+                    onChange={(e) => setCourseForm({ ...courseForm, priceStandard: e.target.value })}
+                    placeholder="200000"
+                    data-testid="input-price-standard"
+                  />
+                  <p className="text-xs text-muted-foreground">+ Vazifa + 1x jonli</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="pricePremium" className="text-xs">Premium</Label>
+                  <Input
+                    id="pricePremium"
+                    type="number"
+                    value={courseForm.pricePremium}
+                    onChange={(e) => setCourseForm({ ...courseForm, pricePremium: e.target.value })}
+                    placeholder="300000"
+                    data-testid="input-price-premium"
+                  />
+                  <p className="text-xs text-muted-foreground">+ 2x jonli dars</p>
+                </div>
               </div>
             </div>
             <div className="space-y-2">
@@ -1293,7 +1328,7 @@ export default function InstructorDashboard() {
             </Button>
             <Button
               onClick={() => createCourseMutation.mutate()}
-              disabled={!courseForm.title || (!courseForm.price && !courseForm.discountedPrice) || createCourseMutation.isPending}
+              disabled={!courseForm.title || !courseForm.priceOddiy || !courseForm.priceStandard || !courseForm.pricePremium || createCourseMutation.isPending}
               data-testid="button-confirm-create-course"
             >
               {createCourseMutation.isPending ? "Yaratilmoqda..." : "Yaratish"}

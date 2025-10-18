@@ -248,11 +248,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/instructor/courses', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
       const instructorId = req.user.claims.sub;
+      const { title, description, category, thumbnailUrl, pricing } = req.body;
+      
+      // Create course with minimal data
       const courseData = insertCourseSchema.parse({
-        ...req.body,
+        title,
+        description,
+        category,
+        thumbnailUrl,
         instructorId,
+        price: pricing.oddiy, // Default price (oddiy plan)
       });
       const course = await storage.createCourse(courseData);
+      
+      // Get subscription plans
+      const planOddiy = await storage.getSubscriptionPlanByName('oddiy');
+      const planStandard = await storage.getSubscriptionPlanByName('standard');
+      const planPremium = await storage.getSubscriptionPlanByName('premium');
+      
+      // Create pricing for each plan
+      if (planOddiy && pricing.oddiy) {
+        await storage.createCoursePlanPricing({
+          courseId: course.id,
+          planId: planOddiy.id,
+          price: pricing.oddiy,
+        });
+      }
+      if (planStandard && pricing.standard) {
+        await storage.createCoursePlanPricing({
+          courseId: course.id,
+          planId: planStandard.id,
+          price: pricing.standard,
+        });
+      }
+      if (planPremium && pricing.premium) {
+        await storage.createCoursePlanPricing({
+          courseId: course.id,
+          planId: planPremium.id,
+          price: pricing.premium,
+        });
+      }
+      
       res.json(course);
     } catch (error: any) {
       res.status(400).json({ message: error.message });

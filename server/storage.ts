@@ -16,6 +16,9 @@ import {
   messages,
   siteSettings,
   testimonials,
+  subscriptionPlans,
+  coursePlanPricing,
+  userSubscriptions,
   type User,
   type UpsertUser,
   type Course,
@@ -51,6 +54,9 @@ import {
   type InstructorCourseWithCounts,
   type CourseAnalytics,
   type StudentCourseProgress,
+  type SubscriptionPlan,
+  type CoursePlanPricing,
+  type InsertCoursePlanPricing,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, sql, inArray } from "drizzle-orm";
@@ -182,6 +188,12 @@ export interface IStorage {
   createTestimonial(testimonial: InsertTestimonial): Promise<Testimonial>;
   updateTestimonial(id: string, data: Partial<InsertTestimonial>): Promise<Testimonial>;
   deleteTestimonial(id: string): Promise<void>;
+  
+  // Subscription operations
+  getSubscriptionPlans(): Promise<SubscriptionPlan[]>;
+  getSubscriptionPlanByName(name: string): Promise<SubscriptionPlan | undefined>;
+  createCoursePlanPricing(pricing: InsertCoursePlanPricing): Promise<CoursePlanPricing>;
+  getCoursePlanPricing(courseId: string): Promise<CoursePlanPricing[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1511,6 +1523,25 @@ export class DatabaseStorage implements IStorage {
   
   async deleteTestimonial(id: string): Promise<void> {
     await db.delete(testimonials).where(eq(testimonials.id, id));
+  }
+  
+  // Subscription operations
+  async getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
+    return await db.select().from(subscriptionPlans).orderBy(subscriptionPlans.order);
+  }
+  
+  async getSubscriptionPlanByName(name: string): Promise<SubscriptionPlan | undefined> {
+    const [plan] = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.name, name));
+    return plan;
+  }
+  
+  async createCoursePlanPricing(pricing: InsertCoursePlanPricing): Promise<CoursePlanPricing> {
+    const [result] = await db.insert(coursePlanPricing).values(pricing).returning();
+    return result;
+  }
+  
+  async getCoursePlanPricing(courseId: string): Promise<CoursePlanPricing[]> {
+    return await db.select().from(coursePlanPricing).where(eq(coursePlanPricing.courseId, courseId));
   }
 }
 
