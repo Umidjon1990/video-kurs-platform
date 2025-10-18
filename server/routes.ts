@@ -8,6 +8,9 @@ import multer from "multer";
 import { writeFile } from "fs/promises";
 import { join } from "path";
 import { ObjectStorageService } from "./objectStorage";
+import { db } from "./db";
+import { users, courses, lessons, assignments, tests, questions, enrollments, submissions, testAttempts, notifications, conversations, messages, siteSettings, testimonials, subscriptionPlans, coursePlanPricing, userSubscriptions } from "@shared/schema";
+import { eq, and, or, desc, sql, count, avg, inArray } from "drizzle-orm";
 import {
   insertCourseSchema,
   insertLessonSchema,
