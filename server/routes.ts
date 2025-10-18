@@ -1936,6 +1936,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public: Get all subscription plans
+  app.get('/api/subscription-plans', async (_req, res) => {
+    try {
+      const plans = await storage.getSubscriptionPlans();
+      res.json(plans);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Update subscription plan features
+  app.put('/api/admin/subscription-plans/:id', isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { features } = req.body;
+      
+      // Update plan features in database
+      const [updatedPlan] = await db
+        .update(subscriptionPlans)
+        .set({ features })
+        .where(eq(subscriptionPlans.id, id))
+        .returning();
+      
+      if (!updatedPlan) {
+        return res.status(404).json({ message: "Tarif topilmadi" });
+      }
+      
+      res.json(updatedPlan);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ============ STRIPE PAYMENT ROUTES ============
   app.post("/api/create-payment-intent", isAuthenticated, async (req: any, res) => {
     try {

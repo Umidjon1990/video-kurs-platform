@@ -116,6 +116,15 @@ export default function AdminDashboard() {
           <h1 className="text-2xl font-bold" data-testid="text-admin-title">Admin Paneli</h1>
           <div className="ml-auto flex items-center gap-3">
             <Button
+              variant="outline"
+              onClick={() => setLocation('/admin/subscription-plans')}
+              data-testid="button-subscription-plans"
+              className="flex items-center gap-2"
+            >
+              <CreditCard className="w-4 h-4" />
+              Tariflar
+            </Button>
+            <Button
               variant="default"
               onClick={() => setLocation('/admin/cms')}
               data-testid="button-cms"
