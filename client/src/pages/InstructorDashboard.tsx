@@ -1341,9 +1341,13 @@ export default function InstructorDashboard() {
                   <Label htmlFor="priceOddiy" className="text-xs">Oddiy</Label>
                   <Input
                     id="priceOddiy"
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     value={courseForm.priceOddiy}
-                    onChange={(e) => setCourseForm({ ...courseForm, priceOddiy: e.target.value })}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '');
+                      setCourseForm({ ...courseForm, priceOddiy: value });
+                    }}
                     placeholder="100000"
                     data-testid="input-price-oddiy"
                   />
@@ -1364,9 +1368,13 @@ export default function InstructorDashboard() {
                   <Label htmlFor="priceStandard" className="text-xs">Standard</Label>
                   <Input
                     id="priceStandard"
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     value={courseForm.priceStandard}
-                    onChange={(e) => setCourseForm({ ...courseForm, priceStandard: e.target.value })}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '');
+                      setCourseForm({ ...courseForm, priceStandard: value });
+                    }}
                     placeholder="200000"
                     data-testid="input-price-standard"
                   />
@@ -1397,9 +1405,13 @@ export default function InstructorDashboard() {
                   <Label htmlFor="pricePremium" className="text-xs">Premium</Label>
                   <Input
                     id="pricePremium"
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     value={courseForm.pricePremium}
-                    onChange={(e) => setCourseForm({ ...courseForm, pricePremium: e.target.value })}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '');
+                      setCourseForm({ ...courseForm, pricePremium: value });
+                    }}
                     placeholder="300000"
                     data-testid="input-price-premium"
                   />

@@ -309,12 +309,40 @@ export class DatabaseStorage implements IStorage {
     return coursesWithCounts;
   }
 
-  async getPublishedCourses(): Promise<Course[]> {
-    return await db
-      .select()
+  async getPublishedCourses(): Promise<Array<Course & { instructor?: User; planPricing?: Array<CoursePlanPricing & { plan: SubscriptionPlan }> }>> {
+    const publishedCourses = await db
+      .select({
+        course: courses,
+        instructor: users,
+      })
       .from(courses)
+      .leftJoin(users, eq(courses.instructorId, users.id))
       .where(eq(courses.status, 'published'))
       .orderBy(desc(courses.createdAt));
+
+    // Fetch plan pricing for all courses in parallel
+    const coursesWithPlans = await Promise.all(
+      publishedCourses.map(async ({ course, instructor }) => {
+        const planPricing = await db
+          .select({
+            pricing: coursePlanPricing,
+            plan: subscriptionPlans,
+          })
+          .from(coursePlanPricing)
+          .innerJoin(subscriptionPlans, eq(coursePlanPricing.planId, subscriptionPlans.id))
+          .where(eq(coursePlanPricing.courseId, course.id))
+          .orderBy(subscriptionPlans.order)
+          .then(results => results.map(r => ({ ...r.pricing, plan: r.plan })));
+
+        return {
+          ...course,
+          instructor: instructor || undefined,
+          planPricing: planPricing.length > 0 ? planPricing : undefined,
+        };
+      })
+    );
+
+    return coursesWithPlans;
   }
 
   async getPublicCourses(filters?: {
