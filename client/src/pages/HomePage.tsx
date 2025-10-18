@@ -300,12 +300,25 @@ export default function HomePage() {
                   onClick={() => setLocation(`/checkout/${course.id}`)}
                 >
                   {/* Thumbnail */}
-                  <div className="h-48 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-b">
+                  <div className="h-48 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-b overflow-hidden">
                     {course.thumbnailUrl ? (
                       <img
                         src={course.thumbnailUrl}
                         alt={course.title}
                         className="w-full h-full object-cover"
+                        loading="lazy"
+                        onError={(e) => {
+                          console.error('Course thumbnail failed to load:', course.thumbnailUrl);
+                          // Hide the broken image and show fallback icon
+                          e.currentTarget.style.display = 'none';
+                          const parent = e.currentTarget.parentElement;
+                          if (parent && parent.querySelector('.fallback-icon') === null) {
+                            const icon = document.createElement('div');
+                            icon.className = 'fallback-icon flex items-center justify-center w-full h-full';
+                            icon.innerHTML = '<svg class="w-16 h-16 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>';
+                            parent.appendChild(icon);
+                          }
+                        }}
                       />
                     ) : (
                       <BookOpen className="w-16 h-16 text-muted-foreground" />
@@ -444,8 +457,8 @@ export default function HomePage() {
               >
                 {/* Triple the content for smooth infinite loop */}
                 {certificateList.concat(certificateList, certificateList).map((url, index) => {
-                  // Convert Dropbox URL to raw format for better mobile compatibility
-                  const rawUrl = url.trim().replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?', '?raw=1&');
+                  // Keep original URL - Dropbox URLs work fine with dl=1
+                  const imageUrl = url.trim();
                   
                   return (
                     <div
@@ -454,12 +467,12 @@ export default function HomePage() {
                       data-testid={`certificate-${index % certificateList.length}`}
                     >
                       <img
-                        src={rawUrl}
+                        src={imageUrl}
                         alt={`Sertifikat ${(index % certificateList.length) + 1}`}
                         className="w-full h-full object-contain"
                         loading="lazy"
                         onError={(e) => {
-                          console.error('Certificate image failed to load:', rawUrl);
+                          console.error('Certificate image failed to load:', imageUrl);
                           e.currentTarget.src = "https://via.placeholder.com/256x320/3B82F6/FFFFFF?text=Sertifikat+" + ((index % certificateList.length) + 1);
                         }}
                       />
