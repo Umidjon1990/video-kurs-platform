@@ -35,9 +35,11 @@ export default function AdminSubscriptionPlansPage() {
     hasAssignments: false,
     hasCertificate: false,
     liveClassesPerWeek: 0,
-    bonuses: [] as string[], // Array of bonus descriptions
+    bonuses: [] as string[],
+    customFeatures: [] as string[], // Custom features admin can add
   });
   const [newBonus, setNewBonus] = useState("");
+  const [newFeature, setNewFeature] = useState("");
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -100,6 +102,7 @@ export default function AdminSubscriptionPlansPage() {
             hasCertificate: planForm.hasCertificate,
             liveClassesPerWeek: planForm.liveClassesPerWeek,
             bonuses: planForm.bonuses,
+            customFeatures: planForm.customFeatures,
           },
         });
       } else {
@@ -114,6 +117,7 @@ export default function AdminSubscriptionPlansPage() {
             hasCertificate: planForm.hasCertificate,
             liveClassesPerWeek: planForm.liveClassesPerWeek,
             bonuses: planForm.bonuses,
+            customFeatures: planForm.customFeatures,
           },
         });
       }
@@ -130,8 +134,10 @@ export default function AdminSubscriptionPlansPage() {
         hasCertificate: false,
         liveClassesPerWeek: 0,
         bonuses: [],
+        customFeatures: [],
       });
       setNewBonus("");
+      setNewFeature("");
       const wasEditing = editingPlan !== null;
       setEditingPlan(null);
       toast({
@@ -260,6 +266,7 @@ export default function AdminSubscriptionPlansPage() {
                         hasCertificate: plan.features.hasCertificate,
                         liveClassesPerWeek: plan.features.liveClassesPerWeek,
                         bonuses: plan.features.bonuses || [],
+                        customFeatures: plan.features.customFeatures || [],
                       });
                       setIsDialogOpen(true);
                     }}
@@ -468,7 +475,61 @@ export default function AdminSubscriptionPlansPage() {
             </div>
 
             <div className="space-y-3 border p-4 rounded-md">
+              <h4 className="font-semibold text-sm">Qo'shimcha Xususiyatlar</h4>
+              <p className="text-xs text-muted-foreground">O'z xususiyatlaringizni qo'shing (masalan: Video darslar, PDF materiallar)</p>
+              
+              <div className="space-y-2">
+                {planForm.customFeatures.map((feature, index) => (
+                  <div key={index} className="flex items-center gap-2" data-testid={`feature-item-${index}`}>
+                    <div className="flex-1 text-sm bg-muted p-2 rounded-md">
+                      {feature}
+                    </div>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => {
+                        const newFeatures = planForm.customFeatures.filter((_, i) => i !== index);
+                        setPlanForm({ ...planForm, customFeatures: newFeatures });
+                      }}
+                      data-testid={`button-remove-feature-${index}`}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-2">
+                <Input
+                  value={newFeature}
+                  onChange={(e) => setNewFeature(e.target.value)}
+                  placeholder="Yangi xususiyat kiriting"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newFeature.trim()) {
+                      setPlanForm({ ...planForm, customFeatures: [...planForm.customFeatures, newFeature.trim()] });
+                      setNewFeature("");
+                    }
+                  }}
+                  data-testid="input-new-feature"
+                />
+                <Button
+                  onClick={() => {
+                    if (newFeature.trim()) {
+                      setPlanForm({ ...planForm, customFeatures: [...planForm.customFeatures, newFeature.trim()] });
+                      setNewFeature("");
+                    }
+                  }}
+                  disabled={!newFeature.trim()}
+                  data-testid="button-add-feature"
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-3 border p-4 rounded-md">
               <h4 className="font-semibold text-sm">Bonuslar</h4>
+              <p className="text-xs text-muted-foreground">Ushbu tarifga xos bonus imkoniyatlar</p>
               
               <div className="space-y-2">
                 {planForm.bonuses.map((bonus, index) => (
@@ -535,8 +596,10 @@ export default function AdminSubscriptionPlansPage() {
                   hasCertificate: false,
                   liveClassesPerWeek: 0,
                   bonuses: [],
+                  customFeatures: [],
                 });
                 setNewBonus("");
+                setNewFeature("");
               }}
               data-testid="button-cancel-plan"
             >
