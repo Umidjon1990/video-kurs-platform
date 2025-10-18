@@ -36,7 +36,7 @@ The system uses Drizzle ORM with PostgreSQL (Neon Serverless) for type-safe data
 -   **Private Messaging**: A chat system enabling direct communication between students and instructors with unread indicators and real-time polling.
 -   **Announcement System**: Instructors can send announcements targeting individual students, course groups, or all students, with notification integration.
 -   **CMS & Homepage Enhancements**: Dynamic "About Us", "Contact Us", Testimonials, and Certificates sections managed via Admin CMS, with certificate image upload to Replit Object Storage.
--   **Admin Subscription Management**: Comprehensive admin interface for subscription plan CRUD operations, including feature toggles, custom feature labels, bonus management, and dynamic feature additions. Supports both switch-based and text-based feature customization.
+-   **Admin Subscription Management**: Comprehensive admin interface (/admin/subscription-plans) for subscription plan CRUD operations. Supports four feature types: (1) Base features with customizable labels (Tests, Assignments, Certificate, Live Classes/week), (2) Dynamic Features - admin-created switch features stored in JSONB array, (3) Custom Features - text-based features array, (4) Bonuses - special offers array. UI design: read-only plan cards with green CheckCircle icons for all features and yellow Star icons for bonuses; all editing exclusively via dialog to prevent data loss. Database stores features in JSONB column with full type safety via Drizzle schema.
 
 ## External Dependencies
 
