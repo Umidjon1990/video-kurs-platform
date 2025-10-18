@@ -16,6 +16,10 @@
   animation: certificate-scroll 30s linear infinite;
 }
 
+.animate-certificate-scroll:hover {
+  animation-play-state: paused;
+}
+
 /* LIGHT MODE */
 :root {
   --button-outline: rgba(0,0,0, .10);

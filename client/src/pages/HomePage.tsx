@@ -3,10 +3,16 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, BookOpen, Users, Award, TrendingUp, Star, Mail, Phone, MapPin, Send, ExternalLink } from "lucide-react";
+import { Search, Filter, BookOpen, Users, Award, TrendingUp, Star, Mail, Phone, MapPin, Send, ExternalLink, X, ZoomIn } from "lucide-react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { Course, User, SiteSetting, Testimonial } from "@shared/schema";
 
 type PublicCourse = Course & {
@@ -20,6 +26,7 @@ export default function HomePage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [priceRange, setPriceRange] = useState<string>("");
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedCertificate, setSelectedCertificate] = useState<{ url: string; index: number } | null>(null);
 
   // Build query params
   const buildQueryParams = () => {
@@ -492,8 +499,9 @@ export default function HomePage() {
                   return (
                     <div
                       key={index}
-                      className="flex-shrink-0 w-64 h-80 rounded-lg overflow-hidden border bg-white shadow-lg"
+                      className="flex-shrink-0 w-64 h-80 rounded-lg overflow-hidden border bg-white shadow-lg cursor-pointer hover:scale-105 transition-transform group relative"
                       data-testid={`certificate-${index % certificateList.length}`}
+                      onClick={() => setSelectedCertificate({ url: imageUrl, index: index % certificateList.length })}
                     >
                       <img
                         src={imageUrl}
@@ -505,6 +513,9 @@ export default function HomePage() {
                           e.currentTarget.src = "https://via.placeholder.com/256x320/3B82F6/FFFFFF?text=Sertifikat+" + ((index % certificateList.length) + 1);
                         }}
                       />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                        <ZoomIn className="w-12 h-12 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
                     </div>
                   );
                 })}
@@ -616,6 +627,30 @@ export default function HomePage() {
           </div>
         </div>
       )}
+
+      {/* Certificate Modal */}
+      <Dialog open={selectedCertificate !== null} onOpenChange={() => setSelectedCertificate(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+          <DialogHeader className="p-6 pb-4">
+            <DialogTitle>Sertifikat #{selectedCertificate ? selectedCertificate.index + 1 : ''}</DialogTitle>
+          </DialogHeader>
+          <div className="px-6 pb-6">
+            {selectedCertificate && (
+              <div className="relative">
+                <img
+                  src={selectedCertificate.url}
+                  alt={`Sertifikat ${selectedCertificate.index + 1}`}
+                  className="w-full h-auto max-h-[70vh] object-contain rounded-lg"
+                  onError={(e) => {
+                    console.error('Certificate image failed to load in modal:', selectedCertificate.url);
+                    e.currentTarget.src = "https://via.placeholder.com/800x1000/3B82F6/FFFFFF?text=Sertifikat+" + (selectedCertificate.index + 1);
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Footer */}
       <footer className="border-t bg-background">
