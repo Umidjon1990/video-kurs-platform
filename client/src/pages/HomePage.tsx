@@ -3,7 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, BookOpen, Users, Award, TrendingUp, Star, Mail, Phone, MapPin } from "lucide-react";
+import { Search, Filter, BookOpen, Users, Award, TrendingUp, Star, Mail, Phone, MapPin, Send, ExternalLink } from "lucide-react";
+import { motion } from "framer-motion";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { Course, User, SiteSetting, Testimonial } from "@shared/schema";
@@ -78,6 +79,12 @@ export default function HomePage() {
     return siteSettings?.find(s => s.key === key)?.value || "";
   };
 
+  // Animation variants
+  const fadeInUp = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 },
+  };
+
   const formatPrice = (price: string | null) => {
     if (!price || parseFloat(price) === 0) return "Bepul";
     return `${parseInt(price).toLocaleString()} so'm`;
@@ -111,20 +118,37 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <div className="relative bg-gradient-to-br from-primary/20 via-primary/10 to-background border-b">
+      <motion.div 
+        className="relative bg-gradient-to-br from-primary/20 via-primary/10 to-background border-b"
+        initial="hidden"
+        animate="visible"
+        variants={fadeInUp}
+        transition={{ duration: 0.6 }}
+      >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(0,0,0,0.1),transparent)]" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
           <div className="text-center space-y-6">
-            <h1 className="text-4xl md:text-6xl font-bold" data-testid="text-hero-title">
+            <motion.h1 
+              className="text-4xl md:text-6xl font-bold" 
+              data-testid="text-hero-title"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+            >
               O'zbekistondagi Eng Yaxshi
               <br />
               <span className="text-primary">Video Kurslar Platformasi</span>
-            </h1>
-            <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
+            </motion.h1>
+            <motion.p 
+              className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+            >
               Professional o'qituvchilardan zamonaviy video darslar.
               <br />
               Kasb-hunaringizni oshiring va kelajagingizni yarating!
-            </p>
+            </motion.p>
 
             {/* Search Bar */}
             <div className="max-w-2xl mx-auto">
@@ -207,7 +231,7 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Stats Section */}
       <div className="border-b bg-muted/30">
@@ -398,6 +422,53 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* Certificates Carousel */}
+      {getSetting("certificate_urls") && getSetting("certificate_urls").trim() && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold mb-2">Litsenziya va Guvohnomalar</h2>
+            <p className="text-muted-foreground">
+              Bizning professional sertifikatlarimiz
+            </p>
+          </div>
+          <div className="relative overflow-hidden">
+            <motion.div
+              className="flex gap-6"
+              animate={{
+                x: [0, -1000],
+              }}
+              transition={{
+                x: {
+                  repeat: Infinity,
+                  repeatType: "loop",
+                  duration: 20,
+                  ease: "linear",
+                },
+              }}
+            >
+              {getSetting("certificate_urls").split('\n').filter(url => url.trim()).concat(
+                getSetting("certificate_urls").split('\n').filter(url => url.trim())
+              ).map((url, index) => (
+                <div
+                  key={index}
+                  className="flex-shrink-0 w-64 h-80 rounded-lg overflow-hidden border bg-card"
+                  data-testid={`certificate-${index}`}
+                >
+                  <img
+                    src={url.trim()}
+                    alt={`Sertifikat ${index + 1}`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = "https://via.placeholder.com/256x320?text=Sertifikat";
+                    }}
+                  />
+                </div>
+              ))}
+            </motion.div>
+          </div>
+        </div>
+      )}
+
       {/* About Us Section */}
       {getSetting("about_us") && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
@@ -411,7 +482,7 @@ export default function HomePage() {
       )}
 
       {/* Contact Section */}
-      {(getSetting("contact_email") || getSetting("contact_phone") || getSetting("contact_address")) && (
+      {(getSetting("contact_email") || getSetting("contact_phone") || getSetting("contact_address") || getSetting("contact_telegram")) && (
         <div className="bg-muted/30 border-t">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
             <div className="text-center mb-12">
@@ -420,30 +491,66 @@ export default function HomePage() {
                 Savollaringiz bormi? Biz bilan bog'laning!
               </p>
             </div>
-            <div className="grid gap-8 md:grid-cols-3 max-w-4xl mx-auto">
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4 max-w-6xl mx-auto">
               {getSetting("contact_email") && (
-                <Card className="text-center">
+                <Card className="text-center hover-elevate">
                   <CardContent className="pt-6">
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                      <Mail className="w-6 h-6 text-primary" />
-                    </div>
-                    <h3 className="font-semibold mb-2">Email</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {getSetting("contact_email")}
-                    </p>
+                    <a 
+                      href={`mailto:${getSetting("contact_email")}`}
+                      className="block"
+                      data-testid="link-contact-email"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                        <Mail className="w-6 h-6 text-primary" />
+                      </div>
+                      <h3 className="font-semibold mb-2">Email</h3>
+                      <p className="text-sm text-muted-foreground break-all">
+                        {getSetting("contact_email")}
+                      </p>
+                    </a>
                   </CardContent>
                 </Card>
               )}
               {getSetting("contact_phone") && (
-                <Card className="text-center">
+                <Card className="text-center hover-elevate">
                   <CardContent className="pt-6">
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                      <Phone className="w-6 h-6 text-primary" />
-                    </div>
-                    <h3 className="font-semibold mb-2">Telefon</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {getSetting("contact_phone")}
-                    </p>
+                    <a 
+                      href={`tel:${getSetting("contact_phone").replace(/\s/g, '')}`}
+                      className="block"
+                      data-testid="link-contact-phone"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                        <Phone className="w-6 h-6 text-primary" />
+                      </div>
+                      <h3 className="font-semibold mb-2">Telefon</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {getSetting("contact_phone")}
+                      </p>
+                    </a>
+                  </CardContent>
+                </Card>
+              )}
+              {getSetting("contact_telegram") && (
+                <Card className="text-center hover-elevate">
+                  <CardContent className="pt-6">
+                    <a 
+                      href={getSetting("contact_telegram")}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                      data-testid="link-contact-telegram"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                        <Send className="w-6 h-6 text-primary" />
+                      </div>
+                      <h3 className="font-semibold mb-2 flex items-center justify-center gap-1">
+                        Telegram
+                        <ExternalLink className="w-3 h-3" />
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Guruhga qo'shiling
+                      </p>
+                    </a>
                   </CardContent>
                 </Card>
               )}
