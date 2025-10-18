@@ -35,6 +35,9 @@ export default function AdminSubscriptionPlansPage() {
     hasAssignments: false,
     hasCertificate: false,
     liveClassesPerWeek: 0,
+    testsLabel: "Testlar",
+    assignmentsLabel: "Vazifalar",
+    certificateLabel: "Sertifikat",
     bonuses: [] as string[],
     customFeatures: [] as string[], // Custom features admin can add
   });
@@ -101,6 +104,9 @@ export default function AdminSubscriptionPlansPage() {
             hasAssignments: planForm.hasAssignments,
             hasCertificate: planForm.hasCertificate,
             liveClassesPerWeek: planForm.liveClassesPerWeek,
+            testsLabel: planForm.testsLabel,
+            assignmentsLabel: planForm.assignmentsLabel,
+            certificateLabel: planForm.certificateLabel,
             bonuses: planForm.bonuses,
             customFeatures: planForm.customFeatures,
           },
@@ -116,6 +122,9 @@ export default function AdminSubscriptionPlansPage() {
             hasAssignments: planForm.hasAssignments,
             hasCertificate: planForm.hasCertificate,
             liveClassesPerWeek: planForm.liveClassesPerWeek,
+            testsLabel: planForm.testsLabel,
+            assignmentsLabel: planForm.assignmentsLabel,
+            certificateLabel: planForm.certificateLabel,
             bonuses: planForm.bonuses,
             customFeatures: planForm.customFeatures,
           },
@@ -133,6 +142,9 @@ export default function AdminSubscriptionPlansPage() {
         hasAssignments: false,
         hasCertificate: false,
         liveClassesPerWeek: 0,
+        testsLabel: "Testlar",
+        assignmentsLabel: "Vazifalar",
+        certificateLabel: "Sertifikat",
         bonuses: [],
         customFeatures: [],
       });
@@ -265,6 +277,9 @@ export default function AdminSubscriptionPlansPage() {
                         hasAssignments: plan.features.hasAssignments,
                         hasCertificate: plan.features.hasCertificate,
                         liveClassesPerWeek: plan.features.liveClassesPerWeek,
+                        testsLabel: plan.features.testsLabel || "Testlar",
+                        assignmentsLabel: plan.features.assignmentsLabel || "Vazifalar",
+                        certificateLabel: plan.features.certificateLabel || "Sertifikat",
                         bonuses: plan.features.bonuses || [],
                         customFeatures: plan.features.customFeatures || [],
                       });
@@ -429,39 +444,70 @@ export default function AdminSubscriptionPlansPage() {
 
             <div className="space-y-3 border p-4 rounded-md">
               <h4 className="font-semibold text-sm">Xususiyatlar</h4>
+              <p className="text-xs text-muted-foreground">Switch bilan yoqing/o'chiring, nomini o'zgartiring</p>
               
-              <div className="flex items-center justify-between">
-                <Label htmlFor="form-tests">Testlar</Label>
-                <Switch
-                  id="form-tests"
-                  checked={planForm.hasTests}
-                  onCheckedChange={(checked) => setPlanForm({ ...planForm, hasTests: checked })}
-                  data-testid="switch-form-tests"
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <Label htmlFor="form-assignments">Vazifalar</Label>
-                <Switch
-                  id="form-assignments"
-                  checked={planForm.hasAssignments}
-                  onCheckedChange={(checked) => setPlanForm({ ...planForm, hasAssignments: checked })}
-                  data-testid="switch-form-assignments"
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <Label htmlFor="form-certificate">Sertifikat</Label>
-                <Switch
-                  id="form-certificate"
-                  checked={planForm.hasCertificate}
-                  onCheckedChange={(checked) => setPlanForm({ ...planForm, hasCertificate: checked })}
-                  data-testid="switch-form-certificate"
-                />
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="form-tests" className="text-sm">Testlar</Label>
+                  <Switch
+                    id="form-tests"
+                    checked={planForm.hasTests}
+                    onCheckedChange={(checked) => setPlanForm({ ...planForm, hasTests: checked })}
+                    data-testid="switch-form-tests"
+                  />
+                </div>
+                {planForm.hasTests && (
+                  <Input
+                    value={planForm.testsLabel}
+                    onChange={(e) => setPlanForm({ ...planForm, testsLabel: e.target.value })}
+                    placeholder="Testlar nomini kiriting"
+                    data-testid="input-tests-label"
+                  />
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="form-live-classes">Haftada jonli darslar</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="form-assignments" className="text-sm">Vazifalar</Label>
+                  <Switch
+                    id="form-assignments"
+                    checked={planForm.hasAssignments}
+                    onCheckedChange={(checked) => setPlanForm({ ...planForm, hasAssignments: checked })}
+                    data-testid="switch-form-assignments"
+                  />
+                </div>
+                {planForm.hasAssignments && (
+                  <Input
+                    value={planForm.assignmentsLabel}
+                    onChange={(e) => setPlanForm({ ...planForm, assignmentsLabel: e.target.value })}
+                    placeholder="Vazifalar nomini kiriting"
+                    data-testid="input-assignments-label"
+                  />
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="form-certificate" className="text-sm">Sertifikat</Label>
+                  <Switch
+                    id="form-certificate"
+                    checked={planForm.hasCertificate}
+                    onCheckedChange={(checked) => setPlanForm({ ...planForm, hasCertificate: checked })}
+                    data-testid="switch-form-certificate"
+                  />
+                </div>
+                {planForm.hasCertificate && (
+                  <Input
+                    value={planForm.certificateLabel}
+                    onChange={(e) => setPlanForm({ ...planForm, certificateLabel: e.target.value })}
+                    placeholder="Sertifikat nomini kiriting"
+                    data-testid="input-certificate-label"
+                  />
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="form-live-classes" className="text-sm">Haftada jonli darslar</Label>
                 <Input
                   id="form-live-classes"
                   type="number"
@@ -595,6 +641,9 @@ export default function AdminSubscriptionPlansPage() {
                   hasAssignments: false,
                   hasCertificate: false,
                   liveClassesPerWeek: 0,
+                  testsLabel: "Testlar",
+                  assignmentsLabel: "Vazifalar",
+                  certificateLabel: "Sertifikat",
                   bonuses: [],
                   customFeatures: [],
                 });
