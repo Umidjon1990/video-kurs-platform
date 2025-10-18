@@ -16,7 +16,8 @@ export default function Checkout() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   
-  const [paymentMethod, setPaymentMethod] = useState<"naqd" | "karta">("karta");
+  const [paymentMethod, setPaymentMethod] = useState<"karta" | "payme">("karta");
+  const randomCardNumber = "8600 1234 5678 9012"; // Random karta raqam
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [receiptPreview, setReceiptPreview] = useState<string>("");
@@ -181,11 +182,85 @@ export default function Checkout() {
                     <Label htmlFor="karta" className="cursor-pointer">Karta orqali</Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="naqd" id="naqd" data-testid="radio-naqd" />
-                    <Label htmlFor="naqd" className="cursor-pointer">Naqd pul</Label>
+                    <RadioGroupItem value="payme" id="payme" data-testid="radio-payme" />
+                    <Label htmlFor="payme" className="cursor-pointer">Payme</Label>
                   </div>
                 </RadioGroup>
               </div>
+
+              {/* Payment Details */}
+              {paymentMethod === "karta" && (
+                <div className="space-y-3 p-4 bg-muted/50 rounded-lg border">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Karta Raqami</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={randomCardNumber}
+                        readOnly
+                        className="font-mono text-lg"
+                        data-testid="input-card-number"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          navigator.clipboard.writeText(randomCardNumber.replace(/\s/g, ''));
+                          toast({
+                            title: "Nusxalandi!",
+                            description: "Karta raqam nusxalandi",
+                          });
+                        }}
+                        data-testid="button-copy-card"
+                      >
+                        Nusxalash
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Ushbu karta raqamiga to'lovni amalga oshiring va chek rasmini yuklang
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {paymentMethod === "payme" && (
+                <div className="space-y-3 p-4 bg-muted/50 rounded-lg border">
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Payme Orqali To'lash</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Payme orqali to'lov qilish uchun quyidagi havola orqali ro'yxatdan o'ting yoki hisobingizga kiring:
+                      </p>
+                      <a
+                        href="https://merchant.payme.uz/auth/sign-up"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-primary hover:underline font-medium"
+                        data-testid="link-payme"
+                      >
+                        merchant.payme.uz/auth/sign-up
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </a>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="payme-amount" className="text-sm font-medium">
+                        To'lov Summasi
+                      </Label>
+                      <Input
+                        id="payme-amount"
+                        value={`${course.price} so'm`}
+                        readOnly
+                        className="font-semibold"
+                        data-testid="input-payme-amount"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      To'lovni amalga oshirgandan so'ng chek rasmini yuklang
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Receipt Upload */}
               <div className="space-y-3">
