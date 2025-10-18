@@ -139,7 +139,9 @@ export default function AdminSubscriptionPlansPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/subscription-plans"] });
       setIsDialogOpen(false);
-      setPlanForm({
+      
+      // Reset form
+      const resetForm = {
         name: "",
         displayName: "",
         description: "",
@@ -153,12 +155,15 @@ export default function AdminSubscriptionPlansPage() {
         bonuses: [],
         customFeatures: [],
         dynamicFeatures: [],
-      });
+      };
+      setPlanForm(resetForm);
       setNewBonus("");
       setNewFeature("");
       setNewDynamicFeature("");
+      
       const wasEditing = editingPlan !== null;
       setEditingPlan(null);
+      
       toast({
         title: "Muvaffaqiyatli",
         description: wasEditing ? "Tarif yangilandi" : "Yangi tarif yaratildi",
