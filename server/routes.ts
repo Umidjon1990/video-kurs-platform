@@ -20,6 +20,8 @@ import {
   insertQuestionOptionSchema,
   insertNotificationSchema,
   insertAnnouncementSchema,
+  insertSiteSettingSchema,
+  insertTestimonialSchema,
   type InstructorCourseWithCounts,
 } from "@shared/schema";
 import { z } from "zod";
@@ -1726,6 +1728,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const count = await storage.getUnreadCount(userId);
       res.json({ count });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ============ SITE SETTINGS & TESTIMONIALS (CMS) ============
+  
+  // Public: Get all site settings (for HomePage)
+  app.get('/api/site-settings', async (_req, res) => {
+    try {
+      const settings = await storage.getSiteSettings();
+      res.json(settings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Admin: Upsert site setting (about, contact, etc.)
+  app.put('/api/admin/site-settings', isAdmin, async (req, res) => {
+    try {
+      const validated = insertSiteSettingSchema.parse(req.body);
+      const setting = await storage.upsertSiteSetting(validated);
+      res.json(setting);
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Public: Get published testimonials (for HomePage)
+  app.get('/api/testimonials', async (_req, res) => {
+    try {
+      const testimonials = await storage.getPublishedTestimonials();
+      res.json(testimonials);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Admin: Get all testimonials (including unpublished)
+  app.get('/api/admin/testimonials', isAdmin, async (_req, res) => {
+    try {
+      const testimonials = await storage.getAllTestimonials();
+      res.json(testimonials);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Admin: Create testimonial
+  app.post('/api/admin/testimonials', isAdmin, async (req, res) => {
+    try {
+      const validated = insertTestimonialSchema.parse(req.body);
+      const testimonial = await storage.createTestimonial(validated);
+      res.json(testimonial);
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Admin: Update testimonial
+  app.put('/api/admin/testimonials/:id', isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validated = insertTestimonialSchema.partial().parse(req.body);
+      const testimonial = await storage.updateTestimonial(id, validated);
+      res.json(testimonial);
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Admin: Delete testimonial
+  app.delete('/api/admin/testimonials/:id', isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteTestimonial(id);
+      res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

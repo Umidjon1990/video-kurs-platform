@@ -14,6 +14,8 @@ import {
   announcements,
   conversations,
   messages,
+  siteSettings,
+  testimonials,
   type User,
   type UpsertUser,
   type Course,
@@ -42,6 +44,10 @@ import {
   type InsertConversation,
   type Message,
   type InsertMessage,
+  type InsertSiteSetting,
+  type SiteSetting,
+  type InsertTestimonial,
+  type Testimonial,
   type InstructorCourseWithCounts,
   type CourseAnalytics,
   type StudentCourseProgress,
@@ -163,6 +169,19 @@ export interface IStorage {
   
   // Student Progress Tracking
   getStudentProgress(userId: string): Promise<StudentCourseProgress[]>;
+  
+  // Site Settings operations (Admin CMS)
+  getSiteSettings(): Promise<SiteSetting[]>;
+  getSiteSetting(key: string): Promise<SiteSetting | undefined>;
+  upsertSiteSetting(setting: InsertSiteSetting): Promise<SiteSetting>;
+  
+  // Testimonials operations (Admin CMS)
+  getAllTestimonials(): Promise<Testimonial[]>;
+  getPublishedTestimonials(): Promise<Testimonial[]>;
+  getTestimonial(id: string): Promise<Testimonial | undefined>;
+  createTestimonial(testimonial: InsertTestimonial): Promise<Testimonial>;
+  updateTestimonial(id: string, data: Partial<InsertTestimonial>): Promise<Testimonial>;
+  deleteTestimonial(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1431,6 +1450,67 @@ export class DatabaseStorage implements IStorage {
     });
 
     return progressData;
+  }
+  
+  // Site Settings operations (Admin CMS)
+  async getSiteSettings(): Promise<SiteSetting[]> {
+    return await db.select().from(siteSettings);
+  }
+  
+  async getSiteSetting(key: string): Promise<SiteSetting | undefined> {
+    const [setting] = await db.select().from(siteSettings).where(eq(siteSettings.key, key));
+    return setting;
+  }
+  
+  async upsertSiteSetting(setting: InsertSiteSetting): Promise<SiteSetting> {
+    const [result] = await db
+      .insert(siteSettings)
+      .values(setting)
+      .onConflictDoUpdate({
+        target: siteSettings.key,
+        set: {
+          value: setting.value,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return result;
+  }
+  
+  // Testimonials operations (Admin CMS)
+  async getAllTestimonials(): Promise<Testimonial[]> {
+    return await db.select().from(testimonials).orderBy(testimonials.order, testimonials.createdAt);
+  }
+  
+  async getPublishedTestimonials(): Promise<Testimonial[]> {
+    return await db
+      .select()
+      .from(testimonials)
+      .where(eq(testimonials.isPublished, true))
+      .orderBy(testimonials.order, testimonials.createdAt);
+  }
+  
+  async getTestimonial(id: string): Promise<Testimonial | undefined> {
+    const [testimonial] = await db.select().from(testimonials).where(eq(testimonials.id, id));
+    return testimonial;
+  }
+  
+  async createTestimonial(testimonial: InsertTestimonial): Promise<Testimonial> {
+    const [result] = await db.insert(testimonials).values(testimonial).returning();
+    return result;
+  }
+  
+  async updateTestimonial(id: string, data: Partial<InsertTestimonial>): Promise<Testimonial> {
+    const [result] = await db
+      .update(testimonials)
+      .set(data)
+      .where(eq(testimonials.id, id))
+      .returning();
+    return result;
+  }
+  
+  async deleteTestimonial(id: string): Promise<void> {
+    await db.delete(testimonials).where(eq(testimonials.id, id));
   }
 }
 
