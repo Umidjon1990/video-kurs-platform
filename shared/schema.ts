@@ -54,6 +54,7 @@ export const courses = pgTable("courses", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
+  category: varchar("category", { length: 50 }), // IT, Design, Business, Language, Marketing, etc.
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   originalPrice: decimal("original_price", { precision: 10, scale: 2 }), // Asl narx
   discountedPrice: decimal("discounted_price", { precision: 10, scale: 2 }), // Chegirmadagi narx
