@@ -336,7 +336,6 @@ export default function AdminDashboard() {
                         onValueChange={(value) =>
                           updateRoleMutation.mutate({ userId: user.id, role: value })
                         }
-                        disabled={user.role === 'admin'}
                       >
                         <SelectTrigger className="w-32" data-testid={`select-role-${user.id}`}>
                           <SelectValue />
