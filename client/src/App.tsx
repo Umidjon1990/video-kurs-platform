@@ -9,6 +9,7 @@ import HomePage from "@/pages/HomePage";
 import Landing from "@/pages/Landing";
 import AdminDashboard from "@/pages/AdminDashboard";
 import AdminPayments from "@/pages/AdminPayments";
+import AdminCMSPage from "@/pages/AdminCMSPage";
 import InstructorDashboard from "@/pages/InstructorDashboard";
 import StudentCourses from "@/pages/StudentCourses";
 import StudentResults from "@/pages/StudentResults";
@@ -43,6 +44,7 @@ function Router() {
             <>
               <Route path="/" component={AdminDashboard} />
               <Route path="/admin/payments" component={AdminPayments} />
+              <Route path="/admin/cms" component={AdminCMSPage} />
             </>
           )}
           

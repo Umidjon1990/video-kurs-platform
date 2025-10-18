@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Users, BookOpen, CreditCard, DollarSign, UserCheck, TrendingUp } from "lucide-react";
+import { Users, BookOpen, CreditCard, DollarSign, UserCheck, TrendingUp, Settings } from "lucide-react";
 import { useLocation } from "wouter";
 import type { User } from "@shared/schema";
 import {
@@ -115,6 +115,15 @@ export default function AdminDashboard() {
         <div className="flex h-16 items-center px-4 gap-4">
           <h1 className="text-2xl font-bold" data-testid="text-admin-title">Admin Paneli</h1>
           <div className="ml-auto flex items-center gap-3">
+            <Button
+              variant="default"
+              onClick={() => setLocation('/admin/cms')}
+              data-testid="button-cms"
+              className="flex items-center gap-2"
+            >
+              <Settings className="w-4 h-4" />
+              Sayt Boshqaruvi
+            </Button>
             <Button
               variant="default"
               onClick={() => setLocation('/admin/payments')}
