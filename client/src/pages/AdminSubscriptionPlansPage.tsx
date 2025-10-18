@@ -40,9 +40,11 @@ export default function AdminSubscriptionPlansPage() {
     certificateLabel: "Sertifikat",
     bonuses: [] as string[],
     customFeatures: [] as string[], // Custom features admin can add
+    dynamicFeatures: [] as Array<{ enabled: boolean; label: string }>, // Switch features like Tests
   });
   const [newBonus, setNewBonus] = useState("");
   const [newFeature, setNewFeature] = useState("");
+  const [newDynamicFeature, setNewDynamicFeature] = useState("");
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -109,6 +111,7 @@ export default function AdminSubscriptionPlansPage() {
             certificateLabel: planForm.certificateLabel,
             bonuses: planForm.bonuses,
             customFeatures: planForm.customFeatures,
+            dynamicFeatures: planForm.dynamicFeatures,
           },
         });
       } else {
@@ -127,6 +130,7 @@ export default function AdminSubscriptionPlansPage() {
             certificateLabel: planForm.certificateLabel,
             bonuses: planForm.bonuses,
             customFeatures: planForm.customFeatures,
+            dynamicFeatures: planForm.dynamicFeatures,
           },
         });
       }
@@ -147,9 +151,11 @@ export default function AdminSubscriptionPlansPage() {
         certificateLabel: "Sertifikat",
         bonuses: [],
         customFeatures: [],
+        dynamicFeatures: [],
       });
       setNewBonus("");
       setNewFeature("");
+      setNewDynamicFeature("");
       const wasEditing = editingPlan !== null;
       setEditingPlan(null);
       toast({
@@ -282,6 +288,7 @@ export default function AdminSubscriptionPlansPage() {
                         certificateLabel: plan.features.certificateLabel || "Sertifikat",
                         bonuses: plan.features.bonuses || [],
                         customFeatures: plan.features.customFeatures || [],
+                        dynamicFeatures: plan.features.dynamicFeatures || [],
                       });
                       setIsDialogOpen(true);
                     }}
@@ -521,8 +528,87 @@ export default function AdminSubscriptionPlansPage() {
             </div>
 
             <div className="space-y-3 border p-4 rounded-md">
-              <h4 className="font-semibold text-sm">Qo'shimcha Xususiyatlar</h4>
-              <p className="text-xs text-muted-foreground">O'z xususiyatlaringizni qo'shing (masalan: Video darslar, PDF materiallar)</p>
+              <h4 className="font-semibold text-sm">Switch Xususiyatlar</h4>
+              <p className="text-xs text-muted-foreground">Testlar, Vazifalar kabi switch xususiyatlar yarating</p>
+              
+              <div className="space-y-3">
+                {planForm.dynamicFeatures.map((feature, index) => (
+                  <div key={index} className="space-y-2 p-3 bg-muted/50 rounded-md" data-testid={`dynamic-feature-${index}`}>
+                    <div className="flex items-center justify-between">
+                      <Input
+                        value={feature.label}
+                        onChange={(e) => {
+                          const newFeatures = [...planForm.dynamicFeatures];
+                          newFeatures[index].label = e.target.value;
+                          setPlanForm({ ...planForm, dynamicFeatures: newFeatures });
+                        }}
+                        placeholder="Xususiyat nomi"
+                        className="flex-1 mr-2"
+                        data-testid={`input-dynamic-feature-label-${index}`}
+                      />
+                      <Switch
+                        checked={feature.enabled}
+                        onCheckedChange={(checked) => {
+                          const newFeatures = [...planForm.dynamicFeatures];
+                          newFeatures[index].enabled = checked;
+                          setPlanForm({ ...planForm, dynamicFeatures: newFeatures });
+                        }}
+                        data-testid={`switch-dynamic-feature-${index}`}
+                      />
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => {
+                          const newFeatures = planForm.dynamicFeatures.filter((_, i) => i !== index);
+                          setPlanForm({ ...planForm, dynamicFeatures: newFeatures });
+                        }}
+                        className="ml-2"
+                        data-testid={`button-remove-dynamic-feature-${index}`}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-2">
+                <Input
+                  value={newDynamicFeature}
+                  onChange={(e) => setNewDynamicFeature(e.target.value)}
+                  placeholder="Yangi xususiyat nomi (masalan: Video darslar)"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newDynamicFeature.trim()) {
+                      setPlanForm({ 
+                        ...planForm, 
+                        dynamicFeatures: [...planForm.dynamicFeatures, { enabled: true, label: newDynamicFeature.trim() }] 
+                      });
+                      setNewDynamicFeature("");
+                    }
+                  }}
+                  data-testid="input-new-dynamic-feature"
+                />
+                <Button
+                  onClick={() => {
+                    if (newDynamicFeature.trim()) {
+                      setPlanForm({ 
+                        ...planForm, 
+                        dynamicFeatures: [...planForm.dynamicFeatures, { enabled: true, label: newDynamicFeature.trim() }] 
+                      });
+                      setNewDynamicFeature("");
+                    }
+                  }}
+                  disabled={!newDynamicFeature.trim()}
+                  data-testid="button-add-dynamic-feature"
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-3 border p-4 rounded-md">
+              <h4 className="font-semibold text-sm">Matnli Xususiyatlar</h4>
+              <p className="text-xs text-muted-foreground">Oddiy matnli xususiyatlar (masalan: PDF materiallar, Onlayn qo'llab-quvvatlash)</p>
               
               <div className="space-y-2">
                 {planForm.customFeatures.map((feature, index) => (
@@ -646,9 +732,11 @@ export default function AdminSubscriptionPlansPage() {
                   certificateLabel: "Sertifikat",
                   bonuses: [],
                   customFeatures: [],
+                  dynamicFeatures: [],
                 });
                 setNewBonus("");
                 setNewFeature("");
+                setNewDynamicFeature("");
               }}
               data-testid="button-cancel-plan"
             >
