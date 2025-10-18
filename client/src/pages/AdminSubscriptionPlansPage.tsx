@@ -397,15 +397,6 @@ export default function AdminSubscriptionPlansPage() {
 
                 <div className="flex gap-2">
                   <Button
-                    onClick={() => handleSave(plan)}
-                    disabled={updatePlanMutation.isPending}
-                    className="flex-1"
-                    data-testid={`button-save-${plan.name}`}
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    {updatePlanMutation.isPending ? "Saqlanmoqda..." : "Saqlash"}
-                  </Button>
-                  <Button
                     variant="destructive"
                     onClick={() => {
                       if (confirm("Bu tarifni o'chirishni xohlaysizmi?")) {
@@ -413,9 +404,11 @@ export default function AdminSubscriptionPlansPage() {
                       }
                     }}
                     disabled={deletePlanMutation.isPending}
+                    className="w-full"
                     data-testid={`button-delete-${plan.name}`}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    O'chirish
                   </Button>
                 </div>
               </CardContent>
