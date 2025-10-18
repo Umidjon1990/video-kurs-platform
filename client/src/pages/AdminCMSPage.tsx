@@ -25,7 +25,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, MessageSquare, Save, Trash2, Plus, Star, Edit } from "lucide-react";
+import { Settings, MessageSquare, Save, Trash2, Plus, Star, Edit, ArrowLeft } from "lucide-react";
 import type { SiteSetting, Testimonial } from "@shared/schema";
 import { useLocation } from "wouter";
 
@@ -233,16 +233,15 @@ export default function AdminCMSPage() {
     <div className="min-h-screen bg-background">
       <div className="border-b">
         <div className="flex h-16 items-center px-4 gap-4">
+          <Button
+            variant="outline"
+            onClick={() => setLocation('/admin')}
+            data-testid="button-back-admin"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Orqaga
+          </Button>
           <h1 className="text-2xl font-bold" data-testid="text-cms-title">Sayt Boshqaruvi</h1>
-          <div className="ml-auto flex items-center gap-3">
-            <Button
-              variant="outline"
-              onClick={() => setLocation('/admin')}
-              data-testid="button-back-admin"
-            >
-              Admin Panelga qaytish
-            </Button>
-          </div>
         </div>
       </div>
 
