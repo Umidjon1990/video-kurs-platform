@@ -443,22 +443,29 @@ export default function HomePage() {
                 }}
               >
                 {/* Triple the content for smooth infinite loop */}
-                {certificateList.concat(certificateList, certificateList).map((url, index) => (
-                  <div
-                    key={index}
-                    className="flex-shrink-0 w-64 h-80 rounded-lg overflow-hidden border bg-card shadow-lg"
-                    data-testid={`certificate-${index % certificateList.length}`}
-                  >
-                    <img
-                      src={url.trim()}
-                      alt={`Sertifikat ${(index % certificateList.length) + 1}`}
-                      className="w-full h-full object-contain bg-white"
-                      onError={(e) => {
-                        e.currentTarget.src = "https://via.placeholder.com/256x320?text=Sertifikat";
-                      }}
-                    />
-                  </div>
-                ))}
+                {certificateList.concat(certificateList, certificateList).map((url, index) => {
+                  // Convert Dropbox URL to raw format for better mobile compatibility
+                  const rawUrl = url.trim().replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?', '?raw=1&');
+                  
+                  return (
+                    <div
+                      key={index}
+                      className="flex-shrink-0 w-64 h-80 rounded-lg overflow-hidden border bg-white shadow-lg"
+                      data-testid={`certificate-${index % certificateList.length}`}
+                    >
+                      <img
+                        src={rawUrl}
+                        alt={`Sertifikat ${(index % certificateList.length) + 1}`}
+                        className="w-full h-full object-contain"
+                        loading="lazy"
+                        onError={(e) => {
+                          console.error('Certificate image failed to load:', rawUrl);
+                          e.currentTarget.src = "https://via.placeholder.com/256x320/3B82F6/FFFFFF?text=Sertifikat+" + ((index % certificateList.length) + 1);
+                        }}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
