@@ -1946,6 +1946,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: Create new subscription plan
+  app.post('/api/admin/subscription-plans', isAdmin, async (req, res) => {
+    try {
+      const { name, displayName, description, features } = req.body;
+      
+      // Get the highest order value
+      const existingPlans = await db.select().from(subscriptionPlans);
+      const maxOrder = existingPlans.length > 0 
+        ? Math.max(...existingPlans.map(p => p.order))
+        : 0;
+      
+      const [newPlan] = await db
+        .insert(subscriptionPlans)
+        .values({
+          name,
+          displayName,
+          description,
+          features,
+          order: maxOrder + 1,
+        })
+        .returning();
+      
+      res.json(newPlan);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Admin: Update subscription plan features
   app.put('/api/admin/subscription-plans/:id', isAdmin, async (req, res) => {
     try {
@@ -1964,6 +1992,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.json(updatedPlan);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Delete subscription plan
+  app.delete('/api/admin/subscription-plans/:id', isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      await db
+        .delete(subscriptionPlans)
+        .where(eq(subscriptionPlans.id, id));
+      
+      res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

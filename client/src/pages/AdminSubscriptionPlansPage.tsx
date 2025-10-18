@@ -8,7 +8,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Save } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ArrowLeft, Save, Plus, Edit, Trash2 } from "lucide-react";
 import { useLocation } from "wouter";
 
 export default function AdminSubscriptionPlansPage() {
@@ -17,6 +25,17 @@ export default function AdminSubscriptionPlansPage() {
   const [, setLocation] = useLocation();
 
   const [plans, setPlans] = useState<any[]>([]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<any | null>(null);
+  const [planForm, setPlanForm] = useState({
+    name: "",
+    displayName: "",
+    description: "",
+    hasTests: true,
+    hasAssignments: false,
+    hasCertificate: false,
+    liveClassesPerWeek: 0,
+  });
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -54,6 +73,67 @@ export default function AdminSubscriptionPlansPage() {
       toast({
         title: "Saqlandi",
         description: "Tarif xususiyatlari yangilandi",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Xatolik",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createPlanMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/admin/subscription-plans", {
+        name: planForm.name,
+        displayName: planForm.displayName,
+        description: planForm.description,
+        features: {
+          hasTests: planForm.hasTests,
+          hasAssignments: planForm.hasAssignments,
+          hasCertificate: planForm.hasCertificate,
+          liveClassesPerWeek: planForm.liveClassesPerWeek,
+        },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/subscription-plans"] });
+      setIsDialogOpen(false);
+      setPlanForm({
+        name: "",
+        displayName: "",
+        description: "",
+        hasTests: true,
+        hasAssignments: false,
+        hasCertificate: false,
+        liveClassesPerWeek: 0,
+      });
+      setEditingPlan(null);
+      toast({
+        title: "Muvaffaqiyatli",
+        description: editingPlan ? "Tarif yangilandi" : "Yangi tarif yaratildi",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Xatolik",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deletePlanMutation = useMutation({
+    mutationFn: async (planId: string) => {
+      await apiRequest("DELETE", `/api/admin/subscription-plans/${planId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/subscription-plans"] });
+      toast({
+        title: "O'chirildi",
+        description: "Tarif o'chirildi",
       });
     },
     onError: (error: Error) => {
@@ -111,6 +191,15 @@ export default function AdminSubscriptionPlansPage() {
           <h1 className="text-2xl font-bold" data-testid="text-subscription-plans-title">
             Tariflarni Boshqarish
           </h1>
+          <div className="ml-auto">
+            <Button
+              onClick={() => setIsDialogOpen(true)}
+              data-testid="button-add-plan"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Yangi Tarif
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -188,15 +277,29 @@ export default function AdminSubscriptionPlansPage() {
                   />
                 </div>
 
-                <Button
-                  onClick={() => handleSave(plan)}
-                  disabled={updatePlanMutation.isPending}
-                  className="w-full"
-                  data-testid={`button-save-${plan.name}`}
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  {updatePlanMutation.isPending ? "Saqlanmoqda..." : "Saqlash"}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => handleSave(plan)}
+                    disabled={updatePlanMutation.isPending}
+                    className="flex-1"
+                    data-testid={`button-save-${plan.name}`}
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    {updatePlanMutation.isPending ? "Saqlanmoqda..." : "Saqlash"}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      if (confirm("Bu tarifni o'chirishni xohlaysizmi?")) {
+                        deletePlanMutation.mutate(plan.id);
+                      }
+                    }}
+                    disabled={deletePlanMutation.isPending}
+                    data-testid={`button-delete-${plan.name}`}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -214,6 +317,131 @@ export default function AdminSubscriptionPlansPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Add/Edit Plan Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent data-testid="dialog-plan">
+          <DialogHeader>
+            <DialogTitle>
+              {editingPlan ? "Tarifni Tahrirlash" : "Yangi Tarif Yaratish"}
+            </DialogTitle>
+            <DialogDescription>
+              Tarif ma'lumotlari va xususiyatlarini kiriting
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="plan-name">Tarif Nomi (Inglizcha)</Label>
+              <Input
+                id="plan-name"
+                value={planForm.name}
+                onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })}
+                placeholder="oddiy, standard, premium"
+                data-testid="input-plan-name"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="plan-display-name">Ko'rsatiladigan Nom (O'zbekcha)</Label>
+              <Input
+                id="plan-display-name"
+                value={planForm.displayName}
+                onChange={(e) => setPlanForm({ ...planForm, displayName: e.target.value })}
+                placeholder="Oddiy, Standard, Premium"
+                data-testid="input-plan-display-name"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="plan-description">Tavsif</Label>
+              <Input
+                id="plan-description"
+                value={planForm.description}
+                onChange={(e) => setPlanForm({ ...planForm, description: e.target.value })}
+                placeholder="Tarif tavsifi"
+                data-testid="input-plan-description"
+              />
+            </div>
+
+            <div className="space-y-3 border p-4 rounded-md">
+              <h4 className="font-semibold text-sm">Xususiyatlar</h4>
+              
+              <div className="flex items-center justify-between">
+                <Label htmlFor="form-tests">Testlar</Label>
+                <Switch
+                  id="form-tests"
+                  checked={planForm.hasTests}
+                  onCheckedChange={(checked) => setPlanForm({ ...planForm, hasTests: checked })}
+                  data-testid="switch-form-tests"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label htmlFor="form-assignments">Vazifalar</Label>
+                <Switch
+                  id="form-assignments"
+                  checked={planForm.hasAssignments}
+                  onCheckedChange={(checked) => setPlanForm({ ...planForm, hasAssignments: checked })}
+                  data-testid="switch-form-assignments"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label htmlFor="form-certificate">Sertifikat</Label>
+                <Switch
+                  id="form-certificate"
+                  checked={planForm.hasCertificate}
+                  onCheckedChange={(checked) => setPlanForm({ ...planForm, hasCertificate: checked })}
+                  data-testid="switch-form-certificate"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="form-live-classes">Haftada jonli darslar</Label>
+                <Input
+                  id="form-live-classes"
+                  type="number"
+                  min="0"
+                  max="7"
+                  value={planForm.liveClassesPerWeek}
+                  onChange={(e) => setPlanForm({ ...planForm, liveClassesPerWeek: parseInt(e.target.value) || 0 })}
+                  data-testid="input-form-live-classes"
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDialogOpen(false);
+                setEditingPlan(null);
+                setPlanForm({
+                  name: "",
+                  displayName: "",
+                  description: "",
+                  hasTests: true,
+                  hasAssignments: false,
+                  hasCertificate: false,
+                  liveClassesPerWeek: 0,
+                });
+              }}
+              data-testid="button-cancel-plan"
+            >
+              Bekor qilish
+            </Button>
+            <Button
+              onClick={() => createPlanMutation.mutate()}
+              disabled={!planForm.name || !planForm.displayName || createPlanMutation.isPending}
+              data-testid="button-save-plan"
+            >
+              {createPlanMutation.isPending ? "Saqlanmoqda..." : "Saqlash"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
