@@ -1718,12 +1718,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const { content } = req.body;
       
-      console.log('[CHAT] Sending message - conversationId:', id, 'senderId:', userId);
       const message = await storage.sendMessage(id, userId, content);
       
       // Create notification for the recipient
       const conversation = await storage.getConversationById(id);
-      console.log('[CHAT] Found conversation:', conversation);
       
       if (conversation) {
         // Determine recipient (the other person in the conversation)
@@ -1731,13 +1729,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? conversation.instructorId 
           : conversation.studentId;
         
-        console.log('[CHAT] Recipient ID:', recipientId);
-        
         // Get sender info for notification message
         const sender = await storage.getUser(userId);
         const senderName = sender ? `${sender.firstName} ${sender.lastName}` : 'Kimdir';
-        
-        console.log('[CHAT] Creating notification for recipient:', recipientId, 'from:', senderName);
         
         // Create notification
         await storage.createNotification({
@@ -1747,15 +1741,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: `${senderName}: ${content.substring(0, 50)}${content.length > 50 ? '...' : ''}`,
           relatedId: id,
         });
-        
-        console.log('[CHAT] Notification created successfully');
-      } else {
-        console.log('[CHAT] Conversation not found, skipping notification');
       }
       
       res.json(message);
     } catch (error: any) {
-      console.error('[CHAT] Error in sendMessage:', error);
       res.status(500).json({ message: error.message });
     }
   });
