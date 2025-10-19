@@ -182,9 +182,52 @@ export async function setupAuth(app: Express) {
   });
 
   app.get("/api/callback", (req, res, next) => {
-    passport.authenticate(`replitauth:${req.hostname}`, {
-      successReturnToOrRedirect: "/",
-      failureRedirect: "/api/login",
+    passport.authenticate(`replitauth:${req.hostname}`, async (err: any, user: any, info: any) => {
+      // Handle authentication errors
+      if (err) {
+        console.error('[OIDC Auth] Authentication error:', err);
+        return next(err);
+      }
+      
+      // Handle authentication failure (e.g., denied consent)
+      if (!user) {
+        console.log('[OIDC Auth] Authentication failed:', info);
+        return res.redirect("/api/login");
+      }
+      
+      req.logIn(user, async (loginErr) => {
+        if (loginErr) {
+          console.error('[OIDC Auth] Login error:', loginErr);
+          return next(loginErr);
+        }
+        
+        try {
+          // SECURITY: Delete all other sessions for this user (enforce single device login)
+          const { db } = await import("./db");
+          const { sql } = await import("drizzle-orm");
+          const userId = user.claims?.sub;
+          const currentSessionId = req.sessionID;
+          
+          if (userId && currentSessionId) {
+            // Find and destroy all sessions for this user except the current one
+            await db.execute(sql`
+              DELETE FROM sessions 
+              WHERE sess::jsonb->'passport'->'user'->'claims'->>'sub' = ${userId}
+              AND sid != ${currentSessionId}
+            `);
+            
+            console.log(`[Session Management] Destroyed old OIDC sessions for user ${userId}, keeping session ${currentSessionId}`);
+          }
+        } catch (sessionError: any) {
+          // Log error but don't fail the login
+          console.error('[Session Management] Error destroying old OIDC sessions:', sessionError);
+        }
+        
+        // Restore successReturnToOrRedirect behavior
+        const returnTo = (req.session as any).returnTo || "/";
+        delete (req.session as any).returnTo;
+        return res.redirect(returnTo);
+      });
     })(req, res, next);
   });
 
