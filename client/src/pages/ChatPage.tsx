@@ -50,12 +50,25 @@ export default function ChatPage() {
         : { studentId: userId };
       
       console.log('Creating conversation with params:', params);
-      return apiRequest('POST', '/api/chat/conversations', params);
+      const response = await apiRequest('POST', '/api/chat/conversations', params);
+      return await response.json();
     },
     onSuccess: (conversation: any) => {
       console.log('Conversation created successfully:', conversation);
+      console.log('Conversation ID:', conversation?.id);
+      console.log('Navigating to:', `/chat/${conversation?.id}`);
       queryClient.invalidateQueries({ queryKey: ['/api/chat/conversations'] });
-      navigate(`/chat/${conversation.id}`);
+      
+      if (conversation && conversation.id) {
+        navigate(`/chat/${conversation.id}`);
+      } else {
+        console.error('Conversation created but no ID returned:', conversation);
+        toast({
+          title: "Xatolik",
+          description: "Suhbat yaratildi, lekin ID topilmadi",
+          variant: "destructive",
+        });
+      }
       setHasTriedToCreate(false);
     },
     onError: (error: any) => {
