@@ -2107,6 +2107,152 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ SUBSCRIPTION MANAGEMENT ROUTES ============
+  // Get user subscriptions
+  app.get('/api/student/subscriptions', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const subscriptions = await storage.getUserSubscriptions(userId);
+      res.json(subscriptions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Instructor: Get subscriptions for their courses
+  app.get('/api/instructor/subscriptions', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const instructorId = req.user.claims.sub;
+      const subscriptions = await storage.getSubscriptionsByInstructor(instructorId);
+      res.json(subscriptions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Instructor: Get expiring subscriptions (7 days)
+  app.get('/api/instructor/subscriptions/expiring', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const instructorId = req.user.claims.sub;
+      const daysBeforeExpiry = parseInt(req.query.days as string) || 7;
+      
+      // Get all subscriptions for instructor's courses
+      const allSubs = await storage.getSubscriptionsByInstructor(instructorId);
+      
+      // Filter expiring subscriptions
+      const now = new Date();
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + daysBeforeExpiry);
+      
+      const expiringSubs = allSubs.filter((item: any) => {
+        const endDate = new Date(item.subscription.endDate);
+        return item.subscription.status === 'active' && 
+               endDate <= futureDate && 
+               endDate > now;
+      });
+      
+      res.json(expiringSubs);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Instructor: Extend subscription
+  app.put('/api/instructor/subscriptions/:id/extend', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { additionalDays } = req.body;
+      
+      if (!additionalDays || additionalDays < 1) {
+        return res.status(400).json({ message: 'additionalDays parametri talab qilinadi va 1dan katta bo\'lishi kerak' });
+      }
+      
+      const updated = await storage.extendSubscription(id, parseInt(additionalDays));
+      
+      // Send notification to student
+      await storage.createNotification({
+        userId: updated.userId,
+        type: 'info',
+        title: 'Obuna muddati uzaytirildi',
+        message: `Sizning obuna muddatingiz ${additionalDays} kunga uzaytirildi`,
+      });
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Get all active subscriptions
+  app.get('/api/admin/subscriptions', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const subscriptions = await storage.getAllActiveSubscriptions();
+      res.json(subscriptions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Get expiring subscriptions
+  app.get('/api/admin/subscriptions/expiring', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const daysBeforeExpiry = parseInt(req.query.days as string) || 7;
+      const subscriptions = await storage.getExpiringSubscriptions(daysBeforeExpiry);
+      res.json(subscriptions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Extend subscription
+  app.put('/api/admin/subscriptions/:id/extend', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { additionalDays } = req.body;
+      
+      if (!additionalDays || additionalDays < 1) {
+        return res.status(400).json({ message: 'additionalDays parametri talab qilinadi va 1dan katta bo\'lishi kerak' });
+      }
+      
+      const updated = await storage.extendSubscription(id, parseInt(additionalDays));
+      
+      // Send notification to student
+      await storage.createNotification({
+        userId: updated.userId,
+        type: 'info',
+        title: 'Obuna muddati uzaytirildi',
+        message: `Sizning obuna muddatingiz ${additionalDays} kunga uzaytirildi`,
+      });
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Update subscription status
+  app.put('/api/admin/subscriptions/:id/status', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      const updated = await storage.updateSubscriptionStatus(id, status);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Check and update expired subscriptions (cron-like endpoint)
+  app.post('/api/admin/subscriptions/check-expired', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      await storage.checkAndUpdateExpiredSubscriptions();
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ============ STRIPE PAYMENT ROUTES ============
   app.post("/api/create-payment-intent", isAuthenticated, async (req: any, res) => {
     try {

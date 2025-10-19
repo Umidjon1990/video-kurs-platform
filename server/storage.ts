@@ -195,6 +195,15 @@ export interface IStorage {
   getSubscriptionPlanByName(name: string): Promise<SubscriptionPlan | undefined>;
   createCoursePlanPricing(pricing: InsertCoursePlanPricing): Promise<CoursePlanPricing>;
   getCoursePlanPricing(courseId: string): Promise<CoursePlanPricing[]>;
+  
+  // User Subscription management
+  getUserSubscriptions(userId: string): Promise<any[]>;
+  getSubscriptionsByInstructor(instructorId: string): Promise<any[]>;
+  getAllActiveSubscriptions(): Promise<any[]>;
+  getExpiringSubscriptions(daysBeforeExpiry: number): Promise<any[]>;
+  extendSubscription(subscriptionId: string, additionalDays: number): Promise<any>;
+  updateSubscriptionStatus(subscriptionId: string, status: string): Promise<any>;
+  checkAndUpdateExpiredSubscriptions(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -715,6 +724,23 @@ export class DatabaseStorage implements IStorage {
       .set({ paymentStatus: status })
       .where(eq(enrollments.id, enrollmentId))
       .returning();
+    
+    // Agar enrollment tasdiqlangan bo'lsa, avtomatik 1 oylik subscription yaratamiz
+    if (status === 'approved' && enrollment.planId) {
+      const startDate = new Date();
+      const endDate = new Date();
+      endDate.setMonth(endDate.getMonth() + 1); // 1 oy qo'shamiz
+
+      await db.insert(userSubscriptions).values({
+        userId: enrollment.userId,
+        courseId: enrollment.courseId,
+        planId: enrollment.planId,
+        enrollmentId: enrollment.id,
+        startDate,
+        endDate,
+        status: 'active',
+      });
+    }
     
     return enrollment;
   }
@@ -1604,6 +1630,165 @@ export class DatabaseStorage implements IStorage {
   
   async getCoursePlanPricing(courseId: string): Promise<CoursePlanPricing[]> {
     return await db.select().from(coursePlanPricing).where(eq(coursePlanPricing.courseId, courseId));
+  }
+  
+  // User Subscription management
+  async getUserSubscriptions(userId: string): Promise<any[]> {
+    const result = await db
+      .select({
+        subscription: userSubscriptions,
+        course: courses,
+        plan: subscriptionPlans,
+      })
+      .from(userSubscriptions)
+      .innerJoin(courses, eq(userSubscriptions.courseId, courses.id))
+      .innerJoin(subscriptionPlans, eq(userSubscriptions.planId, subscriptionPlans.id))
+      .where(eq(userSubscriptions.userId, userId))
+      .orderBy(desc(userSubscriptions.createdAt));
+    
+    return result;
+  }
+  
+  async getSubscriptionsByInstructor(instructorId: string): Promise<any[]> {
+    const result = await db
+      .select({
+        subscription: userSubscriptions,
+        course: courses,
+        plan: subscriptionPlans,
+        user: {
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+          phone: users.phone,
+        },
+      })
+      .from(userSubscriptions)
+      .innerJoin(courses, eq(userSubscriptions.courseId, courses.id))
+      .innerJoin(subscriptionPlans, eq(userSubscriptions.planId, subscriptionPlans.id))
+      .innerJoin(users, eq(userSubscriptions.userId, users.id))
+      .where(eq(courses.instructorId, instructorId))
+      .orderBy(desc(userSubscriptions.endDate));
+    
+    return result;
+  }
+  
+  async getAllActiveSubscriptions(): Promise<any[]> {
+    const result = await db
+      .select({
+        subscription: userSubscriptions,
+        course: courses,
+        plan: subscriptionPlans,
+        user: {
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+          phone: users.phone,
+        },
+      })
+      .from(userSubscriptions)
+      .innerJoin(courses, eq(userSubscriptions.courseId, courses.id))
+      .innerJoin(subscriptionPlans, eq(userSubscriptions.planId, subscriptionPlans.id))
+      .innerJoin(users, eq(userSubscriptions.userId, users.id))
+      .where(eq(userSubscriptions.status, 'active'))
+      .orderBy(desc(userSubscriptions.endDate));
+    
+    return result;
+  }
+  
+  async getExpiringSubscriptions(daysBeforeExpiry: number): Promise<any[]> {
+    const now = new Date();
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + daysBeforeExpiry);
+    
+    const result = await db
+      .select({
+        subscription: userSubscriptions,
+        course: courses,
+        plan: subscriptionPlans,
+        user: {
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+          phone: users.phone,
+        },
+      })
+      .from(userSubscriptions)
+      .innerJoin(courses, eq(userSubscriptions.courseId, courses.id))
+      .innerJoin(subscriptionPlans, eq(userSubscriptions.planId, subscriptionPlans.id))
+      .innerJoin(users, eq(userSubscriptions.userId, users.id))
+      .where(
+        and(
+          eq(userSubscriptions.status, 'active'),
+          sql`${userSubscriptions.endDate} <= ${futureDate}`,
+          sql`${userSubscriptions.endDate} > ${now}`
+        )
+      )
+      .orderBy(userSubscriptions.endDate);
+    
+    return result;
+  }
+  
+  async extendSubscription(subscriptionId: string, additionalDays: number): Promise<any> {
+    // Avval subscriptionni olamiz
+    const [subscription] = await db
+      .select()
+      .from(userSubscriptions)
+      .where(eq(userSubscriptions.id, subscriptionId));
+    
+    if (!subscription) {
+      throw new Error('Subscription not found');
+    }
+    
+    // Yangi endDate ni hisoblaymiz
+    const newEndDate = new Date(subscription.endDate);
+    newEndDate.setDate(newEndDate.getDate() + additionalDays);
+    
+    // Subscription'ni yangilaymiz
+    const [updated] = await db
+      .update(userSubscriptions)
+      .set({
+        endDate: newEndDate,
+        status: 'active', // Avtomatik active qilamiz
+        updatedAt: new Date(),
+      })
+      .where(eq(userSubscriptions.id, subscriptionId))
+      .returning();
+    
+    return updated;
+  }
+  
+  async updateSubscriptionStatus(subscriptionId: string, status: string): Promise<any> {
+    const [updated] = await db
+      .update(userSubscriptions)
+      .set({
+        status,
+        updatedAt: new Date(),
+      })
+      .where(eq(userSubscriptions.id, subscriptionId))
+      .returning();
+    
+    return updated;
+  }
+  
+  async checkAndUpdateExpiredSubscriptions(): Promise<void> {
+    const now = new Date();
+    
+    // Muddati tugagan active subscription'larni topamiz va expired qilamiz
+    await db
+      .update(userSubscriptions)
+      .set({
+        status: 'expired',
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(userSubscriptions.status, 'active'),
+          sql`${userSubscriptions.endDate} < ${now}`
+        )
+      );
   }
 }
 
