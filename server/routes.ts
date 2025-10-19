@@ -192,42 +192,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // File upload endpoint for payment receipts
-  app.post('/api/upload-receipt', isAuthenticated, upload.single('file'), async (req: any, res) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
+  app.post('/api/upload-receipt', isAuthenticated, (req: any, res: any, next: any) => {
+    upload.single('file')(req, res, async (err: any) => {
+      // Handle multer errors
+      if (err) {
+        console.error("Multer error:", err);
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ message: "Fayl hajmi 5MB dan oshmasligi kerak" });
+        }
+        return res.status(400).json({ message: err.message || "Fayl yuklashda xatolik" });
       }
 
-      // Validate file type
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-      if (!allowedTypes.includes(req.file.mimetype)) {
-        return res.status(400).json({ message: "Faqat rasm fayllari (JPG, PNG, WEBP) qabul qilinadi" });
+      try {
+        if (!req.file) {
+          return res.status(400).json({ message: "Fayl tanlanmagan" });
+        }
+
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (!allowedTypes.includes(req.file.mimetype)) {
+          return res.status(400).json({ message: "Faqat rasm fayllari (JPG, PNG, WEBP) qabul qilinadi" });
+        }
+
+        // Validate file size (max 5MB)
+        if (req.file.size > 5 * 1024 * 1024) {
+          return res.status(400).json({ message: "Fayl hajmi 5MB dan oshmasligi kerak" });
+        }
+
+        // SECURITY: Generate safe filename using UUID (no user input)
+        const crypto = await import('crypto');
+        const fileExt = req.file.mimetype.split('/')[1];
+        const safeFileName = `receipt-${crypto.randomUUID()}.${fileExt}`;
+        
+        // Use ObjectStorageService to upload
+        const { ObjectStorageService } = await import('./objectStorage');
+        const objectStorage = new ObjectStorageService();
+        const publicUrl = await objectStorage.uploadFile(
+          req.file.buffer,
+          safeFileName,
+          req.file.mimetype
+        );
+
+        res.json({ url: publicUrl });
+      } catch (error: any) {
+        console.error("Upload error:", error);
+        res.status(500).json({ message: error.message || "Fayl yuklashda xatolik yuz berdi" });
       }
-
-      // Validate file size (max 5MB)
-      if (req.file.size > 5 * 1024 * 1024) {
-        return res.status(400).json({ message: "Fayl hajmi 5MB dan oshmasligi kerak" });
-      }
-
-      // SECURITY: Generate safe filename using UUID (no user input)
-      const crypto = await import('crypto');
-      const fileExt = req.file.mimetype.split('/')[1];
-      const safeFileName = `receipt-${crypto.randomUUID()}.${fileExt}`;
-      
-      // Use ObjectStorageService to upload
-      const { ObjectStorageService } = await import('./objectStorage');
-      const objectStorage = new ObjectStorageService();
-      const publicUrl = await objectStorage.uploadFile(
-        req.file.buffer,
-        safeFileName,
-        req.file.mimetype
-      );
-
-      res.json({ url: publicUrl });
-    } catch (error: any) {
-      console.error("Upload error:", error);
-      res.status(500).json({ message: error.message });
-    }
+    });
   });
 
   // Serve public receipt images

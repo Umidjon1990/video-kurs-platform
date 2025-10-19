@@ -69,7 +69,8 @@ export default function Checkout() {
       });
 
       if (!uploadRes.ok) {
-        throw new Error("Rasm yuklashda xatolik");
+        const errorData = await uploadRes.json().catch(() => ({}));
+        throw new Error(errorData.message || "Rasm yuklashda xatolik");
       }
 
       const { url } = await uploadRes.json();
