@@ -50,7 +50,7 @@ export default function Register() {
 
   const handleRegister = async (data: RegisterFormData) => {
     try {
-      await apiRequest("POST", "/api/auth/register", {
+      const result: any = await apiRequest("POST", "/api/auth/register", {
         phone: data.phone || null,
         email: data.email || null,
         password: data.password,
@@ -60,7 +60,8 @@ export default function Register() {
 
       toast({
         title: "Muvaffaqiyatli!",
-        description: "Ro'yxatdan o'tish amalga oshdi. Endi kirish mumkin.",
+        description: result.message || "Ro'yxatdan o'tish amalga oshdi. Administrator tasdig'ini kutib turing.",
+        duration: 5000,
       });
 
       setLocation("/login");

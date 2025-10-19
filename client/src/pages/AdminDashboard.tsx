@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -21,7 +21,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Users, BookOpen, CreditCard, DollarSign, UserCheck, TrendingUp, Settings } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Users, BookOpen, CreditCard, DollarSign, UserCheck, TrendingUp, Settings, UserPlus, Check, X, Copy } from "lucide-react";
 import { useLocation } from "wouter";
 import type { User } from "@shared/schema";
 import {
@@ -40,6 +51,18 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
+  const [isCreateStudentOpen, setIsCreateStudentOpen] = useState(false);
+  const [newStudent, setNewStudent] = useState({
+    phone: "",
+    email: "",
+    password: "",
+    firstName: "",
+    lastName: "",
+  });
+  const [createdCredentials, setCreatedCredentials] = useState<{
+    login: string;
+    password: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -72,6 +95,11 @@ export default function AdminDashboard() {
     enabled: isAuthenticated,
   });
 
+  const { data: pendingStudents } = useQuery<User[]>({
+    queryKey: ["/api/admin/pending-students"],
+    enabled: isAuthenticated,
+  });
+
   const { data: trends, isLoading: trendsLoading } = useQuery<Array<{
     date: string;
     enrollments: number;
@@ -79,6 +107,72 @@ export default function AdminDashboard() {
   }>>({
     queryKey: ["/api/admin/trends"],
     enabled: isAuthenticated,
+  });
+
+  const createStudentMutation = useMutation({
+    mutationFn: async (data: typeof newStudent) => {
+      return await apiRequest("POST", "/api/admin/create-student", data);
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      setCreatedCredentials(data.credentials);
+      setNewStudent({ phone: "", email: "", password: "", firstName: "", lastName: "" });
+      toast({
+        title: "Muvaffaqiyatli",
+        description: "O'quvchi yaratildi",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Xatolik",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const approveStudentMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("PATCH", `/api/admin/students/${id}/approve`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-students"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      toast({
+        title: "Muvaffaqiyatli",
+        description: "O'quvchi tasdiqlandi",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Xatolik",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const rejectStudentMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("PATCH", `/api/admin/students/${id}/reject`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-students"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "Muvaffaqiyatli",
+        description: "O'quvchi rad etildi",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Xatolik",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const updateRoleMutation = useMutation({
@@ -115,6 +209,18 @@ export default function AdminDashboard() {
         <div className="flex h-16 items-center px-4 gap-4">
           <h1 className="text-2xl font-bold" data-testid="text-admin-title">Admin Paneli</h1>
           <div className="ml-auto flex items-center gap-3">
+            <Button
+              variant="default"
+              onClick={() => {
+                setCreatedCredentials(null);
+                setIsCreateStudentOpen(true);
+              }}
+              data-testid="button-create-student"
+              className="flex items-center gap-2"
+            >
+              <UserPlus className="w-4 h-4" />
+              Yangi O'quvchi
+            </Button>
             <Button
               variant="outline"
               onClick={() => setLocation('/admin/subscription-plans')}
@@ -311,6 +417,68 @@ export default function AdminDashboard() {
           </Card>
         </div>
 
+        {/* Pending Students */}
+        {pendingStudents && pendingStudents.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserCheck className="w-5 h-5" />
+                Kutilayotgan O'quvchilar
+                <Badge variant="default">{pendingStudents.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Ism</TableHead>
+                    <TableHead>Telefon/Email</TableHead>
+                    <TableHead>Ro'yxatdan O'tgan Sana</TableHead>
+                    <TableHead>Amallar</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pendingStudents.map((student) => (
+                    <TableRow key={student.id}>
+                      <TableCell>
+                        {student.firstName} {student.lastName}
+                      </TableCell>
+                      <TableCell>{student.phone || student.email}</TableCell>
+                      <TableCell>
+                        {student.createdAt ? new Date(student.createdAt).toLocaleDateString('uz-UZ') : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => approveStudentMutation.mutate(student.id)}
+                            disabled={approveStudentMutation.isPending}
+                            data-testid={`button-approve-${student.id}`}
+                          >
+                            <Check className="w-4 h-4 mr-1" />
+                            Tasdiqlash
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => rejectStudentMutation.mutate(student.id)}
+                            disabled={rejectStudentMutation.isPending}
+                            data-testid={`button-reject-${student.id}`}
+                          >
+                            <X className="w-4 h-4 mr-1" />
+                            Rad etish
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Users Management */}
         <Card>
           <CardHeader>
@@ -366,6 +534,156 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Create Student Dialog */}
+      <Dialog open={isCreateStudentOpen} onOpenChange={setIsCreateStudentOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Yangi O'quvchi Yaratish</DialogTitle>
+            <DialogDescription>
+              O'quvchi ma'lumotlarini kiriting. Login uchun parol avtomatik yaratiladi.
+            </DialogDescription>
+          </DialogHeader>
+
+          {createdCredentials ? (
+            <div className="space-y-4 py-4">
+              <div className="p-4 bg-muted rounded-md space-y-3">
+                <p className="font-semibold text-sm">O'quvchi muvaffaqiyatli yaratildi!</p>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Login:</span>
+                    <div className="flex items-center gap-2">
+                      <code className="bg-background px-2 py-1 rounded text-sm">
+                        {createdCredentials.login}
+                      </code>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          navigator.clipboard.writeText(createdCredentials.login);
+                          toast({ title: "Nusxalandi!" });
+                        }}
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Parol:</span>
+                    <div className="flex items-center gap-2">
+                      <code className="bg-background px-2 py-1 rounded text-sm">
+                        {createdCredentials.password}
+                      </code>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          navigator.clipboard.writeText(createdCredentials.password);
+                          toast({ title: "Nusxalandi!" });
+                        }}
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Bu ma'lumotlarni o'quvchiga yuboring. Ular login sahifasida foydalanishlari mumkin.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">Ism *</Label>
+                <Input
+                  id="firstName"
+                  placeholder="Ism"
+                  value={newStudent.firstName}
+                  onChange={(e) => setNewStudent({ ...newStudent, firstName: e.target.value })}
+                  data-testid="input-firstname"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Familiya *</Label>
+                <Input
+                  id="lastName"
+                  placeholder="Familiya"
+                  value={newStudent.lastName}
+                  onChange={(e) => setNewStudent({ ...newStudent, lastName: e.target.value })}
+                  data-testid="input-lastname"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Telefon</Label>
+                <Input
+                  id="phone"
+                  placeholder="+998901234567"
+                  value={newStudent.phone}
+                  onChange={(e) => setNewStudent({ ...newStudent, phone: e.target.value })}
+                  data-testid="input-phone"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="email@example.com"
+                  value={newStudent.email}
+                  onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
+                  data-testid="input-email"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Parol *</Label>
+                <Input
+                  id="password"
+                  type="text"
+                  placeholder="Kamida 6 belgidan iborat"
+                  value={newStudent.password}
+                  onChange={(e) => setNewStudent({ ...newStudent, password: e.target.value })}
+                  data-testid="input-password"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                * Telefon yoki Email'dan birini kiritish shart
+              </p>
+            </div>
+          )}
+
+          <DialogFooter>
+            {createdCredentials ? (
+              <Button
+                onClick={() => {
+                  setCreatedCredentials(null);
+                  setIsCreateStudentOpen(false);
+                }}
+                data-testid="button-close-dialog"
+              >
+                Yopish
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCreateStudentOpen(false)}
+                  data-testid="button-cancel"
+                >
+                  Bekor qilish
+                </Button>
+                <Button
+                  onClick={() => createStudentMutation.mutate(newStudent)}
+                  disabled={createStudentMutation.isPending}
+                  data-testid="button-submit"
+                >
+                  {createStudentMutation.isPending ? "Yuklanmoqda..." : "Yaratish"}
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
