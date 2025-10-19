@@ -71,6 +71,12 @@ export default function LearningPage() {
     enabled: !!courseId && isAuthenticated,
   });
 
+  // Check user's subscription status for this course
+  const { data: userSubscriptions } = useQuery<any[]>({
+    queryKey: ["/api/student/subscriptions"],
+    enabled: isAuthenticated,
+  });
+
   const { data: testQuestions } = useQuery<any[]>({
     queryKey: ["/api/tests", testDialog.testId, "questions"],
     enabled: !!testDialog.testId && testDialog.open,
@@ -228,7 +234,19 @@ export default function LearningPage() {
               ) : (
                 lessons?.map((lesson) => {
                   const isEnrolled = enrollment?.paymentStatus === 'confirmed' || enrollment?.paymentStatus === 'approved';
-                  const isLocked = !lesson.isDemo && !isEnrolled;
+                  
+                  // Check if subscription is active for this course
+                  const courseSubscription = userSubscriptions?.find(
+                    (sub: any) => sub.course.id === courseId
+                  );
+                  // Check both status AND endDate to ensure real-time expiration
+                  const now = new Date();
+                  const endDate = courseSubscription ? new Date(courseSubscription.subscription.endDate) : null;
+                  const hasActiveSubscription = courseSubscription?.subscription.status === 'active' && 
+                                                endDate && endDate > now;
+                  
+                  // Lock lesson if not demo AND (not enrolled OR subscription expired)
+                  const isLocked = !lesson.isDemo && (!isEnrolled || !hasActiveSubscription);
                   
                   return (
                     <div
@@ -276,20 +294,60 @@ export default function LearningPage() {
           {currentLesson ? (
             (() => {
               const isEnrolled = enrollment?.paymentStatus === 'confirmed' || enrollment?.paymentStatus === 'approved';
-              const isLocked = !currentLesson.isDemo && !isEnrolled;
+              
+              // Check if subscription is active for this course
+              const courseSubscription = userSubscriptions?.find(
+                (sub: any) => sub.course.id === courseId
+              );
+              // Check both status AND endDate to ensure real-time expiration
+              const now = new Date();
+              const endDate = courseSubscription ? new Date(courseSubscription.subscription.endDate) : null;
+              const hasActiveSubscription = courseSubscription?.subscription.status === 'active' && 
+                                            endDate && endDate > now;
+              
+              // Lock lesson if not demo AND (not enrolled OR subscription expired)
+              const isLocked = !currentLesson.isDemo && (!isEnrolled || !hasActiveSubscription);
               
               if (isLocked) {
+                // Check if subscription expired
+                const subscriptionExpired = isEnrolled && !hasActiveSubscription;
+                
                 return (
                   <Card>
                     <CardContent className="p-12 text-center">
                       <Lock className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-                      <h3 className="text-xl font-semibold mb-2">Bu dars qulflangan</h3>
-                      <p className="text-muted-foreground mb-4">
-                        Bu darsni ko'rish uchun kursni sotib oling
-                      </p>
-                      <Button onClick={() => window.history.back()}>
-                        Orqaga
-                      </Button>
+                      {subscriptionExpired ? (
+                        <>
+                          <h3 className="text-xl font-semibold mb-2">Obuna muddati tugagan</h3>
+                          <p className="text-muted-foreground mb-4">
+                            Sizning obuna muddatingiz tugagan. Kursni davom ettirish uchun o'qituvchi bilan bog'laning.
+                          </p>
+                          {courseSubscription && (
+                            <p className="text-sm text-destructive mb-4">
+                              Tugash sanasi: {new Date(courseSubscription.subscription.endDate).toLocaleDateString('uz-UZ')}
+                            </p>
+                          )}
+                          <div className="flex gap-2 justify-center">
+                            <Button onClick={() => setLocation("/chat")} variant="default">
+                              <MessageCircle className="w-4 h-4 mr-2" />
+                              O'qituvchiga xabar
+                            </Button>
+                            <Button onClick={() => window.history.back()} variant="outline">
+                              Orqaga
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <h3 className="text-xl font-semibold mb-2">Bu dars qulflangan</h3>
+                          <p className="text-muted-foreground mb-4">
+                            Bu darsni ko'rish uchun kursni sotib oling
+                          </p>
+                          <Button onClick={() => window.history.back()}>
+                            Orqaga
+                          </Button>
+                        </>
+                      )}
                     </CardContent>
                   </Card>
                 );

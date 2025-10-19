@@ -1646,6 +1646,15 @@ export class DatabaseStorage implements IStorage {
       .where(eq(userSubscriptions.userId, userId))
       .orderBy(desc(userSubscriptions.createdAt));
     
+    // Update expired subscriptions in real-time before returning
+    const now = new Date();
+    for (const item of result) {
+      if (item.subscription.status === 'active' && new Date(item.subscription.endDate) < now) {
+        await this.updateSubscriptionStatus(item.subscription.id, 'expired');
+        item.subscription.status = 'expired'; // Update in-memory for immediate response
+      }
+    }
+    
     return result;
   }
   

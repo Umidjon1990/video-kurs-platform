@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, Download, Megaphone, Users, User, MessageCircle, TrendingUp, Award, Activity, Settings } from "lucide-react";
+import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, Download, Megaphone, Users, User, MessageCircle, TrendingUp, Award, Activity, Settings, UserCheck } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NotificationBell } from "@/components/NotificationBell";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -604,6 +604,14 @@ export default function InstructorDashboard() {
             >
               <Settings className="w-4 h-4 mr-2" />
               Sozlamalar
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => window.location.href = "/instructor/subscriptions"}
+              data-testid="button-subscriptions"
+            >
+              <UserCheck className="w-4 h-4 mr-2" />
+              Obunalar
             </Button>
             <Button
               variant="outline"
