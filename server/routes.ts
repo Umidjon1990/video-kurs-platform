@@ -332,7 +332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Student Management APIs
   app.post('/api/admin/create-student', isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const { phone, email, password, firstName, lastName } = req.body;
+      const { phone, email, password, firstName, lastName, courseId } = req.body;
       
       // Server-side validation
       const createStudentSchema = z.object({
@@ -341,12 +341,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         password: z.string().min(6, 'Parol kamida 6 belgidan iborat bo\'lishi kerak'),
         firstName: z.string().min(1, 'Ism kiritish shart'),
         lastName: z.string().min(1, 'Familiya kiritish shart'),
+        courseId: z.string().optional(),
       }).refine(
         (data) => data.phone || data.email,
         { message: 'Telefon yoki email kiritish shart' }
       );
       
-      const validatedData = createStudentSchema.parse({ phone, email, password, firstName, lastName });
+      const validatedData = createStudentSchema.parse({ phone, email, password, firstName, lastName, courseId });
       
       // Check if user exists
       if (validatedData.phone) {
@@ -366,19 +367,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash password
       const passwordHash = await bcrypt.hash(validatedData.password, 10);
       
-      // Create user with active status (admin-created users are pre-approved)
-      const [newUser] = await db
-        .insert(users)
-        .values({
-          phone: validatedData.phone || null,
-          email: validatedData.email || null,
-          passwordHash,
-          firstName: validatedData.firstName,
-          lastName: validatedData.lastName,
-          role: 'student',
-          status: 'active', // Admin-created users are automatically active
-        })
-        .returning();
+      // Execute all operations in a transaction to ensure data consistency
+      const newUser = await db.transaction(async (tx) => {
+        // Create user with active status (admin-created users are pre-approved)
+        const [createdUser] = await tx
+          .insert(users)
+          .values({
+            phone: validatedData.phone || null,
+            email: validatedData.email || null,
+            passwordHash,
+            firstName: validatedData.firstName,
+            lastName: validatedData.lastName,
+            role: 'student',
+            status: 'active', // Admin-created users are automatically active
+          })
+          .returning();
+        
+        // If courseId is provided, create enrollment and subscription
+        if (validatedData.courseId) {
+          // Get the first subscription plan as default
+          const [defaultPlan] = await tx
+            .select()
+            .from(subscriptionPlans)
+            .limit(1);
+          
+          if (!defaultPlan) {
+            throw new Error('Hech qanday tarif topilmadi. Avval tariflar yarating.');
+          }
+          
+          // Create enrollment with approved payment status (admin-created enrollments are immediately approved)
+          const [enrollment] = await tx
+            .insert(enrollments)
+            .values({
+              userId: createdUser.id,
+              courseId: validatedData.courseId,
+              planId: defaultPlan.id,
+              paymentStatus: 'approved', // Admin-created enrollments are immediately approved
+            })
+            .returning();
+          
+          // Create 30-day subscription
+          const startDate = new Date();
+          const endDate = new Date();
+          endDate.setDate(endDate.getDate() + 30);
+          
+          await tx
+            .insert(userSubscriptions)
+            .values({
+              userId: createdUser.id,
+              courseId: validatedData.courseId,
+              planId: defaultPlan.id,
+              enrollmentId: enrollment.id,
+              status: 'active',
+              startDate,
+              endDate,
+            });
+        }
+        
+        return createdUser;
+      });
       
       // Remove password from response
       const { passwordHash: _, ...userWithoutPassword } = newUser;
