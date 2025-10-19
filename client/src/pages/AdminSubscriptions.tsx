@@ -19,11 +19,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, AlertCircle, ArrowLeft } from "lucide-react";
+import { Calendar, Clock, AlertCircle, ArrowLeft, MessageCircle, Trash2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { format, differenceInDays } from "date-fns";
 import { uz } from "date-fns/locale";
@@ -32,6 +42,7 @@ export default function AdminSubscriptions() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [extendDialogOpen, setExtendDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedSubscription, setSelectedSubscription] = useState<any>(null);
   const [additionalDays, setAdditionalDays] = useState("");
 
@@ -69,9 +80,41 @@ export default function AdminSubscriptions() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/admin/subscriptions/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/subscriptions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/subscriptions/expiring"] });
+      toast({
+        title: "Muvaffaqiyatli",
+        description: "Obuna bekor qilindi",
+      });
+      setDeleteDialogOpen(false);
+      setSelectedSubscription(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Xatolik",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleExtendClick = (subscription: any) => {
     setSelectedSubscription(subscription);
     setExtendDialogOpen(true);
+  };
+
+  const handleDeleteClick = (subscription: any) => {
+    setSelectedSubscription(subscription);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleMessageClick = (userId: string) => {
+    setLocation(`/chat?userId=${userId}`);
   };
 
   const handleExtendSubmit = () => {
@@ -89,6 +132,12 @@ export default function AdminSubscriptions() {
       id: selectedSubscription.subscription.id,
       days,
     });
+  };
+
+  const handleDeleteConfirm = () => {
+    if (selectedSubscription) {
+      deleteMutation.mutate(selectedSubscription.subscription.id);
+    }
   };
 
   const getDaysRemaining = (endDate: string) => {
@@ -193,15 +242,32 @@ export default function AdminSubscriptions() {
                         </TableCell>
                         <TableCell>{getStatusBadge(item.subscription.status)}</TableCell>
                         <TableCell>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleExtendClick(item)}
-                            data-testid={`button-extend-${item.subscription.id}`}
-                          >
-                            <Clock className="w-4 h-4 mr-2" />
-                            Uzaytirish
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleMessageClick(item.user.id)}
+                              data-testid={`button-message-${item.subscription.id}`}
+                            >
+                              <MessageCircle className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleExtendClick(item)}
+                              data-testid={`button-extend-${item.subscription.id}`}
+                            >
+                              <Clock className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDeleteClick(item)}
+                              data-testid={`button-delete-${item.subscription.id}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -252,15 +318,32 @@ export default function AdminSubscriptions() {
                       </TableCell>
                       <TableCell>{getStatusBadge(item.subscription.status)}</TableCell>
                       <TableCell>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleExtendClick(item)}
-                          data-testid={`button-extend-all-${item.subscription.id}`}
-                        >
-                          <Clock className="w-4 h-4 mr-2" />
-                          Uzaytirish
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleMessageClick(item.user.id)}
+                            data-testid={`button-message-all-${item.subscription.id}`}
+                          >
+                            <MessageCircle className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleExtendClick(item)}
+                            data-testid={`button-extend-all-${item.subscription.id}`}
+                          >
+                            <Clock className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDeleteClick(item)}
+                            data-testid={`button-delete-all-${item.subscription.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -338,6 +421,40 @@ export default function AdminSubscriptions() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Obunani bekor qilishni tasdiqlang</AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedSubscription && (
+                <div className="mt-4 space-y-2">
+                  <p>
+                    Siz <strong>{selectedSubscription.user.firstName} {selectedSubscription.user.lastName}</strong> 
+                    ning <strong>{selectedSubscription.course.title}</strong> kursidagi obunasini bekor qilmoqchisiz.
+                  </p>
+                  <p className="text-destructive font-medium mt-4">
+                    Bu amalni ortga qaytarib bo'lmaydi. Talaba kursga kirishni yo'qotadi.
+                  </p>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete">
+              Bekor qilish
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete"
+            >
+              {deleteMutation.isPending ? "O'chirilmoqda..." : "Ha, o'chirish"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
