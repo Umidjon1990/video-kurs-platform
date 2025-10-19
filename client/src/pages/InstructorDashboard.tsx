@@ -144,6 +144,12 @@ export default function InstructorDashboard() {
     enabled: isAuthenticated,
   });
 
+  const { data: unreadCount } = useQuery<{ count: number }>({
+    queryKey: ["/api/chat/unread-count"],
+    enabled: isAuthenticated,
+    refetchInterval: 10000, // Poll every 10 seconds
+  });
+
   const { data: lessons } = useQuery<Lesson[]>({
     queryKey: ["/api/instructor/courses", selectedCourse?.id, "lessons"],
     enabled: !!selectedCourse,
@@ -617,9 +623,15 @@ export default function InstructorDashboard() {
               variant="outline"
               onClick={() => window.location.href = "/chat"}
               data-testid="button-chat"
+              className="relative"
             >
               <MessageCircle className="w-4 h-4 mr-2" />
               Chat
+              {unreadCount && unreadCount.count > 0 && (
+                <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
+                  {unreadCount.count > 9 ? '9+' : unreadCount.count}
+                </span>
+              )}
             </Button>
             <NotificationBell 
               onNotificationAction={(notification) => {
