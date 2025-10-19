@@ -1769,6 +1769,19 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
   
+  async cancelSubscription(subscriptionId: string): Promise<any> {
+    const [updated] = await db
+      .update(userSubscriptions)
+      .set({
+        status: 'cancelled',
+        updatedAt: new Date(),
+      })
+      .where(eq(userSubscriptions.id, subscriptionId))
+      .returning();
+    
+    return updated;
+  }
+  
   async updateSubscriptionStatus(subscriptionId: string, status: string): Promise<any> {
     const [updated] = await db
       .update(userSubscriptions)

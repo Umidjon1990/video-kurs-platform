@@ -2168,6 +2168,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Instructor: Cancel subscription
+  app.delete('/api/instructor/subscriptions/:id', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      const updated = await storage.cancelSubscription(id);
+      
+      // Send notification to student
+      await storage.createNotification({
+        userId: updated.userId,
+        type: 'warning',
+        title: 'Obuna bekor qilindi',
+        message: 'Sizning obunangiz bekor qilindi. Qo\'shimcha ma\'lumot uchun o\'qituvchi bilan bog\'laning',
+      });
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Instructor: Extend subscription
   app.put('/api/instructor/subscriptions/:id/extend', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
@@ -2210,6 +2231,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const daysBeforeExpiry = parseInt(req.query.days as string) || 7;
       const subscriptions = await storage.getExpiringSubscriptions(daysBeforeExpiry);
       res.json(subscriptions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Cancel subscription
+  app.delete('/api/admin/subscriptions/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const updated = await storage.cancelSubscription(id);
+      
+      // Send notification to student
+      await storage.createNotification({
+        userId: updated.userId,
+        type: 'warning',
+        title: 'Obuna bekor qilindi',
+        message: 'Sizning obunangiz bekor qilindi. Qo\'shimcha ma\'lumot uchun admin bilan bog\'laning',
+      });
+      
+      res.json(updated);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
