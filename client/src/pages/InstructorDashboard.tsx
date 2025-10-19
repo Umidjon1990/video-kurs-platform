@@ -656,6 +656,9 @@ export default function InstructorDashboard() {
                       variant: "default"
                     });
                   }
+                } else if (notification.type === 'chat_message' && notification.relatedId) {
+                  // Navigate to chat with conversation ID
+                  window.location.href = `/chat/${notification.relatedId}`;
                 }
               }}
             />

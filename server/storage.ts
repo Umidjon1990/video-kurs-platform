@@ -153,6 +153,7 @@ export interface IStorage {
   
   // Chat operations (Private Messaging)
   getOrCreateConversation(studentId: string, instructorId: string): Promise<any>;
+  getConversationById(conversationId: string): Promise<any>;
   getConversations(userId: string, role: string): Promise<any[]>;
   sendMessage(conversationId: string, senderId: string, content: string): Promise<any>;
   getMessages(conversationId: string): Promise<any[]>;
@@ -959,6 +960,15 @@ export class DatabaseStorage implements IStorage {
       .insert(conversations)
       .values({ studentId, instructorId })
       .returning();
+    
+    return conversation;
+  }
+
+  async getConversationById(conversationId: string): Promise<any> {
+    const [conversation] = await db
+      .select()
+      .from(conversations)
+      .where(eq(conversations.id, conversationId));
     
     return conversation;
   }

@@ -113,7 +113,14 @@ export default function StudentCourses() {
                 </span>
               )}
             </Button>
-            <NotificationBell />
+            <NotificationBell 
+              onNotificationAction={(notification) => {
+                if (notification.type === 'chat_message' && notification.relatedId) {
+                  // Navigate to chat with conversation ID
+                  setLocation(`/chat/${notification.relatedId}`);
+                }
+              }}
+            />
             <Button
               variant="outline"
               onClick={() => window.location.href = "/api/logout"}

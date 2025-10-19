@@ -1719,6 +1719,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { content } = req.body;
       
       const message = await storage.sendMessage(id, userId, content);
+      
+      // Create notification for the recipient
+      const conversation = await storage.getConversationById(id);
+      if (conversation) {
+        // Determine recipient (the other person in the conversation)
+        const recipientId = conversation.studentId === userId 
+          ? conversation.instructorId 
+          : conversation.studentId;
+        
+        // Get sender info for notification message
+        const sender = await storage.getUser(userId);
+        const senderName = sender ? `${sender.firstName} ${sender.lastName}` : 'Kimdir';
+        
+        // Create notification
+        await storage.createNotification({
+          userId: recipientId,
+          type: 'chat_message',
+          title: 'Yangi xabar',
+          message: `${senderName}: ${content.substring(0, 50)}${content.length > 50 ? '...' : ''}`,
+          relatedId: id,
+        });
+      }
+      
       res.json(message);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
