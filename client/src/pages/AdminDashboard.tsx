@@ -58,6 +58,7 @@ export default function AdminDashboard() {
     password: "",
     firstName: "",
     lastName: "",
+    courseId: "",
   });
   const [createdCredentials, setCreatedCredentials] = useState<{
     login: string;
@@ -100,6 +101,11 @@ export default function AdminDashboard() {
     enabled: isAuthenticated,
   });
 
+  const { data: courses } = useQuery<Array<{ id: string; title: string; }>>({
+    queryKey: ["/api/courses"],
+    enabled: isAuthenticated,
+  });
+
   const { data: trends, isLoading: trendsLoading } = useQuery<Array<{
     date: string;
     enrollments: number;
@@ -117,7 +123,7 @@ export default function AdminDashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       setCreatedCredentials(data.credentials);
-      setNewStudent({ phone: "", email: "", password: "", firstName: "", lastName: "" });
+      setNewStudent({ phone: "", email: "", password: "", firstName: "", lastName: "", courseId: "" });
       toast({
         title: "Muvaffaqiyatli",
         description: "O'quvchi yaratildi",
@@ -645,6 +651,27 @@ export default function AdminDashboard() {
                   onChange={(e) => setNewStudent({ ...newStudent, password: e.target.value })}
                   data-testid="input-password"
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="course">Kursni tanlang (ixtiyoriy)</Label>
+                <Select
+                  value={newStudent.courseId}
+                  onValueChange={(value) => setNewStudent({ ...newStudent, courseId: value })}
+                >
+                  <SelectTrigger id="course" data-testid="select-course">
+                    <SelectValue placeholder="Kursni tanlang" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {courses?.map((course) => (
+                      <SelectItem key={course.id} value={course.id}>
+                        {course.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Agar kurs tanlasangiz, o'quvchi avtomatik ravishda shu kursga yoziladi.
+                </p>
               </div>
               <p className="text-xs text-muted-foreground">
                 * Telefon yoki Email'dan birini kiritish shart
