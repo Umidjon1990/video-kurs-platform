@@ -146,6 +146,18 @@ export default function AdminSubscriptions() {
     return differenceInDays(end, now);
   };
 
+  const isExpired = (endDate: string) => {
+    return new Date(endDate) < new Date();
+  };
+
+  const handleReactivate = (subscription: any) => {
+    // 30 kun (1 oy) qo'shamiz
+    extendMutation.mutate({
+      id: subscription.subscription.id,
+      days: 30,
+    });
+  };
+
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
       active: { label: "Faol", variant: "default" },
@@ -302,51 +314,72 @@ export default function AdminSubscriptions() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {allSubscriptions.map((item: any) => (
-                    <TableRow key={item.subscription.id} data-testid={`row-subscription-${item.subscription.id}`}>
-                      <TableCell>
-                        {item.user.firstName} {item.user.lastName}
-                        <div className="text-sm text-muted-foreground">{item.user.email}</div>
-                      </TableCell>
-                      <TableCell>{item.course.title}</TableCell>
-                      <TableCell>{item.plan.displayName}</TableCell>
-                      <TableCell>
-                        {format(new Date(item.subscription.startDate), "dd MMM yyyy", { locale: uz })}
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(item.subscription.endDate), "dd MMM yyyy", { locale: uz })}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(item.subscription.status)}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleMessageClick(item.user.id)}
-                            data-testid={`button-message-all-${item.subscription.id}`}
-                          >
-                            <MessageCircle className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleExtendClick(item)}
-                            data-testid={`button-extend-all-${item.subscription.id}`}
-                          >
-                            <Clock className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => handleDeleteClick(item)}
-                            data-testid={`button-delete-all-${item.subscription.id}`}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {allSubscriptions.map((item: any) => {
+                    const expired = isExpired(item.subscription.endDate);
+                    return (
+                      <TableRow 
+                        key={item.subscription.id} 
+                        data-testid={`row-subscription-${item.subscription.id}`}
+                        className={expired ? "bg-destructive/10" : ""}
+                      >
+                        <TableCell>
+                          {item.user.firstName} {item.user.lastName}
+                          <div className="text-sm text-muted-foreground">{item.user.email}</div>
+                        </TableCell>
+                        <TableCell>{item.course.title}</TableCell>
+                        <TableCell>{item.plan.displayName}</TableCell>
+                        <TableCell>
+                          {format(new Date(item.subscription.startDate), "dd MMM yyyy", { locale: uz })}
+                        </TableCell>
+                        <TableCell>
+                          <span className={expired ? "text-destructive font-medium" : ""}>
+                            {format(new Date(item.subscription.endDate), "dd MMM yyyy", { locale: uz })}
+                          </span>
+                        </TableCell>
+                        <TableCell>{getStatusBadge(item.subscription.status)}</TableCell>
+                        <TableCell>
+                          {expired ? (
+                            <Button
+                              size="sm"
+                              variant="default"
+                              onClick={() => handleReactivate(item)}
+                              data-testid={`button-reactivate-all-${item.subscription.id}`}
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                            >
+                              Qayta faollashtirish (1 oy)
+                            </Button>
+                          ) : (
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleMessageClick(item.user.id)}
+                                data-testid={`button-message-all-${item.subscription.id}`}
+                              >
+                                <MessageCircle className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleExtendClick(item)}
+                                data-testid={`button-extend-all-${item.subscription.id}`}
+                              >
+                                <Clock className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleDeleteClick(item)}
+                                data-testid={`button-delete-all-${item.subscription.id}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}
