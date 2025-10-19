@@ -16,10 +16,14 @@ import { formatDistanceToNow } from "date-fns";
 export default function ChatPage() {
   const { user } = useAuth();
   const { conversationId } = useParams();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const { toast } = useToast();
   const [messageContent, setMessageContent] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Extract userId from URL query parameters
+  const searchParams = new URLSearchParams(location.split('?')[1] || '');
+  const userIdParam = searchParams.get('userId');
 
   // Fetch conversations
   const { data: conversations, isLoading: isLoadingConversations } = useQuery<any[]>({
@@ -32,6 +36,29 @@ export default function ChatPage() {
     queryKey: ['/api/chat/conversations', conversationId, 'messages'],
     enabled: !!conversationId,
     refetchInterval: 5000, // Poll every 5 seconds for real-time feel
+  });
+
+  // Create or get conversation mutation
+  const createConversationMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      // Determine which parameter to send based on current user role
+      const params = user?.role === 'student' 
+        ? { instructorId: userId }
+        : { studentId: userId };
+      
+      return apiRequest('POST', '/api/chat/conversations', params);
+    },
+    onSuccess: (conversation: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/chat/conversations'] });
+      navigate(`/chat/${conversation.id}`);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Xatolik",
+        description: error.message || "Suhbat yaratishda xatolik yuz berdi",
+        variant: "destructive",
+      });
+    },
   });
 
   // Send message mutation
@@ -53,6 +80,13 @@ export default function ChatPage() {
       });
     },
   });
+
+  // Handle userId parameter - create or get conversation
+  useEffect(() => {
+    if (userIdParam && user && !conversationId) {
+      createConversationMutation.mutate(userIdParam);
+    }
+  }, [userIdParam, user, conversationId]);
 
   // Mark messages as read when conversation is opened
   useEffect(() => {
