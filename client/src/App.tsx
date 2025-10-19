@@ -13,7 +13,9 @@ import AdminDashboard from "@/pages/AdminDashboard";
 import AdminPayments from "@/pages/AdminPayments";
 import AdminCMSPage from "@/pages/AdminCMSPage";
 import AdminSubscriptionPlansPage from "@/pages/AdminSubscriptionPlansPage";
+import AdminSubscriptions from "@/pages/AdminSubscriptions";
 import InstructorDashboard from "@/pages/InstructorDashboard";
+import InstructorSubscriptions from "@/pages/InstructorSubscriptions";
 import StudentCourses from "@/pages/StudentCourses";
 import StudentResults from "@/pages/StudentResults";
 import LearningPage from "@/pages/LearningPage";
@@ -52,6 +54,7 @@ function Router() {
               <Route path="/admin/payments" component={AdminPayments} />
               <Route path="/admin/cms" component={AdminCMSPage} />
               <Route path="/admin/subscription-plans" component={AdminSubscriptionPlansPage} />
+              <Route path="/admin/subscriptions" component={AdminSubscriptions} />
             </>
           )}
           
@@ -59,6 +62,7 @@ function Router() {
           {user?.role === 'instructor' && (
             <>
               <Route path="/" component={InstructorDashboard} />
+              <Route path="/instructor/subscriptions" component={InstructorSubscriptions} />
               <Route path="/chat" component={ChatPage} />
               <Route path="/chat/:conversationId" component={ChatPage} />
             </>

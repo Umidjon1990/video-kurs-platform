@@ -125,6 +125,15 @@ export default function AdminDashboard() {
               Tariflar
             </Button>
             <Button
+              variant="outline"
+              onClick={() => setLocation('/admin/subscriptions')}
+              data-testid="button-subscriptions"
+              className="flex items-center gap-2"
+            >
+              <UserCheck className="w-4 h-4" />
+              Obunalar
+            </Button>
+            <Button
               variant="default"
               onClick={() => setLocation('/admin/cms')}
               data-testid="button-cms"
