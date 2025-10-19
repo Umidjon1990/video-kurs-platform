@@ -33,6 +33,7 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   role: varchar("role", { length: 20 }).notNull().default('student'), // admin, instructor, student
+  status: varchar("status", { length: 20 }).notNull().default('active'), // pending, active, rejected
   // Dual-auth fields
   phone: varchar("phone").unique(), // Telefon raqam (login uchun)
   passwordHash: varchar("password_hash"), // Hashed password

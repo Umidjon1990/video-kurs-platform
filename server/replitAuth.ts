@@ -134,6 +134,15 @@ export async function setupAuth(app: Express) {
           return done(null, false, { message: 'Parol sozlanmagan' });
         }
         
+        // Check user status
+        if (user.status === 'pending') {
+          return done(null, false, { message: 'Akkauntingiz administratorning tasdig\'ini kutmoqda' });
+        }
+        
+        if (user.status === 'rejected') {
+          return done(null, false, { message: 'Akkauntingiz rad etilgan. Iltimos, administrator bilan bog\'laning' });
+        }
+        
         // Compare password
         const isMatch = await bcrypt.compare(password, user.passwordHash);
         if (!isMatch) {

@@ -142,7 +142,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash password
       const passwordHash = await bcrypt.hash(validatedData.password, 10);
       
-      // Create user
+      // Create user with pending status (requires admin approval)
       const [newUser] = await db
         .insert(users)
         .values({
@@ -152,13 +152,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           firstName: validatedData.firstName || null,
           lastName: validatedData.lastName || null,
           role: 'student', // Default to student
+          status: 'pending', // Requires admin approval
         })
         .returning();
       
       // Remove password from response
       const { passwordHash: _, ...userWithoutPassword } = newUser;
       
-      res.json({ message: 'Ro\'yxatdan o\'tish muvaffaqiyatli', user: userWithoutPassword });
+      res.json({ message: 'Ro\'yxatdan o\'tish muvaffaqiyatli! Administrator tasdig\'ini kutib turing.', user: userWithoutPassword });
     } catch (error: any) {
       console.error('Register error:', error);
       if (error instanceof z.ZodError) {
@@ -323,6 +324,144 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { role } = req.body;
       const user = await storage.updateUserRole(userId, role);
       res.json(user);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Student Management APIs
+  app.post('/api/admin/create-student', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { phone, email, password, firstName, lastName } = req.body;
+      
+      // Server-side validation
+      const createStudentSchema = z.object({
+        phone: z.string().optional(),
+        email: z.string().email().optional(),
+        password: z.string().min(6, 'Parol kamida 6 belgidan iborat bo\'lishi kerak'),
+        firstName: z.string().min(1, 'Ism kiritish shart'),
+        lastName: z.string().min(1, 'Familiya kiritish shart'),
+      }).refine(
+        (data) => data.phone || data.email,
+        { message: 'Telefon yoki email kiritish shart' }
+      );
+      
+      const validatedData = createStudentSchema.parse({ phone, email, password, firstName, lastName });
+      
+      // Check if user exists
+      if (validatedData.phone) {
+        const existingUser = await storage.getUserByPhoneOrEmail(validatedData.phone);
+        if (existingUser) {
+          return res.status(400).json({ message: 'Bu telefon raqam allaqachon ro\'yxatdan o\'tgan' });
+        }
+      }
+      
+      if (validatedData.email) {
+        const existingUser = await storage.getUserByPhoneOrEmail(validatedData.email);
+        if (existingUser) {
+          return res.status(400).json({ message: 'Bu email allaqachon ro\'yxatdan o\'tgan' });
+        }
+      }
+      
+      // Hash password
+      const passwordHash = await bcrypt.hash(validatedData.password, 10);
+      
+      // Create user with active status (admin-created users are pre-approved)
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          phone: validatedData.phone || null,
+          email: validatedData.email || null,
+          passwordHash,
+          firstName: validatedData.firstName,
+          lastName: validatedData.lastName,
+          role: 'student',
+          status: 'active', // Admin-created users are automatically active
+        })
+        .returning();
+      
+      // Remove password from response
+      const { passwordHash: _, ...userWithoutPassword } = newUser;
+      
+      // Return user with login credentials
+      res.json({ 
+        message: 'O\'quvchi muvaffaqiyatli yaratildi',
+        user: userWithoutPassword,
+        credentials: {
+          login: validatedData.phone || validatedData.email,
+          password: validatedData.password
+        }
+      });
+    } catch (error: any) {
+      console.error('Create student error:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/admin/pending-students', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const pendingStudents = await db
+        .select()
+        .from(users)
+        .where(and(
+          eq(users.role, 'student'),
+          eq(users.status, 'pending')
+        ))
+        .orderBy(desc(users.createdAt));
+      
+      // Remove passwords from response
+      const studentsWithoutPasswords = pendingStudents.map(({ passwordHash, ...user }) => user);
+      
+      res.json(studentsWithoutPasswords);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch('/api/admin/students/:id/approve', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [updatedUser] = await db
+        .update(users)
+        .set({ status: 'active', updatedAt: new Date() })
+        .where(eq(users.id, id))
+        .returning();
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: 'O\'quvchi topilmadi' });
+      }
+      
+      // Remove password from response
+      const { passwordHash: _, ...userWithoutPassword } = updatedUser;
+      
+      res.json({ message: 'O\'quvchi tasdiqlandi', user: userWithoutPassword });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch('/api/admin/students/:id/reject', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [updatedUser] = await db
+        .update(users)
+        .set({ status: 'rejected', updatedAt: new Date() })
+        .where(eq(users.id, id))
+        .returning();
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: 'O\'quvchi topilmadi' });
+      }
+      
+      // Remove password from response
+      const { passwordHash: _, ...userWithoutPassword } = updatedUser;
+      
+      res.json({ message: 'O\'quvchi rad etildi', user: userWithoutPassword });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
