@@ -22,11 +22,11 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [hasTriedToCreate, setHasTriedToCreate] = useState(false);
   
-  // Extract userId from URL query parameters (check both userId and userid for robustness)
-  const searchParams = new URLSearchParams(location.split('?')[1] || '');
+  // Extract userId from URL query parameters (use window.location.search for query params)
+  const searchParams = new URLSearchParams(window.location.search);
   const userIdParam = searchParams.get('userId') || searchParams.get('userid');
   
-  console.log('ChatPage loaded - location:', location, 'userIdParam:', userIdParam, 'conversationId:', conversationId);
+  console.log('ChatPage loaded - location:', location, 'window.location.search:', window.location.search, 'userIdParam:', userIdParam, 'conversationId:', conversationId);
 
   // Fetch conversations
   const { data: conversations, isLoading: isLoadingConversations } = useQuery<any[]>({
