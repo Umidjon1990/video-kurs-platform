@@ -20,6 +20,7 @@ export default function ChatPage() {
   const { toast } = useToast();
   const [messageContent, setMessageContent] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [hasTriedToCreate, setHasTriedToCreate] = useState(false);
   
   // Extract userId from URL query parameters
   const searchParams = new URLSearchParams(location.split('?')[1] || '');
@@ -46,18 +47,23 @@ export default function ChatPage() {
         ? { instructorId: userId }
         : { studentId: userId };
       
+      console.log('Creating conversation with params:', params);
       return apiRequest('POST', '/api/chat/conversations', params);
     },
     onSuccess: (conversation: any) => {
+      console.log('Conversation created successfully:', conversation);
       queryClient.invalidateQueries({ queryKey: ['/api/chat/conversations'] });
       navigate(`/chat/${conversation.id}`);
+      setHasTriedToCreate(false);
     },
     onError: (error: any) => {
+      console.error('Error creating conversation:', error);
       toast({
         title: "Xatolik",
         description: error.message || "Suhbat yaratishda xatolik yuz berdi",
         variant: "destructive",
       });
+      setHasTriedToCreate(false);
     },
   });
 
@@ -83,13 +89,20 @@ export default function ChatPage() {
 
   // Handle userId parameter - create or get conversation
   useEffect(() => {
-    console.log('useEffect triggered - userIdParam:', userIdParam, 'user:', user?.id, 'conversationId:', conversationId);
+    console.log('useEffect check:', {
+      userIdParam,
+      userId: user?.id,
+      conversationId,
+      hasTriedToCreate,
+      isPending: createConversationMutation.isPending
+    });
     
-    if (userIdParam && user && !conversationId && !createConversationMutation.isPending) {
-      console.log('Creating conversation for userId:', userIdParam, 'Current user role:', user.role);
+    if (userIdParam && user && !conversationId && !hasTriedToCreate && !createConversationMutation.isPending) {
+      console.log('Attempting to create conversation for userId:', userIdParam);
+      setHasTriedToCreate(true);
       createConversationMutation.mutate(userIdParam);
     }
-  }, [location, user]);
+  }, [userIdParam, user, conversationId, hasTriedToCreate]);
 
   // Mark messages as read when conversation is opened
   useEffect(() => {
