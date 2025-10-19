@@ -83,11 +83,13 @@ export default function ChatPage() {
 
   // Handle userId parameter - create or get conversation
   useEffect(() => {
+    console.log('useEffect triggered - userIdParam:', userIdParam, 'user:', user?.id, 'conversationId:', conversationId);
+    
     if (userIdParam && user && !conversationId && !createConversationMutation.isPending) {
-      console.log('Creating conversation for userId:', userIdParam);
+      console.log('Creating conversation for userId:', userIdParam, 'Current user role:', user.role);
       createConversationMutation.mutate(userIdParam);
     }
-  }, [userIdParam, user]);
+  }, [location, user]);
 
   // Mark messages as read when conversation is opened
   useEffect(() => {
