@@ -120,6 +120,8 @@ export default function AdminDashboard() {
       return await apiRequest("POST", "/api/admin/create-student", data);
     },
     onSuccess: (data: any) => {
+      console.log("Create student response:", data);
+      console.log("Credentials:", data.credentials);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       setCreatedCredentials(data.credentials);
