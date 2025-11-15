@@ -1,0 +1,90 @@
+tarting Container
+> rest-express@1.0.0 start
+> NODE_ENV=production node dist/index.js
+npm warn config production Use `--omit=dev` instead.
+[Subscription Scheduler] Checking expiring subscriptions...
+    _closeFrameReceived: false,
+    _bufferedAmount: 0,
+[Subscription Scheduler] Started - will run every 24 hours
+    _closeFrameSent: false,
+      close: [Function],
+    _isServer: false,
+    _closeMessage: <Buffer >,
+    _closeCode: 1006,
+[Subscription Scheduler] Error: ErrorEvent {
+      open: [Function]
+    _closeTimer: null,
+    },
+    _errorEmitted: true,
+    _extensions: {},
+    _receiver: null,
+    _eventsCount: 4,
+    _paused: false,
+    _sender: null,
+    _maxListeners: undefined,
+    _protocol: '',
+8:16:51 PM [express] serving on port 8080
+    _socket: null,
+  [Symbol(kTarget)]: WebSocket {
+    _binaryType: 'arraybuffer',
+    _readyState: 3,
+    _events: [Object: null prototype] {
+      error: [Function],
+      message: [Function],
+    _redirects: 0,
+    _autoPong: true,
+    _url: 'wss://postgres.railway.internal/v2',
+    _req: null,
+    [Symbol(shapeMode)]: false,
+    [Symbol(kCapture)]: false
+  },
+  [Symbol(kType)]: 'error',
+  [Symbol(kError)]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  },
+  [Symbol(kMessage)]: ''
+}
+ErrorEvent {
+  [Symbol(kTarget)]: WebSocket {
+    _events: [Object: null prototype] {
+      error: [Function],
+      message: [Function],
+      close: [Function],
+      open: [Function]
+    },
+    _eventsCount: 4,
+    _maxListeners: undefined,
+    _binaryType: 'arraybuffer',
+    _closeCode: 1006,
+    _errorEmitted: true,
+    _closeFrameReceived: false,
+    _extensions: {},
+    _paused: false,
+    _protocol: '',
+    _closeFrameSent: false,
+    _closeMessage: <Buffer >,
+    _closeTimer: null,
+    _readyState: 3,
+    _receiver: null,
+    _sender: null,
+    _socket: null,
+    _bufferedAmount: 0,
+    _isServer: false,
+    _redirects: 0,
+    _autoPong: true,
+    _url: 'wss://postgres.railway.internal/v2',
+    _req: null,
+    [Symbol(shapeMode)]: false,
+    [Symbol(kCapture)]: false
+  },
+  [Symbol(kType)]: 'error',
+  [Symbol(kError)]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  },
+  [Symbol(kMessage)]: ''
