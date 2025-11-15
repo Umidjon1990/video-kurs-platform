@@ -351,40 +351,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Student Management APIs
   app.post('/api/admin/create-student', isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const { phone, email, password, firstName, lastName, courseId } = req.body;
+      const { phone, email, firstName, lastName, courseId, subscriptionDays } = req.body;
       
       // Server-side validation
       const createStudentSchema = z.object({
-        phone: z.string().optional(),
+        phone: z.string().min(1, 'Telefon raqam kiritish shart'),
         email: z.string().email().optional(),
-        password: z.string().min(6, 'Parol kamida 6 belgidan iborat bo\'lishi kerak'),
         firstName: z.string().min(1, 'Ism kiritish shart'),
         lastName: z.string().min(1, 'Familiya kiritish shart'),
         courseId: z.string().optional(),
-      }).refine(
-        (data) => data.phone || data.email,
-        { message: 'Telefon yoki email kiritish shart' }
-      );
+        subscriptionDays: z.string().transform((val) => parseInt(val, 10)).pipe(z.number().min(1, 'Obuna muddati kamida 1 kun bo\'lishi kerak')),
+      });
       
-      const validatedData = createStudentSchema.parse({ phone, email, password, firstName, lastName, courseId });
+      const validatedData = createStudentSchema.parse({ phone, email, firstName, lastName, courseId, subscriptionDays });
       
-      // Check if user exists
-      if (validatedData.phone) {
-        const existingUser = await storage.getUserByPhoneOrEmail(validatedData.phone);
-        if (existingUser) {
-          return res.status(400).json({ message: 'Bu telefon raqam allaqachon ro\'yxatdan o\'tgan' });
-        }
+      // Check if phone already exists
+      const existingUser = await storage.getUserByPhoneOrEmail(validatedData.phone);
+      if (existingUser) {
+        return res.status(400).json({ message: 'Bu telefon raqam allaqachon ro\'yxatdan o\'tgan' });
       }
       
+      // Check if email exists (if provided)
       if (validatedData.email) {
-        const existingUser = await storage.getUserByPhoneOrEmail(validatedData.email);
-        if (existingUser) {
+        const existingEmailUser = await storage.getUserByPhoneOrEmail(validatedData.email);
+        if (existingEmailUser) {
           return res.status(400).json({ message: 'Bu email allaqachon ro\'yxatdan o\'tgan' });
         }
       }
       
+      // Generate random password (8 characters: letters + numbers)
+      const generatedPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-4).toUpperCase();
+      
       // Hash password
-      const passwordHash = await bcrypt.hash(validatedData.password, 10);
+      const passwordHash = await bcrypt.hash(generatedPassword, 10);
       
       // Execute all operations in a transaction to ensure data consistency
       const newUser = await db.transaction(async (tx) => {
@@ -425,10 +424,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             })
             .returning();
           
-          // Create 30-day subscription
+          // Create subscription with custom duration
           const startDate = new Date();
           const endDate = new Date();
-          endDate.setDate(endDate.getDate() + 30);
+          endDate.setDate(endDate.getDate() + validatedData.subscriptionDays);
           
           await tx
             .insert(userSubscriptions)
@@ -449,13 +448,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Remove password from response
       const { passwordHash: _, ...userWithoutPassword } = newUser;
       
-      // Return user with login credentials
+      // Return user with login credentials (phone as login)
       res.json({ 
         message: 'O\'quvchi muvaffaqiyatli yaratildi',
         user: userWithoutPassword,
         credentials: {
-          login: validatedData.phone || validatedData.email,
-          password: validatedData.password
+          login: validatedData.phone,
+          password: generatedPassword
         }
       });
     } catch (error: any) {

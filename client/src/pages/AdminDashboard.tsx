@@ -55,10 +55,10 @@ export default function AdminDashboard() {
   const [newStudent, setNewStudent] = useState({
     phone: "",
     email: "",
-    password: "",
     firstName: "",
     lastName: "",
     courseId: "",
+    subscriptionDays: "30",
   });
   const [createdCredentials, setCreatedCredentials] = useState<{
     login: string;
@@ -123,7 +123,7 @@ export default function AdminDashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       setCreatedCredentials(data.credentials);
-      setNewStudent({ phone: "", email: "", password: "", firstName: "", lastName: "", courseId: "" });
+      setNewStudent({ phone: "", email: "", firstName: "", lastName: "", courseId: "", subscriptionDays: "30" });
       toast({
         title: "Muvaffaqiyatli",
         description: "O'quvchi yaratildi",
@@ -547,7 +547,7 @@ export default function AdminDashboard() {
           <DialogHeader>
             <DialogTitle>Yangi O'quvchi Yaratish</DialogTitle>
             <DialogDescription>
-              O'quvchi ma'lumotlarini kiriting. Login uchun parol avtomatik yaratiladi.
+              O'quvchi ma'lumotlarini kiriting. Login va parol avtomatik yaratiladi.
             </DialogDescription>
           </DialogHeader>
 
@@ -621,17 +621,21 @@ export default function AdminDashboard() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">Telefon</Label>
+                <Label htmlFor="phone">Telefon Raqami *</Label>
                 <Input
                   id="phone"
                   placeholder="+998901234567"
                   value={newStudent.phone}
                   onChange={(e) => setNewStudent({ ...newStudent, phone: e.target.value })}
                   data-testid="input-phone"
+                  required
                 />
+                <p className="text-xs text-muted-foreground">
+                  Bu raqam login uchun ishlatiladi
+                </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email (ixtiyoriy)</Label>
                 <Input
                   id="email"
                   type="email"
@@ -639,17 +643,6 @@ export default function AdminDashboard() {
                   value={newStudent.email}
                   onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
                   data-testid="input-email"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Parol *</Label>
-                <Input
-                  id="password"
-                  type="text"
-                  placeholder="Kamida 6 belgidan iborat"
-                  value={newStudent.password}
-                  onChange={(e) => setNewStudent({ ...newStudent, password: e.target.value })}
-                  data-testid="input-password"
                 />
               </div>
               <div className="space-y-2">
@@ -673,9 +666,22 @@ export default function AdminDashboard() {
                   Agar kurs tanlasangiz, o'quvchi avtomatik ravishda shu kursga yoziladi.
                 </p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                * Telefon yoki Email'dan birini kiritish shart
-              </p>
+              <div className="space-y-2">
+                <Label htmlFor="subscriptionDays">Obuna muddati (kunlar) *</Label>
+                <Input
+                  id="subscriptionDays"
+                  type="number"
+                  min="1"
+                  placeholder="30"
+                  value={newStudent.subscriptionDays}
+                  onChange={(e) => setNewStudent({ ...newStudent, subscriptionDays: e.target.value })}
+                  data-testid="input-subscription-days"
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Kurs tanlangan bo'lsa, shu muddat uchun obuna yaratiladi
+                </p>
+              </div>
             </div>
           )}
 
