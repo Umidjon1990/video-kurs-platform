@@ -20,7 +20,6 @@ import StudentCourses from "@/pages/StudentCourses";
 import StudentResults from "@/pages/StudentResults";
 import LearningPage from "@/pages/LearningPage";
 import Checkout from "@/pages/Checkout";
-import PaymentSuccess from "@/pages/PaymentSuccess";
 import ChatPage from "@/pages/ChatPage";
 import NotFound from "@/pages/not-found";
 
@@ -75,7 +74,6 @@ function Router() {
               <Route path="/results" component={StudentResults} />
               <Route path="/checkout/:courseId" component={Checkout} />
               <Route path="/learn/:courseId" component={LearningPage} />
-              <Route path="/payment-success" component={PaymentSuccess} />
               <Route path="/chat" component={ChatPage} />
               <Route path="/chat/:conversationId" component={ChatPage} />
             </>

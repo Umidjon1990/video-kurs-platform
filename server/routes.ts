@@ -1337,9 +1337,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const { courseId, paymentMethod, paymentProofUrl } = req.body;
       
-      // Manual payment only (naqd/karta)
-      if (!paymentMethod || (paymentMethod !== 'naqd' && paymentMethod !== 'karta')) {
-        return res.status(400).json({ message: "Faqat naqd yoki karta to'lov usuli qabul qilinadi" });
+      // Manual payment only (naqd/karta/payme)
+      if (!paymentMethod || (paymentMethod !== 'naqd' && paymentMethod !== 'karta' && paymentMethod !== 'payme')) {
+        return res.status(400).json({ message: "Faqat naqd, karta yoki payme to'lov usuli qabul qilinadi" });
       }
       
       if (!paymentProofUrl) {

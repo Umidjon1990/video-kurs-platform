@@ -8,14 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { ArrowLeft, Upload, CheckCircle, ExternalLink } from "lucide-react";
+import { ArrowLeft, Upload, CheckCircle } from "lucide-react";
 import type { Course } from "@shared/schema";
 
 export default function Checkout() {
@@ -23,14 +16,12 @@ export default function Checkout() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   
-  const [paymentMethod, setPaymentMethod] = useState<"karta" | "payme">("karta");
-  const randomCardNumber = "8600 1234 5678 9012"; // Random karta raqam
+  const [paymentMethod, setPaymentMethod] = useState<"naqd" | "karta" | "payme">("naqd");
+  const randomCardNumber = "8600 1234 5678 9012"; // Admin karta raqami
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [receiptPreview, setReceiptPreview] = useState<string>("");
   const [enrollmentSuccess, setEnrollmentSuccess] = useState(false);
-  const [showPaymeDialog, setShowPaymeDialog] = useState(false);
-  const [paymePhone, setPaymePhone] = useState("");
 
   const { data: course } = useQuery<Course>({
     queryKey: ["/api/courses", courseId],
@@ -188,21 +179,37 @@ export default function Checkout() {
                 <Label>To'lov Turi</Label>
                 <RadioGroup value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as any)}>
                   <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="naqd" id="naqd" data-testid="radio-naqd" />
+                    <Label htmlFor="naqd" className="cursor-pointer">Naqd pul (qo'lda to'lov)</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
                     <RadioGroupItem value="karta" id="karta" data-testid="radio-karta" />
-                    <Label htmlFor="karta" className="cursor-pointer">Karta orqali</Label>
+                    <Label htmlFor="karta" className="cursor-pointer">Bank kartasi orqali o'tkazma</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="payme" id="payme" data-testid="radio-payme" />
-                    <Label htmlFor="payme" className="cursor-pointer">Payme</Label>
+                    <Label htmlFor="payme" className="cursor-pointer">Payme orqali</Label>
                   </div>
                 </RadioGroup>
               </div>
 
               {/* Payment Details */}
+              {paymentMethod === "naqd" && (
+                <div className="space-y-3 p-4 bg-muted/50 rounded-lg border">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Naqd To'lov</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Naqd pul bilan to'lovni bevosita administratorga yoki o'qituvchiga topshiring. 
+                      To'lovni amalga oshirgandan keyin chek yoki tasdiqlovchi hujjat rasmini yuklang.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {paymentMethod === "karta" && (
                 <div className="space-y-3 p-4 bg-muted/50 rounded-lg border">
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium">Karta Raqami</Label>
+                    <Label className="text-sm font-medium">Bank Kartasi Orqali O'tkazma</Label>
                     <div className="flex items-center gap-2">
                       <Input
                         value={randomCardNumber}
@@ -226,7 +233,7 @@ export default function Checkout() {
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Ushbu karta raqamiga to'lovni amalga oshiring va chek rasmini yuklang
+                      Bank ilovasida yoki ATM orqali ushbu karta raqamiga pul o'tkazing va to'lov cheki rasmini yuklang
                     </p>
                   </div>
                 </div>
@@ -234,22 +241,12 @@ export default function Checkout() {
 
               {paymentMethod === "payme" && (
                 <div className="space-y-3 p-4 bg-muted/50 rounded-lg border">
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium">Payme Orqali To'lash</Label>
                     <p className="text-sm text-muted-foreground">
-                      Payme orqali to'lov qilish uchun quyidagi tugmani bosing
-                    </p>
-                    <Button
-                      type="button"
-                      variant="default"
-                      className="w-full"
-                      onClick={() => setShowPaymeDialog(true)}
-                      data-testid="button-open-payme"
-                    >
-                      Payme To'lovini Ochish
-                    </Button>
-                    <p className="text-xs text-muted-foreground">
-                      To'lovni amalga oshirgandan so'ng chek rasmini yuklang
+                      Payme ilovasida yoki Payme terminallarda to'lovni amalga oshiring. 
+                      Administrator bilan bog'lanib Payme raqami yoki QR kodni oling. 
+                      To'lovni bajarib bo'lgach chek rasmini yuklang.
                     </p>
                   </div>
                 </div>
@@ -309,123 +306,6 @@ export default function Checkout() {
           </Card>
         </div>
       </div>
-
-      {/* Payme Payment Dialog */}
-      <Dialog open={showPaymeDialog} onOpenChange={setShowPaymeDialog}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <span className="text-2xl">💳</span>
-              Payme Orqali To'lash
-            </DialogTitle>
-            <DialogDescription>
-              To'lovni bajarish uchun quyidagi qadamlarni bajaring
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {/* Payment Amount Card */}
-            <div className="p-6 bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg border-2 border-primary/20 text-center">
-              <p className="text-sm text-muted-foreground mb-2">To'lov Summasi</p>
-              <p className="text-4xl font-bold text-primary">{course.price}</p>
-              <p className="text-sm text-muted-foreground mt-1">so'm</p>
-            </div>
-
-            {/* Open Payme Button */}
-            <Button
-              type="button"
-              size="lg"
-              className="w-full h-14 text-lg"
-              onClick={() => {
-                window.open('https://merchant.payme.uz/auth/sign-up', '_blank', 'width=800,height=900');
-                toast({
-                  title: "Payme oynasi ochildi",
-                  description: "Yangi oynada to'lovni bajaring",
-                });
-              }}
-              data-testid="button-open-payme-window"
-            >
-              <ExternalLink className="w-5 h-5 mr-2" />
-              Payme'ni Ochish
-            </Button>
-
-            {/* Phone Number (Optional) */}
-            <div className="space-y-2">
-              <Label htmlFor="payme-phone-modal" className="text-sm">
-                Telefon Raqam (ixtiyoriy)
-              </Label>
-              <Input
-                id="payme-phone-modal"
-                type="tel"
-                placeholder="+998 90 123 45 67"
-                value={paymePhone}
-                onChange={(e) => setPaymePhone(e.target.value)}
-                data-testid="input-payme-phone-modal"
-              />
-              <p className="text-xs text-muted-foreground">
-                Payme hisobingiz bilan bog'langan telefon
-              </p>
-            </div>
-
-            {/* Instructions */}
-            <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-              <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-3 flex items-center gap-2">
-                <span>📋</span>
-                Qadma-qadamli yo'riqnoma:
-              </p>
-              <ol className="text-sm text-blue-800 dark:text-blue-200 space-y-2 list-decimal list-inside">
-                <li>
-                  <strong>"Payme'ni Ochish"</strong> tugmasini bosing
-                </li>
-                <li>
-                  Yangi oynada <strong>ro'yxatdan o'ting</strong> yoki <strong>kiring</strong>
-                </li>
-                <li>
-                  <strong>{course.price} so'm</strong> to'lovni bajaring
-                </li>
-                <li>
-                  To'lov cheki <strong>rasmini saqlang</strong> yoki screenshot oling
-                </li>
-                <li>
-                  Ushbu oynani yoping va asosiy sahifada <strong>chek rasmini yuklang</strong>
-                </li>
-              </ol>
-            </div>
-
-            {/* Success Note */}
-            <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
-              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
-              <p className="text-sm text-green-800 dark:text-green-200">
-                To'lovni bajarib bo'lgach, chek rasmini yuklang va admin tasdiqlashini kuting
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowPaymeDialog(false)}
-              className="flex-1"
-              data-testid="button-close-payme-dialog"
-            >
-              Yopish
-            </Button>
-            <Button
-              type="button"
-              onClick={() => {
-                setShowPaymeDialog(false);
-                toast({
-                  title: "To'lov bajarildi ✓",
-                  description: "Chek rasmini yuklang va 'Yuborish' tugmasini bosing",
-                });
-              }}
-              className="flex-1"
-              data-testid="button-done-payme"
-            >
-              ✓ To'lov Bajarildi
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
