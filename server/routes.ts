@@ -1,9 +1,8 @@
-// API routes with Replit Auth and Stripe integration
+// API routes with Replit Auth
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, isAdmin, isInstructor } from "./replitAuth";
-import Stripe from "stripe";
 import multer from "multer";
 import { writeFile } from "fs/promises";
 import { join } from "path";
@@ -62,11 +61,6 @@ async function uploadSubmissionFile(
     file.mimetype
   );
 }
-
-// Stripe setup
-const stripe = process.env.STRIPE_SECRET_KEY 
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2025-09-30.clover" })
-  : null;
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware setup
@@ -1341,51 +1335,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/student/enroll', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { courseId, paymentMethod, paymentProofUrl, paymentIntentId } = req.body;
+      const { courseId, paymentMethod, paymentProofUrl } = req.body;
       
-      // Manual payment (naqd/karta)
-      if (paymentMethod && (paymentMethod === 'naqd' || paymentMethod === 'karta')) {
-        if (!paymentProofUrl) {
-          return res.status(400).json({ message: "To'lov cheki rasmi talab qilinadi" });
-        }
-        
-        const enrollmentData = insertEnrollmentSchema.parse({
-          userId,
-          courseId,
-          paymentMethod,
-          paymentProofUrl,
-          paymentStatus: 'pending', // Admin tasdiqini kutadi
-        });
-        
-        const enrollment = await storage.createEnrollment(enrollmentData);
-        return res.json(enrollment);
+      // Manual payment only (naqd/karta)
+      if (!paymentMethod || (paymentMethod !== 'naqd' && paymentMethod !== 'karta')) {
+        return res.status(400).json({ message: "Faqat naqd yoki karta to'lov usuli qabul qilinadi" });
       }
       
-      // Stripe payment
-      if (!stripe) {
-        return res.status(500).json({ message: "Stripe kalitlari sozlanmagan. Iltimos adminstratorga murojaat qiling." });
-      }
-      
-      if (!paymentIntentId) {
-        return res.status(400).json({ message: "Payment intent ID required" });
-      }
-      
-      // SECURITY: Verify payment was successful
-      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-      if (paymentIntent.status !== 'succeeded') {
-        return res.status(400).json({ message: "Payment not completed" });
-      }
-      
-      // Verify payment is for this course and user
-      if (paymentIntent.metadata.courseId !== courseId || paymentIntent.metadata.userId !== userId) {
-        return res.status(400).json({ message: "Invalid payment" });
+      if (!paymentProofUrl) {
+        return res.status(400).json({ message: "To'lov cheki rasmi talab qilinadi" });
       }
       
       const enrollmentData = insertEnrollmentSchema.parse({
         userId,
         courseId,
-        paymentMethod: 'stripe',
-        paymentStatus: 'approved', // Stripe auto-approved
+        paymentMethod,
+        paymentProofUrl,
+        paymentStatus: 'pending', // Admin tasdiqini kutadi
       });
       
       const enrollment = await storage.createEnrollment(enrollmentData);
@@ -2546,36 +2512,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
-    }
-  });
-
-  // ============ STRIPE PAYMENT ROUTES ============
-  app.post("/api/create-payment-intent", isAuthenticated, async (req: any, res) => {
-    try {
-      if (!stripe) {
-        return res.status(500).json({ message: "Stripe not configured" });
-      }
-
-      const { courseId } = req.body;
-      
-      // SECURITY: Get price from server, not client
-      const course = await storage.getCourse(courseId);
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
-      
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(parseFloat(course.price) * 100), // Convert to cents
-        currency: "usd",
-        metadata: { 
-          courseId,
-          userId: req.user.claims.sub,
-        },
-      });
-      
-      res.json({ clientSecret: paymentIntent.client_secret });
-    } catch (error: any) {
-      res.status(500).json({ message: "Error creating payment intent: " + error.message });
     }
   });
 
