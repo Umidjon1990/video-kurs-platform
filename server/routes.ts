@@ -356,10 +356,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Server-side validation
       const createStudentSchema = z.object({
         phone: z.string().min(1, 'Telefon raqam kiritish shart'),
-        email: z.string().email().optional(),
+        email: z.preprocess(
+          (val) => (val === '' || val === undefined || val === null) ? undefined : val,
+          z.string().email().optional()
+        ),
         firstName: z.string().min(1, 'Ism kiritish shart'),
         lastName: z.string().min(1, 'Familiya kiritish shart'),
-        courseId: z.string().optional(),
+        courseId: z.preprocess(
+          (val) => (val === '' || val === undefined || val === null) ? undefined : val,
+          z.string().optional()
+        ),
         subscriptionDays: z.string().transform((val) => parseInt(val, 10)).pipe(z.number().min(1, 'Obuna muddati kamida 1 kun bo\'lishi kerak')),
       });
       
