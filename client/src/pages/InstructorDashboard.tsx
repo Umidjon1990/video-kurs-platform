@@ -185,15 +185,20 @@ export default function InstructorDashboard() {
         ? `/api/instructor/courses/${editingCourse.id}` 
         : "/api/instructor/courses";
       
+      const priceValue = courseForm.price.trim();
+      if (!priceValue || isNaN(Number(priceValue)) || Number(priceValue) <= 0) {
+        throw new Error("Iltimos, to'g'ri narx kiriting");
+      }
+      
       await apiRequest(method, url, {
         title: courseForm.title,
         description: courseForm.description,
         category: courseForm.category,
         thumbnailUrl: courseForm.thumbnailUrl,
         pricing: {
-          oddiy: courseForm.price,
-          standard: courseForm.price,
-          premium: courseForm.price,
+          oddiy: Number(priceValue),
+          standard: Number(priceValue),
+          premium: Number(priceValue),
         }
       });
     },
@@ -719,11 +724,12 @@ export default function InstructorDashboard() {
                         variant="ghost"
                         size="icon"
                         onClick={() => {
+                          const existingPrice = course.price || (course as any).planPricing?.[0]?.price || "";
                           setCourseForm({
                             title: course.title,
                             description: course.description || "",
                             category: course.category || "",
-                            price: course.price?.toString() || "",
+                            price: existingPrice.toString(),
                             thumbnailUrl: course.thumbnailUrl || "",
                           });
                           setEditingCourse(course);
@@ -1389,7 +1395,7 @@ export default function InstructorDashboard() {
             </Button>
             <Button
               onClick={() => createCourseMutation.mutate()}
-              disabled={!courseForm.title || !courseForm.price || createCourseMutation.isPending}
+              disabled={!courseForm.title || !courseForm.price || !courseForm.price.trim() || createCourseMutation.isPending}
               data-testid="button-confirm-create-course"
             >
               {createCourseMutation.isPending ? "Yaratilmoqda..." : "Yaratish"}
