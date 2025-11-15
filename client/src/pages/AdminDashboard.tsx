@@ -32,7 +32,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Users, BookOpen, CreditCard, DollarSign, UserCheck, TrendingUp, Settings, UserPlus, Check, X, Copy } from "lucide-react";
+import { Users, BookOpen, CreditCard, DollarSign, UserCheck, TrendingUp, Settings, UserPlus, Check, X, Copy, CheckCircle } from "lucide-react";
 import { useLocation } from "wouter";
 import type { User } from "@shared/schema";
 import {
@@ -542,7 +542,16 @@ export default function AdminDashboard() {
       </div>
 
       {/* Create Student Dialog */}
-      <Dialog open={isCreateStudentOpen} onOpenChange={setIsCreateStudentOpen}>
+      <Dialog 
+        open={isCreateStudentOpen} 
+        onOpenChange={(open) => {
+          setIsCreateStudentOpen(open);
+          if (!open) {
+            setCreatedCredentials(null);
+            setNewStudent({ phone: "", email: "", firstName: "", lastName: "", courseId: "", subscriptionDays: "30" });
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Yangi O'quvchi Yaratish</DialogTitle>
@@ -553,49 +562,64 @@ export default function AdminDashboard() {
 
           {createdCredentials ? (
             <div className="space-y-4 py-4">
-              <div className="p-4 bg-muted rounded-md space-y-3">
-                <p className="font-semibold text-sm">O'quvchi muvaffaqiyatli yaratildi!</p>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Login:</span>
+              <div className="flex items-center justify-center py-3">
+                <div className="flex items-center gap-2 text-green-600">
+                  <CheckCircle className="w-5 h-5" />
+                  <p className="font-semibold">O'quvchi muvaffaqiyatli yaratildi!</p>
+                </div>
+              </div>
+              <div className="p-4 bg-muted rounded-md space-y-4">
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Login (Telefon)</Label>
                     <div className="flex items-center gap-2">
-                      <code className="bg-background px-2 py-1 rounded text-sm">
+                      <code className="flex-1 bg-background px-3 py-2 rounded text-sm font-mono border">
                         {createdCredentials.login}
                       </code>
                       <Button
                         size="sm"
-                        variant="ghost"
+                        variant="outline"
                         onClick={() => {
                           navigator.clipboard.writeText(createdCredentials.login);
-                          toast({ title: "Nusxalandi!" });
+                          toast({ 
+                            title: "Nusxalandi!", 
+                            description: "Login nusxalandi" 
+                          });
                         }}
+                        data-testid="button-copy-login"
                       >
                         <Copy className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Parol:</span>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Parol</Label>
                     <div className="flex items-center gap-2">
-                      <code className="bg-background px-2 py-1 rounded text-sm">
+                      <code className="flex-1 bg-background px-3 py-2 rounded text-sm font-mono border">
                         {createdCredentials.password}
                       </code>
                       <Button
                         size="sm"
-                        variant="ghost"
+                        variant="outline"
                         onClick={() => {
                           navigator.clipboard.writeText(createdCredentials.password);
-                          toast({ title: "Nusxalandi!" });
+                          toast({ 
+                            title: "Nusxalandi!", 
+                            description: "Parol nusxalandi" 
+                          });
                         }}
+                        data-testid="button-copy-password"
                       >
                         <Copy className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Bu ma'lumotlarni o'quvchiga yuboring. Ular login sahifasida foydalanishlari mumkin.
-                </p>
+                <div className="pt-2 border-t">
+                  <p className="text-xs text-muted-foreground">
+                    ⚠️ Bu ma'lumotlarni o'quvchiga xavfsiz usulda yuboring. Ular login sahifasida foydalanishlari mumkin.
+                  </p>
+                </div>
               </div>
             </div>
           ) : (

@@ -379,8 +379,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Generate random password (8 characters: letters + numbers)
-      const generatedPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-4).toUpperCase();
+      // Generate secure random password using crypto (12 characters)
+      const crypto = await import('crypto');
+      // Generate 16 bytes to ensure we have enough characters after base64url encoding
+      const randomBytes = crypto.randomBytes(16);
+      // Use base64url encoding: replace + with -, / with _, and remove = padding
+      const generatedPassword = randomBytes
+        .toString('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=/g, '')
+        .slice(0, 12);
       
       // Hash password
       const passwordHash = await bcrypt.hash(generatedPassword, 10);
