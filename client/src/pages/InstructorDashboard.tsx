@@ -46,9 +46,7 @@ export default function InstructorDashboard() {
     title: "",
     description: "",
     category: "",
-    priceOddiy: "",
-    priceStandard: "",
-    pricePremium: "",
+    price: "",
     thumbnailUrl: "",
   });
 
@@ -193,9 +191,9 @@ export default function InstructorDashboard() {
         category: courseForm.category,
         thumbnailUrl: courseForm.thumbnailUrl,
         pricing: {
-          oddiy: courseForm.priceOddiy,
-          standard: courseForm.priceStandard,
-          premium: courseForm.pricePremium,
+          oddiy: courseForm.price,
+          standard: courseForm.price,
+          premium: courseForm.price,
         }
       });
     },
@@ -206,7 +204,7 @@ export default function InstructorDashboard() {
         description: editingCourse ? "Kurs yangilandi" : "Kurs yaratildi" 
       });
       setIsCreateCourseOpen(false);
-      setCourseForm({ title: "", description: "", category: "", priceOddiy: "", priceStandard: "", pricePremium: "", thumbnailUrl: "" });
+      setCourseForm({ title: "", description: "", category: "", price: "", thumbnailUrl: "" });
       setEditingCourse(null);
     },
     onError: (error: Error) => {
@@ -725,9 +723,7 @@ export default function InstructorDashboard() {
                             title: course.title,
                             description: course.description || "",
                             category: course.category || "",
-                            priceOddiy: "",
-                            priceStandard: "",
-                            pricePremium: "",
+                            price: course.price?.toString() || "",
                             thumbnailUrl: course.thumbnailUrl || "",
                           });
                           setEditingCourse(course);
@@ -1357,111 +1353,20 @@ export default function InstructorDashboard() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-3 border p-4 rounded-md">
-              <h4 className="font-semibold text-sm">Tarif Narxlari (so'm)</h4>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="priceOddiy" className="text-xs">Oddiy</Label>
-                  <Input
-                    id="priceOddiy"
-                    type="text"
-                    inputMode="numeric"
-                    value={courseForm.priceOddiy}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, '');
-                      setCourseForm({ ...courseForm, priceOddiy: value });
-                    }}
-                    placeholder="100000"
-                    data-testid="input-price-oddiy"
-                  />
-                  {subscriptionPlans?.find(p => p.name === 'oddiy') && (
-                    <div className="text-xs text-muted-foreground space-y-0.5">
-                      <div className="flex items-center gap-1">
-                        <span>✓ Darslar</span>
-                      </div>
-                      {subscriptionPlans.find(p => p.name === 'oddiy').features.hasTests && (
-                        <div className="flex items-center gap-1">
-                          <span>✓ Testlar</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="priceStandard" className="text-xs">Standard</Label>
-                  <Input
-                    id="priceStandard"
-                    type="text"
-                    inputMode="numeric"
-                    value={courseForm.priceStandard}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, '');
-                      setCourseForm({ ...courseForm, priceStandard: value });
-                    }}
-                    placeholder="200000"
-                    data-testid="input-price-standard"
-                  />
-                  {subscriptionPlans?.find(p => p.name === 'standard') && (
-                    <div className="text-xs text-muted-foreground space-y-0.5">
-                      <div className="flex items-center gap-1">
-                        <span>✓ Darslar + Testlar</span>
-                      </div>
-                      {subscriptionPlans.find(p => p.name === 'standard').features.hasAssignments && (
-                        <div className="flex items-center gap-1">
-                          <span>✓ Vazifalar</span>
-                        </div>
-                      )}
-                      {subscriptionPlans.find(p => p.name === 'standard').features.hasCertificate && (
-                        <div className="flex items-center gap-1">
-                          <span>✓ Sertifikat</span>
-                        </div>
-                      )}
-                      {subscriptionPlans.find(p => p.name === 'standard').features.liveClassesPerWeek > 0 && (
-                        <div className="flex items-center gap-1">
-                          <span>✓ Haftada {subscriptionPlans.find(p => p.name === 'standard').features.liveClassesPerWeek}x jonli dars</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="pricePremium" className="text-xs">Premium</Label>
-                  <Input
-                    id="pricePremium"
-                    type="text"
-                    inputMode="numeric"
-                    value={courseForm.pricePremium}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, '');
-                      setCourseForm({ ...courseForm, pricePremium: value });
-                    }}
-                    placeholder="300000"
-                    data-testid="input-price-premium"
-                  />
-                  {subscriptionPlans?.find(p => p.name === 'premium') && (
-                    <div className="text-xs text-muted-foreground space-y-0.5">
-                      <div className="flex items-center gap-1">
-                        <span>✓ Darslar + Testlar</span>
-                      </div>
-                      {subscriptionPlans.find(p => p.name === 'premium').features.hasAssignments && (
-                        <div className="flex items-center gap-1">
-                          <span>✓ Vazifalar</span>
-                        </div>
-                      )}
-                      {subscriptionPlans.find(p => p.name === 'premium').features.hasCertificate && (
-                        <div className="flex items-center gap-1">
-                          <span>✓ Sertifikat</span>
-                        </div>
-                      )}
-                      {subscriptionPlans.find(p => p.name === 'premium').features.liveClassesPerWeek > 0 && (
-                        <div className="flex items-center gap-1">
-                          <span>✓ Haftada {subscriptionPlans.find(p => p.name === 'premium').features.liveClassesPerWeek}x jonli dars</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="price">Narxi (so'm)</Label>
+              <Input
+                id="price"
+                type="text"
+                inputMode="numeric"
+                value={courseForm.price}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '');
+                  setCourseForm({ ...courseForm, price: value });
+                }}
+                placeholder="150000"
+                data-testid="input-course-price"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="thumbnail">Rasm URL (ixtiyoriy)</Label>
@@ -1484,7 +1389,7 @@ export default function InstructorDashboard() {
             </Button>
             <Button
               onClick={() => createCourseMutation.mutate()}
-              disabled={!courseForm.title || !courseForm.priceOddiy || !courseForm.priceStandard || !courseForm.pricePremium || createCourseMutation.isPending}
+              disabled={!courseForm.title || !courseForm.price || createCourseMutation.isPending}
               data-testid="button-confirm-create-course"
             >
               {createCourseMutation.isPending ? "Yaratilmoqda..." : "Yaratish"}
