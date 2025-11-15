@@ -196,9 +196,9 @@ export default function InstructorDashboard() {
         category: courseForm.category,
         thumbnailUrl: courseForm.thumbnailUrl,
         pricing: {
-          oddiy: Number(priceValue),
-          standard: Number(priceValue),
-          premium: Number(priceValue),
+          oddiy: priceValue,
+          standard: priceValue,
+          premium: priceValue,
         }
       });
     },
