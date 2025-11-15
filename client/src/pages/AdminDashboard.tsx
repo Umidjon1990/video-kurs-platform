@@ -117,7 +117,8 @@ export default function AdminDashboard() {
 
   const createStudentMutation = useMutation({
     mutationFn: async (data: typeof newStudent) => {
-      return await apiRequest("POST", "/api/admin/create-student", data);
+      const response = await apiRequest("POST", "/api/admin/create-student", data);
+      return await response.json();
     },
     onSuccess: (data: any) => {
       console.log("Create student response:", data);
