@@ -1,0 +1,55 @@
+Starting Container
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 start
+> NODE_ENV=production node dist/index.js
+8:23:15 PM [express] serving on port 8080
+[Subscription Scheduler] Checking expiring subscriptions...
+[Subscription Scheduler] Started - will run every 24 hours
+[Subscription Scheduler] Error: error: relation "user_subscriptions" does not exist
+error: relation "user_subscriptions" does not exist
+    at /app/node_modules/pg-pool/index.js:45:11
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async DatabaseStorage.getExpiringSubscriptions (file:///app/dist/index.js:1708:20)
+    at async checkExpiringSubscriptions (file:///app/dist/index.js:4097:27) {
+  length: 118,
+  severity: 'ERROR',
+  code: '42P01',
+  detail: undefined,
+  hint: undefined,
+  position: '943',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1449',
+  routine: 'parserOpenTable'
+}
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+  table: undefined,
+    at async DatabaseStorage.getExpiringSubscriptions (file:///app/dist/index.js:1708:20)
+    at async checkExpiringSubscriptions (file:///app/dist/index.js:4097:27) {
+  column: undefined,
+  length: 118,
+  dataType: undefined,
+  severity: 'ERROR',
+  constraint: undefined,
+  code: '42P01',
+  detail: undefined,
+  file: 'parse_relation.c',
+  hint: undefined,
+  line: '1449',
+  position: '943',
+  routine: 'parserOpenTable'
+  internalPosition: undefined,
+}
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
