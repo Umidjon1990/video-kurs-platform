@@ -395,7 +395,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete user and all related data
-  app.delete('/api/admin/users/:userId', isAuthenticated, isAdmin, async (req, res) => {
+  app.delete('/api/admin/users/:userId', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const { userId } = req.params;
       const adminId = req.user.claims.sub;
@@ -417,15 +417,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Delete all related records in transaction
-      await db.transaction(async (tx) => {
-        // 1. Delete test submissions
-        await tx.delete(testSubmissions).where(eq(testSubmissions.studentId, userId));
+      await db.transaction(async (tx: any) => {
+        // 1. Delete test attempts
+        await tx.delete(testAttempts).where(eq(testAttempts.userId, userId));
         
         // 2. Delete assignment submissions
-        await tx.delete(submissions).where(eq(submissions.studentId, userId));
+        await tx.delete(submissions).where(eq(submissions.userId, userId));
         
         // 3. Delete enrollments
-        await tx.delete(enrollments).where(eq(enrollments.studentId, userId));
+        await tx.delete(enrollments).where(eq(enrollments.userId, userId));
         
         // 4. Delete user subscriptions
         await tx.delete(userSubscriptions).where(eq(userSubscriptions.userId, userId));

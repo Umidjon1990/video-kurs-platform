@@ -32,7 +32,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Users, BookOpen, CreditCard, DollarSign, UserCheck, TrendingUp, Settings, UserPlus, Check, X, Copy, CheckCircle, Key } from "lucide-react";
+import { Users, BookOpen, CreditCard, DollarSign, UserCheck, TrendingUp, Settings, UserPlus, Check, X, Copy, CheckCircle, Key, Trash2 } from "lucide-react";
 import { useLocation } from "wouter";
 import type { User } from "@shared/schema";
 import {
@@ -144,6 +144,16 @@ export default function AdminDashboard() {
     contactInfo: "",
   });
   const [newPassword, setNewPassword] = useState("");
+  
+  const [deleteDialog, setDeleteDialog] = useState<{
+    isOpen: boolean;
+    userId: string | null;
+    userName: string;
+  }>({
+    isOpen: false,
+    userId: null,
+    userName: "",
+  });
 
   const createStudentMutation = useMutation({
     mutationFn: async (data: typeof newStudent) => {
@@ -223,6 +233,27 @@ export default function AdminDashboard() {
       toast({
         title: "Muvaffaqiyatli",
         description: "Rol yangilandi",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Xatolik",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      await apiRequest("DELETE", `/api/admin/users/${userId}`, {});
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      setDeleteDialog({ isOpen: false, userId: null, userName: "" });
+      toast({
+        title: "Muvaffaqiyatli",
+        description: data.message || "Foydalanuvchi o'chirildi",
       });
     },
     onError: (error: Error) => {
@@ -663,6 +694,7 @@ export default function AdminDashboard() {
                   <TableHead>Ism</TableHead>
                   <TableHead>Rol</TableHead>
                   <TableHead>Qo'shilgan Sana</TableHead>
+                  <TableHead>Amallar</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -691,6 +723,24 @@ export default function AdminDashboard() {
                     </TableCell>
                     <TableCell>
                       {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-'}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => {
+                          setDeleteDialog({
+                            isOpen: true,
+                            userId: user.id,
+                            userName: `${user.firstName} ${user.lastName}`,
+                          });
+                        }}
+                        disabled={deleteUserMutation.isPending}
+                        data-testid={`button-delete-user-${user.id}`}
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        O'chirish
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -963,6 +1013,59 @@ export default function AdminDashboard() {
               data-testid="button-confirm-reset-password"
             >
               {approvePasswordResetMutation.isPending ? "O'rnatilmoqda..." : "Parolni O'rnatish"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete User Confirmation Dialog */}
+      <Dialog 
+        open={deleteDialog.isOpen} 
+        onOpenChange={(open) => {
+          setDeleteDialog({ isOpen: open, userId: null, userName: "" });
+        }}
+      >
+        <DialogContent data-testid="dialog-delete-user">
+          <DialogHeader>
+            <DialogTitle>Foydalanuvchini O'chirish</DialogTitle>
+            <DialogDescription>
+              Haqiqatan ham <strong>{deleteDialog.userName}</strong> foydalanuvchisini o'chirmoqchimisiz?
+              <br /><br />
+              <span className="text-destructive font-semibold">Diqqat:</span> Ushbu amal qaytarib bo'lmaydi va quyidagi barcha ma'lumotlar o'chiriladi:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>Foydalanuvchi profili</li>
+                <li>Kurs yozilmalari</li>
+                <li>Topshiriqlar va test javoblari</li>
+                <li>Xabarlar va bildirishnomalar</li>
+                <li>Obuna ma'lumotlari</li>
+                {deleteDialog.userName && deleteDialog.userName.includes("O'qituvchi") && (
+                  <li className="text-destructive">O'qituvchi yaratgan barcha kurslar</li>
+                )}
+              </ul>
+            </DialogDescription>
+          </DialogHeader>
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteDialog({ isOpen: false, userId: null, userName: "" });
+              }}
+              data-testid="button-cancel-delete"
+            >
+              Bekor qilish
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (deleteDialog.userId) {
+                  deleteUserMutation.mutate(deleteDialog.userId);
+                }
+              }}
+              disabled={deleteUserMutation.isPending}
+              data-testid="button-confirm-delete"
+            >
+              {deleteUserMutation.isPending ? "O'chirilmoqda..." : "Ha, O'chirish"}
             </Button>
           </DialogFooter>
         </DialogContent>
