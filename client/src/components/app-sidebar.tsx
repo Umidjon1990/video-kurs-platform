@@ -47,8 +47,6 @@ const adminMenuItems: MenuItem[] = [
 
 const instructorMenuItems: MenuItem[] = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Kurslarim", url: "/", icon: BookOpen },
-  { title: "Talabalar", url: "/", icon: Users },
   { title: "Obunalar", url: "/instructor/subscriptions", icon: Wallet },
   { title: "Xabarlar", url: "/chat", icon: MessageSquare },
 ];
