@@ -223,74 +223,9 @@ export default function LearningPage() {
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row">
-        {/* Lessons Sidebar */}
-        <div className="lg:w-80 border-r bg-muted/30">
-          <div className="p-4">
-            <h3 className="font-semibold mb-4">Darslar</h3>
-            <div className="space-y-2">
-              {lessons && lessons.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Darslar hali qo'shilmagan</p>
-              ) : (
-                lessons?.map((lesson) => {
-                  const isEnrolled = enrollment?.paymentStatus === 'confirmed' || enrollment?.paymentStatus === 'approved';
-                  
-                  // Check if subscription is active for this course
-                  const courseSubscription = userSubscriptions?.find(
-                    (sub: any) => sub.course.id === courseId
-                  );
-                  // Check both status AND endDate to ensure real-time expiration
-                  const now = new Date();
-                  const endDate = courseSubscription ? new Date(courseSubscription.subscription.endDate) : null;
-                  const hasActiveSubscription = courseSubscription?.subscription.status === 'active' && 
-                                                endDate && endDate > now;
-                  
-                  // Lock lesson if not demo AND (not enrolled OR subscription expired)
-                  const isLocked = !lesson.isDemo && (!isEnrolled || !hasActiveSubscription);
-                  
-                  return (
-                    <div
-                      key={lesson.id}
-                      onClick={() => !isLocked && setCurrentLessonId(lesson.id)}
-                      className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
-                        isLocked 
-                          ? 'opacity-60 cursor-not-allowed' 
-                          : 'hover-elevate cursor-pointer'
-                      } ${
-                        currentLessonId === lesson.id ? 'bg-primary/10 border-l-4 border-primary' : ''
-                      }`}
-                      data-testid={`lesson-item-${lesson.id}`}
-                    >
-                      {isLocked ? (
-                        <Lock className="w-5 h-5 flex-shrink-0 text-muted-foreground" />
-                      ) : (
-                        <PlayCircle className={`w-5 h-5 flex-shrink-0 ${
-                          currentLessonId === lesson.id ? 'text-primary' : 'text-muted-foreground'
-                        }`} />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className={`text-sm font-medium line-clamp-1 ${
-                            currentLessonId === lesson.id ? 'text-primary' : ''
-                          }`}>{lesson.title}</p>
-                          {lesson.isDemo && (
-                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">Demo</span>
-                          )}
-                        </div>
-                        {lesson.duration && (
-                          <p className="text-xs text-muted-foreground">{lesson.duration} daqiqa</p>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <div className="flex-1 p-8">
+      <div className="flex flex-col lg:flex-row h-[calc(100vh-4rem)]">
+        {/* Main Content - Video Player Area */}
+        <div className="flex-1 overflow-auto p-6 lg:p-8">
           {currentLesson ? (
             (() => {
               const isEnrolled = enrollment?.paymentStatus === 'confirmed' || enrollment?.paymentStatus === 'approved';
@@ -661,6 +596,81 @@ export default function LearningPage() {
               </CardContent>
             </Card>
           )}
+        </div>
+
+        {/* Lessons Sidebar - Right Side */}
+        <div className="lg:w-96 border-l bg-muted/30 overflow-y-auto">
+          <div className="p-4 sticky top-0 bg-muted/30 border-b z-10">
+            <h3 className="font-semibold">Kurs Dasturi</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              {lessons?.length || 0} ta dars
+            </p>
+          </div>
+          <div className="p-4 space-y-2">
+            {lessons && lessons.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Darslar hali qo'shilmagan</p>
+            ) : (
+              lessons?.map((lesson, index) => {
+                const isEnrolled = enrollment?.paymentStatus === 'confirmed' || enrollment?.paymentStatus === 'approved';
+                
+                // Check if subscription is active for this course
+                const courseSubscription = userSubscriptions?.find(
+                  (sub: any) => sub.course.id === courseId
+                );
+                // Check both status AND endDate to ensure real-time expiration
+                const now = new Date();
+                const endDate = courseSubscription ? new Date(courseSubscription.subscription.endDate) : null;
+                const hasActiveSubscription = courseSubscription?.subscription.status === 'active' && 
+                                              endDate && endDate > now;
+                
+                // Lock lesson if not demo AND (not enrolled OR subscription expired)
+                const isLocked = !lesson.isDemo && (!isEnrolled || !hasActiveSubscription);
+                
+                return (
+                  <div
+                    key={lesson.id}
+                    onClick={() => !isLocked && setCurrentLessonId(lesson.id)}
+                    className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${
+                      isLocked 
+                        ? 'opacity-60 cursor-not-allowed' 
+                        : 'hover-elevate cursor-pointer'
+                    } ${
+                      currentLessonId === lesson.id ? 'bg-primary/10 border-2 border-primary' : 'border-2 border-transparent'
+                    }`}
+                    data-testid={`lesson-item-${lesson.id}`}
+                  >
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mt-1">
+                      {isLocked ? (
+                        <Lock className="w-4 h-4 text-muted-foreground" />
+                      ) : currentLessonId === lesson.id ? (
+                        <PlayCircle className="w-4 h-4 text-primary" />
+                      ) : (
+                        <span className="text-sm font-semibold text-muted-foreground">{index + 1}</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start gap-2 mb-1">
+                        <p className={`text-sm font-medium line-clamp-2 flex-1 ${
+                          currentLessonId === lesson.id ? 'text-primary' : ''
+                        }`}>{lesson.title}</p>
+                        {lesson.isDemo && (
+                          <span className="text-xs bg-green-500/10 text-green-700 dark:text-green-400 px-2 py-0.5 rounded flex-shrink-0">
+                            Demo
+                          </span>
+                        )}
+                      </div>
+                      {lesson.duration && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <PlayCircle className="w-3 h-3" />
+                          {lesson.duration} daqiqa
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
       </div>
 
