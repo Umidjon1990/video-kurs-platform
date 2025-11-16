@@ -394,6 +394,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete user and all related data
+  app.delete('/api/admin/users/:userId', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const adminId = req.user.claims.sub;
+      
+      // Prevent admin from deleting themselves
+      if (userId === adminId) {
+        return res.status(400).json({ message: 'O\'zingizni o\'chira olmaysiz' });
+      }
+      
+      // Get user info before deletion for logging
+      const [userToDelete] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      
+      if (!userToDelete) {
+        return res.status(404).json({ message: 'Foydalanuvchi topilmadi' });
+      }
+      
+      // Delete all related records in transaction
+      await db.transaction(async (tx) => {
+        // 1. Delete test submissions
+        await tx.delete(testSubmissions).where(eq(testSubmissions.studentId, userId));
+        
+        // 2. Delete assignment submissions
+        await tx.delete(submissions).where(eq(submissions.studentId, userId));
+        
+        // 3. Delete enrollments
+        await tx.delete(enrollments).where(eq(enrollments.studentId, userId));
+        
+        // 4. Delete user subscriptions
+        await tx.delete(userSubscriptions).where(eq(userSubscriptions.userId, userId));
+        
+        // 5. Delete notifications (both received and sent)
+        await tx.delete(notifications).where(eq(notifications.userId, userId));
+        
+        // 6. Delete password reset requests
+        await tx.delete(passwordResetRequests).where(eq(passwordResetRequests.userId, userId));
+        await tx.delete(passwordResetRequests).where(eq(passwordResetRequests.processedBy, userId));
+        
+        // 7. Delete messages sent by user
+        await tx.delete(messages).where(eq(messages.senderId, userId));
+        
+        // 8. Delete conversations where user is a participant
+        await tx.delete(conversations).where(eq(conversations.studentId, userId));
+        await tx.delete(conversations).where(eq(conversations.instructorId, userId));
+        
+        // 9. Delete courses created by instructor (if instructor)
+        if (userToDelete.role === 'instructor') {
+          await tx.delete(courses).where(eq(courses.instructorId, userId));
+        }
+        
+        // 10. Finally, delete the user
+        await tx.delete(users).where(eq(users.id, userId));
+      });
+      
+      res.json({ 
+        success: true, 
+        message: `${userToDelete.firstName} ${userToDelete.lastName} muvaffaqiyatli o'chirildi`
+      });
+    } catch (error: any) {
+      console.error('User deletion error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Student Management APIs
   app.post('/api/admin/create-student', isAuthenticated, isAdmin, async (req, res) => {
     try {
