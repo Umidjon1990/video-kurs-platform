@@ -10,7 +10,7 @@ import { ObjectStorageService } from "./objectStorage";
 import { db } from "./db";
 import bcrypt from "bcryptjs";
 import passport from "passport";
-import { users, courses, lessons, assignments, tests, questions, enrollments, submissions, testAttempts, notifications, conversations, messages, siteSettings, testimonials, subscriptionPlans, coursePlanPricing, userSubscriptions } from "@shared/schema";
+import { users, courses, lessons, assignments, tests, questions, enrollments, submissions, testAttempts, notifications, conversations, messages, siteSettings, testimonials, subscriptionPlans, coursePlanPricing, userSubscriptions, passwordResetRequests } from "@shared/schema";
 import { eq, and, or, desc, sql, count, avg, inArray } from "drizzle-orm";
 import {
   insertCourseSchema,
@@ -203,6 +203,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
     })(req, res, next);
+  });
+
+  // Forgot Password: Create reset request
+  app.post('/api/auth/forgot-password', async (req, res) => {
+    try {
+      const { contactInfo } = req.body;
+      
+      // Validate input
+      if (!contactInfo || contactInfo.trim().length === 0) {
+        return res.status(400).json({ message: 'Email yoki telefon kiriting' });
+      }
+      
+      // Find user by phone or email
+      const user = await storage.getUserByPhoneOrEmail(contactInfo.trim());
+      
+      // Security: Don't reveal if user exists or not
+      const responseMessage = 'Agar bu ma\'lumot tizimda mavjud bo\'lsa, administrator sizga tez orada aloqaga chiqadi.';
+      
+      // If user found, create reset request
+      if (user) {
+        const [resetRequest] = await db
+          .insert(passwordResetRequests)
+          .values({
+            contactInfo: contactInfo.trim(),
+            userId: user.id,
+            status: 'pending',
+          })
+          .returning();
+        
+        // Create notification for all admins
+        const admins = await db
+          .select()
+          .from(users)
+          .where(eq(users.role, 'admin'));
+        
+        for (const admin of admins) {
+          await db.insert(notifications).values({
+            userId: admin.id,
+            type: 'password_reset_request',
+            title: 'Parolni tiklash so\'rovi',
+            message: `${user.firstName || ''} ${user.lastName || ''} (${contactInfo}) parolni tiklashni so\'radi`,
+            relatedId: resetRequest.id,
+            isRead: false,
+          });
+        }
+      }
+      
+      res.json({ message: responseMessage });
+    } catch (error: any) {
+      console.error('Forgot password error:', error);
+      res.status(500).json({ message: 'Xatolik yuz berdi. Qaytadan urinib ko\'ring.' });
+    }
   });
 
   // File upload endpoint for payment receipts
@@ -537,6 +589,127 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({ message: 'O\'quvchi rad etildi', user: userWithoutPassword });
     } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Password Reset Requests - Admin routes
+  app.get('/api/admin/password-reset-requests', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const requests = await db
+        .select({
+          id: passwordResetRequests.id,
+          contactInfo: passwordResetRequests.contactInfo,
+          status: passwordResetRequests.status,
+          createdAt: passwordResetRequests.createdAt,
+          processedAt: passwordResetRequests.processedAt,
+          userId: passwordResetRequests.userId,
+          user: {
+            id: users.id,
+            firstName: users.firstName,
+            lastName: users.lastName,
+            email: users.email,
+            phone: users.phone,
+            role: users.role,
+          }
+        })
+        .from(passwordResetRequests)
+        .leftJoin(users, eq(passwordResetRequests.userId, users.id))
+        .orderBy(desc(passwordResetRequests.createdAt));
+      
+      res.json(requests);
+    } catch (error: any) {
+      console.error('Get password reset requests error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put('/api/admin/password-reset-requests/:id', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { newPassword } = req.body;
+      const adminId = req.user.claims.sub;
+      
+      // Validate new password
+      if (!newPassword || newPassword.trim().length < 6) {
+        return res.status(400).json({ message: 'Parol kamida 6 belgidan iborat bo\'lishi kerak' });
+      }
+      
+      // Get reset request
+      const [resetRequest] = await db
+        .select()
+        .from(passwordResetRequests)
+        .where(eq(passwordResetRequests.id, id));
+      
+      if (!resetRequest) {
+        return res.status(404).json({ message: 'So\'rov topilmadi' });
+      }
+      
+      if (!resetRequest.userId) {
+        return res.status(400).json({ message: 'Foydalanuvchi topilmadi' });
+      }
+      
+      // Hash new password
+      const passwordHash = await bcrypt.hash(newPassword.trim(), 10);
+      
+      // Update user password
+      await db
+        .update(users)
+        .set({ 
+          passwordHash,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, resetRequest.userId));
+      
+      // Update reset request status
+      await db
+        .update(passwordResetRequests)
+        .set({
+          status: 'approved',
+          processedBy: adminId,
+          processedAt: new Date(),
+        })
+        .where(eq(passwordResetRequests.id, id));
+      
+      // Notify user
+      await db.insert(notifications).values({
+        userId: resetRequest.userId,
+        type: 'password_reset_completed',
+        title: 'Parol tiklandi',
+        message: 'Parolingiz muvaffaqiyatli tiklandi. Yangi parol bilan tizimga kirishingiz mumkin.',
+        isRead: false,
+      });
+      
+      res.json({ message: 'Parol muvaffaqiyatli o\'rnatildi' });
+    } catch (error: any) {
+      console.error('Process password reset error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete('/api/admin/password-reset-requests/:id', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const adminId = req.user.claims.sub;
+      
+      // Update request status to rejected
+      const [updated] = await db
+        .update(passwordResetRequests)
+        .set({
+          status: 'rejected',
+          processedBy: adminId,
+          processedAt: new Date(),
+        })
+        .where(eq(passwordResetRequests.id, id))
+        .returning();
+      
+      if (!updated) {
+        return res.status(404).json({ message: 'So\'rov topilmadi' });
+      }
+      
+      res.json({ message: 'So\'rov rad etildi' });
+    } catch (error: any) {
+      console.error('Reject password reset error:', error);
       res.status(500).json({ message: error.message });
     }
   });
