@@ -12,7 +12,11 @@ Preferred communication style: Simple, everyday language (Uzbek interface).
 
 ### Frontend Architecture
 
-The frontend is built with React and TypeScript using Vite, Wouter for routing, and TanStack Query for state management. It utilizes Radix UI primitives and Shadcn/ui components, styled with Tailwind CSS, following a Material Design-inspired aesthetic with distinct user role experiences and dark/light mode support. UI/UX decisions include modern stats cards, interactive charts, enhanced course cards, progress tracking systems with circular charts, and performance optimizations for student dashboards. Animations using `framer-motion` are used for a modern feel.
+The frontend is built with React and TypeScript using Vite, Wouter for routing, and TanStack Query for state management. It utilizes Radix UI primitives and Shadcn/ui components, styled with Tailwind CSS, following a Material Design-inspired aesthetic with distinct user role experiences and dark/light mode support. 
+
+**Navigation System**: Implements Shadcn Sidebar component with role-based menus (Admin, Instructor, Student). Features include collapsible/expandable sidebar with icon mode, user profile display in sidebar header (avatar with initials, full name, role), logout in footer, active route highlighting, and mobile responsiveness. App layout uses SidebarProvider wrapping authenticated routes, with sticky header containing sidebar trigger. Public routes (login, register, explore) render without sidebar.
+
+**Dashboard Enhancements**: Modern stats cards with KPI metrics, interactive charts, enhanced course cards, progress tracking systems with circular charts, and performance optimizations. Student dashboard displays: Total Enrolled Courses, Completed Courses (100% progress), In Progress Courses (0-99% progress), and Certificates count. Animations using `framer-motion` are used for a modern feel.
 
 ### Backend Architecture
 
