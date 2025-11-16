@@ -29,10 +29,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Users, BookOpen, CreditCard, DollarSign, UserCheck, TrendingUp, Settings, UserPlus, Check, X, Copy, CheckCircle, Key, Trash2 } from "lucide-react";
+import { Users, BookOpen, CreditCard, DollarSign, UserCheck, TrendingUp, Settings, UserPlus, Check, X, Copy, CheckCircle, Key, Trash2, BarChart3, Activity } from "lucide-react";
 import { useLocation } from "wouter";
 import type { User } from "@shared/schema";
 import {
@@ -316,71 +322,25 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="border-b">
-        <div className="flex h-16 items-center px-4 gap-4">
-          <h1 className="text-2xl font-bold" data-testid="text-admin-title">Admin Paneli</h1>
-          <div className="ml-auto flex items-center gap-3">
-            <Button
-              variant="default"
-              onClick={() => {
-                setCreatedCredentials(null);
-                setIsCreateStudentOpen(true);
-              }}
-              data-testid="button-create-student"
-              className="flex items-center gap-2"
-            >
-              <UserPlus className="w-4 h-4" />
-              Yangi O'quvchi
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setLocation('/admin/subscription-plans')}
-              data-testid="button-subscription-plans"
-              className="flex items-center gap-2"
-            >
-              <CreditCard className="w-4 h-4" />
-              Tariflar
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setLocation('/admin/subscriptions')}
-              data-testid="button-subscriptions"
-              className="flex items-center gap-2"
-            >
-              <UserCheck className="w-4 h-4" />
-              Obunalar
-            </Button>
-            <Button
-              variant="default"
-              onClick={() => setLocation('/admin/cms')}
-              data-testid="button-cms"
-              className="flex items-center gap-2"
-            >
-              <Settings className="w-4 h-4" />
-              Sayt Boshqaruvi
-            </Button>
-            <Button
-              variant="default"
-              onClick={() => setLocation('/admin/payments')}
-              data-testid="button-payments"
-              className="flex items-center gap-2"
-            >
-              <CreditCard className="w-4 h-4" />
-              To'lovlar
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => window.location.href = "/api/logout"}
-              data-testid="button-logout"
-            >
-              Chiqish
-            </Button>
-          </div>
-        </div>
+    <div className="p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold" data-testid="text-admin-title">
+          Admin Dashboard
+        </h1>
+        <Button
+          onClick={() => {
+            setCreatedCredentials(null);
+            setIsCreateStudentOpen(true);
+          }}
+          data-testid="button-create-student"
+          className="flex items-center gap-2"
+        >
+          <UserPlus className="w-4 h-4" />
+          Yangi O'quvchi
+        </Button>
       </div>
 
-      <div className="p-8 space-y-8">
+      <div className="space-y-6">
         {/* Stats */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatsCard

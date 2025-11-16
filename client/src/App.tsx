@@ -4,6 +4,8 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
 import { useAuth } from "@/hooks/useAuth";
 import HomePage from "@/pages/HomePage";
 import Landing from "@/pages/Landing";
@@ -34,54 +36,74 @@ function Router() {
     );
   }
 
-  return (
+  // Public routes (no sidebar)
+  const publicRoutes = (
     <Switch>
-      {/* Public Routes - accessible to everyone */}
       <Route path="/explore" component={HomePage} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
-      
-      {!isAuthenticated ? (
-        <Route path="/" component={HomePage} />
-      ) : (
-        <>
-          {/* Admin Routes */}
-          {user?.role === 'admin' && (
-            <>
-              <Route path="/" component={AdminDashboard} />
-              <Route path="/admin" component={AdminDashboard} />
-              <Route path="/admin/payments" component={AdminPayments} />
-              <Route path="/admin/cms" component={AdminCMSPage} />
-              <Route path="/admin/subscription-plans" component={AdminSubscriptionPlansPage} />
-              <Route path="/admin/subscriptions" component={AdminSubscriptions} />
-            </>
-          )}
-          
-          {/* Instructor Routes */}
-          {user?.role === 'instructor' && (
-            <>
-              <Route path="/" component={InstructorDashboard} />
-              <Route path="/instructor/subscriptions" component={InstructorSubscriptions} />
-              <Route path="/chat" component={ChatPage} />
-              <Route path="/chat/:conversationId" component={ChatPage} />
-            </>
-          )}
-          
-          {/* Student Routes */}
-          {user?.role === 'student' && (
-            <>
-              <Route path="/" component={StudentCourses} />
-              <Route path="/results" component={StudentResults} />
-              <Route path="/checkout/:courseId" component={Checkout} />
-              <Route path="/learn/:courseId" component={LearningPage} />
-              <Route path="/chat" component={ChatPage} />
-              <Route path="/chat/:conversationId" component={ChatPage} />
-            </>
-          )}
-        </>
-      )}
-      <Route component={NotFound} />
+      {!isAuthenticated && <Route path="/" component={HomePage} />}
     </Switch>
+  );
+
+  // Authenticated routes (with sidebar)
+  const authenticatedRoutes = isAuthenticated && (
+    <SidebarProvider defaultOpen={true}>
+      <div className="flex h-screen w-full">
+        <AppSidebar />
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <header className="flex items-center gap-2 border-b p-4 bg-background">
+            <SidebarTrigger data-testid="button-sidebar-toggle" />
+            <div className="flex-1" />
+          </header>
+          <main className="flex-1 overflow-auto">
+            <Switch>
+              {/* Admin Routes */}
+              {user?.role === 'admin' && (
+                <>
+                  <Route path="/" component={AdminDashboard} />
+                  <Route path="/admin" component={AdminDashboard} />
+                  <Route path="/admin/payments" component={AdminPayments} />
+                  <Route path="/admin/cms" component={AdminCMSPage} />
+                  <Route path="/admin/subscription-plans" component={AdminSubscriptionPlansPage} />
+                  <Route path="/admin/subscriptions" component={AdminSubscriptions} />
+                </>
+              )}
+              
+              {/* Instructor Routes */}
+              {user?.role === 'instructor' && (
+                <>
+                  <Route path="/" component={InstructorDashboard} />
+                  <Route path="/instructor/subscriptions" component={InstructorSubscriptions} />
+                  <Route path="/chat" component={ChatPage} />
+                  <Route path="/chat/:conversationId" component={ChatPage} />
+                </>
+              )}
+              
+              {/* Student Routes */}
+              {user?.role === 'student' && (
+                <>
+                  <Route path="/" component={StudentCourses} />
+                  <Route path="/results" component={StudentResults} />
+                  <Route path="/checkout/:courseId" component={Checkout} />
+                  <Route path="/learn/:courseId" component={LearningPage} />
+                  <Route path="/chat" component={ChatPage} />
+                  <Route path="/chat/:conversationId" component={ChatPage} />
+                </>
+              )}
+              <Route component={NotFound} />
+            </Switch>
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
+  );
+
+  return (
+    <>
+      {publicRoutes}
+      {authenticatedRoutes}
+    </>
   );
 }
 
