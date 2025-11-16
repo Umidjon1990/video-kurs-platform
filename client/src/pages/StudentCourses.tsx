@@ -5,11 +5,12 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatsCard } from "@/components/StatsCard";
 import { CourseCard } from "@/components/CourseCard";
 import { ProgressCard } from "@/components/ProgressCard";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useLocation } from "wouter";
-import { MessageCircle, CheckCircle, Star } from "lucide-react";
+import { BookOpen, Trophy, GraduationCap, PlayCircle, CheckCircle, Star } from "lucide-react";
 import type { Course, StudentCourseProgress, SubscriptionPlan } from "@shared/schema";
 
 export default function StudentCourses() {
@@ -86,53 +87,55 @@ export default function StudentCourses() {
     );
   }
 
+  // Calculate stats
+  const totalEnrolled = enrolledCourses?.length || 0;
+  const completedCourses = progressData?.filter(p => p.progressPercentage === 100).length || 0;
+  const inProgressCourses = progressData?.filter(p => p.progressPercentage > 0 && p.progressPercentage < 100).length || 0;
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="border-b">
-        <div className="flex h-16 items-center px-4 gap-4">
-          <h1 className="text-2xl font-bold" data-testid="text-student-title">O'quv Platformasi</h1>
-          <div className="ml-auto flex items-center gap-2">
-            <Button
-              variant="default"
-              onClick={() => setLocation("/results")}
-              data-testid="button-results"
-            >
-              Natijalarim
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setLocation("/chat")}
-              data-testid="button-chat"
-              className="relative"
-            >
-              <MessageCircle className="w-4 h-4 mr-2" />
-              Chat
-              {unreadCount && unreadCount.count > 0 && (
-                <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
-                  {unreadCount.count > 9 ? '9+' : unreadCount.count}
-                </span>
-              )}
-            </Button>
-            <NotificationBell 
-              onNotificationAction={(notification) => {
-                if (notification.type === 'chat_message' && notification.relatedId) {
-                  // Navigate to chat with conversation ID
-                  setLocation(`/chat/${notification.relatedId}`);
-                }
-              }}
-            />
-            <Button
-              variant="outline"
-              onClick={() => window.location.href = "/api/logout"}
-              data-testid="button-logout"
-            >
-              Chiqish
-            </Button>
-          </div>
-        </div>
+    <div className="p-6">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold mb-2" data-testid="text-student-title">
+          Mening Kurslarim
+        </h1>
+        <p className="text-muted-foreground">
+          O'quv jarayoningizni kuzatib boring va yangi bilimlarni egallang
+        </p>
       </div>
 
-      <div className="p-8">
+      {/* KPI Stats */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+        <StatsCard
+          title="Jami Kurslar"
+          value={totalEnrolled}
+          icon={BookOpen}
+          testId="stats-total-courses"
+          description="Yozilgan kurslar"
+        />
+        <StatsCard
+          title="Tugallangan"
+          value={completedCourses}
+          icon={GraduationCap}
+          testId="stats-completed"
+          description="100% bajarilgan"
+        />
+        <StatsCard
+          title="Davom Etmoqda"
+          value={inProgressCourses}
+          icon={PlayCircle}
+          testId="stats-in-progress"
+          description="Jarayonda"
+        />
+        <StatsCard
+          title="Sertifikatlar"
+          value={completedCourses}
+          icon={Trophy}
+          testId="stats-certificates"
+          description="Olingan"
+        />
+      </div>
+
+      <div className="space-y-6">
         <Tabs defaultValue="all" className="space-y-8">
           <TabsList>
             <TabsTrigger value="all" data-testid="tab-all-courses">Barcha Kurslar</TabsTrigger>
