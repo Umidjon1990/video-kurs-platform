@@ -384,7 +384,6 @@ export const passwordResetRequests = pgTable("password_reset_requests", {
   contactInfo: varchar("contact_info", { length: 255 }).notNull(), // email yoki telefon
   userId: varchar("user_id").references(() => users.id), // Topilgan foydalanuvchi
   status: varchar("status", { length: 20 }).notNull().default('pending'), // pending, approved, rejected
-  newPasswordHash: varchar("new_password_hash"), // Admin o'rnatgan yangi parol
   processedBy: varchar("processed_by").references(() => users.id), // Qaysi admin ko'rib chiqdi
   processedAt: timestamp("processed_at"),
   createdAt: timestamp("created_at").defaultNow(),

@@ -630,10 +630,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { newPassword } = req.body;
       const adminId = req.user.claims.sub;
       
-      // Validate new password
-      if (!newPassword || newPassword.trim().length < 6) {
-        return res.status(400).json({ message: 'Parol kamida 6 belgidan iborat bo\'lishi kerak' });
+      // Strong password validation
+      const passwordSchema = z.string()
+        .min(6, 'Parol kamida 6 belgidan iborat bo\'lishi kerak')
+        .max(100, 'Parol juda uzun')
+        .regex(/^(?=.*[0-9])/, 'Parol kamida bitta raqam o\'z ichiga olishi kerak')
+        .trim();
+      
+      const validationResult = passwordSchema.safeParse(newPassword);
+      if (!validationResult.success) {
+        return res.status(400).json({ message: validationResult.error.errors[0].message });
       }
+      
+      const validatedPassword = validationResult.data;
       
       // Get reset request
       const [resetRequest] = await db
@@ -650,7 +659,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Hash new password
-      const passwordHash = await bcrypt.hash(newPassword.trim(), 10);
+      const passwordHash = await bcrypt.hash(validatedPassword, 10);
       
       // Update user password
       await db

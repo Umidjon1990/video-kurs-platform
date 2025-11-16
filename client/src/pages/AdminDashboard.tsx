@@ -32,7 +32,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Users, BookOpen, CreditCard, DollarSign, UserCheck, TrendingUp, Settings, UserPlus, Check, X, Copy, CheckCircle } from "lucide-react";
+import { Users, BookOpen, CreditCard, DollarSign, UserCheck, TrendingUp, Settings, UserPlus, Check, X, Copy, CheckCircle, Key } from "lucide-react";
 import { useLocation } from "wouter";
 import type { User } from "@shared/schema";
 import {
@@ -115,6 +115,36 @@ export default function AdminDashboard() {
     enabled: isAuthenticated,
   });
 
+  const { data: passwordResetRequests } = useQuery<Array<{
+    id: string;
+    contactInfo: string;
+    status: string;
+    createdAt: string;
+    userId: string | null;
+    user: {
+      id: string;
+      firstName: string | null;
+      lastName: string | null;
+      email: string | null;
+      phone: string | null;
+      role: string;
+    } | null;
+  }>>({
+    queryKey: ["/api/admin/password-reset-requests"],
+    enabled: isAuthenticated,
+  });
+
+  const [resetPasswordDialog, setResetPasswordDialog] = useState<{
+    isOpen: boolean;
+    requestId: string | null;
+    contactInfo: string;
+  }>({
+    isOpen: false,
+    requestId: null,
+    contactInfo: "",
+  });
+  const [newPassword, setNewPassword] = useState("");
+
   const createStudentMutation = useMutation({
     mutationFn: async (data: typeof newStudent) => {
       const response = await apiRequest("POST", "/api/admin/create-student", data);
@@ -193,6 +223,48 @@ export default function AdminDashboard() {
       toast({
         title: "Muvaffaqiyatli",
         description: "Rol yangilandi",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Xatolik",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const approvePasswordResetMutation = useMutation({
+    mutationFn: async ({ requestId, newPassword }: { requestId: string; newPassword: string }) => {
+      await apiRequest("PUT", `/api/admin/password-reset-requests/${requestId}`, { newPassword });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/password-reset-requests"] });
+      setResetPasswordDialog({ isOpen: false, requestId: null, contactInfo: "" });
+      setNewPassword("");
+      toast({
+        title: "Muvaffaqiyatli",
+        description: "Parol muvaffaqiyatli o'rnatildi",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Xatolik",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const rejectPasswordResetMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      await apiRequest("DELETE", `/api/admin/password-reset-requests/${requestId}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/password-reset-requests"] });
+      toast({
+        title: "Muvaffaqiyatli",
+        description: "So'rov rad etildi",
       });
     },
     onError: (error: Error) => {
@@ -488,6 +560,90 @@ export default function AdminDashboard() {
           </Card>
         )}
 
+        {/* Password Reset Requests */}
+        {passwordResetRequests && passwordResetRequests.filter(r => r.status === 'pending').length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Key className="w-5 h-5" />
+                Parolni Tiklash So'rovlari
+                <Badge variant="default">
+                  {passwordResetRequests.filter(r => r.status === 'pending').length}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Foydalanuvchi</TableHead>
+                    <TableHead>Aloqa Ma'lumoti</TableHead>
+                    <TableHead>So'rov Sanasi</TableHead>
+                    <TableHead>Amallar</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {passwordResetRequests
+                    .filter(r => r.status === 'pending')
+                    .map((request) => (
+                      <TableRow key={request.id}>
+                        <TableCell>
+                          {request.user ? (
+                            <>
+                              {request.user.firstName} {request.user.lastName}
+                              <br />
+                              <span className="text-sm text-muted-foreground">
+                                {request.user.role === 'student' ? 'O\'quvchi' : 
+                                 request.user.role === 'instructor' ? 'O\'qituvchi' : 'Admin'}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-muted-foreground">Foydalanuvchi topilmadi</span>
+                          )}
+                        </TableCell>
+                        <TableCell>{request.contactInfo}</TableCell>
+                        <TableCell>
+                          {new Date(request.createdAt).toLocaleDateString('uz-UZ')}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="default"
+                              onClick={() => {
+                                setResetPasswordDialog({
+                                  isOpen: true,
+                                  requestId: request.id,
+                                  contactInfo: request.contactInfo,
+                                });
+                                setNewPassword("");
+                              }}
+                              disabled={approvePasswordResetMutation.isPending || !request.user}
+                              data-testid={`button-reset-password-${request.id}`}
+                            >
+                              <Key className="w-4 h-4 mr-1" />
+                              Parol O'rnatish
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => rejectPasswordResetMutation.mutate(request.id)}
+                              disabled={rejectPasswordResetMutation.isPending}
+                              data-testid={`button-reject-reset-${request.id}`}
+                            >
+                              <X className="w-4 h-4 mr-1" />
+                              Rad Etish
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Users Management */}
         <Card>
           <CardHeader>
@@ -741,6 +897,73 @@ export default function AdminDashboard() {
                 </Button>
               </>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Password Dialog */}
+      <Dialog 
+        open={resetPasswordDialog.isOpen} 
+        onOpenChange={(open) => {
+          setResetPasswordDialog({ isOpen: open, requestId: null, contactInfo: "" });
+          setNewPassword("");
+        }}
+      >
+        <DialogContent data-testid="dialog-reset-password">
+          <DialogHeader>
+            <DialogTitle>Yangi Parol O'rnatish</DialogTitle>
+            <DialogDescription>
+              {resetPasswordDialog.contactInfo} uchun yangi parol o'rnating.
+              Foydalanuvchiga bildirishnoma yuboriladi.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-password">Yangi Parol</Label>
+              <Input
+                id="new-password"
+                type="text"
+                placeholder="Kamida 6 belgidan iborat parol"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                data-testid="input-new-password"
+              />
+              <p className="text-sm text-muted-foreground">
+                Parol talablari:
+                <br />
+                • Kamida 6 belgi
+                <br />
+                • Kamida bitta raqam
+              </p>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setResetPasswordDialog({ isOpen: false, requestId: null, contactInfo: "" });
+                setNewPassword("");
+              }}
+              data-testid="button-cancel-reset-password"
+            >
+              Bekor qilish
+            </Button>
+            <Button
+              onClick={() => {
+                if (resetPasswordDialog.requestId && newPassword.trim().length >= 6) {
+                  approvePasswordResetMutation.mutate({
+                    requestId: resetPasswordDialog.requestId,
+                    newPassword: newPassword.trim(),
+                  });
+                }
+              }}
+              disabled={approvePasswordResetMutation.isPending || newPassword.trim().length < 6}
+              data-testid="button-confirm-reset-password"
+            >
+              {approvePasswordResetMutation.isPending ? "O'rnatilmoqda..." : "Parolni O'rnatish"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
