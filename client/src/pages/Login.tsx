@@ -3,28 +3,43 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useState } from "react";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Telefon yoki email kiriting"),
   password: z.string().min(1, "Parol kiriting"),
 });
 
+const forgotPasswordSchema = z.object({
+  contactInfo: z.string().min(1, "Telefon yoki email kiriting"),
+});
+
 type LoginFormData = z.infer<typeof loginSchema>;
+type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 
 export default function Login() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       username: "",
       password: "",
+    },
+  });
+
+  const forgotPasswordForm = useForm<ForgotPasswordFormData>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: {
+      contactInfo: "",
     },
   });
 
@@ -56,6 +71,28 @@ export default function Login() {
 
   const handleReplitAuth = () => {
     window.location.href = "/api/login"; // Replit Auth
+  };
+
+  const handleForgotPassword = async (data: ForgotPasswordFormData) => {
+    try {
+      await apiRequest("POST", "/api/auth/forgot-password", {
+        contactInfo: data.contactInfo,
+      });
+
+      toast({
+        title: "So'rov yuborildi",
+        description: "Agar bu ma'lumot tizimda mavjud bo'lsa, administrator sizga tez orada aloqaga chiqadi.",
+      });
+
+      setIsForgotPasswordOpen(false);
+      forgotPasswordForm.reset();
+    } catch (error: any) {
+      toast({
+        title: "Xato",
+        description: error.message || "Xatolik yuz berdi",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -93,7 +130,17 @@ export default function Login() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Parol</FormLabel>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Parol</FormLabel>
+                      <button
+                        type="button"
+                        onClick={() => setIsForgotPasswordOpen(true)}
+                        className="text-sm text-primary hover:underline"
+                        data-testid="link-forgot-password"
+                      >
+                        Parolni unutdim?
+                      </button>
+                    </div>
                     <FormControl>
                       <Input
                         {...field}
@@ -153,6 +200,61 @@ export default function Login() {
           </form>
         </Form>
       </Card>
+
+      {/* Forgot Password Dialog */}
+      <Dialog open={isForgotPasswordOpen} onOpenChange={setIsForgotPasswordOpen}>
+        <DialogContent data-testid="dialog-forgot-password">
+          <DialogHeader>
+            <DialogTitle>Parolni tiklash</DialogTitle>
+            <DialogDescription>
+              Telefon yoki email kiriting. Administrator sizga tez orada aloqaga chiqadi va yangi parol o'rnatadi.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...forgotPasswordForm}>
+            <form onSubmit={forgotPasswordForm.handleSubmit(handleForgotPassword)} className="space-y-4">
+              <FormField
+                control={forgotPasswordForm.control}
+                name="contactInfo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Telefon yoki Email</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="+998901234567 yoki email@example.com"
+                        data-testid="input-forgot-password-contact"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsForgotPasswordOpen(false);
+                    forgotPasswordForm.reset();
+                  }}
+                  data-testid="button-cancel-forgot-password"
+                >
+                  Bekor qilish
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={forgotPasswordForm.formState.isSubmitting}
+                  data-testid="button-submit-forgot-password"
+                >
+                  {forgotPasswordForm.formState.isSubmitting ? "Yuborilmoqda..." : "Yuborish"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
