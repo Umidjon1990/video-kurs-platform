@@ -378,6 +378,31 @@ export const announcementsRelations = relations(announcements, ({ one }) => ({
   }),
 }));
 
+// Password Reset Requests table - Parolni tiklash so'rovlari
+export const passwordResetRequests = pgTable("password_reset_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contactInfo: varchar("contact_info", { length: 255 }).notNull(), // email yoki telefon
+  userId: varchar("user_id").references(() => users.id), // Topilgan foydalanuvchi
+  status: varchar("status", { length: 20 }).notNull().default('pending'), // pending, approved, rejected
+  newPasswordHash: varchar("new_password_hash"), // Admin o'rnatgan yangi parol
+  processedBy: varchar("processed_by").references(() => users.id), // Qaysi admin ko'rib chiqdi
+  processedAt: timestamp("processed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const passwordResetRequestsRelations = relations(passwordResetRequests, ({ one }) => ({
+  user: one(users, {
+    fields: [passwordResetRequests.userId],
+    references: [users.id],
+    relationName: 'passwordResetUser',
+  }),
+  processor: one(users, {
+    fields: [passwordResetRequests.processedBy],
+    references: [users.id],
+    relationName: 'passwordResetProcessor',
+  }),
+}));
+
 // Site Settings table - Sayt sozlamalari (Admin boshqaradi)
 export const siteSettings = pgTable("site_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -460,6 +485,12 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
 export const insertAnnouncementSchema = createInsertSchema(announcements).omit({
   id: true,
   createdAt: true,
+});
+
+export const insertPasswordResetRequestSchema = createInsertSchema(passwordResetRequests).omit({
+  id: true,
+  createdAt: true,
+  processedAt: true,
 });
 
 // Conversations table (Private Messaging)
@@ -603,6 +634,9 @@ export type Notification = typeof notifications.$inferSelect;
 
 export type InsertAnnouncement = z.infer<typeof insertAnnouncementSchema>;
 export type Announcement = typeof announcements.$inferSelect;
+
+export type InsertPasswordResetRequest = z.infer<typeof insertPasswordResetRequestSchema>;
+export type PasswordResetRequest = typeof passwordResetRequests.$inferSelect;
 
 export type InsertConversation = z.infer<typeof insertConversationSchema>;
 export type Conversation = typeof conversations.$inferSelect;
