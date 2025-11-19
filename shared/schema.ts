@@ -54,6 +54,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   instructorConversations: many(conversations, { relationName: 'instructorConversations' }),
   messages: many(messages),
   userSubscriptions: many(userSubscriptions),
+  lessonProgress: many(lessonProgress),
 }));
 
 // Courses table
@@ -105,6 +106,33 @@ export const lessonsRelations = relations(lessons, ({ one, many }) => ({
   }),
   assignments: many(assignments),
   tests: many(tests),
+  progress: many(lessonProgress),
+}));
+
+// Lesson Progress table - Video tracking
+export const lessonProgress = pgTable("lesson_progress", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  lessonId: varchar("lesson_id").notNull().references(() => lessons.id, { onDelete: 'cascade' }),
+  watchedSeconds: integer("watched_seconds").notNull().default(0), // Qancha sekund ko'rilgan
+  totalSeconds: integer("total_seconds").notNull().default(0), // Umumiy davomiylik
+  lastPosition: integer("last_position").notNull().default(0), // Oxirgi to'xtatilgan joy (sekundlarda)
+  completed: boolean("completed").default(false), // 90%+ ko'rilgan bo'lsa true
+  completedAt: timestamp("completed_at"), // Tugallanganlik vaqti
+  lastWatchedAt: timestamp("last_watched_at").defaultNow(), // Oxirgi marta ko'rilgan vaqt
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const lessonProgressRelations = relations(lessonProgress, ({ one }) => ({
+  user: one(users, {
+    fields: [lessonProgress.userId],
+    references: [users.id],
+  }),
+  lesson: one(lessons, {
+    fields: [lessonProgress.lessonId],
+    references: [lessons.id],
+  }),
 }));
 
 // Assignments table
@@ -441,6 +469,12 @@ export const insertLessonSchema = createInsertSchema(lessons).omit({
   createdAt: true,
 });
 
+export const insertLessonProgressSchema = createInsertSchema(lessonProgress).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertAssignmentSchema = createInsertSchema(assignments).omit({
   id: true,
   createdAt: true,
@@ -606,6 +640,9 @@ export type StudentCourseProgress = {
 
 export type InsertLesson = z.infer<typeof insertLessonSchema>;
 export type Lesson = typeof lessons.$inferSelect;
+
+export type InsertLessonProgress = z.infer<typeof insertLessonProgressSchema>;
+export type LessonProgress = typeof lessonProgress.$inferSelect;
 
 export type InsertAssignment = z.infer<typeof insertAssignmentSchema>;
 export type Assignment = typeof assignments.$inferSelect;
