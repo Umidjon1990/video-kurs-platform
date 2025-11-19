@@ -3,6 +3,7 @@ import {
   users,
   courses,
   lessons,
+  lessonProgress,
   assignments,
   tests,
   enrollments,
@@ -25,6 +26,8 @@ import {
   type InsertCourse,
   type Lesson,
   type InsertLesson,
+  type LessonProgress,
+  type InsertLessonProgress,
   type Assignment,
   type InsertAssignment,
   type Test,
@@ -85,6 +88,11 @@ export interface IStorage {
   getLesson(id: string): Promise<Lesson | undefined>;
   updateLesson(id: string, data: Partial<InsertLesson>): Promise<Lesson>;
   deleteLesson(id: string): Promise<void>;
+  
+  // Lesson Progress operations
+  getLessonProgress(lessonId: string, userId: string): Promise<LessonProgress | undefined>;
+  upsertLessonProgress(data: Partial<InsertLessonProgress>): Promise<LessonProgress>;
+  getLessonProgressByCourse(courseId: string, userId: string): Promise<LessonProgress[]>;
   
   // Assignment operations
   createAssignment(assignment: InsertAssignment): Promise<Assignment>;
@@ -519,6 +527,65 @@ export class DatabaseStorage implements IStorage {
 
   async deleteLesson(id: string): Promise<void> {
     await db.delete(lessons).where(eq(lessons.id, id));
+  }
+
+  // Lesson Progress operations
+  async getLessonProgress(lessonId: string, userId: string): Promise<LessonProgress | undefined> {
+    const [progress] = await db
+      .select()
+      .from(lessonProgress)
+      .where(and(eq(lessonProgress.lessonId, lessonId), eq(lessonProgress.userId, userId)));
+    return progress;
+  }
+
+  async upsertLessonProgress(data: Partial<InsertLessonProgress>): Promise<LessonProgress> {
+    // Check if progress exists
+    if (!data.lessonId || !data.userId) {
+      throw new Error("lessonId and userId are required");
+    }
+    
+    const existing = await this.getLessonProgress(data.lessonId, data.userId);
+    
+    if (existing) {
+      // Update existing progress
+      const [updated] = await db
+        .update(lessonProgress)
+        .set({
+          ...data,
+          updatedAt: new Date(),
+          lastWatchedAt: new Date(),
+        })
+        .where(and(eq(lessonProgress.lessonId, data.lessonId), eq(lessonProgress.userId, data.userId)))
+        .returning();
+      return updated;
+    } else {
+      // Insert new progress
+      const [inserted] = await db
+        .insert(lessonProgress)
+        .values(data as InsertLessonProgress)
+        .returning();
+      return inserted;
+    }
+  }
+
+  async getLessonProgressByCourse(courseId: string, userId: string): Promise<LessonProgress[]> {
+    return await db
+      .select({
+        id: lessonProgress.id,
+        userId: lessonProgress.userId,
+        lessonId: lessonProgress.lessonId,
+        watchedSeconds: lessonProgress.watchedSeconds,
+        totalSeconds: lessonProgress.totalSeconds,
+        lastPosition: lessonProgress.lastPosition,
+        completed: lessonProgress.completed,
+        completedAt: lessonProgress.completedAt,
+        lastWatchedAt: lessonProgress.lastWatchedAt,
+        createdAt: lessonProgress.createdAt,
+        updatedAt: lessonProgress.updatedAt,
+      })
+      .from(lessonProgress)
+      .innerJoin(lessons, eq(lessons.id, lessonProgress.lessonId))
+      .where(and(eq(lessons.courseId, courseId), eq(lessonProgress.userId, userId)));
   }
 
   // Assignment operations

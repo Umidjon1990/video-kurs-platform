@@ -1551,6 +1551,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Lesson Progress endpoints
+  app.get('/api/lessons/:lessonId/progress', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { lessonId } = req.params;
+      const progress = await storage.getLessonProgress(lessonId, userId);
+      res.json(progress || null);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/lessons/:lessonId/progress', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { lessonId } = req.params;
+      const { watchedSeconds, totalSeconds, lastPosition, completed } = req.body;
+      
+      const progress = await storage.upsertLessonProgress({
+        userId,
+        lessonId,
+        watchedSeconds,
+        totalSeconds,
+        lastPosition,
+        completed,
+        completedAt: completed ? new Date() : undefined,
+      });
+      
+      res.json(progress);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/courses/:courseId/progress', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { courseId } = req.params;
+      const progress = await storage.getLessonProgressByCourse(courseId, userId);
+      res.json(progress);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get('/api/student/enrolled-courses', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
