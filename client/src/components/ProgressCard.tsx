@@ -2,8 +2,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BookOpen, CheckCircle2, FileText, GraduationCap, ArrowRight } from "lucide-react";
+import { BookOpen, CheckCircle2, FileText, GraduationCap, ArrowRight, Trophy } from "lucide-react";
 import type { StudentCourseProgress } from "@shared/schema";
+import { motion } from "framer-motion";
 
 interface ProgressCardProps {
   progress: StudentCourseProgress;
@@ -24,14 +25,29 @@ export function ProgressCard({ progress, onContinue }: ProgressCardProps) {
     nextLesson
   } = progress;
 
+  const isCompleted = progressPercentage === 100;
+
   return (
-    <Card className="overflow-hidden" data-testid={`progress-card-${course.id}`}>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <Card className="overflow-hidden h-full hover-elevate" data-testid={`progress-card-${course.id}`}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
-            <CardTitle className="text-xl line-clamp-1" data-testid={`progress-course-title-${course.id}`}>
-              {course.title}
-            </CardTitle>
+            <div className="flex items-center gap-2 mb-2">
+              <CardTitle className="text-xl line-clamp-1" data-testid={`progress-course-title-${course.id}`}>
+                {course.title}
+              </CardTitle>
+              {isCompleted && (
+                <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
+                  <Trophy className="w-3 h-3 mr-1" />
+                  Tugallangan
+                </Badge>
+              )}
+            </div>
             <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
               {course.description}
             </p>
@@ -134,7 +150,17 @@ export function ProgressCard({ progress, onContinue }: ProgressCardProps) {
             </div>
           </div>
         )}
+        
+        {/* Linear Progress Bar */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Umumiy progress</span>
+            <span className="font-medium">{progressPercentage}%</span>
+          </div>
+          <Progress value={progressPercentage} className="h-2" />
+        </div>
       </CardContent>
     </Card>
+    </motion.div>
   );
 }

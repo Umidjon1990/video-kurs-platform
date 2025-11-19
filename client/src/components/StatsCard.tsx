@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LucideIcon, TrendingUp, TrendingDown } from "lucide-react";
+import { motion } from "framer-motion";
 
 interface StatsCardProps {
   title: string;
@@ -22,10 +23,18 @@ export function StatsCard({ title, value, icon: Icon, description, testId, trend
     : "";
 
   return (
-    <Card data-testid={testId} className="hover-elevate">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      whileHover={{ y: -4 }}
+    >
+      <Card data-testid={testId} className="h-full">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
+        <div className="p-2 rounded-lg bg-primary/10">
+          <Icon className="h-4 w-4 text-primary" />
+        </div>
       </CardHeader>
       <CardContent>
         <div className="flex items-baseline gap-2">
@@ -46,5 +55,6 @@ export function StatsCard({ title, value, icon: Icon, description, testId, trend
         )}
       </CardContent>
     </Card>
+    </motion.div>
   );
 }
