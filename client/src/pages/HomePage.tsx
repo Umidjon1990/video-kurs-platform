@@ -114,7 +114,7 @@ export default function HomePage() {
     { value: "IT", label: "💻 Dasturlash" },
     { value: "Design", label: "🎨 Dizayn" },
     { value: "Business", label: "📈 Biznes" },
-    { value: "Language", label: "🌍 Tillar" },
+    { value: "Til", label: "🌍 Tillar" },
     { value: "Marketing", label: "📢 Marketing" },
   ];
 
@@ -146,7 +146,7 @@ export default function HomePage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
             >
-              O'zbekistondagi Eng Yaxshi
+             Zamonaviy Ta'lim
               <br />
               <span className="text-primary">Video Kurslar Platformasi</span>
             </motion.h1>
@@ -156,9 +156,9 @@ export default function HomePage() {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.8, delay: 0.4 }}
             >
-              Professional o'qituvchilardan zamonaviy video darslar.
+              Professional  zamonaviy video darslar.
               <br />
-              Kasb-hunaringizni oshiring va kelajagingizni yarating!
+              Bilimingizni oshiring va kelajagingizni yarating!
             </motion.p>
 
             {/* Search Bar */}
@@ -866,7 +866,7 @@ export default function HomePage() {
       <footer className="border-t bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Video Kurslar Platformasi. Barcha huquqlar himoyalangan.
+            © {new Date().getFullYear()} Zamonaviy Ta'lim loyihasi. Barcha huquqlar himoyalangan.
           </div>
         </div>
       </footer>
