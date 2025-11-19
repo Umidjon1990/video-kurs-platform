@@ -136,31 +136,12 @@ export default function StudentCourses() {
       </div>
 
       <div className="space-y-6">
-        <Tabs defaultValue="all" className="space-y-8">
+        <Tabs defaultValue="enrolled" className="space-y-8">
           <TabsList>
-            <TabsTrigger value="all" data-testid="tab-all-courses">Barcha Kurslar</TabsTrigger>
             <TabsTrigger value="enrolled" data-testid="tab-my-courses">Mening Kurslarim</TabsTrigger>
+            <TabsTrigger value="all" data-testid="tab-all-courses">Barcha Kurslar</TabsTrigger>
             <TabsTrigger value="plans" data-testid="tab-subscription-plans">Tariflar</TabsTrigger>
           </TabsList>
-
-          <TabsContent value="all" className="space-y-4">
-            <h2 className="text-3xl font-bold">Barcha Kurslar</h2>
-            {allCourses && allCourses.length === 0 ? (
-              <p className="text-center text-muted-foreground py-16">Hozircha kurslar yo'q</p>
-            ) : (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {allCourses?.map((course) => (
-                  <CourseCard
-                    key={course.id}
-                    course={course}
-                    onEnroll={handleEnroll}
-                    onViewDemo={handleViewDemo}
-                    isEnrolled={enrolledCourseIds.has(course.id)}
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
 
           <TabsContent value="enrolled" className="space-y-4">
             <h2 className="text-3xl font-bold">Mening Kurslarim</h2>
@@ -191,6 +172,25 @@ export default function StudentCourses() {
                     </div>
                   );
                 })}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="all" className="space-y-4">
+            <h2 className="text-3xl font-bold">Barcha Kurslar</h2>
+            {allCourses && allCourses.length === 0 ? (
+              <p className="text-center text-muted-foreground py-16">Hozircha kurslar yo'q</p>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {allCourses?.map((course) => (
+                  <CourseCard
+                    key={course.id}
+                    course={course}
+                    onEnroll={handleEnroll}
+                    onViewDemo={handleViewDemo}
+                    isEnrolled={enrolledCourseIds.has(course.id)}
+                  />
+                ))}
               </div>
             )}
           </TabsContent>
