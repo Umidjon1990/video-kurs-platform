@@ -1546,6 +1546,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public lessons endpoint - shows demo lessons with video, premium lessons with minimal info
+  app.get('/api/courses/:courseId/lessons/public', async (req, res) => {
+    try {
+      const { courseId } = req.params;
+      
+      // Check if course exists and is published
+      const course = await storage.getCourse(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      if (course.status !== 'published') {
+        return res.status(404).json({ message: "Course not available" });
+      }
+      
+      const lessons = await storage.getLessonsByCourse(courseId);
+      
+      // Return 404 if no lessons exist
+      if (!lessons || lessons.length === 0) {
+        return res.status(404).json({ message: "No lessons available" });
+      }
+      
+      // Sort lessons by order
+      const sortedLessons = lessons.sort((a, b) => a.order - b.order);
+      
+      // For security: Return only safe fields for all lessons
+      const publicLessons = sortedLessons.map(lesson => {
+        if (lesson.isDemo) {
+          // Demo lessons - include video URL for viewing
+          return {
+            id: lesson.id,
+            title: lesson.title,
+            videoUrl: lesson.videoUrl, // Include for demo lessons
+            duration: lesson.duration,
+            order: lesson.order,
+            isDemo: lesson.isDemo,
+            courseId: lesson.courseId,
+          };
+        } else {
+          // Premium lessons - return only safe fields (no video URL)
+          return {
+            id: lesson.id,
+            title: lesson.title,
+            duration: lesson.duration,
+            order: lesson.order,
+            isDemo: lesson.isDemo,
+            courseId: lesson.courseId,
+            videoUrl: '', // Explicitly empty for security
+          };
+        }
+      });
+      
+      res.json(publicLessons);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ============ STUDENT ROUTES ============
   app.get('/api/courses', isAuthenticated, async (req, res) => {
     try {

@@ -21,6 +21,15 @@ type PublicCourse = Course & {
   planPricing?: Array<CoursePlanPricing & { plan: SubscriptionPlan }>;
 };
 
+type Lesson = {
+  id: string;
+  title: string;
+  videoUrl: string;
+  isDemo: boolean;
+  duration?: number;
+  order: number;
+};
+
 export default function HomePage() {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
@@ -28,6 +37,7 @@ export default function HomePage() {
   const [priceRange, setPriceRange] = useState<string>("");
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCertificate, setSelectedCertificate] = useState<{ url: string; index: number } | null>(null);
+  const [selectedCourseForLessons, setSelectedCourseForLessons] = useState<PublicCourse | null>(null);
 
   // Build query params
   const buildQueryParams = () => {
@@ -51,35 +61,27 @@ export default function HomePage() {
     return params.toString();
   };
 
+  const queryString = buildQueryParams();
   const { data: courses, isLoading } = useQuery<PublicCourse[]>({
-    queryKey: ["/api/courses/public", searchQuery, selectedCategory, priceRange],
-    queryFn: async () => {
-      const queryString = buildQueryParams();
-      const url = `/api/courses/public${queryString ? `?${queryString}` : ''}`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("Failed to fetch courses");
-      return response.json();
-    },
+    queryKey: [`/api/courses/public${queryString ? `?${queryString}` : ''}`],
   });
 
   // Fetch site settings
   const { data: siteSettings } = useQuery<SiteSetting[]>({
     queryKey: ["/api/site-settings"],
-    queryFn: async () => {
-      const response = await fetch("/api/site-settings");
-      if (!response.ok) throw new Error("Failed to fetch settings");
-      return response.json();
-    },
   });
 
   // Fetch testimonials
   const { data: testimonials } = useQuery<Testimonial[]>({
     queryKey: ["/api/testimonials"],
-    queryFn: async () => {
-      const response = await fetch("/api/testimonials");
-      if (!response.ok) throw new Error("Failed to fetch testimonials");
-      return response.json();
-    },
+  });
+
+  // Fetch lessons for selected course
+  const { data: courseLessons } = useQuery<Lesson[]>({
+    queryKey: selectedCourseForLessons 
+      ? [`/api/courses/${selectedCourseForLessons.id}/lessons/public`]
+      : [],
+    enabled: !!selectedCourseForLessons,
   });
 
   // Helper to get setting value
@@ -244,25 +246,11 @@ export default function HomePage() {
       {/* Stats Section */}
       <div className="border-b bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl mx-auto">
             <div className="text-center">
               <BookOpen className="w-10 h-10 mx-auto text-primary mb-2" />
               <div className="text-3xl font-bold">{courses?.length || 0}</div>
               <div className="text-sm text-muted-foreground">Video Kurslar</div>
-            </div>
-            <div className="text-center">
-              <Users className="w-10 h-10 mx-auto text-primary mb-2" />
-              <div className="text-3xl font-bold">
-                {courses?.reduce((sum, c) => sum + c.enrollmentsCount, 0) || 0}
-              </div>
-              <div className="text-sm text-muted-foreground">Aktiv Talabalar</div>
-            </div>
-            <div className="text-center">
-              <Award className="w-10 h-10 mx-auto text-primary mb-2" />
-              <div className="text-3xl font-bold">
-                {new Set(courses?.map(c => c.instructorId)).size || 0}
-              </div>
-              <div className="text-sm text-muted-foreground">Professional O'qituvchilar</div>
             </div>
             <div className="text-center">
               <TrendingUp className="w-10 h-10 mx-auto text-primary mb-2" />
@@ -405,16 +393,29 @@ export default function HomePage() {
                         )}
                       </div>
                     )}
-                    <Button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        window.location.href = "/api/login";
-                      }}
-                      className="w-full"
-                      data-testid={`button-enroll-${course.id}`}
-                    >
-                      Yozilish
-                    </Button>
+                    <div className="flex gap-2 w-full">
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedCourseForLessons(course);
+                        }}
+                        variant="outline"
+                        className="flex-1"
+                        data-testid={`button-view-lessons-${course.id}`}
+                      >
+                        Darslarni Ko'rish
+                      </Button>
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open("https://t.me/zamonaviytalimuz", "_blank", "noopener,noreferrer");
+                        }}
+                        className="flex-1"
+                        data-testid={`button-enroll-${course.id}`}
+                      >
+                        Yozilish
+                      </Button>
+                    </div>
                   </CardFooter>
                 </Card>
               );
@@ -669,6 +670,71 @@ export default function HomePage() {
                     e.currentTarget.src = "https://via.placeholder.com/800x1000/3B82F6/FFFFFF?text=Sertifikat+" + (selectedCertificate.index + 1);
                   }}
                 />
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Course Lessons Modal */}
+      <Dialog 
+        open={selectedCourseForLessons !== null} 
+        onOpenChange={() => setSelectedCourseForLessons(null)}
+      >
+        <DialogContent className="max-w-3xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>{selectedCourseForLessons?.title}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+            {courseLessons && courseLessons.length > 0 ? (
+              <div className="space-y-2">
+                {courseLessons.map((lesson, index) => (
+                  <Card 
+                    key={lesson.id}
+                    className={lesson.isDemo ? "hover-elevate" : "opacity-75"}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mt-1">
+                          {lesson.isDemo ? (
+                            <span className="text-sm font-semibold text-primary">{index + 1}</span>
+                          ) : (
+                            <span className="text-sm font-semibold text-muted-foreground">{index + 1}</span>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <h4 className="font-medium">{lesson.title}</h4>
+                            {lesson.isDemo ? (
+                              <Badge variant="default" className="bg-green-500 hover:bg-green-600">
+                                Bepul Demo
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary">
+                                Premium
+                              </Badge>
+                            )}
+                          </div>
+                          {lesson.duration && (
+                            <p className="text-sm text-muted-foreground">
+                              {lesson.duration} daqiqa
+                            </p>
+                          )}
+                          {!lesson.isDemo && (
+                            <p className="text-xs text-muted-foreground mt-2">
+                              Bu darsni ko'rish uchun kursga yoziling
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">Hali darslar qo'shilmagan</p>
               </div>
             )}
           </div>
