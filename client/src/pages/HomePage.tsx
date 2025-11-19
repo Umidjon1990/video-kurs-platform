@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, BookOpen, Users, Award, TrendingUp, Star, Mail, Phone, MapPin, Send, ExternalLink, X, ZoomIn } from "lucide-react";
+import { Search, Filter, BookOpen, Users, Award, Star, Mail, Phone, MapPin, Send, ExternalLink, X, ZoomIn } from "lucide-react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -243,24 +243,6 @@ export default function HomePage() {
           </div>
         </div>
       </motion.div>
-
-      {/* Stats Section */}
-      <div className="border-b bg-muted/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl mx-auto">
-            <div className="text-center">
-              <BookOpen className="w-10 h-10 mx-auto text-primary mb-2" />
-              <div className="text-3xl font-bold">{courses?.length || 0}</div>
-              <div className="text-sm text-muted-foreground">Video Kurslar</div>
-            </div>
-            <div className="text-center">
-              <TrendingUp className="w-10 h-10 mx-auto text-primary mb-2" />
-              <div className="text-3xl font-bold">4.8</div>
-              <div className="text-sm text-muted-foreground">O'rtacha Reyting</div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Courses Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
