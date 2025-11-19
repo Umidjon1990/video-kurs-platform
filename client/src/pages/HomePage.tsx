@@ -796,12 +796,15 @@ export default function HomePage() {
           <div className="space-y-4 max-h-[70vh] overflow-y-auto">
             {courseLessons && courseLessons.length > 0 ? (
               <div className="space-y-2">
-                {courseLessons.map((lesson, index) => (
-                  <Card 
+                {courseLessons.map((lesson, index) => {
+                  const canViewDemo = lesson.isDemo && lesson.videoUrl && lesson.videoUrl.trim() !== '';
+                  
+                  return <Card 
                     key={lesson.id}
-                    className={lesson.isDemo ? "hover-elevate cursor-pointer" : "opacity-75"}
+                    className={canViewDemo ? "hover-elevate cursor-pointer" : "opacity-75"}
                     onClick={() => {
-                      if (lesson.isDemo && lesson.videoUrl) {
+                      // SECURITY: Only allow demo lessons with valid video URLs
+                      if (canViewDemo) {
                         setSelectedDemoLesson(lesson);
                       }
                     }}
@@ -834,7 +837,7 @@ export default function HomePage() {
                               {lesson.duration} daqiqa
                             </p>
                           )}
-                          {lesson.isDemo && lesson.videoUrl ? (
+                          {canViewDemo ? (
                             <p className="text-xs text-green-600 dark:text-green-400 mt-2">
                               Bosib ko'ring
                             </p>
@@ -846,8 +849,8 @@ export default function HomePage() {
                         </div>
                       </div>
                     </CardContent>
-                  </Card>
-                ))}
+                  </Card>;
+                })}
               </div>
             ) : (
               <div className="text-center py-8">
