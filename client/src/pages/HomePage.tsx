@@ -38,6 +38,7 @@ export default function HomePage() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCertificate, setSelectedCertificate] = useState<{ url: string; index: number } | null>(null);
   const [selectedCourseForLessons, setSelectedCourseForLessons] = useState<PublicCourse | null>(null);
+  const [selectedDemoLesson, setSelectedDemoLesson] = useState<Lesson | null>(null);
 
   // Build query params
   const buildQueryParams = () => {
@@ -676,6 +677,113 @@ export default function HomePage() {
         </DialogContent>
       </Dialog>
 
+      {/* Demo Video Player Modal */}
+      <Dialog 
+        open={selectedDemoLesson !== null} 
+        onOpenChange={() => setSelectedDemoLesson(null)}
+      >
+        <DialogContent className="max-w-5xl">
+          <DialogHeader>
+            <DialogTitle>{selectedDemoLesson?.title}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {selectedDemoLesson?.videoUrl && (
+              <div className="w-full aspect-video bg-black rounded-lg overflow-hidden">
+                {(() => {
+                  const videoContent = selectedDemoLesson.videoUrl.trim();
+                  
+                  // Check if it's an iframe embed code
+                  if (videoContent.startsWith('<iframe') || videoContent.startsWith('<embed')) {
+                    return (
+                      <div 
+                        className="w-full h-full"
+                        dangerouslySetInnerHTML={{ __html: videoContent }}
+                        data-testid="demo-video-player"
+                      />
+                    );
+                  }
+                  
+                  // Parse YouTube URLs
+                  if (videoContent.includes('youtube.com') || videoContent.includes('youtu.be')) {
+                    let videoId = '';
+                    
+                    if (videoContent.includes('youtube.com/watch?v=')) {
+                      videoId = videoContent.split('watch?v=')[1]?.split('&')[0];
+                    } else if (videoContent.includes('youtube.com/embed/')) {
+                      videoId = videoContent.split('embed/')[1]?.split('?')[0];
+                    } else if (videoContent.includes('youtu.be/')) {
+                      videoId = videoContent.split('youtu.be/')[1]?.split('?')[0];
+                    }
+                    
+                    if (videoId) {
+                      return (
+                        <iframe
+                          src={`https://www.youtube.com/embed/${videoId}`}
+                          className="w-full h-full"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          data-testid="demo-video-player"
+                        />
+                      );
+                    }
+                  }
+                  
+                  // Check for Kinescope, Vimeo and other video platforms
+                  if (videoContent.includes('kinescope.io') || 
+                      videoContent.includes('vimeo.com') ||
+                      videoContent.includes('player.vimeo.com') ||
+                      videoContent.includes('dailymotion.com') ||
+                      videoContent.includes('wistia.com')) {
+                    return (
+                      <iframe
+                        src={videoContent}
+                        className="w-full h-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        data-testid="demo-video-player"
+                      />
+                    );
+                  }
+                  
+                  // Try to treat as direct video URL or iframe src
+                  if (videoContent.startsWith('http://') || videoContent.startsWith('https://')) {
+                    return (
+                      <iframe
+                        src={videoContent}
+                        className="w-full h-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        data-testid="demo-video-player"
+                      />
+                    );
+                  }
+                  
+                  // Default: show as link
+                  return (
+                    <div className="text-white p-8 text-center flex flex-col items-center justify-center h-full">
+                      <p className="mb-4">Video formatini aniqlab bo'lmadi</p>
+                      <a 
+                        href={videoContent} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        Video havolasini ochish
+                      </a>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+            {selectedDemoLesson?.duration && (
+              <p className="text-sm text-muted-foreground">
+                Davomiyligi: {selectedDemoLesson.duration} daqiqa
+              </p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Course Lessons Modal */}
       <Dialog 
         open={selectedCourseForLessons !== null} 
@@ -691,7 +799,13 @@ export default function HomePage() {
                 {courseLessons.map((lesson, index) => (
                   <Card 
                     key={lesson.id}
-                    className={lesson.isDemo ? "hover-elevate" : "opacity-75"}
+                    className={lesson.isDemo ? "hover-elevate cursor-pointer" : "opacity-75"}
+                    onClick={() => {
+                      if (lesson.isDemo && lesson.videoUrl) {
+                        setSelectedDemoLesson(lesson);
+                      }
+                    }}
+                    data-testid={`card-lesson-${lesson.id}`}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-start gap-3">
@@ -720,7 +834,11 @@ export default function HomePage() {
                               {lesson.duration} daqiqa
                             </p>
                           )}
-                          {!lesson.isDemo && (
+                          {lesson.isDemo && lesson.videoUrl ? (
+                            <p className="text-xs text-green-600 dark:text-green-400 mt-2">
+                              Bosib ko'ring
+                            </p>
+                          ) : !lesson.isDemo && (
                             <p className="text-xs text-muted-foreground mt-2">
                               Bu darsni ko'rish uchun kursga yoziling
                             </p>
