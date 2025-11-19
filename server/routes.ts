@@ -545,7 +545,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const passwordHash = await bcrypt.hash(generatedPassword, 10);
       
       // Execute all operations in a transaction to ensure data consistency
-      const newUser = await db.transaction(async (tx) => {
+      const newUser = await db.transaction(async (tx: any) => {
         // Create user with active status (admin-created users are pre-approved)
         const [createdUser] = await tx
           .insert(users)
@@ -561,6 +561,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .returning();
         
         // If courseId is provided, create enrollment and subscription
+        let enrollmentCreated = false;
         if (validatedData.courseId) {
           // Get the first subscription plan as default
           const [defaultPlan] = await tx
@@ -568,49 +569,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .from(subscriptionPlans)
             .limit(1);
           
-          if (!defaultPlan) {
-            throw new Error('Hech qanday tarif topilmadi. Avval tariflar yarating.');
+          if (defaultPlan) {
+            // Create enrollment with approved payment status (admin-created enrollments are immediately approved)
+            const [enrollment] = await tx
+              .insert(enrollments)
+              .values({
+                userId: createdUser.id,
+                courseId: validatedData.courseId,
+                planId: defaultPlan.id,
+                paymentStatus: 'approved', // Admin-created enrollments are immediately approved
+              })
+              .returning();
+            
+            // Create subscription with custom duration
+            const startDate = new Date();
+            const endDate = new Date();
+            endDate.setDate(endDate.getDate() + validatedData.subscriptionDays);
+            
+            await tx
+              .insert(userSubscriptions)
+              .values({
+                userId: createdUser.id,
+                courseId: validatedData.courseId,
+                planId: defaultPlan.id,
+                enrollmentId: enrollment.id,
+                status: 'active',
+                startDate,
+                endDate,
+              });
+            
+            enrollmentCreated = true;
           }
-          
-          // Create enrollment with approved payment status (admin-created enrollments are immediately approved)
-          const [enrollment] = await tx
-            .insert(enrollments)
-            .values({
-              userId: createdUser.id,
-              courseId: validatedData.courseId,
-              planId: defaultPlan.id,
-              paymentStatus: 'approved', // Admin-created enrollments are immediately approved
-            })
-            .returning();
-          
-          // Create subscription with custom duration
-          const startDate = new Date();
-          const endDate = new Date();
-          endDate.setDate(endDate.getDate() + validatedData.subscriptionDays);
-          
-          await tx
-            .insert(userSubscriptions)
-            .values({
-              userId: createdUser.id,
-              courseId: validatedData.courseId,
-              planId: defaultPlan.id,
-              enrollmentId: enrollment.id,
-              status: 'active',
-              startDate,
-              endDate,
-            });
         }
         
-        return createdUser;
+        return { user: createdUser, enrollmentCreated };
       });
       
       // Remove password from response
-      const { passwordHash: _, ...userWithoutPassword } = newUser;
+      const { passwordHash: _pwd, ...userWithoutPassword } = newUser.user;
       
-      // Return user with login credentials (phone as login)
+      // Return user with login credentials (phone as login) and enrollment status
       res.json({ 
-        message: 'O\'quvchi muvaffaqiyatli yaratildi',
+        message: newUser.enrollmentCreated 
+          ? 'O\'quvchi muvaffaqiyatli yaratildi va kursga yozildi' 
+          : validatedData.courseId 
+            ? 'O\'quvchi yaratildi (Kursga yozilmadi - tarif topilmadi)'
+            : 'O\'quvchi muvaffaqiyatli yaratildi',
         user: userWithoutPassword,
+        enrollmentCreated: newUser.enrollmentCreated,
         credentials: {
           login: validatedData.phone,
           password: generatedPassword
@@ -637,7 +643,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .orderBy(desc(users.createdAt));
       
       // Remove passwords from response
-      const studentsWithoutPasswords = pendingStudents.map(({ passwordHash, ...user }) => user);
+      const studentsWithoutPasswords = pendingStudents.map(({ passwordHash: _p, ...user }: any) => user);
       
       res.json(studentsWithoutPasswords);
     } catch (error: any) {
@@ -2682,7 +2688,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get the highest order value
       const existingPlans = await db.select().from(subscriptionPlans);
       const maxOrder = existingPlans.length > 0 
-        ? Math.max(...existingPlans.map(p => p.order))
+        ? Math.max(...existingPlans.map((p: any) => p.order))
         : 0;
       
       const [newPlan] = await db
