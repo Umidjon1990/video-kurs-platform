@@ -867,7 +867,7 @@ export default function InstructorDashboard() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setLocation(`/learning/${course.id}`)}
+                      onClick={() => setLocation(`/learn/${course.id}`)}
                       data-testid={`button-preview-${course.id}`}
                     >
                       <Eye className="w-4 h-4 mr-2" />

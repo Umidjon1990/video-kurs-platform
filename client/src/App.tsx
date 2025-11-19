@@ -69,6 +69,7 @@ function Router() {
                   <Route path="/admin/cms" component={AdminCMSPage} />
                   <Route path="/admin/subscription-plans" component={AdminSubscriptionPlansPage} />
                   <Route path="/admin/subscriptions" component={AdminSubscriptions} />
+                  <Route path="/learn/:courseId" component={LearningPage} />
                 </>
               )}
               
@@ -77,6 +78,7 @@ function Router() {
                 <>
                   <Route path="/" component={InstructorDashboard} />
                   <Route path="/instructor/subscriptions" component={InstructorSubscriptions} />
+                  <Route path="/learn/:courseId" component={LearningPage} />
                   <Route path="/chat" component={ChatPage} />
                   <Route path="/chat/:conversationId" component={ChatPage} />
                 </>
