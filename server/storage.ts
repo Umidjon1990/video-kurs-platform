@@ -548,21 +548,32 @@ export class DatabaseStorage implements IStorage {
     
     if (existing) {
       // Update existing progress
+      const updateData = {
+        ...data,
+        updatedAt: new Date(),
+        lastWatchedAt: new Date(),
+        // FIXED: Set or clear completedAt based on completed flag
+        completedAt: data.completed ? new Date() : null,
+      };
+      
       const [updated] = await db
         .update(lessonProgress)
-        .set({
-          ...data,
-          updatedAt: new Date(),
-          lastWatchedAt: new Date(),
-        })
+        .set(updateData)
         .where(and(eq(lessonProgress.lessonId, data.lessonId), eq(lessonProgress.userId, data.userId)))
         .returning();
       return updated;
     } else {
       // Insert new progress
+      const insertData = {
+        ...data,
+        lastWatchedAt: new Date(),
+        // FIXED: Set completedAt on initial insert if completed
+        completedAt: data.completed ? new Date() : undefined,
+      };
+      
       const [inserted] = await db
         .insert(lessonProgress)
-        .values(data as InsertLessonProgress)
+        .values(insertData as InsertLessonProgress)
         .returning();
       return inserted;
     }

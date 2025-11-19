@@ -82,6 +82,43 @@ export default function LearningPage() {
     enabled: !!testDialog.testId && testDialog.open,
   });
 
+  // Lesson progress tracking
+  const { data: lessonProgress } = useQuery<any>({
+    queryKey: ["/api/lessons", currentLessonId, "progress"],
+    enabled: !!currentLessonId && isAuthenticated,
+  });
+
+  // Fetch all lesson progress for the course (for sidebar indicators)
+  const { data: courseProgress } = useQuery<any[]>({
+    queryKey: ["/api/courses", courseId, "progress"],
+    enabled: !!courseId && isAuthenticated,
+  });
+
+  const saveProgressMutation = useMutation({
+    mutationFn: async ({ lessonId, completed }: { lessonId: string; completed: boolean }) => {
+      const response = await apiRequest("POST", `/api/lessons/${lessonId}/progress`, {
+        watchedSeconds: 0, // Basic implementation - just track completion
+        totalSeconds: 0,
+        lastPosition: 0,
+        completed,
+      });
+      return await response.json();
+    },
+    onSuccess: () => {
+      // Invalidate all relevant queries
+      queryClient.invalidateQueries({ queryKey: ["/api/lessons", currentLessonId, "progress"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/courses", courseId, "progress"] }); // FIXED: Sidebar progress
+      queryClient.invalidateQueries({ queryKey: ["/api/student/progress"] });
+      toast({
+        title: "Saqlandi",
+        description: "Dars progresi saqlandi",
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+
   const submitTestMutation = useMutation({
     mutationFn: async () => {
       if (!testDialog.testId) return;
@@ -402,6 +439,48 @@ export default function LearningPage() {
                 </CardContent>
               </Card>
 
+              {/* Lesson Progress Tracking */}
+              <Card className="bg-primary/5 border-primary/20">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      {lessonProgress?.completed ? (
+                        <CheckCircle className="w-5 h-5 text-success" data-testid="icon-lesson-completed" />
+                      ) : (
+                        <PlayCircle className="w-5 h-5 text-primary" data-testid="icon-lesson-in-progress" />
+                      )}
+                      <div>
+                        <p className="font-medium">
+                          {lessonProgress?.completed ? "Dars tugallangan ✓" : "Darsni ko'ring"}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {lessonProgress?.completed 
+                            ? `Tugallangan: ${new Date(lessonProgress.completedAt).toLocaleDateString('uz-UZ')}`
+                            : "Videoni ko'rib, darsni tugalladim deb belgilang"
+                          }
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => {
+                        if (currentLesson?.id) {
+                          saveProgressMutation.mutate({
+                            lessonId: currentLesson.id,
+                            completed: !lessonProgress?.completed
+                          });
+                        }
+                      }}
+                      variant={lessonProgress?.completed ? "outline" : "default"}
+                      disabled={saveProgressMutation.isPending}
+                      data-testid="button-mark-lesson-complete"
+                    >
+                      {saveProgressMutation.isPending ? "Saqlanmoqda..." : 
+                       lessonProgress?.completed ? "Bekor qilish" : "Darsni tugalladim"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
               <Tabs defaultValue="overview">
                 <TabsList>
                   <TabsTrigger value="overview" data-testid="tab-overview">Umumiy Ma'lumot</TabsTrigger>
@@ -626,6 +705,10 @@ export default function LearningPage() {
                 // Lock lesson if not demo AND (not enrolled OR subscription expired)
                 const isLocked = !lesson.isDemo && (!isEnrolled || !hasActiveSubscription);
                 
+                // Check if lesson is completed
+                const lessonProgressData = courseProgress?.find((p: any) => p.lessonId === lesson.id);
+                const isCompleted = lessonProgressData?.completed || false;
+                
                 return (
                   <div
                     key={lesson.id}
@@ -642,6 +725,8 @@ export default function LearningPage() {
                     <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mt-1">
                       {isLocked ? (
                         <Lock className="w-4 h-4 text-muted-foreground" />
+                      ) : isCompleted ? (
+                        <CheckCircle className="w-4 h-4 text-success" data-testid={`icon-lesson-${lesson.id}-completed`} />
                       ) : currentLessonId === lesson.id ? (
                         <PlayCircle className="w-4 h-4 text-primary" />
                       ) : (
