@@ -64,6 +64,13 @@ export default function AdminDashboard() {
     login: string;
     password: string;
   } | null>(null);
+  const [userResetPasswordDialog, setUserResetPasswordDialog] = useState<{
+    isOpen: boolean;
+    userId: string;
+    userName: string;
+  } | null>(null);
+  const [userNewPassword, setUserNewPassword] = useState("");
+  const [userResetPasswordResult, setUserResetPasswordResult] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -233,6 +240,26 @@ export default function AdminDashboard() {
       toast({
         title: "Muvaffaqiyatli",
         description: "Rol yangilandi",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Xatolik",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const resetUserPasswordMutation = useMutation({
+    mutationFn: async ({ userId, newPassword }: { userId: string; newPassword: string }) => {
+      return await apiRequest("PATCH", `/api/admin/users/${userId}/reset-password`, { newPassword });
+    },
+    onSuccess: () => {
+      setUserResetPasswordResult(userNewPassword);
+      toast({
+        title: "Muvaffaqiyatli",
+        description: "Parol yangilandi",
       });
     },
     onError: (error: Error) => {
@@ -679,22 +706,41 @@ export default function AdminDashboard() {
                       {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-'}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => {
-                          setDeleteDialog({
-                            isOpen: true,
-                            userId: user.id,
-                            userName: `${user.firstName} ${user.lastName}`,
-                          });
-                        }}
-                        disabled={deleteUserMutation.isPending}
-                        data-testid={`button-delete-user-${user.id}`}
-                      >
-                        <Trash2 className="w-4 h-4 mr-1" />
-                        O'chirish
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setUserResetPasswordDialog({
+                              isOpen: true,
+                              userId: user.id,
+                              userName: `${user.firstName} ${user.lastName}`,
+                            });
+                            setUserNewPassword("");
+                            setUserResetPasswordResult(null);
+                          }}
+                          data-testid={`button-reset-password-${user.id}`}
+                        >
+                          <Key className="w-4 h-4 mr-1" />
+                          Parolni tiklash
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => {
+                            setDeleteDialog({
+                              isOpen: true,
+                              userId: user.id,
+                              userName: `${user.firstName} ${user.lastName}`,
+                            });
+                          }}
+                          disabled={deleteUserMutation.isPending}
+                          data-testid={`button-delete-user-${user.id}`}
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" />
+                          O'chirish
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -969,6 +1015,125 @@ export default function AdminDashboard() {
               {approvePasswordResetMutation.isPending ? "O'rnatilmoqda..." : "Parolni O'rnatish"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* User Reset Password Dialog */}
+      <Dialog 
+        open={userResetPasswordDialog?.isOpen || false} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setUserResetPasswordDialog(null);
+            setUserNewPassword("");
+            setUserResetPasswordResult(null);
+          }
+        }}
+      >
+        <DialogContent data-testid="dialog-reset-password">
+          <DialogHeader>
+            <DialogTitle>Parolni Tiklash</DialogTitle>
+            <DialogDescription>
+              {userResetPasswordDialog?.userName} uchun yangi parol o'rnating
+            </DialogDescription>
+          </DialogHeader>
+
+          {userResetPasswordResult ? (
+            <div className="space-y-4 py-4">
+              <div className="flex items-center justify-center py-3">
+                <div className="flex items-center gap-2 text-green-600">
+                  <CheckCircle className="w-5 h-5" />
+                  <p className="font-semibold">Parol muvaffaqiyatli tiklandi!</p>
+                </div>
+              </div>
+              <div className="p-4 bg-muted rounded-md space-y-4">
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Yangi Parol</Label>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 bg-background px-3 py-2 rounded text-sm font-mono border">
+                        {userResetPasswordResult}
+                      </code>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          navigator.clipboard.writeText(userResetPasswordResult);
+                          toast({ 
+                            title: "Nusxalandi!", 
+                            description: "Parol nusxalandi" 
+                          });
+                        }}
+                        data-testid="button-copy-new-password"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                <div className="pt-2 border-t">
+                  <p className="text-xs text-muted-foreground">
+                    ⚠️ Bu parolni o'quvchiga xavfsiz usulda yuboring (Telegram/SMS orqali).
+                  </p>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  onClick={() => {
+                    setUserResetPasswordDialog(null);
+                    setUserNewPassword("");
+                    setUserResetPasswordResult(null);
+                  }}
+                  data-testid="button-close-reset-password"
+                >
+                  Yopish
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">Yangi Parol *</Label>
+                <Input
+                  id="newPassword"
+                  type="text"
+                  placeholder="Kamida 6 ta belgi"
+                  value={userNewPassword}
+                  onChange={(e) => setUserNewPassword(e.target.value)}
+                  data-testid="input-new-password"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Oson eslab qolinadigan parol kiriting (masalan: student123)
+                </p>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setUserResetPasswordDialog(null);
+                    setUserNewPassword("");
+                  }}
+                  data-testid="button-cancel-reset-password"
+                >
+                  Bekor qilish
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (userResetPasswordDialog && userNewPassword.trim().length >= 6) {
+                      resetUserPasswordMutation.mutate({
+                        userId: userResetPasswordDialog.userId,
+                        newPassword: userNewPassword.trim(),
+                      });
+                    }
+                  }}
+                  disabled={resetUserPasswordMutation.isPending || userNewPassword.trim().length < 6}
+                  data-testid="button-confirm-reset-password"
+                >
+                  {resetUserPasswordMutation.isPending ? "Tiklanmoqda..." : "Parolni O'rnatish"}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

@@ -394,6 +394,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reset user password (Admin only)
+  app.patch('/api/admin/users/:userId/reset-password', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { newPassword } = req.body;
+      
+      if (!newPassword || newPassword.length < 6) {
+        return res.status(400).json({ message: "Parol kamida 6 ta belgidan iborat bo'lishi kerak" });
+      }
+      
+      // Hash the new password
+      const bcrypt = await import('bcryptjs');
+      const passwordHash = await bcrypt.hash(newPassword, 10);
+      
+      // Update user password
+      await db
+        .update(users)
+        .set({ 
+          passwordHash,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId));
+      
+      res.json({ message: "Parol muvaffaqiyatli yangilandi" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Delete user and all related data
   app.delete('/api/admin/users/:userId', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
