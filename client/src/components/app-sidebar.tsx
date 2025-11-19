@@ -39,6 +39,7 @@ type MenuItem = {
 
 const adminMenuItems: MenuItem[] = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
+  { title: "Kurslar", url: "/admin/courses", icon: BookOpen },
   { title: "To'lovlar", url: "/admin/payments", icon: CreditCard },
   { title: "Obunalar", url: "/admin/subscriptions", icon: Wallet },
   { title: "Obuna Rejalari", url: "/admin/subscription-plans", icon: ListChecks },

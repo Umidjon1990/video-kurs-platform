@@ -821,6 +821,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all courses (for admin - student creation form)
+  app.get('/api/courses', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      // Only admin and instructors can access all courses
+      if (user?.role !== 'admin' && user?.role !== 'instructor') {
+        return res.status(403).json({ message: "Ruxsat yo'q" });
+      }
+      
+      // Get all courses with instructor info, enrollments, and lessons count
+      const allCourses = await db
+        .select({
+          id: courses.id,
+          title: courses.title,
+          instructorId: courses.instructorId,
+          status: courses.status,
+          instructor: {
+            firstName: users.firstName,
+            lastName: users.lastName,
+          },
+          enrollmentsCount: sql<number>`cast(count(distinct ${enrollments.id}) as int)`,
+          lessonsCount: sql<number>`cast(count(distinct ${lessons.id}) as int)`,
+        })
+        .from(courses)
+        .leftJoin(users, eq(courses.instructorId, users.id))
+        .leftJoin(enrollments, eq(courses.id, enrollments.courseId))
+        .leftJoin(lessons, eq(courses.id, lessons.courseId))
+        .groupBy(courses.id, users.id)
+        .orderBy(desc(courses.createdAt));
+      
+      res.json(allCourses);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ============ INSTRUCTOR ROUTES ============
   app.get('/api/instructor/courses', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
