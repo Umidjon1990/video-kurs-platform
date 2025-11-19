@@ -19,8 +19,11 @@ import type { Course, Lesson, Assignment, Test } from "@shared/schema";
 export default function LearningPage() {
   const { courseId } = useParams<{ courseId: string }>();
   const { toast } = useToast();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user, isInstructor, isAdmin } = useAuth();
   const [, setLocation] = useLocation();
+  
+  // Preview mode for instructors and admins (bypass enrollment checks)
+  const isPreviewMode = isInstructor || isAdmin;
   const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
   const [submissionDialog, setSubmissionDialog] = useState<{ open: boolean; assignmentId: string | null }>({ open: false, assignmentId: null });
   const [submissionForm, setSubmissionForm] = useState({ content: "" });
@@ -277,8 +280,8 @@ export default function LearningPage() {
               const hasActiveSubscription = courseSubscription?.subscription.status === 'active' && 
                                             endDate && endDate > now;
               
-              // Lock lesson if not demo AND (not enrolled OR subscription expired)
-              const isLocked = !currentLesson.isDemo && (!isEnrolled || !hasActiveSubscription);
+              // Lock lesson if not demo AND (not enrolled OR subscription expired) AND not in preview mode
+              const isLocked = !isPreviewMode && !currentLesson.isDemo && (!isEnrolled || !hasActiveSubscription);
               
               if (isLocked) {
                 // Check if subscription expired
@@ -702,8 +705,8 @@ export default function LearningPage() {
                 const hasActiveSubscription = courseSubscription?.subscription.status === 'active' && 
                                               endDate && endDate > now;
                 
-                // Lock lesson if not demo AND (not enrolled OR subscription expired)
-                const isLocked = !lesson.isDemo && (!isEnrolled || !hasActiveSubscription);
+                // Lock lesson if not demo AND (not enrolled OR subscription expired) AND not in preview mode
+                const isLocked = !isPreviewMode && !lesson.isDemo && (!isEnrolled || !hasActiveSubscription);
                 
                 // Check if lesson is completed
                 const lessonProgressData = courseProgress?.find((p: any) => p.lessonId === lesson.id);

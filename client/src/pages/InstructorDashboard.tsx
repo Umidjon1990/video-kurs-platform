@@ -32,10 +32,12 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import type { Course, Lesson, Assignment, Test, InstructorCourseWithCounts, CourseAnalytics } from "@shared/schema";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { useLocation } from "wouter";
 
 export default function InstructorDashboard() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const [, setLocation] = useLocation();
   const [isCreateCourseOpen, setIsCreateCourseOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
@@ -857,16 +859,23 @@ export default function InstructorDashboard() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1"
                       onClick={() => setSelectedCourse(course)}
                       data-testid={`button-manage-${course.id}`}
                     >
                       Boshqarish
                     </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setLocation(`/learning/${course.id}`)}
+                      data-testid={`button-preview-${course.id}`}
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      Ko'rish
+                    </Button>
                     {course.status === 'draft' && (
                       <Button
                         size="sm"
-                        className="flex-1"
                         onClick={() => publishCourseMutation.mutate(course.id)}
                         data-testid={`button-publish-${course.id}`}
                       >
