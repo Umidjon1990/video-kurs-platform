@@ -1660,15 +1660,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   function extractOptionParts(value: string): { enumerator: string | null; body: string } {
     const trimmed = value.trim();
     
-    // Match enumerator patterns:
+    // Match enumerator patterns - requires closing bracket OR punctuation delimiter:
     // ^\s*[\(\[\{]? - optional opening bracket
-    // ([A-Za-z]+|\d+|[IVXLCDM]+) - letter(s), digit(s), or roman numeral (captured group 1)
-    // [\)\]\}]* - optional closing bracket
-    // [\s\.\-:–—]+ - required delimiter (space, dot, hyphen, en-dash, em-dash, colon)
-    const enumeratorPattern = /^\s*[\(\[\{]?([A-Za-z]+|\d+|[IVXLCDM]+)[\)\]\}]*[\s\.\-:–—]+/;
+    // ([A-Za-z]+|\d+|[IVXLCDM]+) - letter(s), digit(s), or roman numeral (group 1)
+    // ([\)\]\}]\s*|\s*[\.\-:–—]+\s*) - EITHER closing bracket OR punctuation (with optional space before/after) (group 2)
+    // 
+    // Matches:
+    //   A)Foo ✓ (closing paren)
+    //   A) Foo ✓ (closing paren + space)
+    //   A - Foo ✓ (space + hyphen + space)
+    //   A. Foo ✓ (dot + space)
+    //   (A) Foo ✓ (both brackets)
+    //   1.Bar ✓ (dot)
+    // Rejects:
+    //   Toshkent ✗ (no bracket/delimiter)
+    //   Toshkent shahar ✗ (space only, no punctuation)
+    //   A Foo ✗ (space only, no punctuation)
+    const enumeratorPattern = /^\s*[\(\[\{]?([A-Za-z]+|\d+|[IVXLCDM]+)([\)\]\}]\s*|\s*[\.\-:–—]+\s*)/;
     const match = trimmed.match(enumeratorPattern);
     
     if (match && match[1]) {
+      const delimiterPart = match[2];
+      
+      // CRITICAL: Reject if delimiter contains ONLY whitespace (no bracket/punctuation)
+      // Accept if delimiter has ANY of: ), ], }, ., -, :, –, —
+      // This prevents "A Foo" or "Toshkent shahar" from being treated as enumerated
+      const hasPunctuation = /[\)\]\}\.\-:–—]/.test(delimiterPart);
+      if (!hasPunctuation) {
+        return { enumerator: null, body: trimmed };
+      }
+      
       const enumerator = match[1];
       const body = trimmed.slice(match[0].length).trim();
       return { enumerator, body };
