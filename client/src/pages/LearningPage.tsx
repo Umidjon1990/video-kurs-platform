@@ -446,12 +446,26 @@ export default function LearningPage() {
               {(currentLesson as any).description && (
                 <Card>
                   <CardHeader>
-                    <CardTitle>Dars haqida</CardTitle>
+                    <CardTitle>Izoh</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-muted-foreground whitespace-pre-wrap" data-testid="text-lesson-description">
+                    <div 
+                      className="text-muted-foreground whitespace-pre-wrap select-none" 
+                      data-testid="text-lesson-description"
+                      onContextMenu={(e) => e.preventDefault()}
+                      onCopy={(e) => e.preventDefault()}
+                      onCut={(e) => e.preventDefault()}
+                      onDragStart={(e) => e.preventDefault()}
+                      style={{
+                        userSelect: 'none',
+                        WebkitUserSelect: 'none',
+                        MozUserSelect: 'none',
+                        msUserSelect: 'none',
+                        WebkitTouchCallout: 'none'
+                      }}
+                    >
                       {(currentLesson as any).description}
-                    </p>
+                    </div>
                   </CardContent>
                 </Card>
               )}

@@ -1576,12 +1576,12 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="lesson-description">Matn/Izoh (ixtiyoriy)</Label>
+              <Label htmlFor="lesson-description">Izoh (ixtiyoriy)</Label>
               <Textarea
                 id="lesson-description"
                 value={lessonForm.description}
                 onChange={(e) => setLessonForm({ ...lessonForm, description: e.target.value })}
-                placeholder="Dars haqida qo'shimcha ma'lumot yoki izohlar..."
+                placeholder="Dars haqida qo'shimcha izoh..."
                 data-testid="input-lesson-description"
               />
             </div>
