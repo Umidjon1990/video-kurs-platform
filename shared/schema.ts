@@ -528,6 +528,197 @@ export const insertPasswordResetRequestSchema = createInsertSchema(passwordReset
   processedAt: true,
 });
 
+// ============ SPEAKING TESTS SYSTEM ============
+// Speaking Tests table - Og'zaki testlar
+export const speakingTests = pgTable("speaking_tests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: 'cascade' }),
+  lessonId: varchar("lesson_id").references(() => lessons.id, { onDelete: 'cascade' }),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  language: varchar("language", { length: 10 }).notNull().default('ar'), // ar, uz, en, etc.
+  isDemo: boolean("is_demo").default(false), // Bepul demo test
+  isPublished: boolean("is_published").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Speaking Test Sections - Test bo'limlari
+export const speakingTestSections = pgTable("speaking_test_sections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  speakingTestId: varchar("speaking_test_id").notNull().references(() => speakingTests.id, { onDelete: 'cascade' }),
+  sectionNumber: integer("section_number").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  instructions: text("instructions"),
+  preparationTime: integer("preparation_time").notNull().default(30), // Tayyorlanish vaqti (soniyalarda)
+  speakingTime: integer("speaking_time").notNull().default(60), // Gapirish vaqti (soniyalarda)
+  imageUrl: text("image_url"), // Bo'lim uchun rasm
+  parentSectionId: varchar("parent_section_id"), // Nested sections - self reference
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Speaking Questions - Og'zaki savollar
+export const speakingQuestions = pgTable("speaking_questions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sectionId: varchar("section_id").notNull().references(() => speakingTestSections.id, { onDelete: 'cascade' }),
+  questionNumber: integer("question_number").notNull(),
+  questionText: text("question_text").notNull(),
+  imageUrl: text("image_url"), // Savol uchun rasm
+  preparationTime: integer("preparation_time"), // Savol uchun maxsus tayyorlanish vaqti
+  speakingTime: integer("speaking_time"), // Savol uchun maxsus gapirish vaqti
+  questionAudioUrl: text("question_audio_url"), // Audio savol (ixtiyoriy)
+  // Baholash parametrlari
+  keyFactsPlus: text("key_facts_plus"), // Muhim faktlar (ijobiy)
+  keyFactsMinus: text("key_facts_minus"), // Muhim faktlar (salbiy)
+  keyFactsPlusLabel: text("key_facts_plus_label"), // "Aytilishi kerak" label
+  keyFactsMinusLabel: text("key_facts_minus_label"), // "Aytilmasligi kerak" label
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Speaking Submissions - O'quvchi javoblari
+export const speakingSubmissions = pgTable("speaking_submissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  speakingTestId: varchar("speaking_test_id").notNull().references(() => speakingTests.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  status: varchar("status", { length: 20 }).notNull().default('pending'), // pending, evaluating, completed
+  totalScore: integer("total_score"), // Umumiy ball
+  maxScore: integer("max_score"), // Maksimal ball
+  feedback: text("feedback"), // Umumiy fikr
+  submittedAt: timestamp("submitted_at").defaultNow(),
+  evaluatedAt: timestamp("evaluated_at"),
+});
+
+// Speaking Answers - Har bir savol uchun javob
+export const speakingAnswers = pgTable("speaking_answers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  submissionId: varchar("submission_id").notNull().references(() => speakingSubmissions.id, { onDelete: 'cascade' }),
+  questionId: varchar("question_id").notNull().references(() => speakingQuestions.id, { onDelete: 'cascade' }),
+  audioUrl: text("audio_url").notNull(), // Object Storage'dagi audio fayl
+  transcription: text("transcription"), // Whisper transcription
+  score: integer("score"), // Savol uchun ball
+  feedback: text("feedback"), // AI/O'qituvchi fikri
+  duration: integer("duration"), // Audio davomiyligi (soniyalarda)
+  evaluatedAt: timestamp("evaluated_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Speaking Evaluations - AI baholash tarixi
+export const speakingEvaluations = pgTable("speaking_evaluations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  answerId: varchar("answer_id").notNull().references(() => speakingAnswers.id, { onDelete: 'cascade' }),
+  evaluationType: varchar("evaluation_type", { length: 20 }).notNull(), // ai, manual
+  evaluatorId: varchar("evaluator_id").references(() => users.id), // O'qituvchi (agar manual bo'lsa)
+  score: integer("score").notNull(),
+  feedback: text("feedback"),
+  detailedAnalysis: jsonb("detailed_analysis"), // AI tahlili (JSON)
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations
+export const speakingTestsRelations = relations(speakingTests, ({ one, many }) => ({
+  course: one(courses, {
+    fields: [speakingTests.courseId],
+    references: [courses.id],
+  }),
+  lesson: one(lessons, {
+    fields: [speakingTests.lessonId],
+    references: [lessons.id],
+  }),
+  sections: many(speakingTestSections),
+  submissions: many(speakingSubmissions),
+}));
+
+export const speakingTestSectionsRelations = relations(speakingTestSections, ({ one, many }) => ({
+  speakingTest: one(speakingTests, {
+    fields: [speakingTestSections.speakingTestId],
+    references: [speakingTests.id],
+  }),
+  parentSection: one(speakingTestSections, {
+    fields: [speakingTestSections.parentSectionId],
+    references: [speakingTestSections.id],
+    relationName: 'nestedSections',
+  }),
+  childSections: many(speakingTestSections, { relationName: 'nestedSections' }),
+  questions: many(speakingQuestions),
+}));
+
+export const speakingQuestionsRelations = relations(speakingQuestions, ({ one, many }) => ({
+  section: one(speakingTestSections, {
+    fields: [speakingQuestions.sectionId],
+    references: [speakingTestSections.id],
+  }),
+  answers: many(speakingAnswers),
+}));
+
+export const speakingSubmissionsRelations = relations(speakingSubmissions, ({ one, many }) => ({
+  speakingTest: one(speakingTests, {
+    fields: [speakingSubmissions.speakingTestId],
+    references: [speakingTests.id],
+  }),
+  user: one(users, {
+    fields: [speakingSubmissions.userId],
+    references: [users.id],
+  }),
+  answers: many(speakingAnswers),
+}));
+
+export const speakingAnswersRelations = relations(speakingAnswers, ({ one, many }) => ({
+  submission: one(speakingSubmissions, {
+    fields: [speakingAnswers.submissionId],
+    references: [speakingSubmissions.id],
+  }),
+  question: one(speakingQuestions, {
+    fields: [speakingAnswers.questionId],
+    references: [speakingQuestions.id],
+  }),
+  evaluations: many(speakingEvaluations),
+}));
+
+export const speakingEvaluationsRelations = relations(speakingEvaluations, ({ one }) => ({
+  answer: one(speakingAnswers, {
+    fields: [speakingEvaluations.answerId],
+    references: [speakingAnswers.id],
+  }),
+  evaluator: one(users, {
+    fields: [speakingEvaluations.evaluatorId],
+    references: [users.id],
+  }),
+}));
+
+// Insert schemas
+export const insertSpeakingTestSchema = createInsertSchema(speakingTests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSpeakingTestSectionSchema = createInsertSchema(speakingTestSections).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSpeakingQuestionSchema = createInsertSchema(speakingQuestions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSpeakingSubmissionSchema = createInsertSchema(speakingSubmissions).omit({
+  id: true,
+  submittedAt: true,
+  evaluatedAt: true,
+});
+
+export const insertSpeakingAnswerSchema = createInsertSchema(speakingAnswers).omit({
+  id: true,
+  createdAt: true,
+  evaluatedAt: true,
+});
+
+export const insertSpeakingEvaluationSchema = createInsertSchema(speakingEvaluations).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Conversations table (Private Messaging)
 export const conversations = pgTable("conversations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -696,6 +887,25 @@ export type CoursePlanPricing = typeof coursePlanPricing.$inferSelect;
 
 export type InsertUserSubscription = z.infer<typeof insertUserSubscriptionSchema>;
 export type UserSubscription = typeof userSubscriptions.$inferSelect;
+
+// Speaking Test types
+export type InsertSpeakingTest = z.infer<typeof insertSpeakingTestSchema>;
+export type SpeakingTest = typeof speakingTests.$inferSelect;
+
+export type InsertSpeakingTestSection = z.infer<typeof insertSpeakingTestSectionSchema>;
+export type SpeakingTestSection = typeof speakingTestSections.$inferSelect;
+
+export type InsertSpeakingQuestion = z.infer<typeof insertSpeakingQuestionSchema>;
+export type SpeakingQuestion = typeof speakingQuestions.$inferSelect;
+
+export type InsertSpeakingSubmission = z.infer<typeof insertSpeakingSubmissionSchema>;
+export type SpeakingSubmission = typeof speakingSubmissions.$inferSelect;
+
+export type InsertSpeakingAnswer = z.infer<typeof insertSpeakingAnswerSchema>;
+export type SpeakingAnswer = typeof speakingAnswers.$inferSelect;
+
+export type InsertSpeakingEvaluation = z.infer<typeof insertSpeakingEvaluationSchema>;
+export type SpeakingEvaluation = typeof speakingEvaluations.$inferSelect;
 
 // Course Analytics type (for instructor dashboard)
 export type CourseAnalytics = {
