@@ -18,7 +18,9 @@ import { insertSpeakingTestSectionSchema, insertSpeakingQuestionSchema } from '@
 import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
-const sectionFormSchema = insertSpeakingTestSectionSchema.omit({ speakingTestId: true });
+const sectionFormSchema = insertSpeakingTestSectionSchema.omit({ speakingTestId: true }).extend({
+  timeLimit: z.string().optional().transform(val => val ? Number(val) : null),
+});
 const questionFormSchema = insertSpeakingQuestionSchema.omit({ sectionId: true }).extend({
   questionNumber: z.string().transform(Number),
   timeLimit: z.string().optional().transform(val => val ? Number(val) : null),
@@ -316,6 +318,7 @@ function SectionDialog({ open, onOpenChange, onSubmit, isPending }: { open: bool
       title: '',
       description: '',
       timeLimit: null,
+      imageUrl: '',
     },
   });
 
@@ -379,6 +382,19 @@ function SectionDialog({ open, onOpenChange, onSubmit, isPending }: { open: bool
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name="imageUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Rasm URL (ixtiyoriy)</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="https://example.com/image.jpg" data-testid="input-section-image" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} data-testid="button-cancel">
                 Bekor qilish
@@ -404,6 +420,7 @@ function QuestionDialog({ open, onOpenChange, question, onSubmit, isPending }: {
       timeLimit: question.timeLimit?.toString() || '',
       expectedDuration: question.expectedDuration?.toString() || '',
       sampleAnswer: question.sampleAnswer || '',
+      imageUrl: question.imageUrl || '',
     } : {
       questionNumber: '1',
       questionText: '',
@@ -411,6 +428,7 @@ function QuestionDialog({ open, onOpenChange, question, onSubmit, isPending }: {
       timeLimit: '',
       expectedDuration: '',
       sampleAnswer: '',
+      imageUrl: '',
     },
   });
 
@@ -497,6 +515,19 @@ function QuestionDialog({ open, onOpenChange, question, onSubmit, isPending }: {
                   <FormLabel>Namuna javob (ixtiyoriy)</FormLabel>
                   <FormControl>
                     <Textarea {...field} rows={3} data-testid="input-question-sample" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="imageUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Rasm URL (ixtiyoriy)</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="https://example.com/image.jpg" data-testid="input-question-image" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

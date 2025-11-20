@@ -260,8 +260,23 @@ export default function StudentSpeakingTest() {
               </Badge>
             )}
           </div>
+          {currentSection.description && (
+            <p className="text-sm text-muted-foreground mt-2" data-testid="text-section-description">
+              {currentSection.description}
+            </p>
+          )}
+          {currentSection.imageUrl && (
+            <div className="rounded-lg overflow-hidden border mt-4">
+              <img 
+                src={currentSection.imageUrl} 
+                alt="Section rasmi" 
+                className="w-full h-auto max-h-64 object-contain"
+                data-testid="img-section"
+              />
+            </div>
+          )}
           {currentQuestion.timeLimit && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
               <Clock className="h-4 w-4" />
               <span>Vaqt chegarasi: {currentQuestion.timeLimit} soniya</span>
             </div>
@@ -269,6 +284,16 @@ export default function StudentSpeakingTest() {
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
+            {currentQuestion.imageUrl && (
+              <div className="rounded-lg overflow-hidden border mb-4">
+                <img 
+                  src={currentQuestion.imageUrl} 
+                  alt="Savol rasmi" 
+                  className="w-full h-auto max-h-96 object-contain"
+                  data-testid="img-question"
+                />
+              </div>
+            )}
             <p className="text-lg font-medium" data-testid="text-question">{currentQuestion.questionText}</p>
             {currentQuestion.prompt && (
               <p className="text-muted-foreground mt-2" data-testid="text-prompt">{currentQuestion.prompt}</p>
