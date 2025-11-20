@@ -1689,27 +1689,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Remove header row
         const dataRows = rawData.slice(1);
         
-        // Group rows by Tartib (order number)
+        // Group rows by Tartib (order number) - davom etgan qatorlar uchun
         const questionGroups = new Map<string, any[]>();
         const errors: string[] = [];
+        let currentTartib: string | null = null;
         
         for (let i = 0; i < dataRows.length; i++) {
           const row = dataRows[i];
           const rowNum = i + 2; // Excel row number (1-indexed + header)
           
-          // Skip empty rows
-          if (!row || row.length === 0 || !row[0]) continue;
+          // Skip completely empty rows
+          if (!row || row.length === 0) continue;
           
-          const tartib = row[0]?.toString().trim();
-          if (!tartib) {
-            errors.push(`Qator ${rowNum}: Tartib bo'sh`);
+          // Tartib ustuni - agar bo'sh bo'lsa, oxirgisini davom ettirish
+          const tartibValue = row[0]?.toString().trim();
+          if (tartibValue) {
+            currentTartib = tartibValue;
+          }
+          
+          // Agar hali tartib yo'q bo'lsa, xato
+          if (!currentTartib) {
+            errors.push(`Qator ${rowNum}: Birinchi qator tartib raqamiga ega bo'lishi kerak`);
             continue;
           }
           
-          if (!questionGroups.has(tartib)) {
-            questionGroups.set(tartib, []);
+          if (!questionGroups.has(currentTartib)) {
+            questionGroups.set(currentTartib, []);
           }
-          questionGroups.get(tartib)!.push({ row, rowNum });
+          questionGroups.get(currentTartib)!.push({ row, rowNum });
         }
         
         // Validate and prepare questions for import
