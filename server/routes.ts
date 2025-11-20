@@ -1756,7 +1756,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               continue;
             }
             
-            const variants = optionsText.split('|').map(v => v.trim()).filter(v => v);
+            const variants = optionsText.split('|').map((v: string) => v.trim()).filter((v: string) => v);
             if (variants.length < 2) {
               errors.push(`Qator ${rowNum}: Kamida 2 ta variant bo'lishi kerak`);
               continue;
@@ -1768,7 +1768,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
             
             // Variantlarni options massiviga qo'shish
-            variants.forEach((variant, idx) => {
+            variants.forEach((variant: string, idx: number) => {
               question.options.push({
                 optionText: variant,
                 isCorrect: variant === answerText,
@@ -1789,7 +1789,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               continue;
             }
             
-            const pairs = optionsText.split(',').map(p => p.trim()).filter(p => p);
+            const pairs = optionsText.split(',').map((p: string) => p.trim()).filter((p: string) => p);
             if (pairs.length < 2) {
               errors.push(`Qator ${rowNum}: Kamida 2 ta juftlik bo'lishi kerak`);
               continue;
