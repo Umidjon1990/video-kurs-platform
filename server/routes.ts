@@ -1689,7 +1689,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Remove header row
         const dataRows = rawData.slice(1);
         
-        // Group rows by QuestionKey
+        // Group rows by Tartib (order number)
         const questionGroups = new Map<string, any[]>();
         const errors: string[] = [];
         
@@ -1700,16 +1700,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Skip empty rows
           if (!row || row.length === 0 || !row[0]) continue;
           
-          const questionKey = row[0]?.toString().trim();
-          if (!questionKey) {
-            errors.push(`Qator ${rowNum}: SavolID bo'sh`);
+          const tartib = row[0]?.toString().trim();
+          if (!tartib) {
+            errors.push(`Qator ${rowNum}: Tartib bo'sh`);
             continue;
           }
           
-          if (!questionGroups.has(questionKey)) {
-            questionGroups.set(questionKey, []);
+          if (!questionGroups.has(tartib)) {
+            questionGroups.set(tartib, []);
           }
-          questionGroups.get(questionKey)!.push({ row, rowNum });
+          questionGroups.get(tartib)!.push({ row, rowNum });
         }
         
         // Validate and prepare questions for import
@@ -1718,7 +1718,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Yangi sodda parsing
         // Format: Tartib | Turi | Savol | Javob
-        for (const [questionKey, rows] of Array.from(questionGroups.entries())) {
+        for (const [tartib, rows] of Array.from(questionGroups.entries())) {
           const firstRow = rows[0].row;
           const firstRowNum = rows[0].rowNum;
           
@@ -1728,7 +1728,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // row[2] = Savol (faqat birinchi qatorda)
           // row[3] = Javob (birinchi qatorda yoki keyingi qatorlarda)
           
-          const order = firstRow[0] ? parseInt(firstRow[0].toString()) : null;
+          const order = parseInt(tartib);
           const type = firstRow[1]?.toString().trim();
           const questionText = firstRow[2]?.toString().trim();
           const firstAnswer = firstRow[3]?.toString().trim() || '';
@@ -1737,24 +1737,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const points = 1;
           
           // Validation
+          if (isNaN(order) || order < 1) {
+            errors.push(`Tartib ${tartib} (Qator ${firstRowNum}): Tartib raqami noto'g'ri`);
+            continue;
+          }
+          
           if (!type || !validQuestionTypes.includes(type)) {
-            errors.push(`${questionKey} (Qator ${firstRowNum}): Turi noto'g'ri. Faqat: ${validQuestionTypes.join(', ')}`);
+            errors.push(`Tartib ${tartib} (Qator ${firstRowNum}): Turi noto'g'ri. Faqat: ${validQuestionTypes.join(', ')}`);
             continue;
           }
           
           if (!questionText) {
-            errors.push(`${questionKey} (Qator ${firstRowNum}): Savol matni bo'sh`);
-            continue;
-          }
-          
-          if (isNaN(points) || points < 1) {
-            errors.push(`${questionKey} (Qator ${firstRowNum}): Ball kamida 1 bo'lishi kerak`);
+            errors.push(`Tartib ${tartib} (Qator ${firstRowNum}): Savol matni bo'sh`);
             continue;
           }
           
           // Prepare question object
           const question: any = {
-            questionKey,
             order,
             type,
             questionText,
@@ -1809,13 +1808,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
             
             if (question.options.length < 2) {
-              errors.push(`${questionKey}: Kamida 2 ta variant bo'lishi kerak`);
+              errors.push(`Tartib ${tartib}: Kamida 2 ta variant bo'lishi kerak`);
               continue;
             }
             
             const correctCount = question.options.filter((o: any) => o.isCorrect).length;
             if (correctCount === 0) {
-              errors.push(`${questionKey}: Kamida 1 ta to'g'ri javob belgilang - (to'g'ri) so'zini qo'shing`);
+              errors.push(`Tartib ${tartib}: Kamida 1 ta to'g'ri javob belgilang - (to'g'ri) so'zini qo'shing`);
               continue;
             }
           } else if (type === 'matching') {
@@ -1843,17 +1842,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
             
             if (question.options.length < 2) {
-              errors.push(`${questionKey}: Kamida 2 ta juftlik bo'lishi kerak (format: Chap|O'ng)`);
+              errors.push(`Tartib ${tartib}: Kamida 2 ta juftlik bo'lishi kerak (format: Chap|O'ng)`);
               continue;
             }
-          } else if (['true_false', 'fill_blanks', 'short_answer'].includes(type)) {
+          } else if (type === 'true_false') {
+            // True/False: faqat "true" yoki "false" qabul qilish
+            if (firstAnswer) {
+              const normalizedAnswer = firstAnswer.toLowerCase();
+              if (normalizedAnswer === 'true' || normalizedAnswer === 'false') {
+                question.correctAnswer = normalizedAnswer;
+              } else {
+                errors.push(`Tartib ${tartib}: True/False javob faqat "true" yoki "false" bo'lishi kerak`);
+                continue;
+              }
+            } else {
+              errors.push(`Tartib ${tartib}: True/False javob kiritish shart`);
+              continue;
+            }
+          } else if (['fill_blanks', 'short_answer'].includes(type)) {
             // To'g'ri javobni birinchi qatordan olish
             if (firstAnswer) {
               question.correctAnswer = firstAnswer;
             }
             
             if (!question.correctAnswer) {
-              errors.push(`${questionKey}: To'g'ri javob kiritish shart (Javob ustunida)`);
+              errors.push(`Tartib ${tartib}: To'g'ri javob kiritish shart (Javob ustunida)`);
               continue;
             }
           }
