@@ -10,7 +10,7 @@ import { ObjectStorageService } from "./objectStorage";
 import { db } from "./db";
 import bcrypt from "bcryptjs";
 import passport from "passport";
-import { users, courses, lessons, assignments, tests, questions, enrollments, submissions, testAttempts, notifications, conversations, messages, siteSettings, testimonials, subscriptionPlans, coursePlanPricing, userSubscriptions, passwordResetRequests } from "@shared/schema";
+import { users, courses, lessons, assignments, tests, questions, questionOptions, enrollments, submissions, testAttempts, notifications, conversations, messages, siteSettings, testimonials, subscriptionPlans, coursePlanPricing, userSubscriptions, passwordResetRequests } from "@shared/schema";
 import { eq, and, or, desc, sql, count, avg, inArray } from "drizzle-orm";
 import {
   insertCourseSchema,
@@ -29,6 +29,7 @@ import {
   type InstructorCourseWithCounts,
 } from "@shared/schema";
 import { z } from "zod";
+import * as XLSX from "xlsx";
 
 // Grading schema
 const gradingSchema = z.object({
@@ -1558,6 +1559,311 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: error.message });
     }
   });
+
+  // Test Import/Export - Download Template
+  app.get('/api/instructor/tests/:testId/template', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { testId } = req.params;
+      const { type } = req.query; // 'blank' or 'sample'
+      const instructorId = req.user.claims.sub;
+      
+      const test = await storage.getTest(testId);
+      if (!test) {
+        return res.status(404).json({ message: "Test not found" });
+      }
+      
+      const course = await storage.getCourse(test.courseId);
+      if (course?.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+      }
+      
+      // Create Excel workbook
+      const wb = XLSX.utils.book_new();
+      
+      // Define headers
+      const headers = [
+        'SavolID',
+        'Tartib',
+        'Turi',
+        'Savol',
+        'Ball',
+        'ToʻgʻriJavob',
+        'MediaURL',
+        'Variant',
+        'VariantToʻgʻriMi'
+      ];
+      
+      let data: any[][] = [headers];
+      
+      if (type === 'sample') {
+        // Add sample data for each question type
+        data.push(
+          ['Q1', '1', 'multiple_choice', '2+2 nechaga teng?', '2', '', '', '3', 'FALSE'],
+          ['Q1', '', '', '', '', '', '', '4', 'TRUE'],
+          ['Q1', '', '', '', '', '', '', '5', 'FALSE'],
+          ['Q2', '2', 'true_false', 'Yer dumaloq shakldami?', '1', 'true', '', '', ''],
+          ['Q3', '3', 'fill_blanks', "O'zbekistonning poytaxti ___", '1', 'Toshkent', '', '', ''],
+          ['Q4', '4', 'matching', "So'zni tarjima qiling: Kitob", '2', '', '', 'Book', 'Kitob'],
+          ['Q4', '', '', '', '', '', '', 'Pen', 'Qalam'],
+          ['Q4', '', '', '', '', '', '', 'House', 'Uy'],
+          ['Q5', '5', 'short_answer', 'Python nima?', '3', 'Dasturlash tili', '', '', ''],
+          ['Q6', '6', 'essay', 'Sun\'iy intellekt haqida fikringiz yozing', '5', '', '', '', '']
+        );
+      }
+      
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 10 },  // SavolID
+        { wch: 8 },   // Tartib
+        { wch: 18 },  // Turi
+        { wch: 40 },  // Savol
+        { wch: 6 },   // Ball
+        { wch: 20 },  // ToʻgʻriJavob
+        { wch: 30 },  // MediaURL
+        { wch: 25 },  // Variant
+        { wch: 18 },  // VariantToʻgʻriMi
+      ];
+      
+      XLSX.utils.book_append_sheet(wb, ws, 'Savollar');
+      
+      // Generate buffer
+      const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+      
+      // Set headers for file download
+      const filename = type === 'sample' 
+        ? `test-template-namuna-${testId}.xlsx`
+        : `test-template-${testId}.xlsx`;
+      
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(buffer);
+    } catch (error: any) {
+      console.error('Template generation error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Test Import - Upload and Parse Excel
+  app.post('/api/instructor/tests/:testId/import-questions', 
+    isAuthenticated, 
+    isInstructor, 
+    upload.single('file'),
+    async (req: any, res) => {
+      try {
+        const { testId } = req.params;
+        const instructorId = req.user.claims.sub;
+        
+        if (!req.file) {
+          return res.status(400).json({ message: 'File yuklash kerak' });
+        }
+        
+        const test = await storage.getTest(testId);
+        if (!test) {
+          return res.status(404).json({ message: "Test not found" });
+        }
+        
+        const course = await storage.getCourse(test.courseId);
+        if (course?.instructorId !== instructorId) {
+          const user = await storage.getUser(instructorId);
+          if (user?.role !== 'admin') {
+            return res.status(403).json({ message: "Forbidden" });
+          }
+        }
+        
+        // Parse Excel file
+        const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const rawData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        
+        // Remove header row
+        const dataRows = rawData.slice(1);
+        
+        // Group rows by QuestionKey
+        const questionGroups = new Map<string, any[]>();
+        const errors: string[] = [];
+        
+        for (let i = 0; i < dataRows.length; i++) {
+          const row = dataRows[i];
+          const rowNum = i + 2; // Excel row number (1-indexed + header)
+          
+          // Skip empty rows
+          if (!row || row.length === 0 || !row[0]) continue;
+          
+          const questionKey = row[0]?.toString().trim();
+          if (!questionKey) {
+            errors.push(`Qator ${rowNum}: SavolID bo'sh`);
+            continue;
+          }
+          
+          if (!questionGroups.has(questionKey)) {
+            questionGroups.set(questionKey, []);
+          }
+          questionGroups.get(questionKey)!.push({ row, rowNum });
+        }
+        
+        // Validate and prepare questions for import
+        const questionsToCreate: any[] = [];
+        const validQuestionTypes = ['multiple_choice', 'true_false', 'fill_blanks', 'matching', 'short_answer', 'essay'];
+        
+        for (const [questionKey, rows] of questionGroups.entries()) {
+          const firstRow = rows[0].row;
+          const firstRowNum = rows[0].rowNum;
+          
+          // Parse question data from first row
+          const order = firstRow[1] ? parseInt(firstRow[1].toString()) : null;
+          const type = firstRow[2]?.toString().trim();
+          const questionText = firstRow[3]?.toString().trim();
+          const points = firstRow[4] ? parseInt(firstRow[4].toString()) : 1;
+          const correctAnswer = firstRow[5]?.toString().trim() || null;
+          const mediaUrl = firstRow[6]?.toString().trim() || null;
+          
+          // Validation
+          if (!order || isNaN(order)) {
+            errors.push(`${questionKey} (Qator ${firstRowNum}): Tartib raqami noto'g'ri`);
+            continue;
+          }
+          
+          if (!type || !validQuestionTypes.includes(type)) {
+            errors.push(`${questionKey} (Qator ${firstRowNum}): Turi noto'g'ri. Faqat: ${validQuestionTypes.join(', ')}`);
+            continue;
+          }
+          
+          if (!questionText) {
+            errors.push(`${questionKey} (Qator ${firstRowNum}): Savol matni bo'sh`);
+            continue;
+          }
+          
+          if (isNaN(points) || points < 1) {
+            errors.push(`${questionKey} (Qator ${firstRowNum}): Ball kamida 1 bo'lishi kerak`);
+            continue;
+          }
+          
+          // Prepare question object
+          const question: any = {
+            questionKey,
+            order,
+            type,
+            questionText,
+            points,
+            correctAnswer,
+            mediaUrl,
+            options: []
+          };
+          
+          // Handle options for multiple_choice and matching
+          if (type === 'multiple_choice') {
+            for (const { row, rowNum } of rows) {
+              const optionText = row[7]?.toString().trim();
+              const isCorrectStr = row[8]?.toString().trim().toUpperCase();
+              
+              if (optionText) {
+                const isCorrect = isCorrectStr === 'TRUE' || isCorrectStr === 'HA';
+                question.options.push({
+                  optionText,
+                  isCorrect,
+                  order: question.options.length + 1
+                });
+              }
+            }
+            
+            if (question.options.length < 2) {
+              errors.push(`${questionKey}: Kamida 2 ta variant bo'lishi kerak`);
+              continue;
+            }
+            
+            const correctCount = question.options.filter((o: any) => o.isCorrect).length;
+            if (correctCount === 0) {
+              errors.push(`${questionKey}: Kamida 1 ta to'g'ri javob bo'lishi kerak`);
+              continue;
+            }
+          } else if (type === 'matching') {
+            for (const { row, rowNum } of rows) {
+              const optionLabel = row[7]?.toString().trim();
+              const optionMatch = row[8]?.toString().trim();
+              
+              if (optionLabel && optionMatch) {
+                question.options.push({
+                  optionText: `${optionLabel}|${optionMatch}`,
+                  isCorrect: false,
+                  order: question.options.length + 1
+                });
+              }
+            }
+            
+            if (question.options.length < 2) {
+              errors.push(`${questionKey}: Kamida 2 ta juftlik bo'lishi kerak`);
+              continue;
+            }
+          } else if (['true_false', 'fill_blanks', 'short_answer'].includes(type)) {
+            if (!correctAnswer) {
+              errors.push(`${questionKey}: To'g'ri javob kiritish shart`);
+              continue;
+            }
+          }
+          
+          questionsToCreate.push(question);
+        }
+        
+        // If there are validation errors, return them
+        if (errors.length > 0) {
+          return res.status(400).json({ 
+            message: 'Faylda xatolar mavjud',
+            errors,
+            importedCount: 0
+          });
+        }
+        
+        // Import questions in a transaction
+        let importedCount = 0;
+        await db.transaction(async (tx: any) => {
+          for (const q of questionsToCreate) {
+            // Create question
+            const [createdQuestion] = await tx
+              .insert(questions)
+              .values({
+                testId,
+                type: q.type,
+                questionText: q.questionText,
+                points: q.points,
+                order: q.order,
+                mediaUrl: q.mediaUrl,
+                correctAnswer: q.correctAnswer,
+              })
+              .returning();
+            
+            // Create options if any
+            if (q.options.length > 0) {
+              await tx.insert(questionOptions).values(
+                q.options.map((opt: any) => ({
+                  questionId: createdQuestion.id,
+                  optionText: opt.optionText,
+                  isCorrect: opt.isCorrect,
+                  order: opt.order,
+                }))
+              );
+            }
+            
+            importedCount++;
+          }
+        });
+        
+        res.json({ 
+          message: `${importedCount} ta savol muvaffaqiyatli yuklandi`,
+          importedCount,
+          errors: []
+        });
+      } catch (error: any) {
+        console.error('Import error:', error);
+        res.status(500).json({ message: error.message });
+      }
+    }
+  );
 
   // ============ PUBLIC ROUTES (No Auth Required) ============
   // Public courses endpoint with filters
