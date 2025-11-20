@@ -1653,9 +1653,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Helper functions for Excel import
   
+  // Extract optional enumerator and body from option text
+  // Examples: "(A) Foo" -> { enumerator: "A", body: "Foo" }
+  //           "A) Bar" -> { enumerator: "A", body: "Bar" }
+  //           "Foo" -> { enumerator: null, body: "Foo" }
+  function extractOptionParts(value: string): { enumerator: string | null; body: string } {
+    const trimmed = value.trim();
+    
+    // Match enumerator patterns:
+    // ^\s*[\(\[\{]? - optional opening bracket
+    // ([A-Za-z]+|\d+|[IVXLCDM]+) - letter(s), digit(s), or roman numeral (captured group 1)
+    // [\)\]\}]* - optional closing bracket
+    // [\s\.\-:–—]+ - required delimiter (space, dot, hyphen, en-dash, em-dash, colon)
+    const enumeratorPattern = /^\s*[\(\[\{]?([A-Za-z]+|\d+|[IVXLCDM]+)[\)\]\}]*[\s\.\-:–—]+/;
+    const match = trimmed.match(enumeratorPattern);
+    
+    if (match && match[1]) {
+      const enumerator = match[1];
+      const body = trimmed.slice(match[0].length).trim();
+      return { enumerator, body };
+    }
+    
+    // No enumerator found, return full text as body
+    return { enumerator: null, body: trimmed };
+  }
+  
   // Normalize answer token for matching - removes punctuation, spaces, lowercase
   function normalizeAnswerToken(value: string): string {
-    return value.toLowerCase().replace(/[().\s,;:!?]/g, '');
+    return value.toLowerCase().replace(/[().\s,;:!?\-–—]/g, '');
   }
   
   // Parse points with locale support (1,0 -> 1.0)
@@ -1800,33 +1825,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
               continue;
             }
             
-            // Build 3-key lookup map for answer matching
-            // Keys: (a) letter label (A, B, C), (b) normalized token, (c) lowercase full text
+            // Build multi-key lookup map with safe insertion (no overwrites)
             const answerMap = new Map<string, number>();
+            
+            // Helper to add key only if not already present
+            const addKey = (key: string, idx: number) => {
+              if (key && !answerMap.has(key)) {
+                answerMap.set(key, idx);
+              }
+            };
+            
             variants.forEach((variant: string, idx: number) => {
-              // Key 1: Letter label
-              const letterKey = getLetterLabel(idx).toLowerCase(); // "a", "b", "c"
-              answerMap.set(letterKey, idx);
+              // Extract enumerator and body
+              const { enumerator, body } = extractOptionParts(variant);
               
-              // Key 2: Normalized token (remove punctuation)
-              const tokenKey = normalizeAnswerToken(variant);
-              answerMap.set(tokenKey, idx);
+              // Priority 1: Letter label (A, B, C, ...)
+              const letterKey = getLetterLabel(idx).toLowerCase();
+              addKey(letterKey, idx);
               
-              // Key 3: Lowercase full text
-              const fullKey = variant.toLowerCase();
-              answerMap.set(fullKey, idx);
+              // Priority 2: Enumerator from option text (if present)
+              if (enumerator) {
+                addKey(enumerator.toLowerCase(), idx);
+              }
+              
+              // Priority 3: Normalized body text (most common for plain text answers)
+              const normalizedBody = normalizeAnswerToken(body);
+              addKey(normalizedBody, idx);
+              
+              // Priority 4: Normalized full text
+              const normalizedFull = normalizeAnswerToken(variant);
+              addKey(normalizedFull, idx);
+              
+              // Priority 5: Lowercase full text
+              const lowerFull = variant.toLowerCase().trim();
+              addKey(lowerFull, idx);
             });
             
-            // Find correct answer by checking all 3 keys
+            // Find correct answer by trying all normalized forms
             const normalizedAnswer = normalizeAnswerToken(answerText);
-            const lowerAnswer = answerText.toLowerCase();
+            const lowerAnswer = answerText.toLowerCase().trim();
+            const answerLetter = answerText.trim().charAt(0).toLowerCase();
             
             let correctIndex: number | undefined;
-            // Priority: normalized token > lowercase full > letter
+            
+            // Try in priority order
             if (answerMap.has(normalizedAnswer)) {
               correctIndex = answerMap.get(normalizedAnswer);
             } else if (answerMap.has(lowerAnswer)) {
               correctIndex = answerMap.get(lowerAnswer);
+            } else if (answerMap.has(answerLetter) && /^[a-z]$/i.test(answerText.trim())) {
+              // Single letter answer (A, B, C...)
+              correctIndex = answerMap.get(answerLetter);
             }
             
             if (correctIndex === undefined) {
