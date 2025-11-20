@@ -1,0 +1,76 @@
+Starting Container
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 start
+> NODE_ENV=production node dist/index.js
+1:48:12 PM [express] serving on port 8080
+[Subscription Scheduler] Checking expiring subscriptions...
+[Subscription Scheduler] Started - will run every 24 hours
+  file: 'parse_relation.c',
+[Subscription Scheduler] Error: error: column courses.image_url does not exist
+  line: '3716',
+    at /app/node_modules/pg-pool/index.js:45:11
+  routine: 'errorMissingColumn'
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+}
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async DatabaseStorage.getExpiringSubscriptions (file:///app/dist/index.js:1830:20)
+    at async checkExpiringSubscriptions (file:///app/dist/index.js:4812:27) {
+  length: 116,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '553',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3716',
+  routine: 'errorMissingColumn'
+}
+error: column courses.image_url does not exist
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async DatabaseStorage.getExpiringSubscriptions (file:///app/dist/index.js:1830:20)
+    at async checkExpiringSubscriptions (file:///app/dist/index.js:4812:27) {
+  length: 116,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '553',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+1:49:14 PM [express] GET /api/chat/unread-count 304 in 58ms :: {"count":0}
+1:49:14 PM [express] GET /api/notifications 200 in 62ms :: []
+1:49:26 PM [express] GET /api/auth/user 304 in 36ms :: {"id":"9ff1f99a-3be1-4488-9f48-3b1b5140b11f",…
+1:49:29 PM [express] GET /api/chat/unread-count 200 in 11ms :: {"count":0}
+1:49:29 PM [express] GET /api/instructor/courses 500 in 41ms :: {"message":"column \"image_url\" doe…
+1:49:29 PM [express] GET /api/subscription-plans 304 in 7ms :: []
+1:49:30 PM [express] GET /api/notifications 200 in 7ms :: []
+1:49:37 PM [express] GET /api/instructor/subscriptions 500 in 8ms :: {"message":"column courses.imag…
+1:49:37 PM [express] GET /api/instructor/subscriptions/expiring 500 in 36ms :: {"message":"column co…
+1:49:39 PM [express] GET /api/instructor/courses 500 in 15ms :: {"message":"column \"image_url\" doe…
+1:49:40 PM [express] GET /api/instructor/subscriptions 500 in 34ms :: {"message":"column courses.ima…
+1:49:40 PM [express] GET /api/instructor/subscriptions/expiring 500 in 33ms :: {"message":"column co…
+[CHAT DEBUG] Getting conversations for user: 9ff1f99a-3be1-4488-9f48-3b1b5140b11f role: instructor
+[STORAGE] getConversations called - userId: 9ff1f99a-3be1-4488-9f48-3b1b5140b11f role: instructor
+[CHAT DEBUG] Found conversations: 0
+1:49:40 PM [express] GET /api/chat/conversations 304 in 20ms :: []
+1:49:42 PM [express] GET /api/instructor/courses 500 in 6ms :: {"message":"column \"image_url\" does…
+1:49:52 PM [express] GET /api/chat/unread-count 304 in 43ms :: {"count":0}
+1:50:03 PM [express] GET /api/chat/unread-count 304 in 58ms :: {"count":0}
+1:50:03 PM [express] POST /api/instructor/courses 400 in 10ms :: {"message":"column \"image_url\" of…
+1:50:11 PM [express] GET /api/chat/unread-count 304 in 37ms :: {"count":0}
