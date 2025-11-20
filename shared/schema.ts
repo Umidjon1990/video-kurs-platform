@@ -68,6 +68,7 @@ export const courses = pgTable("courses", {
   discountedPrice: decimal("discounted_price", { precision: 10, scale: 2 }), // Chegirmadagi narx
   instructorId: varchar("instructor_id").notNull().references(() => users.id),
   thumbnailUrl: varchar("thumbnail_url"),
+  imageUrl: text("image_url"), // Kurs sahifasi uchun rasm
   status: varchar("status", { length: 20 }).notNull().default('draft'), // draft, published
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -93,6 +94,7 @@ export const lessons = pgTable("lessons", {
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   videoUrl: text("video_url").notNull(),
+  pdfUrl: text("pdf_url"), // PDF manba (Dropbox, Google Drive)
   order: integer("order").notNull(),
   duration: integer("duration"), // in minutes
   isDemo: boolean("is_demo").default(false), // Bepul demo dars
