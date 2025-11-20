@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PlayCircle, CheckCircle, FileText, ClipboardCheck, Lock, Home, MessageCircle } from "lucide-react";
+import { PlayCircle, CheckCircle, FileText, ClipboardCheck, Lock, Home, MessageCircle, Download } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { NotificationBell } from "@/components/NotificationBell";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -441,6 +441,58 @@ export default function LearningPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Lesson Description */}
+              {(currentLesson as any).description && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Dars haqida</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground whitespace-pre-wrap" data-testid="text-lesson-description">
+                      {(currentLesson as any).description}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* PDF Resource */}
+              {(currentLesson as any).pdfUrl && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>PDF Manba</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-3">
+                      <FileText className="w-5 h-5 text-primary" />
+                      <a
+                        href={(currentLesson as any).pdfUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline flex-1"
+                        data-testid="link-lesson-pdf"
+                      >
+                        PDF faylni ochish
+                      </a>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        asChild
+                        data-testid="button-download-pdf"
+                      >
+                        <a
+                          href={(currentLesson as any).pdfUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          Yuklab olish
+                        </a>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Lesson Progress Tracking */}
               <Card className="bg-primary/5 border-primary/20">
