@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, Download, Megaphone, Users, User, MessageCircle, TrendingUp, Award, Activity, Settings, UserCheck } from "lucide-react";
+import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, Download, Megaphone, Users, User, MessageCircle, TrendingUp, Award, Activity, Settings, UserCheck, Upload, FileSpreadsheet } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NotificationBell } from "@/components/NotificationBell";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -110,6 +110,12 @@ export default function InstructorDashboard() {
   ]);
   const [expandedTests, setExpandedTests] = useState<Set<string>>(new Set());
   const [expandedAnalytics, setExpandedAnalytics] = useState<Set<string>>(new Set());
+
+  // Test Import states
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [importTestId, setImportTestId] = useState<string | null>(null);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importResult, setImportResult] = useState<{message: string, importedCount: number, errors: string[]} | null>(null);
 
   const [isGradingOpen, setIsGradingOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<any | null>(null);
@@ -584,6 +590,82 @@ export default function InstructorDashboard() {
       toast({ title: "Xatolik", description: error.message, variant: "destructive" });
     },
   });
+
+  // Test Import mutation
+  const importQuestionsMutation = useMutation({
+    mutationFn: async () => {
+      if (!importFile || !importTestId) return;
+      
+      const formData = new FormData();
+      formData.append('file', importFile);
+      
+      const response = await fetch(`/api/instructor/tests/${importTestId}/import-questions`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Import failed');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data: any) => {
+      setImportResult(data);
+      setImportFile(null);
+      queryClient.invalidateQueries({ queryKey: ['/api/instructor/tests', importTestId, 'questions'] });
+      
+      if (data.errors && data.errors.length > 0) {
+        toast({ 
+          title: "Import yakunlandi (xatolar bilan)", 
+          description: `${data.importedCount} ta savol yuklandi, ${data.errors.length} ta xato`,
+          variant: "destructive"
+        });
+      } else {
+        toast({ 
+          title: "Muvaffaqiyatli!", 
+          description: data.message 
+        });
+      }
+    },
+    onError: (error: Error) => {
+      toast({ title: "Import xatosi", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Template download handlers
+  const downloadTemplate = async (testId: string, type: 'blank' | 'sample') => {
+    try {
+      const response = await fetch(`/api/instructor/tests/${testId}/template?type=${type}`, {
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Template yuklab bo\'lmadi');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = type === 'sample' 
+        ? `test-template-namuna-${testId}.xlsx`
+        : `test-template-${testId}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({ 
+        title: "Yuklab olindi", 
+        description: type === 'sample' ? "Namuna template yuklab olindi" : "Bo'sh template yuklab olindi"
+      });
+    } catch (error: any) {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    }
+  };
   
   // Load user settings when dialog opens
   useEffect(() => {
@@ -1120,6 +1202,20 @@ export default function InstructorDashboard() {
                                       >
                                         <Plus className="w-3 h-3 mr-1" />
                                         Savol
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          setImportTestId(test.id);
+                                          setImportFile(null);
+                                          setImportResult(null);
+                                          setIsImportDialogOpen(true);
+                                        }}
+                                        data-testid={`button-import-questions-${test.id}`}
+                                      >
+                                        <Upload className="w-3 h-3 mr-1" />
+                                        Import
                                       </Button>
                                       <Button
                                         variant="ghost"
@@ -2105,6 +2201,134 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
             >
               {updateSettingsMutation.isPending ? "Saqlanmoqda..." : "Saqlash"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Test Import Dialog */}
+      <Dialog open={isImportDialogOpen} onOpenChange={(open) => {
+        setIsImportDialogOpen(open);
+        if (!open) {
+          setImportFile(null);
+          setImportResult(null);
+        }
+      }}>
+        <DialogContent className="max-w-2xl" data-testid="dialog-import-questions">
+          <DialogHeader>
+            <DialogTitle>Savollarni Excel'dan Yuklash</DialogTitle>
+            <DialogDescription>
+              Template yuklab oling, to'ldiring va import qiling
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Template Download Buttons */}
+            <div className="space-y-2">
+              <Label>1. Template yuklab olish</Label>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => importTestId && downloadTemplate(importTestId, 'blank')}
+                  disabled={!importTestId}
+                  data-testid="button-download-blank-template"
+                  className="flex-1"
+                >
+                  <FileSpreadsheet className="w-4 h-4 mr-2" />
+                  Bo'sh Template
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => importTestId && downloadTemplate(importTestId, 'sample')}
+                  disabled={!importTestId}
+                  data-testid="button-download-sample-template"
+                  className="flex-1"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Namuna bilan
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Bo'sh yoki namuna bilan to'ldirilgan template yuklab oling
+              </p>
+            </div>
+
+            {/* File Upload */}
+            <div className="space-y-2">
+              <Label htmlFor="import-file">2. To'ldirilgan faylni yuklang</Label>
+              <Input
+                id="import-file"
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setImportFile(file);
+                    setImportResult(null);
+                  }
+                }}
+                data-testid="input-import-file"
+              />
+              {importFile && (
+                <p className="text-sm text-muted-foreground">
+                  Tanlangan: {importFile.name}
+                </p>
+              )}
+            </div>
+
+            {/* Import Results */}
+            {importResult && (
+              <div className="space-y-2">
+                <Label>Natija:</Label>
+                <div className={`p-4 rounded-lg border ${
+                  importResult.errors.length > 0 ? 'bg-destructive/10 border-destructive' : 'bg-green-50 border-green-200'
+                }`}>
+                  <p className="font-medium mb-2">{importResult.message}</p>
+                  {importResult.importedCount > 0 && (
+                    <p className="text-sm text-green-600">
+                      ✅ {importResult.importedCount} ta savol yuklandi
+                    </p>
+                  )}
+                  {importResult.errors.length > 0 && (
+                    <div className="mt-3 space-y-1 max-h-40 overflow-y-auto">
+                      <p className="text-sm font-medium text-destructive">Xatolar:</p>
+                      {importResult.errors.map((error, index) => (
+                        <p key={index} className="text-xs text-destructive">• {error}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Instructions */}
+            <div className="bg-muted p-4 rounded-lg text-sm space-y-2">
+              <p className="font-medium">Ko'rsatmalar:</p>
+              <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                <li>SavolID har bir savol uchun yagona bo'lishi kerak (Q1, Q2, ...)</li>
+                <li>Variantli savollar (multiple_choice, matching) uchun bir necha qator kerak</li>
+                <li>Turi: multiple_choice, true_false, fill_blanks, matching, short_answer, essay</li>
+                <li>VariantTo'g'riMi: TRUE yoki FALSE (katta-kichik harflar muhim emas)</li>
+              </ul>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsImportDialogOpen(false)}
+              data-testid="button-cancel-import"
+            >
+              {importResult ? 'Yopish' : 'Bekor qilish'}
+            </Button>
+            {!importResult && (
+              <Button
+                onClick={() => importQuestionsMutation.mutate()}
+                disabled={!importFile || importQuestionsMutation.isPending}
+                data-testid="button-submit-import"
+              >
+                {importQuestionsMutation.isPending ? "Yuklanmoqda..." : "Import Qilish"}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

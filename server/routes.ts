@@ -1711,7 +1711,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const questionsToCreate: any[] = [];
         const validQuestionTypes = ['multiple_choice', 'true_false', 'fill_blanks', 'matching', 'short_answer', 'essay'];
         
-        for (const [questionKey, rows] of questionGroups.entries()) {
+        for (const [questionKey, rows] of Array.from(questionGroups.entries())) {
           const firstRow = rows[0].row;
           const firstRowNum = rows[0].rowNum;
           
