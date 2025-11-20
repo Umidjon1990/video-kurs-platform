@@ -1585,42 +1585,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create Excel workbook
       const wb = XLSX.utils.book_new();
       
-      // Define headers - yangi sodda format
+      // Define headers - 6 ustunli sodda format
       const headers = [
         'Tartib',
         'Turi',
         'Savol',
-        'Javob'
+        'Options',
+        'Javob',
+        'Ball'
       ];
       
       let data: any[][] = [headers];
       
       if (type === 'sample') {
-        // Add sample data for each question type
+        // Add sample data for each question type - har bir savol bitta qatorda!
         data.push(
-          // Multiple Choice - har bir variant alohida qator
-          ['1', 'multiple_choice', '2+2 nechaga teng?', ''],
-          ['1', '', '', '4 (to\'g\'ri)'],
-          ['1', '', '', '3'],
-          ['1', '', '', '5'],
+          // Multiple Choice - Variantlar Options ustunida | bilan ajratilgan
+          ['1', 'multiple_choice', "O'zbekiston poytaxti qayer", 'Toshkent|Samarqand|Buxoro|Namangan', 'Toshkent', '1'],
           
           // True/False
-          ['2', 'true_false', 'Yer dumaloq shakldami?', 'true'],
+          ['2', 'true_false', 'Yer dumaloq shakldami?', '', 'true', '1'],
           
           // Fill in Blanks
-          ['3', 'fill_blanks', "O'zbekistonning poytaxti ___", 'Toshkent'],
+          ['3', 'fill_blanks', "O'zbekistonning poytaxti ___", '', 'Toshkent', '1'],
           
-          // Matching - juftliklar
-          ['4', 'matching', "So'zlarni tarjima qiling", ''],
-          ['4', '', '', 'Book|Kitob'],
-          ['4', '', '', 'Pen|Qalam'],
-          ['4', '', '', 'House|Uy'],
+          // Matching - Juftliklar Options ustunida vergul bilan ajratilgan
+          ['4', 'matching', "So'zlarni tarjima qiling", 'Book|Kitob,Pen|Qalam,House|Uy', '', '1'],
           
           // Short Answer
-          ['5', 'short_answer', 'Python nima?', 'Dasturlash tili'],
+          ['5', 'short_answer', 'Python nima?', '', 'Dasturlash tili', '1'],
           
-          // Essay (javob talab qilinmaydi)
-          ['6', 'essay', 'Sun\'iy intellekt haqida fikringiz yozing', '']
+          // Essay (javob va options bo'sh)
+          ['6', 'essay', 'Sun\'iy intellekt haqida fikringiz yozing', '', '', '2']
         );
       }
       
@@ -1630,8 +1626,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ws['!cols'] = [
         { wch: 8 },   // Tartib
         { wch: 18 },  // Turi
-        { wch: 50 },  // Savol
-        { wch: 40 },  // Javob
+        { wch: 40 },  // Savol
+        { wch: 50 },  // Options
+        { wch: 20 },  // Javob
+        { wch: 6 },   // Ball
       ];
       
       XLSX.utils.book_append_sheet(wb, ws, 'Savollar');
