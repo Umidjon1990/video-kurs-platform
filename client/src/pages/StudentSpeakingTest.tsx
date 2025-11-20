@@ -96,20 +96,21 @@ export default function StudentSpeakingTest() {
       mediaRecorder.start();
       setIsRecording(true);
       
-      // Start timer if question has time limit
+      // Start timer - question speakingTime > section speakingTime > default 60s
       const currentQuestion = getCurrentQuestion();
-      if (currentQuestion?.timeLimit) {
-        setTimeLeft(currentQuestion.timeLimit);
-        timerRef.current = setInterval(() => {
-          setTimeLeft((prev) => {
-            if (prev === null || prev <= 1) {
-              stopRecording();
-              return null;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-      }
+      const currentSection = testData?.sections[currentSectionIndex];
+      const speakingTime = currentQuestion?.speakingTime || currentSection?.speakingTime || 60;
+      
+      setTimeLeft(speakingTime);
+      timerRef.current = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev === null || prev <= 1) {
+            stopRecording();
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -275,10 +276,10 @@ export default function StudentSpeakingTest() {
               />
             </div>
           )}
-          {currentQuestion.timeLimit && (
+          {(currentQuestion.speakingTime || currentSection.speakingTime) && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
               <Clock className="h-4 w-4" />
-              <span>Vaqt chegarasi: {currentQuestion.timeLimit} soniya</span>
+              <span>Gapirish vaqti: {currentQuestion.speakingTime || currentSection.speakingTime} soniya</span>
             </div>
           )}
         </CardHeader>

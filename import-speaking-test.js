@@ -19,18 +19,18 @@
  * Sheet 2: Sections
  *   - Section Number
  *   - Section Title
- *   - Description
- *   - Time Limit (soniya)
+ *   - Instructions
+ *   - Preparation Time (soniya)
+ *   - Speaking Time (soniya)
+ *   - Image URL (optional)
  * 
  * Sheet 3: Questions
  *   - Section Number
  *   - Question Number
  *   - Question Text
- *   - Prompt/Instructions
- *   - Time Limit (soniya)
- *   - Expected Duration (soniya)
- *   - Sample Answer (optional)
- *   - Evaluation Criteria (JSON or text)
+ *   - Preparation Time (soniya, optional)
+ *   - Speaking Time (soniya, optional)
+ *   - Image URL (optional)
  * 
  * Ishlatish:
  *   node import-speaking-test.js <excel-file-path> <instructor-id>
@@ -154,8 +154,10 @@ async function importSpeakingTest(excelFilePath, instructorId) {
           speakingTestId: speakingTest.id,
           sectionNumber: parseInt(sectionData['Section Number']),
           title: sectionData['Section Title'] || `Section ${sectionData['Section Number']}`,
-          description: sectionData['Description'] || '',
-          timeLimit: parseInt(sectionData['Time Limit (soniya)']) || null,
+          instructions: sectionData['Instructions'] || '',
+          preparationTime: parseInt(sectionData['Preparation Time (soniya)']) || 30,
+          speakingTime: parseInt(sectionData['Speaking Time (soniya)']) || 60,
+          imageUrl: sectionData['Image URL'] || null,
         })
         .returning();
       
@@ -183,29 +185,15 @@ async function importSpeakingTest(excelFilePath, instructorId) {
         continue;
       }
       
-      // Parse evaluation criteria
-      let evaluationCriteria = null;
-      if (questionData['Evaluation Criteria']) {
-        try {
-          // Try to parse as JSON
-          evaluationCriteria = JSON.parse(questionData['Evaluation Criteria']);
-        } catch {
-          // If not JSON, store as text array
-          evaluationCriteria = [questionData['Evaluation Criteria']];
-        }
-      }
-      
       await db
         .insert(speakingQuestions)
         .values({
           sectionId: sectionId,
           questionNumber: parseInt(questionData['Question Number']),
           questionText: questionData['Question Text'],
-          prompt: questionData['Prompt/Instructions'] || '',
-          timeLimit: parseInt(questionData['Time Limit (soniya)']) || null,
-          expectedDuration: parseInt(questionData['Expected Duration (soniya)']) || null,
-          sampleAnswer: questionData['Sample Answer'] || null,
-          evaluationCriteria: evaluationCriteria,
+          preparationTime: parseInt(questionData['Preparation Time (soniya)']) || null,
+          speakingTime: parseInt(questionData['Speaking Time (soniya)']) || null,
+          imageUrl: questionData['Image URL'] || null,
         });
       
       questionCount++;

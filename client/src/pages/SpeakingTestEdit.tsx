@@ -19,12 +19,13 @@ import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 const sectionFormSchema = insertSpeakingTestSectionSchema.omit({ speakingTestId: true }).extend({
-  timeLimit: z.string().optional().transform(val => val ? Number(val) : null),
+  preparationTime: z.string().transform(val => val ? Number(val) : 30),
+  speakingTime: z.string().transform(val => val ? Number(val) : 60),
 });
 const questionFormSchema = insertSpeakingQuestionSchema.omit({ sectionId: true }).extend({
   questionNumber: z.string().transform(Number),
-  timeLimit: z.string().optional().transform(val => val ? Number(val) : null),
-  expectedDuration: z.string().optional().transform(val => val ? Number(val) : null),
+  preparationTime: z.string().optional().transform(val => val ? Number(val) : null),
+  speakingTime: z.string().optional().transform(val => val ? Number(val) : null),
 });
 
 export default function SpeakingTestEdit() {
@@ -316,8 +317,9 @@ function SectionDialog({ open, onOpenChange, onSubmit, isPending }: { open: bool
     defaultValues: {
       sectionNumber: 1,
       title: '',
-      description: '',
-      timeLimit: null,
+      instructions: '',
+      preparationTime: '30',
+      speakingTime: '60',
       imageUrl: '',
     },
   });
@@ -358,30 +360,45 @@ function SectionDialog({ open, onOpenChange, onSubmit, isPending }: { open: bool
             />
             <FormField
               control={form.control}
-              name="description"
+              name="instructions"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Tavsif (ixtiyoriy)</FormLabel>
+                  <FormLabel>Ko'rsatmalar (ixtiyoriy)</FormLabel>
                   <FormControl>
-                    <Textarea {...field} rows={3} data-testid="input-section-description" />
+                    <Textarea {...field} rows={3} data-testid="input-section-instructions" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="timeLimit"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Vaqt chegarasi (soniya, ixtiyoriy)</FormLabel>
-                  <FormControl>
-                    <Input {...field} type="number" min="0" value={field.value || ''} data-testid="input-section-time" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="preparationTime"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tayyorgarlik vaqti (soniya)</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="number" min="0" data-testid="input-section-prep-time" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="speakingTime"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Gapirish vaqti (soniya)</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="number" min="0" data-testid="input-section-speaking-time" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             <FormField
               control={form.control}
               name="imageUrl"
@@ -416,18 +433,14 @@ function QuestionDialog({ open, onOpenChange, question, onSubmit, isPending }: {
     defaultValues: question ? {
       questionNumber: question.questionNumber.toString(),
       questionText: question.questionText,
-      prompt: question.prompt || '',
-      timeLimit: question.timeLimit?.toString() || '',
-      expectedDuration: question.expectedDuration?.toString() || '',
-      sampleAnswer: question.sampleAnswer || '',
+      preparationTime: question.preparationTime?.toString() || '',
+      speakingTime: question.speakingTime?.toString() || '',
       imageUrl: question.imageUrl || '',
     } : {
       questionNumber: '1',
       questionText: '',
-      prompt: '',
-      timeLimit: '',
-      expectedDuration: '',
-      sampleAnswer: '',
+      preparationTime: '',
+      speakingTime: '',
       imageUrl: '',
     },
   });
@@ -466,28 +479,15 @@ function QuestionDialog({ open, onOpenChange, question, onSubmit, isPending }: {
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="prompt"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Ko'rsatmalar (ixtiyoriy)</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} rows={2} data-testid="input-question-prompt" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="timeLimit"
+                name="preparationTime"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Vaqt chegarasi (soniya)</FormLabel>
+                    <FormLabel>Tayyorgarlik vaqti (soniya, ixtiyoriy)</FormLabel>
                     <FormControl>
-                      <Input {...field} type="number" min="0" data-testid="input-question-time" />
+                      <Input {...field} type="number" min="0" data-testid="input-question-prep-time" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -495,31 +495,18 @@ function QuestionDialog({ open, onOpenChange, question, onSubmit, isPending }: {
               />
               <FormField
                 control={form.control}
-                name="expectedDuration"
+                name="speakingTime"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Kutilgan davomiylik (soniya)</FormLabel>
+                    <FormLabel>Gapirish vaqti (soniya, ixtiyoriy)</FormLabel>
                     <FormControl>
-                      <Input {...field} type="number" min="0" data-testid="input-question-duration" />
+                      <Input {...field} type="number" min="0" data-testid="input-question-speaking-time" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
-            <FormField
-              control={form.control}
-              name="sampleAnswer"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Namuna javob (ixtiyoriy)</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} rows={3} data-testid="input-question-sample" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             <FormField
               control={form.control}
               name="imageUrl"
