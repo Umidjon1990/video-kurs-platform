@@ -1687,11 +1687,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Remove header row
         const dataRows = rawData.slice(1);
         
-        // Group rows by Tartib (order number) - davom etgan qatorlar uchun
-        const questionGroups = new Map<string, any[]>();
+        // Validate and prepare questions for import
+        const questionsToCreate: any[] = [];
         const errors: string[] = [];
-        let currentTartib: string | null = null;
+        const validQuestionTypes = ['multiple_choice', 'true_false', 'fill_blanks', 'matching', 'short_answer', 'essay'];
         
+        // Yangi 6 ustunli format - har bir savol bitta qatorda!
+        // Format: Tartib | Turi | Savol | Options | Javob | Ball
         for (let i = 0; i < dataRows.length; i++) {
           const row = dataRows[i];
           const rowNum = i + 2; // Excel row number (1-indexed + header)
@@ -1699,61 +1701,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Skip completely empty rows
           if (!row || row.length === 0) continue;
           
-          // Tartib ustuni - agar bo'sh bo'lsa, oxirgisini davom ettirish
-          const tartibValue = row[0]?.toString().trim();
-          if (tartibValue) {
-            currentTartib = tartibValue;
-          }
-          
-          // Agar hali tartib yo'q bo'lsa, xato
-          if (!currentTartib) {
-            errors.push(`Qator ${rowNum}: Birinchi qator tartib raqamiga ega bo'lishi kerak`);
-            continue;
-          }
-          
-          if (!questionGroups.has(currentTartib)) {
-            questionGroups.set(currentTartib, []);
-          }
-          questionGroups.get(currentTartib)!.push({ row, rowNum });
-        }
-        
-        // Validate and prepare questions for import
-        const questionsToCreate: any[] = [];
-        const validQuestionTypes = ['multiple_choice', 'true_false', 'fill_blanks', 'matching', 'short_answer', 'essay'];
-        
-        // Yangi sodda parsing
-        // Format: Tartib | Turi | Savol | Javob
-        for (const [tartib, rows] of Array.from(questionGroups.entries())) {
-          const firstRow = rows[0].row;
-          const firstRowNum = rows[0].rowNum;
-          
-          // Parse question data from first row
+          // Parse row columns
           // row[0] = Tartib (1, 2, 3...)
-          // row[1] = Turi (faqat birinchi qatorda)
-          // row[2] = Savol (faqat birinchi qatorda)
-          // row[3] = Javob (birinchi qatorda yoki keyingi qatorlarda)
+          // row[1] = Turi (multiple_choice, true_false, ...)
+          // row[2] = Savol
+          // row[3] = Options (Multiple choice: A|B|C, Matching: L1|R1,L2|R2)
+          // row[4] = Javob (To'g'ri javob)
+          // row[5] = Ball
           
-          const order = parseInt(tartib);
-          const type = firstRow[1]?.toString().trim();
-          const questionText = firstRow[2]?.toString().trim();
-          const firstAnswer = firstRow[3]?.toString().trim() || '';
+          const order = parseInt(row[0]?.toString().trim() || '');
+          const type = row[1]?.toString().trim();
+          const questionText = row[2]?.toString().trim();
+          const optionsText = row[3]?.toString().trim() || '';
+          const answerText = row[4]?.toString().trim() || '';
+          const points = parseInt(row[5]?.toString().trim() || '1');
           
-          // Ball hamma savol uchun default 1
-          const points = 1;
-          
-          // Validation
+          // Basic validation
           if (isNaN(order) || order < 1) {
-            errors.push(`Tartib ${tartib} (Qator ${firstRowNum}): Tartib raqami noto'g'ri`);
+            errors.push(`Qator ${rowNum}: Tartib raqami noto'g'ri`);
             continue;
           }
           
           if (!type || !validQuestionTypes.includes(type)) {
-            errors.push(`Tartib ${tartib} (Qator ${firstRowNum}): Turi noto'g'ri. Faqat: ${validQuestionTypes.join(', ')}`);
+            errors.push(`Qator ${rowNum}: Turi noto'g'ri. Faqat: ${validQuestionTypes.join(', ')}`);
             continue;
           }
           
           if (!questionText) {
-            errors.push(`Tartib ${tartib} (Qator ${firstRowNum}): Savol matni bo'sh`);
+            errors.push(`Qator ${rowNum}: Savol matni bo'sh`);
+            continue;
+          }
+          
+          if (isNaN(points) || points < 1) {
+            errors.push(`Qator ${rowNum}: Ball noto'g'ri (kamida 1 bo'lishi kerak)`);
             continue;
           }
           
@@ -1767,113 +1747,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
             options: []
           };
           
-          // Parse variants/answers from rows
+          // Type-specific parsing
           if (type === 'multiple_choice') {
-            // Birinchi qatordagi javobni ham tekshirish
-            if (firstAnswer) {
-              const isCorrect = firstAnswer.toLowerCase().includes('(to\'g\'ri)') || 
-                                firstAnswer.toLowerCase().includes('togri') ||
-                                firstAnswer.toLowerCase().includes('(toʻgʻri)');
-              
-              const cleanText = firstAnswer
-                .replace(/\(to'g'ri\)/gi, '')
-                .replace(/\(togri\)/gi, '')
-                .replace(/\(toʻgʻri\)/gi, '')
-                .trim();
-              
-              question.options.push({
-                optionText: cleanText,
-                isCorrect,
-                order: 1
-              });
-            }
-            
-            // Keyingi qatorlardan variantlarni olish
-            for (let i = 1; i < rows.length; i++) {
-              const row = rows[i].row;
-              const variantText = row[3]?.toString().trim();
-              
-              if (variantText) {
-                const isCorrect = variantText.toLowerCase().includes('(to\'g\'ri)') || 
-                                  variantText.toLowerCase().includes('togri') ||
-                                  variantText.toLowerCase().includes('(toʻgʻri)');
-                
-                const cleanText = variantText
-                  .replace(/\(to'g'ri\)/gi, '')
-                  .replace(/\(togri\)/gi, '')
-                  .replace(/\(toʻgʻri\)/gi, '')
-                  .trim();
-                
-                question.options.push({
-                  optionText: cleanText,
-                  isCorrect,
-                  order: question.options.length + 1
-                });
-              }
-            }
-            
-            if (question.options.length < 2) {
-              errors.push(`Tartib ${tartib}: Kamida 2 ta variant bo'lishi kerak`);
+            // Options ustunida | bilan ajratilgan variantlar
+            // Javob ustunida to'g'ri javob
+            if (!optionsText) {
+              errors.push(`Qator ${rowNum}: Multiple choice uchun Options ustunida variantlar bo'lishi kerak (masalan: A|B|C|D)`);
               continue;
             }
+            
+            const variants = optionsText.split('|').map(v => v.trim()).filter(v => v);
+            if (variants.length < 2) {
+              errors.push(`Qator ${rowNum}: Kamida 2 ta variant bo'lishi kerak`);
+              continue;
+            }
+            
+            if (!answerText) {
+              errors.push(`Qator ${rowNum}: Javob ustunida to'g'ri javob bo'lishi kerak`);
+              continue;
+            }
+            
+            // Variantlarni options massiviga qo'shish
+            variants.forEach((variant, idx) => {
+              question.options.push({
+                optionText: variant,
+                isCorrect: variant === answerText,
+                order: idx + 1
+              });
+            });
             
             const correctCount = question.options.filter((o: any) => o.isCorrect).length;
             if (correctCount === 0) {
-              errors.push(`Tartib ${tartib}: Kamida 1 ta to'g'ri javob belgilang - (to'g'ri) so'zini qo'shing`);
+              errors.push(`Qator ${rowNum}: To'g'ri javob Options ichida topilmadi. Javob ustunidagi matn Options ichida bo'lishi kerak.`);
               continue;
             }
           } else if (type === 'matching') {
-            // Birinchi qatordagi juftlikni ham tekshirish
-            if (firstAnswer && firstAnswer.includes('|')) {
-              question.options.push({
-                optionText: firstAnswer,
-                isCorrect: false,
-                order: 1
-              });
-            }
-            
-            // Keyingi qatorlardan juftliklarni olish
-            for (let i = 1; i < rows.length; i++) {
-              const row = rows[i].row;
-              const pairText = row[3]?.toString().trim();
-              
-              if (pairText && pairText.includes('|')) {
-                question.options.push({
-                  optionText: pairText,
-                  isCorrect: false,
-                  order: question.options.length + 1
-                });
-              }
-            }
-            
-            if (question.options.length < 2) {
-              errors.push(`Tartib ${tartib}: Kamida 2 ta juftlik bo'lishi kerak (format: Chap|O'ng)`);
+            // Options ustunida vergul bilan ajratilgan juftliklar
+            // Format: Chap1|O'ng1,Chap2|O'ng2,Chap3|O'ng3
+            if (!optionsText) {
+              errors.push(`Qator ${rowNum}: Matching uchun Options ustunida juftliklar bo'lishi kerak (masalan: Book|Kitob,Pen|Qalam)`);
               continue;
             }
-          } else if (type === 'true_false') {
-            // True/False: faqat "true" yoki "false" qabul qilish
-            if (firstAnswer) {
-              const normalizedAnswer = firstAnswer.toLowerCase();
-              if (normalizedAnswer === 'true' || normalizedAnswer === 'false') {
-                question.correctAnswer = normalizedAnswer;
-              } else {
-                errors.push(`Tartib ${tartib}: True/False javob faqat "true" yoki "false" bo'lishi kerak`);
+            
+            const pairs = optionsText.split(',').map(p => p.trim()).filter(p => p);
+            if (pairs.length < 2) {
+              errors.push(`Qator ${rowNum}: Kamida 2 ta juftlik bo'lishi kerak`);
+              continue;
+            }
+            
+            // Har bir juftlikni tekshirish
+            for (const pair of pairs) {
+              if (!pair.includes('|')) {
+                errors.push(`Qator ${rowNum}: Matching juftlik noto'g'ri format: "${pair}". Format: Chap|O'ng`);
                 continue;
               }
-            } else {
-              errors.push(`Tartib ${tartib}: True/False javob kiritish shart`);
-              continue;
+              
+              question.options.push({
+                optionText: pair,
+                isCorrect: false,
+                order: question.options.length + 1
+              });
             }
-          } else if (['fill_blanks', 'short_answer'].includes(type)) {
-            // To'g'ri javobni birinchi qatordan olish
-            if (firstAnswer) {
-              question.correctAnswer = firstAnswer;
+          } else if (type === 'true_false') {
+            // Javob ustunida faqat "true" yoki "false"
+            if (!answerText) {
+              errors.push(`Qator ${rowNum}: True/False javob kiritish shart (Javob ustunida)`);
+              continue;
             }
             
-            if (!question.correctAnswer) {
-              errors.push(`Tartib ${tartib}: To'g'ri javob kiritish shart (Javob ustunida)`);
+            const normalizedAnswer = answerText.toLowerCase();
+            if (normalizedAnswer !== 'true' && normalizedAnswer !== 'false') {
+              errors.push(`Qator ${rowNum}: True/False javob faqat "true" yoki "false" bo'lishi kerak`);
               continue;
             }
+            
+            question.correctAnswer = normalizedAnswer;
+          } else if (['fill_blanks', 'short_answer'].includes(type)) {
+            // Javob ustunida to'g'ri javob
+            if (!answerText) {
+              errors.push(`Qator ${rowNum}: Javob ustunida to'g'ri javob bo'lishi kerak`);
+              continue;
+            }
+            
+            question.correctAnswer = answerText;
+          } else if (type === 'essay') {
+            // Essay uchun javob ixtiyoriy
+            question.correctAnswer = answerText || '';
           }
           
           questionsToCreate.push(question);
