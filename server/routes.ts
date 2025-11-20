@@ -1585,17 +1585,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create Excel workbook
       const wb = XLSX.utils.book_new();
       
-      // Define headers
+      // Define headers - soddalashtirilgan format
       const headers = [
         'SavolID',
-        'Tartib',
         'Turi',
-        'Savol',
-        'Ball',
-        'ToʻgʻriJavob',
-        'MediaURL',
-        'Variant',
-        'VariantToʻgʻriMi'
+        'Javob',
+        'Ball'
       ];
       
       let data: any[][] = [headers];
@@ -1603,16 +1598,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (type === 'sample') {
         // Add sample data for each question type
         data.push(
-          ['Q1', '1', 'multiple_choice', '2+2 nechaga teng?', '2', '', '', '3', 'FALSE'],
-          ['Q1', '', '', '', '', '', '', '4', 'TRUE'],
-          ['Q1', '', '', '', '', '', '', '5', 'FALSE'],
-          ['Q2', '2', 'true_false', 'Yer dumaloq shakldami?', '1', 'true', '', '', ''],
-          ['Q3', '3', 'fill_blanks', "O'zbekistonning poytaxti ___", '1', 'Toshkent', '', '', ''],
-          ['Q4', '4', 'matching', "So'zni tarjima qiling: Kitob", '2', '', '', 'Book', 'Kitob'],
-          ['Q4', '', '', '', '', '', '', 'Pen', 'Qalam'],
-          ['Q4', '', '', '', '', '', '', 'House', 'Uy'],
-          ['Q5', '5', 'short_answer', 'Python nima?', '3', 'Dasturlash tili', '', '', ''],
-          ['Q6', '6', 'essay', 'Sun\'iy intellekt haqida fikringiz yozing', '5', '', '', '', '']
+          // Multiple Choice - har bir variant alohida qator
+          ['Q1', 'multiple_choice', '2+2 nechaga teng?', '2'],
+          ['Q1', '4 (to\'g\'ri)', '', ''],
+          ['Q1', '3', '', ''],
+          ['Q1', '5', '', ''],
+          
+          // True/False
+          ['Q2', 'true_false', 'Yer dumaloq shakldami? (javob: true yoki false)', '1'],
+          ['Q2', 'true', '', ''],
+          
+          // Fill in Blanks
+          ['Q3', 'fill_blanks', "O'zbekistonning poytaxti ___ (javob quyida)", '1'],
+          ['Q3', 'Toshkent', '', ''],
+          
+          // Matching - juftliklar
+          ['Q4', 'matching', "So'zlarni tarjima qiling (chap|o'ng)", '2'],
+          ['Q4', 'Book|Kitob', '', ''],
+          ['Q4', 'Pen|Qalam', '', ''],
+          ['Q4', 'House|Uy', '', ''],
+          
+          // Short Answer
+          ['Q5', 'short_answer', 'Python nima? (javob quyida)', '3'],
+          ['Q5', 'Dasturlash tili', '', ''],
+          
+          // Essay
+          ['Q6', 'essay', 'Sun\'iy intellekt haqida fikringiz yozing', '5']
         );
       }
       
@@ -1620,15 +1631,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Set column widths
       ws['!cols'] = [
-        { wch: 10 },  // SavolID
-        { wch: 8 },   // Tartib
-        { wch: 18 },  // Turi
-        { wch: 40 },  // Savol
-        { wch: 6 },   // Ball
-        { wch: 20 },  // ToʻgʻriJavob
-        { wch: 30 },  // MediaURL
-        { wch: 25 },  // Variant
-        { wch: 18 },  // VariantToʻgʻriMi
+        { wch: 12 },  // SavolID
+        { wch: 20 },  // Turi
+        { wch: 50 },  // Javob
+        { wch: 8 },   // Ball
       ];
       
       XLSX.utils.book_append_sheet(wb, ws, 'Savollar');
@@ -1713,24 +1719,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const questionsToCreate: any[] = [];
         const validQuestionTypes = ['multiple_choice', 'true_false', 'fill_blanks', 'matching', 'short_answer', 'essay'];
         
+        // Soddalashtirilgan parsing - yangi format
+        // Format: SavolID | Turi | Javob | Ball
         for (const [questionKey, rows] of Array.from(questionGroups.entries())) {
           const firstRow = rows[0].row;
           const firstRowNum = rows[0].rowNum;
           
           // Parse question data from first row
-          const order = firstRow[1] ? parseInt(firstRow[1].toString()) : null;
-          const type = firstRow[2]?.toString().trim();
-          const questionText = firstRow[3]?.toString().trim();
-          const points = firstRow[4] ? parseInt(firstRow[4].toString()) : 1;
-          const correctAnswer = firstRow[5]?.toString().trim() || null;
-          const mediaUrl = firstRow[6]?.toString().trim() || null;
+          // row[0] = SavolID (Q1, Q2, ...)
+          // row[1] = Turi (faqat birinchi qatorda)
+          // row[2] = Javob (birinchi qatorda - savol matni, keyingi qatorlarda - variant)
+          // row[3] = Ball (faqat birinchi qatorda)
+          
+          const type = firstRow[1]?.toString().trim();
+          const questionText = firstRow[2]?.toString().trim();
+          const points = firstRow[3] ? parseInt(firstRow[3].toString()) : 1;
+          
+          // Extract order from questionKey (Q1 -> 1, Q2 -> 2)
+          const orderMatch = questionKey.match(/\d+/);
+          const order = orderMatch ? parseInt(orderMatch[0]) : 1;
           
           // Validation
-          if (!order || isNaN(order)) {
-            errors.push(`${questionKey} (Qator ${firstRowNum}): Tartib raqami noto'g'ri`);
-            continue;
-          }
-          
           if (!type || !validQuestionTypes.includes(type)) {
             errors.push(`${questionKey} (Qator ${firstRowNum}): Turi noto'g'ri. Faqat: ${validQuestionTypes.join(', ')}`);
             continue;
@@ -1753,21 +1762,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
             type,
             questionText,
             points,
-            correctAnswer,
-            mediaUrl,
+            correctAnswer: null,
             options: []
           };
           
-          // Handle options for multiple_choice and matching
+          // Parse variants/answers from remaining rows
           if (type === 'multiple_choice') {
-            for (const { row, rowNum } of rows) {
-              const optionText = row[7]?.toString().trim();
-              const isCorrectStr = row[8]?.toString().trim().toUpperCase();
+            // Keyingi qatorlardan variantlarni olish
+            for (let i = 1; i < rows.length; i++) {
+              const row = rows[i].row;
+              const variantText = row[1]?.toString().trim();
               
-              if (optionText) {
-                const isCorrect = isCorrectStr === 'TRUE' || isCorrectStr === 'HA';
+              if (variantText) {
+                // Check if it's marked as correct (to'g'ri)
+                const isCorrect = variantText.toLowerCase().includes('(to\'g\'ri)') || 
+                                  variantText.toLowerCase().includes('togri') ||
+                                  variantText.toLowerCase().includes('(toʻgʻri)');
+                
+                // Clean variant text
+                const cleanText = variantText
+                  .replace(/\(to'g'ri\)/gi, '')
+                  .replace(/\(togri\)/gi, '')
+                  .replace(/\(toʻgʻri\)/gi, '')
+                  .trim();
+                
                 question.options.push({
-                  optionText,
+                  optionText: cleanText,
                   isCorrect,
                   order: question.options.length + 1
                 });
@@ -1781,17 +1801,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             const correctCount = question.options.filter((o: any) => o.isCorrect).length;
             if (correctCount === 0) {
-              errors.push(`${questionKey}: Kamida 1 ta to'g'ri javob bo'lishi kerak`);
+              errors.push(`${questionKey}: Kamida 1 ta to'g'ri javob belgilang - (to'g'ri) so'zini qo'shing`);
               continue;
             }
           } else if (type === 'matching') {
-            for (const { row, rowNum } of rows) {
-              const optionLabel = row[7]?.toString().trim();
-              const optionMatch = row[8]?.toString().trim();
+            // Matching: Book|Kitob formatida
+            for (let i = 1; i < rows.length; i++) {
+              const row = rows[i].row;
+              const pairText = row[1]?.toString().trim();
               
-              if (optionLabel && optionMatch) {
+              if (pairText && pairText.includes('|')) {
                 question.options.push({
-                  optionText: `${optionLabel}|${optionMatch}`,
+                  optionText: pairText,
                   isCorrect: false,
                   order: question.options.length + 1
                 });
@@ -1799,12 +1820,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
             
             if (question.options.length < 2) {
-              errors.push(`${questionKey}: Kamida 2 ta juftlik bo'lishi kerak`);
+              errors.push(`${questionKey}: Kamida 2 ta juftlik bo'lishi kerak (format: Chap|O'ng)`);
               continue;
             }
           } else if (['true_false', 'fill_blanks', 'short_answer'].includes(type)) {
-            if (!correctAnswer) {
-              errors.push(`${questionKey}: To'g'ri javob kiritish shart`);
+            // To'g'ri javobni ikkinchi qatordan olish
+            if (rows.length > 1) {
+              const answerRow = rows[1].row;
+              const answer = answerRow[1]?.toString().trim();
+              
+              if (answer) {
+                question.correctAnswer = answer;
+              }
+            }
+            
+            if (!question.correctAnswer) {
+              errors.push(`${questionKey}: To'g'ri javob kiritish shart (ikkinchi qatorda)`);
               continue;
             }
           }
