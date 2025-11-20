@@ -27,6 +27,7 @@ import StudentSpeakingTest from "@/pages/StudentSpeakingTest";
 import LearningPage from "@/pages/LearningPage";
 import Checkout from "@/pages/Checkout";
 import ChatPage from "@/pages/ChatPage";
+import MicTestPage from "@/pages/MicTestPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -46,6 +47,7 @@ function Router() {
       <Route path="/explore" component={HomePage} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
+      <Route path="/take-test/demo" component={MicTestPage} />
       {!isAuthenticated && <Route path="/" component={HomePage} />}
     </Switch>
   );

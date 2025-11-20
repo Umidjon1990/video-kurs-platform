@@ -3420,10 +3420,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ============ SPEAKING TESTS API ROUTES ============
   
+  // PUBLIC: Get demo speaking tests
+  app.get('/api/speaking-tests/demo', async (req, res) => {
+    try {
+      const demoTests = await storage.getDemoSpeakingTests();
+      res.json(demoTests);
+    } catch (error: any) {
+      console.error('Error fetching demo speaking tests:', error);
+      res.status(500).json({ message: error.message || 'Failed to fetch demo speaking tests' });
+    }
+  });
+  
   // INSTRUCTOR: Create speaking test
   app.post('/api/instructor/speaking-tests', isAuthenticated, isInstructor, async (req, res) => {
     try {
-      const userId = req.user!.claims.sub;
+      const userId = req.user!.id;
       const data = insertSpeakingTestSchema.parse({
         ...req.body,
         instructorId: userId,
@@ -3445,7 +3456,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // INSTRUCTOR: Get speaking tests by course
   app.get('/api/instructor/courses/:courseId/speaking-tests', isAuthenticated, isInstructor, async (req, res) => {
     try {
-      const userId = req.user!.claims.sub;
+      const userId = req.user!.id;
       const { courseId } = req.params;
       
       // Verify instructor owns the course
@@ -3464,7 +3475,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // INSTRUCTOR: Get single speaking test with full structure
   app.get('/api/instructor/speaking-tests/:id', isAuthenticated, isInstructor, async (req, res) => {
     try {
-      const userId = req.user!.claims.sub;
+      const userId = req.user!.id;
       const { id } = req.params;
       
       const speakingTest = await storage.getSpeakingTest(id);
@@ -3500,7 +3511,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // INSTRUCTOR: Update speaking test
   app.put('/api/instructor/speaking-tests/:id', isAuthenticated, isInstructor, async (req, res) => {
     try {
-      const userId = req.user!.claims.sub;
+      const userId = req.user!.id;
       const { id } = req.params;
       
       const speakingTest = await storage.getSpeakingTest(id);
@@ -3523,7 +3534,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // INSTRUCTOR: Delete speaking test
   app.delete('/api/instructor/speaking-tests/:id', isAuthenticated, isInstructor, async (req, res) => {
     try {
-      const userId = req.user!.claims.sub;
+      const userId = req.user!.id;
       const { id } = req.params;
       
       const speakingTest = await storage.getSpeakingTest(id);
@@ -3545,7 +3556,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // INSTRUCTOR: Create section
   app.post('/api/instructor/speaking-tests/:testId/sections', isAuthenticated, isInstructor, async (req, res) => {
     try {
-      const userId = req.user!.claims.sub;
+      const userId = req.user!.id;
       const { testId } = req.params;
       
       const speakingTest = await storage.getSpeakingTest(testId);
@@ -3568,7 +3579,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // INSTRUCTOR: Update section
   app.put('/api/instructor/sections/:id', isAuthenticated, isInstructor, async (req, res) => {
     try {
-      const userId = req.user!.claims.sub;
+      const userId = req.user!.id;
       const { id } = req.params;
       
       const section = await storage.getSpeakingTestSection(id);
@@ -3592,7 +3603,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // INSTRUCTOR: Delete section
   app.delete('/api/instructor/sections/:id', isAuthenticated, isInstructor, async (req, res) => {
     try {
-      const userId = req.user!.claims.sub;
+      const userId = req.user!.id;
       const { id } = req.params;
       
       const section = await storage.getSpeakingTestSection(id);
@@ -3615,7 +3626,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // INSTRUCTOR: Create question
   app.post('/api/instructor/sections/:sectionId/questions', isAuthenticated, isInstructor, async (req, res) => {
     try {
-      const userId = req.user!.claims.sub;
+      const userId = req.user!.id;
       const { sectionId } = req.params;
       
       const section = await storage.getSpeakingTestSection(sectionId);
@@ -3643,7 +3654,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // INSTRUCTOR: Update question
   app.put('/api/instructor/questions/:id', isAuthenticated, isInstructor, async (req, res) => {
     try {
-      const userId = req.user!.claims.sub;
+      const userId = req.user!.id;
       const { id } = req.params;
       
       const question = await storage.getSpeakingQuestion(id);
@@ -3668,7 +3679,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // INSTRUCTOR: Delete question
   app.delete('/api/instructor/questions/:id', isAuthenticated, isInstructor, async (req, res) => {
     try {
-      const userId = req.user!.claims.sub;
+      const userId = req.user!.id;
       const { id } = req.params;
       
       const question = await storage.getSpeakingQuestion(id);
@@ -3692,7 +3703,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // INSTRUCTOR: Get submissions for a speaking test
   app.get('/api/instructor/speaking-tests/:testId/submissions', isAuthenticated, isInstructor, async (req, res) => {
     try {
-      const userId = req.user!.claims.sub;
+      const userId = req.user!.id;
       const { testId } = req.params;
       
       const speakingTest = await storage.getSpeakingTest(testId);
@@ -3710,7 +3721,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // INSTRUCTOR: Get single submission with answers and evaluations
   app.get('/api/instructor/submissions/:submissionId', isAuthenticated, isInstructor, async (req, res) => {
     try {
-      const userId = req.user!.claims.sub;
+      const userId = req.user!.id;
       const { submissionId } = req.params;
       
       const submission = await storage.getSpeakingSubmission(submissionId);
@@ -3745,7 +3756,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // STUDENT: Get published speaking tests for course
   app.get('/api/student/courses/:courseId/speaking-tests', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user!.claims.sub;
+      const userId = req.user!.id;
       const { courseId } = req.params;
       
       // Check enrollment
@@ -3766,7 +3777,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // STUDENT: Get single speaking test to take
   app.get('/api/student/speaking-tests/:id', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user!.claims.sub;
+      const userId = req.user!.id;
       const { id } = req.params;
       
       const speakingTest = await storage.getSpeakingTest(id);
@@ -3801,7 +3812,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // STUDENT: Submit speaking test
   app.post('/api/student/speaking-tests/:testId/submit', isAuthenticated, upload.array('audioFiles'), async (req, res) => {
     try {
-      const userId = req.user!.claims.sub;
+      const userId = req.user!.id;
       const { testId } = req.params;
       const files = req.files as Express.Multer.File[];
       
@@ -3850,7 +3861,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // STUDENT: Get my submissions
   app.get('/api/student/speaking-submissions', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user!.claims.sub;
+      const userId = req.user!.id;
       const submissions = await storage.getSpeakingSubmissionsByUser(userId);
       res.json(submissions);
     } catch (error: any) {
@@ -3861,7 +3872,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // STUDENT: Get single submission with results
   app.get('/api/student/submissions/:submissionId', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user!.claims.sub;
+      const userId = req.user!.id;
       const { submissionId } = req.params;
       
       const submission = await storage.getSpeakingSubmission(submissionId);
