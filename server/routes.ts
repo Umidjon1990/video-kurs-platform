@@ -10,7 +10,7 @@ import { ObjectStorageService } from "./objectStorage";
 import { db } from "./db";
 import bcrypt from "bcryptjs";
 import passport from "passport";
-import { users, courses, lessons, assignments, tests, questions, questionOptions, enrollments, submissions, testAttempts, notifications, conversations, messages, siteSettings, testimonials, subscriptionPlans, coursePlanPricing, userSubscriptions, passwordResetRequests } from "@shared/schema";
+import { users, courses, lessons, assignments, tests, questions, questionOptions, enrollments, submissions, testAttempts, notifications, conversations, messages, siteSettings, testimonials, subscriptionPlans, coursePlanPricing, userSubscriptions, passwordResetRequests, speakingTests, speakingTestSections, speakingQuestions, speakingSubmissions, speakingAnswers, speakingEvaluations } from "@shared/schema";
 import { eq, and, or, desc, sql, count, avg, inArray } from "drizzle-orm";
 import {
   insertCourseSchema,
@@ -26,6 +26,12 @@ import {
   insertAnnouncementSchema,
   insertSiteSettingSchema,
   insertTestimonialSchema,
+  insertSpeakingTestSchema,
+  insertSpeakingTestSectionSchema,
+  insertSpeakingQuestionSchema,
+  insertSpeakingSubmissionSchema,
+  insertSpeakingAnswerSchema,
+  insertSpeakingEvaluationSchema,
   type InstructorCourseWithCounts,
 } from "@shared/schema";
 import { z } from "zod";
@@ -3407,6 +3413,481 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       await storage.checkAndUpdateExpiredSubscriptions();
       res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ============ SPEAKING TESTS API ROUTES ============
+  
+  // INSTRUCTOR: Create speaking test
+  app.post('/api/instructor/speaking-tests', isAuthenticated, isInstructor, async (req, res) => {
+    try {
+      const userId = req.user!.claims.sub;
+      const data = insertSpeakingTestSchema.parse({
+        ...req.body,
+        instructorId: userId,
+      });
+      
+      // Verify instructor owns the course
+      const course = await storage.getCourse(data.courseId);
+      if (!course || course.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu kursga ruxsat yo\'q' });
+      }
+      
+      const speakingTest = await storage.createSpeakingTest(data);
+      res.json(speakingTest);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // INSTRUCTOR: Get speaking tests by course
+  app.get('/api/instructor/courses/:courseId/speaking-tests', isAuthenticated, isInstructor, async (req, res) => {
+    try {
+      const userId = req.user!.claims.sub;
+      const { courseId } = req.params;
+      
+      // Verify instructor owns the course
+      const course = await storage.getCourse(courseId);
+      if (!course || course.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu kursga ruxsat yo\'q' });
+      }
+      
+      const speakingTests = await storage.getSpeakingTestsByCourse(courseId);
+      res.json(speakingTests);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // INSTRUCTOR: Get single speaking test with full structure
+  app.get('/api/instructor/speaking-tests/:id', isAuthenticated, isInstructor, async (req, res) => {
+    try {
+      const userId = req.user!.claims.sub;
+      const { id } = req.params;
+      
+      const speakingTest = await storage.getSpeakingTest(id);
+      if (!speakingTest) {
+        return res.status(404).json({ message: 'Speaking test topilmadi' });
+      }
+      
+      // Verify instructor owns the test
+      if (speakingTest.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu testga ruxsat yo\'q' });
+      }
+      
+      // Get sections
+      const sections = await storage.getSpeakingTestSections(id);
+      
+      // Get questions for each section
+      const sectionsWithQuestions = await Promise.all(
+        sections.map(async (section) => {
+          const questions = await storage.getSpeakingQuestions(section.id);
+          return { ...section, questions };
+        })
+      );
+      
+      res.json({
+        ...speakingTest,
+        sections: sectionsWithQuestions,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // INSTRUCTOR: Update speaking test
+  app.put('/api/instructor/speaking-tests/:id', isAuthenticated, isInstructor, async (req, res) => {
+    try {
+      const userId = req.user!.claims.sub;
+      const { id } = req.params;
+      
+      const speakingTest = await storage.getSpeakingTest(id);
+      if (!speakingTest) {
+        return res.status(404).json({ message: 'Speaking test topilmadi' });
+      }
+      
+      if (speakingTest.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu testga ruxsat yo\'q' });
+      }
+      
+      const data = insertSpeakingTestSchema.partial().parse(req.body);
+      const updated = await storage.updateSpeakingTest(id, data);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // INSTRUCTOR: Delete speaking test
+  app.delete('/api/instructor/speaking-tests/:id', isAuthenticated, isInstructor, async (req, res) => {
+    try {
+      const userId = req.user!.claims.sub;
+      const { id } = req.params;
+      
+      const speakingTest = await storage.getSpeakingTest(id);
+      if (!speakingTest) {
+        return res.status(404).json({ message: 'Speaking test topilmadi' });
+      }
+      
+      if (speakingTest.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu testga ruxsat yo\'q' });
+      }
+      
+      await storage.deleteSpeakingTest(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // INSTRUCTOR: Create section
+  app.post('/api/instructor/speaking-tests/:testId/sections', isAuthenticated, isInstructor, async (req, res) => {
+    try {
+      const userId = req.user!.claims.sub;
+      const { testId } = req.params;
+      
+      const speakingTest = await storage.getSpeakingTest(testId);
+      if (!speakingTest || speakingTest.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu testga ruxsat yo\'q' });
+      }
+      
+      const data = insertSpeakingTestSectionSchema.parse({
+        ...req.body,
+        speakingTestId: testId,
+      });
+      
+      const section = await storage.createSpeakingTestSection(data);
+      res.json(section);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // INSTRUCTOR: Update section
+  app.put('/api/instructor/sections/:id', isAuthenticated, isInstructor, async (req, res) => {
+    try {
+      const userId = req.user!.claims.sub;
+      const { id } = req.params;
+      
+      const section = await storage.getSpeakingTestSection(id);
+      if (!section) {
+        return res.status(404).json({ message: 'Section topilmadi' });
+      }
+      
+      const speakingTest = await storage.getSpeakingTest(section.speakingTestId);
+      if (!speakingTest || speakingTest.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu sectionga ruxsat yo\'q' });
+      }
+      
+      const data = insertSpeakingTestSectionSchema.partial().parse(req.body);
+      const updated = await storage.updateSpeakingTestSection(id, data);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // INSTRUCTOR: Delete section
+  app.delete('/api/instructor/sections/:id', isAuthenticated, isInstructor, async (req, res) => {
+    try {
+      const userId = req.user!.claims.sub;
+      const { id } = req.params;
+      
+      const section = await storage.getSpeakingTestSection(id);
+      if (!section) {
+        return res.status(404).json({ message: 'Section topilmadi' });
+      }
+      
+      const speakingTest = await storage.getSpeakingTest(section.speakingTestId);
+      if (!speakingTest || speakingTest.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu sectionga ruxsat yo\'q' });
+      }
+      
+      await storage.deleteSpeakingTestSection(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // INSTRUCTOR: Create question
+  app.post('/api/instructor/sections/:sectionId/questions', isAuthenticated, isInstructor, async (req, res) => {
+    try {
+      const userId = req.user!.claims.sub;
+      const { sectionId } = req.params;
+      
+      const section = await storage.getSpeakingTestSection(sectionId);
+      if (!section) {
+        return res.status(404).json({ message: 'Section topilmadi' });
+      }
+      
+      const speakingTest = await storage.getSpeakingTest(section.speakingTestId);
+      if (!speakingTest || speakingTest.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu sectionga ruxsat yo\'q' });
+      }
+      
+      const data = insertSpeakingQuestionSchema.parse({
+        ...req.body,
+        sectionId,
+      });
+      
+      const question = await storage.createSpeakingQuestion(data);
+      res.json(question);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // INSTRUCTOR: Update question
+  app.put('/api/instructor/questions/:id', isAuthenticated, isInstructor, async (req, res) => {
+    try {
+      const userId = req.user!.claims.sub;
+      const { id } = req.params;
+      
+      const question = await storage.getSpeakingQuestion(id);
+      if (!question) {
+        return res.status(404).json({ message: 'Savol topilmadi' });
+      }
+      
+      const section = await storage.getSpeakingTestSection(question.sectionId);
+      const speakingTest = await storage.getSpeakingTest(section!.speakingTestId);
+      if (!speakingTest || speakingTest.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu savolga ruxsat yo\'q' });
+      }
+      
+      const data = insertSpeakingQuestionSchema.partial().parse(req.body);
+      const updated = await storage.updateSpeakingQuestion(id, data);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // INSTRUCTOR: Delete question
+  app.delete('/api/instructor/questions/:id', isAuthenticated, isInstructor, async (req, res) => {
+    try {
+      const userId = req.user!.claims.sub;
+      const { id } = req.params;
+      
+      const question = await storage.getSpeakingQuestion(id);
+      if (!question) {
+        return res.status(404).json({ message: 'Savol topilmadi' });
+      }
+      
+      const section = await storage.getSpeakingTestSection(question.sectionId);
+      const speakingTest = await storage.getSpeakingTest(section!.speakingTestId);
+      if (!speakingTest || speakingTest.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu savolga ruxsat yo\'q' });
+      }
+      
+      await storage.deleteSpeakingQuestion(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // INSTRUCTOR: Get submissions for a speaking test
+  app.get('/api/instructor/speaking-tests/:testId/submissions', isAuthenticated, isInstructor, async (req, res) => {
+    try {
+      const userId = req.user!.claims.sub;
+      const { testId } = req.params;
+      
+      const speakingTest = await storage.getSpeakingTest(testId);
+      if (!speakingTest || speakingTest.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu testga ruxsat yo\'q' });
+      }
+      
+      const submissions = await storage.getSpeakingSubmissionsByTest(testId);
+      res.json(submissions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // INSTRUCTOR: Get single submission with answers and evaluations
+  app.get('/api/instructor/submissions/:submissionId', isAuthenticated, isInstructor, async (req, res) => {
+    try {
+      const userId = req.user!.claims.sub;
+      const { submissionId } = req.params;
+      
+      const submission = await storage.getSpeakingSubmission(submissionId);
+      if (!submission) {
+        return res.status(404).json({ message: 'Submission topilmadi' });
+      }
+      
+      // Verify instructor owns the test
+      if (submission.test.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu submissionga ruxsat yo\'q' });
+      }
+      
+      // Get answers with questions and evaluations
+      const answers = await storage.getSpeakingAnswers(submissionId);
+      
+      const answersWithEvaluations = await Promise.all(
+        answers.map(async (answer) => {
+          const evaluations = await storage.getSpeakingEvaluations(answer.answer.id);
+          return { ...answer, evaluations };
+        })
+      );
+      
+      res.json({
+        ...submission,
+        answers: answersWithEvaluations,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // STUDENT: Get published speaking tests for course
+  app.get('/api/student/courses/:courseId/speaking-tests', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.claims.sub;
+      const { courseId } = req.params;
+      
+      // Check enrollment
+      const enrollment = await storage.getEnrollmentByCourseAndUser(courseId, userId);
+      if (!enrollment || enrollment.paymentStatus !== 'approved') {
+        return res.status(403).json({ message: 'Kursga ro\'yxatdan o\'tmagan' });
+      }
+      
+      const speakingTests = await storage.getSpeakingTestsByCourse(courseId);
+      const published = speakingTests.filter(t => t.isPublished);
+      
+      res.json(published);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // STUDENT: Get single speaking test to take
+  app.get('/api/student/speaking-tests/:id', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.claims.sub;
+      const { id } = req.params;
+      
+      const speakingTest = await storage.getSpeakingTest(id);
+      if (!speakingTest || !speakingTest.isPublished) {
+        return res.status(404).json({ message: 'Speaking test topilmadi' });
+      }
+      
+      // Check enrollment
+      const enrollment = await storage.getEnrollmentByCourseAndUser(speakingTest.courseId, userId);
+      if (!enrollment || enrollment.paymentStatus !== 'approved') {
+        return res.status(403).json({ message: 'Kursga ro\'yxatdan o\'tmagan' });
+      }
+      
+      // Get sections and questions
+      const sections = await storage.getSpeakingTestSections(id);
+      const sectionsWithQuestions = await Promise.all(
+        sections.map(async (section) => {
+          const questions = await storage.getSpeakingQuestions(section.id);
+          return { ...section, questions };
+        })
+      );
+      
+      res.json({
+        ...speakingTest,
+        sections: sectionsWithQuestions,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // STUDENT: Submit speaking test
+  app.post('/api/student/speaking-tests/:testId/submit', isAuthenticated, upload.array('audioFiles'), async (req, res) => {
+    try {
+      const userId = req.user!.claims.sub;
+      const { testId } = req.params;
+      const files = req.files as Express.Multer.File[];
+      
+      const speakingTest = await storage.getSpeakingTest(testId);
+      if (!speakingTest || !speakingTest.isPublished) {
+        return res.status(404).json({ message: 'Speaking test topilmadi' });
+      }
+      
+      // Check enrollment
+      const enrollment = await storage.getEnrollmentByCourseAndUser(speakingTest.courseId, userId);
+      if (!enrollment || enrollment.paymentStatus !== 'approved') {
+        return res.status(403).json({ message: 'Kursga ro\'yxatdan o\'tmagan' });
+      }
+      
+      // Parse answers from request body
+      const answersData = JSON.parse(req.body.answers);
+      
+      // Create submission
+      const submission = await storage.createSpeakingSubmission({
+        speakingTestId: testId,
+        userId,
+        status: 'submitted',
+      });
+      
+      // Upload audio files and create answers
+      for (let i = 0; i < answersData.length; i++) {
+        const answerData = answersData[i];
+        const audioFile = files[i];
+        
+        // Upload audio to object storage
+        const audioUrl = await uploadSubmissionFile(audioFile, 'speaking-tests');
+        
+        await storage.createSpeakingAnswer({
+          submissionId: submission.id,
+          questionId: answerData.questionId,
+          audioUrl,
+        });
+      }
+      
+      res.json(submission);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // STUDENT: Get my submissions
+  app.get('/api/student/speaking-submissions', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.claims.sub;
+      const submissions = await storage.getSpeakingSubmissionsByUser(userId);
+      res.json(submissions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // STUDENT: Get single submission with results
+  app.get('/api/student/submissions/:submissionId', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.claims.sub;
+      const { submissionId } = req.params;
+      
+      const submission = await storage.getSpeakingSubmission(submissionId);
+      if (!submission) {
+        return res.status(404).json({ message: 'Submission topilmadi' });
+      }
+      
+      // Verify student owns the submission
+      if (submission.submission.userId !== userId) {
+        return res.status(403).json({ message: 'Bu submissionga ruxsat yo\'q' });
+      }
+      
+      // Get answers with evaluations
+      const answers = await storage.getSpeakingAnswers(submissionId);
+      
+      const answersWithEvaluations = await Promise.all(
+        answers.map(async (answer) => {
+          const evaluations = await storage.getSpeakingEvaluations(answer.answer.id);
+          return { ...answer, evaluations };
+        })
+      );
+      
+      res.json({
+        ...submission,
+        answers: answersWithEvaluations,
+      });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

@@ -20,6 +20,12 @@ import {
   subscriptionPlans,
   coursePlanPricing,
   userSubscriptions,
+  speakingTests,
+  speakingTestSections,
+  speakingQuestions,
+  speakingSubmissions,
+  speakingAnswers,
+  speakingEvaluations,
   type User,
   type UpsertUser,
   type Course,
@@ -60,6 +66,18 @@ import {
   type SubscriptionPlan,
   type CoursePlanPricing,
   type InsertCoursePlanPricing,
+  type SpeakingTest,
+  type InsertSpeakingTest,
+  type SpeakingTestSection,
+  type InsertSpeakingTestSection,
+  type SpeakingQuestion,
+  type InsertSpeakingQuestion,
+  type SpeakingSubmission,
+  type InsertSpeakingSubmission,
+  type SpeakingAnswer,
+  type InsertSpeakingAnswer,
+  type SpeakingEvaluation,
+  type InsertSpeakingEvaluation,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, sql, inArray } from "drizzle-orm";
@@ -213,6 +231,47 @@ export interface IStorage {
   extendSubscription(subscriptionId: string, additionalDays: number): Promise<any>;
   updateSubscriptionStatus(subscriptionId: string, status: string): Promise<any>;
   checkAndUpdateExpiredSubscriptions(): Promise<void>;
+  
+  // ============ SPEAKING TESTS OPERATIONS ============
+  // Speaking Test operations
+  createSpeakingTest(test: InsertSpeakingTest): Promise<SpeakingTest>;
+  getSpeakingTestsByCourse(courseId: string): Promise<SpeakingTest[]>;
+  getSpeakingTest(id: string): Promise<SpeakingTest | undefined>;
+  updateSpeakingTest(id: string, data: Partial<InsertSpeakingTest>): Promise<SpeakingTest>;
+  deleteSpeakingTest(id: string): Promise<void>;
+  getPublishedSpeakingTests(): Promise<SpeakingTest[]>;
+  getDemoSpeakingTests(): Promise<SpeakingTest[]>;
+  
+  // Speaking Test Section operations
+  createSpeakingTestSection(section: InsertSpeakingTestSection): Promise<SpeakingTestSection>;
+  getSpeakingTestSections(speakingTestId: string): Promise<SpeakingTestSection[]>;
+  getSpeakingTestSection(id: string): Promise<SpeakingTestSection | undefined>;
+  updateSpeakingTestSection(id: string, data: Partial<InsertSpeakingTestSection>): Promise<SpeakingTestSection>;
+  deleteSpeakingTestSection(id: string): Promise<void>;
+  
+  // Speaking Question operations
+  createSpeakingQuestion(question: InsertSpeakingQuestion): Promise<SpeakingQuestion>;
+  getSpeakingQuestions(sectionId: string): Promise<SpeakingQuestion[]>;
+  getSpeakingQuestion(id: string): Promise<SpeakingQuestion | undefined>;
+  updateSpeakingQuestion(id: string, data: Partial<InsertSpeakingQuestion>): Promise<SpeakingQuestion>;
+  deleteSpeakingQuestion(id: string): Promise<void>;
+  
+  // Speaking Submission operations
+  createSpeakingSubmission(submission: InsertSpeakingSubmission): Promise<SpeakingSubmission>;
+  getSpeakingSubmission(id: string): Promise<any>;
+  getSpeakingSubmissionsByTest(speakingTestId: string): Promise<any[]>;
+  getSpeakingSubmissionsByUser(userId: string): Promise<any[]>;
+  updateSpeakingSubmission(id: string, data: Partial<InsertSpeakingSubmission>): Promise<SpeakingSubmission>;
+  
+  // Speaking Answer operations
+  createSpeakingAnswer(answer: InsertSpeakingAnswer): Promise<SpeakingAnswer>;
+  getSpeakingAnswers(submissionId: string): Promise<any[]>;
+  getSpeakingAnswer(id: string): Promise<SpeakingAnswer | undefined>;
+  updateSpeakingAnswer(id: string, data: Partial<InsertSpeakingAnswer>): Promise<SpeakingAnswer>;
+  
+  // Speaking Evaluation operations
+  createSpeakingEvaluation(evaluation: InsertSpeakingEvaluation): Promise<SpeakingEvaluation>;
+  getSpeakingEvaluations(answerId: string): Promise<SpeakingEvaluation[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1899,6 +1958,230 @@ export class DatabaseStorage implements IStorage {
           sql`${userSubscriptions.endDate} < ${now}`
         )
       );
+  }
+  
+  // ============ SPEAKING TESTS IMPLEMENTATION ============
+  // Speaking Test operations
+  async createSpeakingTest(test: InsertSpeakingTest): Promise<SpeakingTest> {
+    const [created] = await db.insert(speakingTests).values(test).returning();
+    return created;
+  }
+  
+  async getSpeakingTestsByCourse(courseId: string): Promise<SpeakingTest[]> {
+    return await db
+      .select()
+      .from(speakingTests)
+      .where(eq(speakingTests.courseId, courseId))
+      .orderBy(desc(speakingTests.createdAt));
+  }
+  
+  async getSpeakingTest(id: string): Promise<SpeakingTest | undefined> {
+    const [test] = await db
+      .select()
+      .from(speakingTests)
+      .where(eq(speakingTests.id, id));
+    return test;
+  }
+  
+  async updateSpeakingTest(id: string, data: Partial<InsertSpeakingTest>): Promise<SpeakingTest> {
+    const [updated] = await db
+      .update(speakingTests)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(speakingTests.id, id))
+      .returning();
+    return updated;
+  }
+  
+  async deleteSpeakingTest(id: string): Promise<void> {
+    await db.delete(speakingTests).where(eq(speakingTests.id, id));
+  }
+  
+  async getPublishedSpeakingTests(): Promise<SpeakingTest[]> {
+    return await db
+      .select()
+      .from(speakingTests)
+      .where(eq(speakingTests.isPublished, true))
+      .orderBy(desc(speakingTests.createdAt));
+  }
+  
+  async getDemoSpeakingTests(): Promise<SpeakingTest[]> {
+    return await db
+      .select()
+      .from(speakingTests)
+      .where(and(eq(speakingTests.isPublished, true), eq(speakingTests.isDemo, true)))
+      .orderBy(desc(speakingTests.createdAt));
+  }
+  
+  // Speaking Test Section operations
+  async createSpeakingTestSection(section: InsertSpeakingTestSection): Promise<SpeakingTestSection> {
+    const [created] = await db.insert(speakingTestSections).values(section).returning();
+    return created;
+  }
+  
+  async getSpeakingTestSections(speakingTestId: string): Promise<SpeakingTestSection[]> {
+    return await db
+      .select()
+      .from(speakingTestSections)
+      .where(eq(speakingTestSections.speakingTestId, speakingTestId))
+      .orderBy(speakingTestSections.sectionNumber);
+  }
+  
+  async getSpeakingTestSection(id: string): Promise<SpeakingTestSection | undefined> {
+    const [section] = await db
+      .select()
+      .from(speakingTestSections)
+      .where(eq(speakingTestSections.id, id));
+    return section;
+  }
+  
+  async updateSpeakingTestSection(id: string, data: Partial<InsertSpeakingTestSection>): Promise<SpeakingTestSection> {
+    const [updated] = await db
+      .update(speakingTestSections)
+      .set(data)
+      .where(eq(speakingTestSections.id, id))
+      .returning();
+    return updated;
+  }
+  
+  async deleteSpeakingTestSection(id: string): Promise<void> {
+    await db.delete(speakingTestSections).where(eq(speakingTestSections.id, id));
+  }
+  
+  // Speaking Question operations
+  async createSpeakingQuestion(question: InsertSpeakingQuestion): Promise<SpeakingQuestion> {
+    const [created] = await db.insert(speakingQuestions).values(question).returning();
+    return created;
+  }
+  
+  async getSpeakingQuestions(sectionId: string): Promise<SpeakingQuestion[]> {
+    return await db
+      .select()
+      .from(speakingQuestions)
+      .where(eq(speakingQuestions.sectionId, sectionId))
+      .orderBy(speakingQuestions.questionNumber);
+  }
+  
+  async getSpeakingQuestion(id: string): Promise<SpeakingQuestion | undefined> {
+    const [question] = await db
+      .select()
+      .from(speakingQuestions)
+      .where(eq(speakingQuestions.id, id));
+    return question;
+  }
+  
+  async updateSpeakingQuestion(id: string, data: Partial<InsertSpeakingQuestion>): Promise<SpeakingQuestion> {
+    const [updated] = await db
+      .update(speakingQuestions)
+      .set(data)
+      .where(eq(speakingQuestions.id, id))
+      .returning();
+    return updated;
+  }
+  
+  async deleteSpeakingQuestion(id: string): Promise<void> {
+    await db.delete(speakingQuestions).where(eq(speakingQuestions.id, id));
+  }
+  
+  // Speaking Submission operations
+  async createSpeakingSubmission(submission: InsertSpeakingSubmission): Promise<SpeakingSubmission> {
+    const [created] = await db.insert(speakingSubmissions).values(submission).returning();
+    return created;
+  }
+  
+  async getSpeakingSubmission(id: string): Promise<any> {
+    const [submission] = await db
+      .select({
+        submission: speakingSubmissions,
+        test: speakingTests,
+        user: users,
+      })
+      .from(speakingSubmissions)
+      .innerJoin(speakingTests, eq(speakingSubmissions.speakingTestId, speakingTests.id))
+      .innerJoin(users, eq(speakingSubmissions.userId, users.id))
+      .where(eq(speakingSubmissions.id, id));
+    return submission;
+  }
+  
+  async getSpeakingSubmissionsByTest(speakingTestId: string): Promise<any[]> {
+    return await db
+      .select({
+        submission: speakingSubmissions,
+        user: users,
+      })
+      .from(speakingSubmissions)
+      .innerJoin(users, eq(speakingSubmissions.userId, users.id))
+      .where(eq(speakingSubmissions.speakingTestId, speakingTestId))
+      .orderBy(desc(speakingSubmissions.submittedAt));
+  }
+  
+  async getSpeakingSubmissionsByUser(userId: string): Promise<any[]> {
+    return await db
+      .select({
+        submission: speakingSubmissions,
+        test: speakingTests,
+      })
+      .from(speakingSubmissions)
+      .innerJoin(speakingTests, eq(speakingSubmissions.speakingTestId, speakingTests.id))
+      .where(eq(speakingSubmissions.userId, userId))
+      .orderBy(desc(speakingSubmissions.submittedAt));
+  }
+  
+  async updateSpeakingSubmission(id: string, data: Partial<InsertSpeakingSubmission>): Promise<SpeakingSubmission> {
+    const [updated] = await db
+      .update(speakingSubmissions)
+      .set(data)
+      .where(eq(speakingSubmissions.id, id))
+      .returning();
+    return updated;
+  }
+  
+  // Speaking Answer operations
+  async createSpeakingAnswer(answer: InsertSpeakingAnswer): Promise<SpeakingAnswer> {
+    const [created] = await db.insert(speakingAnswers).values(answer).returning();
+    return created;
+  }
+  
+  async getSpeakingAnswers(submissionId: string): Promise<any[]> {
+    return await db
+      .select({
+        answer: speakingAnswers,
+        question: speakingQuestions,
+      })
+      .from(speakingAnswers)
+      .innerJoin(speakingQuestions, eq(speakingAnswers.questionId, speakingQuestions.id))
+      .where(eq(speakingAnswers.submissionId, submissionId))
+      .orderBy(speakingQuestions.questionNumber);
+  }
+  
+  async getSpeakingAnswer(id: string): Promise<SpeakingAnswer | undefined> {
+    const [answer] = await db
+      .select()
+      .from(speakingAnswers)
+      .where(eq(speakingAnswers.id, id));
+    return answer;
+  }
+  
+  async updateSpeakingAnswer(id: string, data: Partial<InsertSpeakingAnswer>): Promise<SpeakingAnswer> {
+    const [updated] = await db
+      .update(speakingAnswers)
+      .set(data)
+      .where(eq(speakingAnswers.id, id))
+      .returning();
+    return updated;
+  }
+  
+  // Speaking Evaluation operations
+  async createSpeakingEvaluation(evaluation: InsertSpeakingEvaluation): Promise<SpeakingEvaluation> {
+    const [created] = await db.insert(speakingEvaluations).values(evaluation).returning();
+    return created;
+  }
+  
+  async getSpeakingEvaluations(answerId: string): Promise<SpeakingEvaluation[]> {
+    return await db
+      .select()
+      .from(speakingEvaluations)
+      .where(eq(speakingEvaluations.answerId, answerId))
+      .orderBy(desc(speakingEvaluations.createdAt));
   }
 }
 

@@ -533,9 +533,14 @@ export const insertPasswordResetRequestSchema = createInsertSchema(passwordReset
 export const speakingTests = pgTable("speaking_tests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: 'cascade' }),
+  instructorId: varchar("instructor_id").notNull().references(() => users.id),
   lessonId: varchar("lesson_id").references(() => lessons.id, { onDelete: 'cascade' }),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
+  duration: integer("duration").notNull().default(60), // Davomiyligi (daqiqalarda)
+  passScore: integer("pass_score").notNull().default(60), // O'tish bali
+  totalScore: integer("total_score").notNull().default(100), // Maksimal ball
+  instructions: text("instructions"), // Ko'rsatmalar
   language: varchar("language", { length: 10 }).notNull().default('ar'), // ar, uz, en, etc.
   isDemo: boolean("is_demo").default(false), // Bepul demo test
   isPublished: boolean("is_published").default(false),

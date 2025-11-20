@@ -19,8 +19,11 @@ import AdminSubscriptionPlansPage from "@/pages/AdminSubscriptionPlansPage";
 import AdminSubscriptions from "@/pages/AdminSubscriptions";
 import InstructorDashboard from "@/pages/InstructorDashboard";
 import InstructorSubscriptions from "@/pages/InstructorSubscriptions";
+import SpeakingTests from "@/pages/SpeakingTests";
+import SpeakingTestEdit from "@/pages/SpeakingTestEdit";
 import StudentCourses from "@/pages/StudentCourses";
 import StudentResults from "@/pages/StudentResults";
+import StudentSpeakingTest from "@/pages/StudentSpeakingTest";
 import LearningPage from "@/pages/LearningPage";
 import Checkout from "@/pages/Checkout";
 import ChatPage from "@/pages/ChatPage";
@@ -78,6 +81,8 @@ function Router() {
                 <>
                   <Route path="/" component={InstructorDashboard} />
                   <Route path="/instructor/subscriptions" component={InstructorSubscriptions} />
+                  <Route path="/instructor/courses/:courseId/speaking-tests" component={SpeakingTests} />
+                  <Route path="/instructor/speaking-tests/:testId" component={SpeakingTestEdit} />
                   <Route path="/learn/:courseId" component={LearningPage} />
                   <Route path="/chat" component={ChatPage} />
                   <Route path="/chat/:conversationId" component={ChatPage} />
@@ -90,6 +95,7 @@ function Router() {
                   <Route path="/" component={StudentCourses} />
                   <Route path="/results" component={StudentResults} />
                   <Route path="/checkout/:courseId" component={Checkout} />
+                  <Route path="/student/speaking-test/:testId" component={StudentSpeakingTest} />
                   <Route path="/learn/:courseId" component={LearningPage} />
                   <Route path="/chat" component={ChatPage} />
                   <Route path="/chat/:conversationId" component={ChatPage} />
