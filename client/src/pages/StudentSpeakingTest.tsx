@@ -25,21 +25,33 @@ export default function StudentSpeakingTest() {
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Try public endpoint first (for demo tests), fallback to student endpoint
-  const { data: finalTestData, finalLoading, error } = useQuery<any>({
+  // Try public endpoint first (for demo tests)
+  const { data: testData, isLoading, error, status } = useQuery<any>({
     queryKey: [`/api/speaking-tests/${testId}/public`],
     retry: false,
+    queryFn: async () => {
+      const response = await fetch(`/api/speaking-tests/${testId}/public`, {
+        credentials: 'include'
+      });
+      if (response.status === 404) {
+        throw new Error('Not a demo test');
+      }
+      if (!response.ok) {
+        throw new Error('Failed to fetch demo test');
+      }
+      return response.json();
+    }
   });
 
-  // If public endpoint fails, user is not authenticated for non-demo test
-  const { data: authenticatedTestData, finalLoading: isLoadingAuth } = useQuery<any>({
+  // If public endpoint fails (not a demo), try authenticated endpoint
+  const { data: authenticatedTestData, isLoading: isLoadingAuth } = useQuery<any>({
     queryKey: [`/api/student/speaking-tests/${testId}`],
-    enabled: !!error && !finalTestData,
+    enabled: status === 'error' && !testData,
   });
 
   // Use whichever data is available
-  const finalTestData = finalTestData || authenticatedTestData;
-  const finalLoading = finalLoading || isLoadingAuth;
+  const finalTestData = testData || authenticatedTestData;
+  const finalLoading = isLoading || isLoadingAuth;
 
   useEffect(() => {
     if (finalTestData?.isDemo) {
@@ -366,14 +378,20 @@ export default function StudentSpeakingTest() {
             </Button>
             
             {isLastQuestion() ? (
-              <Button
-                onClick={handleSubmit}
-                disabled={submitMutation.isPending || answeredCount === 0}
-                data-testid="button-submit"
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                {submitMutation.isPending ? 'Yuborilmoqda...' : 'Testni yakunlash'}
-              </Button>
+              isDemo ? (
+                <div className="text-sm text-muted-foreground text-center flex-1" data-testid="text-demo-info">
+                  Demo testlarda natija saqlanmaydi. To'liq test topshirish uchun ro'yxatdan o'ting.
+                </div>
+              ) : (
+                <Button
+                  onClick={handleSubmit}
+                  disabled={submitMutation.isPending || answeredCount === 0}
+                  data-testid="button-submit"
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  {submitMutation.isPending ? 'Yuborilmoqda...' : 'Testni yakunlash'}
+                </Button>
+              )
             ) : (
               <Button onClick={handleNext} data-testid="button-next">
                 Keyingi

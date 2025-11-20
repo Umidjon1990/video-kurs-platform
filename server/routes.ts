@@ -3437,7 +3437,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { testId } = req.params;
       
       const speakingTest = await storage.getSpeakingTest(testId);
-      if (!speakingTest || !speakingTest.isDemo || !speakingTest.isPublished) {
+      
+      // SECURITY: Only allow public access to demo tests that are published
+      if (!speakingTest || speakingTest.isDemo !== true || speakingTest.isPublished !== true) {
         return res.status(404).json({ message: 'Demo test topilmadi' });
       }
       
