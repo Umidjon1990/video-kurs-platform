@@ -3430,6 +3430,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: error.message || 'Failed to fetch demo speaking tests' });
     }
   });
+
+  // PUBLIC: Get demo speaking test details (no auth required)
+  app.get('/api/speaking-tests/:testId/public', async (req, res) => {
+    try {
+      const { testId } = req.params;
+      
+      const speakingTest = await storage.getSpeakingTest(testId);
+      if (!speakingTest || !speakingTest.isDemo || !speakingTest.isPublished) {
+        return res.status(404).json({ message: 'Demo test topilmadi' });
+      }
+      
+      // Get sections and questions
+      const sections = await storage.getSpeakingTestSections(testId);
+      const sectionsWithQuestions = await Promise.all(
+        sections.map(async (section) => {
+          const questions = await storage.getSpeakingQuestions(section.id);
+          return { ...section, questions };
+        })
+      );
+      
+      res.json({
+        ...speakingTest,
+        sections: sectionsWithQuestions,
+      });
+    } catch (error: any) {
+      console.error('Error fetching demo test:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
   
   // INSTRUCTOR: Create speaking test
   app.post('/api/instructor/speaking-tests', isAuthenticated, isInstructor, async (req, res) => {
