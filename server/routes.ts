@@ -1585,12 +1585,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create Excel workbook
       const wb = XLSX.utils.book_new();
       
-      // Define headers - soddalashtirilgan format
+      // Define headers - yangi sodda format
       const headers = [
-        'SavolID',
+        'Tartib',
         'Turi',
-        'Javob',
-        'Ball'
+        'Savol',
+        'Javob'
       ];
       
       let data: any[][] = [headers];
@@ -1599,31 +1599,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Add sample data for each question type
         data.push(
           // Multiple Choice - har bir variant alohida qator
-          ['Q1', 'multiple_choice', '2+2 nechaga teng?', '2'],
-          ['Q1', '4 (to\'g\'ri)', '', ''],
-          ['Q1', '3', '', ''],
-          ['Q1', '5', '', ''],
+          ['1', 'multiple_choice', '2+2 nechaga teng?', ''],
+          ['1', '', '', '4 (to\'g\'ri)'],
+          ['1', '', '', '3'],
+          ['1', '', '', '5'],
           
           // True/False
-          ['Q2', 'true_false', 'Yer dumaloq shakldami? (javob: true yoki false)', '1'],
-          ['Q2', 'true', '', ''],
+          ['2', 'true_false', 'Yer dumaloq shakldami?', 'true'],
           
           // Fill in Blanks
-          ['Q3', 'fill_blanks', "O'zbekistonning poytaxti ___ (javob quyida)", '1'],
-          ['Q3', 'Toshkent', '', ''],
+          ['3', 'fill_blanks', "O'zbekistonning poytaxti ___", 'Toshkent'],
           
           // Matching - juftliklar
-          ['Q4', 'matching', "So'zlarni tarjima qiling (chap|o'ng)", '2'],
-          ['Q4', 'Book|Kitob', '', ''],
-          ['Q4', 'Pen|Qalam', '', ''],
-          ['Q4', 'House|Uy', '', ''],
+          ['4', 'matching', "So'zlarni tarjima qiling", ''],
+          ['4', '', '', 'Book|Kitob'],
+          ['4', '', '', 'Pen|Qalam'],
+          ['4', '', '', 'House|Uy'],
           
           // Short Answer
-          ['Q5', 'short_answer', 'Python nima? (javob quyida)', '3'],
-          ['Q5', 'Dasturlash tili', '', ''],
+          ['5', 'short_answer', 'Python nima?', 'Dasturlash tili'],
           
-          // Essay
-          ['Q6', 'essay', 'Sun\'iy intellekt haqida fikringiz yozing', '5']
+          // Essay (javob talab qilinmaydi)
+          ['6', 'essay', 'Sun\'iy intellekt haqida fikringiz yozing', '']
         );
       }
       
@@ -1631,10 +1628,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Set column widths
       ws['!cols'] = [
-        { wch: 12 },  // SavolID
-        { wch: 20 },  // Turi
-        { wch: 50 },  // Javob
-        { wch: 8 },   // Ball
+        { wch: 8 },   // Tartib
+        { wch: 18 },  // Turi
+        { wch: 50 },  // Savol
+        { wch: 40 },  // Javob
       ];
       
       XLSX.utils.book_append_sheet(wb, ws, 'Savollar');
@@ -1719,25 +1716,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const questionsToCreate: any[] = [];
         const validQuestionTypes = ['multiple_choice', 'true_false', 'fill_blanks', 'matching', 'short_answer', 'essay'];
         
-        // Soddalashtirilgan parsing - yangi format
-        // Format: SavolID | Turi | Javob | Ball
+        // Yangi sodda parsing
+        // Format: Tartib | Turi | Savol | Javob
         for (const [questionKey, rows] of Array.from(questionGroups.entries())) {
           const firstRow = rows[0].row;
           const firstRowNum = rows[0].rowNum;
           
           // Parse question data from first row
-          // row[0] = SavolID (Q1, Q2, ...)
+          // row[0] = Tartib (1, 2, 3...)
           // row[1] = Turi (faqat birinchi qatorda)
-          // row[2] = Javob (birinchi qatorda - savol matni, keyingi qatorlarda - variant)
-          // row[3] = Ball (faqat birinchi qatorda)
+          // row[2] = Savol (faqat birinchi qatorda)
+          // row[3] = Javob (birinchi qatorda yoki keyingi qatorlarda)
           
+          const order = firstRow[0] ? parseInt(firstRow[0].toString()) : null;
           const type = firstRow[1]?.toString().trim();
           const questionText = firstRow[2]?.toString().trim();
-          const points = firstRow[3] ? parseInt(firstRow[3].toString()) : 1;
+          const firstAnswer = firstRow[3]?.toString().trim() || '';
           
-          // Extract order from questionKey (Q1 -> 1, Q2 -> 2)
-          const orderMatch = questionKey.match(/\d+/);
-          const order = orderMatch ? parseInt(orderMatch[0]) : 1;
+          // Ball hamma savol uchun default 1
+          const points = 1;
           
           // Validation
           if (!type || !validQuestionTypes.includes(type)) {
