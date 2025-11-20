@@ -1651,6 +1651,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper functions for Excel import
+  
+  // Normalize answer token for matching - removes punctuation, spaces, lowercase
+  function normalizeAnswerToken(value: string): string {
+    return value.toLowerCase().replace(/[().\s,;:!?]/g, '');
+  }
+  
+  // Parse points with locale support (1,0 -> 1.0)
+  function parsePoints(raw: string): number | null {
+    if (!raw) return null; // Bo'sh -> null (default 1 bo'ladi)
+    
+    // Trim and convert locale comma to dot
+    const cleaned = raw.trim().replace(',', '.');
+    const num = parseFloat(cleaned);
+    
+    // Validate
+    if (!Number.isFinite(num) || num <= 0) {
+      return null; // Invalid -> null (xato berish uchun)
+    }
+    
+    return num;
+  }
+  
+  // Get letter label for variant index (0 -> A, 1 -> B, ...)
+  function getLetterLabel(index: number): string {
+    return String.fromCharCode(65 + index); // 65 = 'A'
+  }
+
   // Test Import - Upload and Parse Excel
   app.post('/api/instructor/tests/:testId/import-questions', 
     isAuthenticated, 
@@ -1714,7 +1742,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const questionText = row[2]?.toString().trim();
           const optionsText = row[3]?.toString().trim() || '';
           const answerText = row[4]?.toString().trim() || '';
-          const points = parseInt(row[5]?.toString().trim() || '1');
+          const pointsText = row[5]?.toString().trim();
+          
+          // Parse points with locale support
+          const parsedPoints = parsePoints(pointsText);
+          const points = parsedPoints !== null ? parsedPoints : 1; // Default 1 if empty or invalid
           
           // Basic validation
           if (isNaN(order) || order < 1) {
@@ -1732,8 +1764,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             continue;
           }
           
-          if (isNaN(points) || points < 1) {
-            errors.push(`Qator ${rowNum}: Ball noto'g'ri (kamida 1 bo'lishi kerak)`);
+          // Points validation - parsedPoints null bo'lsa va pointsText mavjud bo'lsa, xato
+          if (pointsText && parsedPoints === null) {
+            errors.push(`Qator ${rowNum}: Ball noto'g'ri format. Raqam kiriting (masalan: 1, 1.5, 2,0)`);
             continue;
           }
           
@@ -1767,23 +1800,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
               continue;
             }
             
-            // Variantlarni options massiviga qo'shish
+            // Build 3-key lookup map for answer matching
+            // Keys: (a) letter label (A, B, C), (b) normalized token, (c) lowercase full text
+            const answerMap = new Map<string, number>();
+            variants.forEach((variant: string, idx: number) => {
+              // Key 1: Letter label
+              const letterKey = getLetterLabel(idx).toLowerCase(); // "a", "b", "c"
+              answerMap.set(letterKey, idx);
+              
+              // Key 2: Normalized token (remove punctuation)
+              const tokenKey = normalizeAnswerToken(variant);
+              answerMap.set(tokenKey, idx);
+              
+              // Key 3: Lowercase full text
+              const fullKey = variant.toLowerCase();
+              answerMap.set(fullKey, idx);
+            });
+            
+            // Find correct answer by checking all 3 keys
+            const normalizedAnswer = normalizeAnswerToken(answerText);
+            const lowerAnswer = answerText.toLowerCase();
+            
+            let correctIndex: number | undefined;
+            // Priority: normalized token > lowercase full > letter
+            if (answerMap.has(normalizedAnswer)) {
+              correctIndex = answerMap.get(normalizedAnswer);
+            } else if (answerMap.has(lowerAnswer)) {
+              correctIndex = answerMap.get(lowerAnswer);
+            }
+            
+            if (correctIndex === undefined) {
+              errors.push(`Qator ${rowNum}: To'g'ri javob topilmadi. Javob "${answerText}" Options ichida yo'q. Harfli (A, B, C) yoki to'liq matnli javob kiriting.`);
+              continue;
+            }
+            
+            // Build options with correct answer marked
             variants.forEach((variant: string, idx: number) => {
               question.options.push({
                 optionText: variant,
-                isCorrect: variant === answerText,
+                isCorrect: idx === correctIndex,
                 order: idx + 1
               });
             });
-            
-            const correctCount = question.options.filter((o: any) => o.isCorrect).length;
-            if (correctCount === 0) {
-              errors.push(`Qator ${rowNum}: To'g'ri javob Options ichida topilmadi. Javob ustunidagi matn Options ichida bo'lishi kerak.`);
-              continue;
-            }
           } else if (type === 'matching') {
             // Options ustunida vergul bilan ajratilgan juftliklar
             // Format: Chap1|O'ng1,Chap2|O'ng2,Chap3|O'ng3
+            // Javob ustuni matching uchun ishlatilmaydi (bo'sh bo'lishi mumkin)
             if (!optionsText) {
               errors.push(`Qator ${rowNum}: Matching uchun Options ustunida juftliklar bo'lishi kerak (masalan: Book|Kitob,Pen|Qalam)`);
               continue;
@@ -1796,10 +1858,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
             
             // Har bir juftlikni tekshirish
+            let hasInvalidPair = false;
             for (const pair of pairs) {
               if (!pair.includes('|')) {
                 errors.push(`Qator ${rowNum}: Matching juftlik noto'g'ri format: "${pair}". Format: Chap|O'ng`);
-                continue;
+                hasInvalidPair = true;
+                break;
               }
               
               question.options.push({
@@ -1808,6 +1872,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 order: question.options.length + 1
               });
             }
+            
+            if (hasInvalidPair) continue;
           } else if (type === 'true_false') {
             // Javob ustunida faqat "true" yoki "false"
             if (!answerText) {
@@ -1831,7 +1897,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             question.correctAnswer = answerText;
           } else if (type === 'essay') {
-            // Essay uchun javob ixtiyoriy
+            // Essay uchun javob ixtiyoriy (bo'sh bo'lishi mumkin)
+            // Downstream kod string kutmoqda, shuning uchun null o'rniga '' ishlatamiz
             question.correctAnswer = answerText || '';
           }
           
