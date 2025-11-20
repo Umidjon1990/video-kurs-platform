@@ -50,11 +50,14 @@ export default function InstructorDashboard() {
     category: "",
     price: "",
     thumbnailUrl: "",
+    imageUrl: "",
   });
 
   const [lessonForm, setLessonForm] = useState({
     title: "",
     videoUrl: "",
+    description: "",
+    pdfUrl: "",
     duration: "",
     isDemo: false,
   });
@@ -203,6 +206,7 @@ export default function InstructorDashboard() {
         description: courseForm.description,
         category: courseForm.category,
         thumbnailUrl: courseForm.thumbnailUrl,
+        imageUrl: courseForm.imageUrl,
         pricing: {
           oddiy: priceValue,
           standard: priceValue,
@@ -217,7 +221,7 @@ export default function InstructorDashboard() {
         description: editingCourse ? "Kurs yangilandi" : "Kurs yaratildi" 
       });
       setIsCreateCourseOpen(false);
-      setCourseForm({ title: "", description: "", category: "", price: "", thumbnailUrl: "" });
+      setCourseForm({ title: "", description: "", category: "", price: "", thumbnailUrl: "", imageUrl: "" });
       setEditingCourse(null);
     },
     onError: (error: Error) => {
@@ -277,7 +281,7 @@ export default function InstructorDashboard() {
         description: editingLesson ? "Dars yangilandi" : "Dars qo'shildi" 
       });
       setIsAddLessonOpen(false);
-      setLessonForm({ title: "", videoUrl: "", duration: "", isDemo: false });
+      setLessonForm({ title: "", videoUrl: "", description: "", pdfUrl: "", duration: "", isDemo: false });
       setEditingLesson(null);
     },
     onError: (error: Error) => {
@@ -815,6 +819,7 @@ export default function InstructorDashboard() {
                             category: course.category || "",
                             price: existingPrice.toString(),
                             thumbnailUrl: course.thumbnailUrl || "",
+                            imageUrl: (course as any).imageUrl || "",
                           });
                           setEditingCourse(course);
                           setIsCreateCourseOpen(true);
@@ -1029,6 +1034,8 @@ export default function InstructorDashboard() {
                                   setLessonForm({
                                     title: lesson.title,
                                     videoUrl: lesson.videoUrl,
+                                    description: (lesson as any).description || "",
+                                    pdfUrl: (lesson as any).pdfUrl || "",
                                     duration: lesson.duration?.toString() || "",
                                     isDemo: lesson.isDemo || false,
                                   });
@@ -1480,14 +1487,30 @@ export default function InstructorDashboard() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="thumbnail">Rasm URL (ixtiyoriy)</Label>
+              <Label htmlFor="thumbnail">Thumbnail URL (ixtiyoriy)</Label>
               <Input
                 id="thumbnail"
                 value={courseForm.thumbnailUrl}
                 onChange={(e) => setCourseForm({ ...courseForm, thumbnailUrl: e.target.value })}
-                placeholder="https://example.com/image.jpg"
+                placeholder="https://example.com/thumbnail.jpg"
                 data-testid="input-course-thumbnail"
               />
+              <p className="text-xs text-muted-foreground">
+                Kurs kartochkasi uchun kichik rasm
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="imageUrl">Kurs Rasmi URL (ixtiyoriy)</Label>
+              <Input
+                id="imageUrl"
+                value={courseForm.imageUrl}
+                onChange={(e) => setCourseForm({ ...courseForm, imageUrl: e.target.value })}
+                placeholder="https://example.com/course-image.jpg"
+                data-testid="input-course-image"
+              />
+              <p className="text-xs text-muted-foreground">
+                Kurs sahifasi uchun katta rasm (Dropbox, Google Drive qo'llab-quvvatlaydi)
+              </p>
             </div>
           </div>
           <DialogFooter>
@@ -1514,7 +1537,7 @@ export default function InstructorDashboard() {
         setIsAddLessonOpen(open);
         if (!open) {
           setEditingLesson(null);
-          setLessonForm({ title: "", videoUrl: "", duration: "", isDemo: false });
+          setLessonForm({ title: "", videoUrl: "", description: "", pdfUrl: "", duration: "", isDemo: false });
         }
       }}>
         <DialogContent data-testid="dialog-add-lesson">
@@ -1550,6 +1573,29 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
               />
               <p className="text-xs text-muted-foreground">
                 Kinescope yoki YouTube'dan embed kodni yoki to'g'ridan-to'g'ri linkni kiriting
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lesson-description">Matn/Izoh (ixtiyoriy)</Label>
+              <Textarea
+                id="lesson-description"
+                value={lessonForm.description}
+                onChange={(e) => setLessonForm({ ...lessonForm, description: e.target.value })}
+                placeholder="Dars haqida qo'shimcha ma'lumot yoki izohlar..."
+                data-testid="input-lesson-description"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="pdf-url">PDF Manba URL (ixtiyoriy)</Label>
+              <Input
+                id="pdf-url"
+                value={lessonForm.pdfUrl}
+                onChange={(e) => setLessonForm({ ...lessonForm, pdfUrl: e.target.value })}
+                placeholder="https://drive.google.com/... yoki https://dropbox.com/..."
+                data-testid="input-lesson-pdf"
+              />
+              <p className="text-xs text-muted-foreground">
+                Google Drive, Dropbox yoki boshqa PDF faylga havola
               </p>
             </div>
             <div className="space-y-2">
