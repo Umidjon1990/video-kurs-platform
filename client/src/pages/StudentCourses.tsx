@@ -32,7 +32,7 @@ export default function StudentCourses() {
   }, [isAuthenticated, authLoading, toast]);
 
   const { data: allCourses, isLoading: allCoursesLoading } = useQuery<Course[]>({
-    queryKey: ["/api/courses"],
+    queryKey: ["/api/courses/public"],
     enabled: isAuthenticated,
   });
 
