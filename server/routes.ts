@@ -1763,20 +1763,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
             options: []
           };
           
-          // Parse variants/answers from remaining rows
+          // Parse variants/answers from rows
           if (type === 'multiple_choice') {
+            // Birinchi qatordagi javobni ham tekshirish
+            if (firstAnswer) {
+              const isCorrect = firstAnswer.toLowerCase().includes('(to\'g\'ri)') || 
+                                firstAnswer.toLowerCase().includes('togri') ||
+                                firstAnswer.toLowerCase().includes('(toʻgʻri)');
+              
+              const cleanText = firstAnswer
+                .replace(/\(to'g'ri\)/gi, '')
+                .replace(/\(togri\)/gi, '')
+                .replace(/\(toʻgʻri\)/gi, '')
+                .trim();
+              
+              question.options.push({
+                optionText: cleanText,
+                isCorrect,
+                order: 1
+              });
+            }
+            
             // Keyingi qatorlardan variantlarni olish
             for (let i = 1; i < rows.length; i++) {
               const row = rows[i].row;
-              const variantText = row[1]?.toString().trim();
+              const variantText = row[3]?.toString().trim();
               
               if (variantText) {
-                // Check if it's marked as correct (to'g'ri)
                 const isCorrect = variantText.toLowerCase().includes('(to\'g\'ri)') || 
                                   variantText.toLowerCase().includes('togri') ||
                                   variantText.toLowerCase().includes('(toʻgʻri)');
                 
-                // Clean variant text
                 const cleanText = variantText
                   .replace(/\(to'g'ri\)/gi, '')
                   .replace(/\(togri\)/gi, '')
@@ -1802,10 +1819,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
               continue;
             }
           } else if (type === 'matching') {
-            // Matching: Book|Kitob formatida
+            // Birinchi qatordagi juftlikni ham tekshirish
+            if (firstAnswer && firstAnswer.includes('|')) {
+              question.options.push({
+                optionText: firstAnswer,
+                isCorrect: false,
+                order: 1
+              });
+            }
+            
+            // Keyingi qatorlardan juftliklarni olish
             for (let i = 1; i < rows.length; i++) {
               const row = rows[i].row;
-              const pairText = row[1]?.toString().trim();
+              const pairText = row[3]?.toString().trim();
               
               if (pairText && pairText.includes('|')) {
                 question.options.push({
@@ -1821,18 +1847,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               continue;
             }
           } else if (['true_false', 'fill_blanks', 'short_answer'].includes(type)) {
-            // To'g'ri javobni ikkinchi qatordan olish
-            if (rows.length > 1) {
-              const answerRow = rows[1].row;
-              const answer = answerRow[1]?.toString().trim();
-              
-              if (answer) {
-                question.correctAnswer = answer;
-              }
+            // To'g'ri javobni birinchi qatordan olish
+            if (firstAnswer) {
+              question.correctAnswer = firstAnswer;
             }
             
             if (!question.correctAnswer) {
-              errors.push(`${questionKey}: To'g'ri javob kiritish shart (ikkinchi qatorda)`);
+              errors.push(`${questionKey}: To'g'ri javob kiritish shart (Javob ustunida)`);
               continue;
             }
           }
