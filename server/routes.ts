@@ -2360,6 +2360,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Course Like endpoints ("Qiziqtirdi" feature - public for authenticated users)
+  app.post('/api/courses/:courseId/like', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { courseId } = req.params;
+      
+      // Check if already liked
+      const alreadyLiked = await storage.checkIfUserLikedCourse(courseId, userId);
+      if (alreadyLiked) {
+        return res.status(400).json({ message: "Siz allaqachon ushbu kursni yoqtirdingiz" });
+      }
+      
+      const like = await storage.createCourseLike(courseId, userId);
+      const likeCount = await storage.getCourseLikeCount(courseId);
+      res.json({ like, likeCount });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete('/api/courses/:courseId/like', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { courseId } = req.params;
+      
+      await storage.deleteCourseLike(courseId, userId);
+      const likeCount = await storage.getCourseLikeCount(courseId);
+      res.json({ likeCount });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/courses/:courseId/likes', async (req, res) => {
+    try {
+      const { courseId } = req.params;
+      const likeCount = await storage.getCourseLikeCount(courseId);
+      res.json({ count: likeCount });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/courses/:courseId/likes/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { courseId } = req.params;
+      const isLiked = await storage.checkIfUserLikedCourse(courseId, userId);
+      res.json({ isLiked });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Get test questions (student - for taking test) - SANITIZED (no correct answers)
   app.get('/api/tests/:testId/questions', isAuthenticated, async (req, res) => {
     try {
