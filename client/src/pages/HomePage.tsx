@@ -77,11 +77,6 @@ export default function HomePage() {
     queryKey: ["/api/testimonials"],
   });
 
-  // Fetch demo speaking tests
-  const { data: demoTests } = useQuery<any[]>({
-    queryKey: ["/api/speaking-tests/demo"],
-  });
-
   // Fetch lessons for selected course
   const { data: courseLessons } = useQuery<Lesson[]>({
     queryKey: selectedCourseForLessons 
@@ -248,61 +243,6 @@ export default function HomePage() {
           </div>
         </div>
       </motion.div>
-
-      {/* Demo Speaking Tests Section */}
-      {demoTests && demoTests.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 bg-background">
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold mb-2">Mavjud Testlar</h2>
-            <p className="text-muted-foreground">
-              Arab tili bilimingizni CEFR standartlariga asoslangan testlar bilan baholang
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {demoTests.map((test) => (
-              <motion.div
-                key={test.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Card className="hover-elevate h-full" data-testid={`card-demo-test-${test.id}`}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <h3 className="font-semibold text-xl">{test.title}</h3>
-                      <Badge variant="secondary" className="shrink-0" data-testid={`badge-demo-${test.id}`}>
-                        🎁 DEMO
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground">{test.description}</p>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground">CEFR OG'ZAKI QISM</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-lg">Bepul</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button
-                      className="w-full"
-                      size="lg"
-                      onClick={() => setLocation('/take-test/demo')}
-                      data-testid={`button-demo-test-${test.id}`}
-                    >
-                      Demo testni topshirish
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        </section>
-      )}
 
       {/* Courses Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
