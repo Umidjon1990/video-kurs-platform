@@ -50,6 +50,7 @@ export default function InstructorDashboard() {
     author: "",
     category: "",
     price: "",
+    discountPercentage: "0",
     thumbnailUrl: "",
     imageUrl: "",
   });
@@ -202,6 +203,12 @@ export default function InstructorDashboard() {
         throw new Error("Iltimos, to'g'ri narx kiriting");
       }
       
+      const discountValue = courseForm.discountPercentage.trim();
+      const discountNumber = Number(discountValue);
+      if (discountValue && (isNaN(discountNumber) || discountNumber < 0 || discountNumber > 90)) {
+        throw new Error("Chegirma 0-90 oralig'ida bo'lishi kerak");
+      }
+      
       await apiRequest(method, url, {
         title: courseForm.title,
         description: courseForm.description,
@@ -209,6 +216,7 @@ export default function InstructorDashboard() {
         category: courseForm.category,
         thumbnailUrl: courseForm.thumbnailUrl,
         imageUrl: courseForm.imageUrl,
+        discountPercentage: discountNumber || 0,
         pricing: {
           oddiy: priceValue,
           standard: priceValue,
@@ -224,7 +232,7 @@ export default function InstructorDashboard() {
         description: editingCourse ? "Kurs yangilandi" : "Kurs yaratildi" 
       });
       setIsCreateCourseOpen(false);
-      setCourseForm({ title: "", description: "", author: "", category: "", price: "", thumbnailUrl: "", imageUrl: "" });
+      setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "" });
       setEditingCourse(null);
     },
     onError: (error: Error) => {
@@ -816,12 +824,14 @@ export default function InstructorDashboard() {
                         size="icon"
                         onClick={() => {
                           const existingPrice = course.price || (course as any).planPricing?.[0]?.price || "";
+                          const existingDiscount = (course as any).discountPercentage || 0;
                           setCourseForm({
                             title: course.title,
                             description: course.description || "",
                             author: (course as any).author || "",
                             category: course.category || "",
                             price: existingPrice.toString(),
+                            discountPercentage: existingDiscount.toString(),
                             thumbnailUrl: course.thumbnailUrl || "",
                             imageUrl: (course as any).imageUrl || "",
                           });
@@ -886,11 +896,16 @@ export default function InstructorDashboard() {
                   ) : (
                     <div className="flex items-center justify-between">
                       <div className="flex flex-col">
-                        {course.discountedPrice && Number(course.discountedPrice) < Number(course.price) ? (
+                        {(course as any).discountPercentage && Number((course as any).discountPercentage) > 0 ? (
                           <>
-                            <span className="text-lg font-bold">
-                              {Number(course.discountedPrice).toLocaleString('uz-UZ')} so'm
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg font-bold">
+                                {(Number(course.price) * (1 - Number((course as any).discountPercentage) / 100)).toLocaleString('uz-UZ')} so'm
+                              </span>
+                              <Badge variant="destructive" className="text-xs">
+                                -{(course as any).discountPercentage}%
+                              </Badge>
+                            </div>
                             <span className="text-sm text-muted-foreground line-through">
                               {Number(course.price).toLocaleString('uz-UZ')} so'm
                             </span>
@@ -1513,6 +1528,27 @@ export default function InstructorDashboard() {
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="discount">Chegirma (%, 0-90 oralig'ida)</Label>
+              <Input
+                id="discount"
+                type="text"
+                inputMode="numeric"
+                value={courseForm.discountPercentage}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '');
+                  const numValue = Number(value);
+                  if (value === '' || (numValue >= 0 && numValue <= 90)) {
+                    setCourseForm({ ...courseForm, discountPercentage: value });
+                  }
+                }}
+                placeholder="0"
+                data-testid="input-course-discount"
+              />
+              <p className="text-xs text-muted-foreground">
+                0 = chegirma yo'q, 20 = 20% chegirma
+              </p>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="thumbnail">Thumbnail URL (ixtiyoriy)</Label>
               <Input
                 id="thumbnail"
@@ -1560,7 +1596,7 @@ export default function InstructorDashboard() {
               onClick={() => {
                 setIsCreateCourseOpen(false);
                 setEditingCourse(null);
-                setCourseForm({ title: "", description: "", author: "", category: "", price: "", thumbnailUrl: "", imageUrl: "" });
+                setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "" });
               }}
               data-testid="button-cancel-create-course"
             >
