@@ -118,6 +118,9 @@ export default function LearningPage() {
   const submitRatingMutation = useMutation({
     mutationFn: async () => {
       if (!courseId) return;
+      if (selectedRating < 1 || selectedRating > 5) {
+        throw new Error("Rating 1 dan 5 gacha bo'lishi kerak");
+      }
       const response = await apiRequest("POST", `/api/courses/${courseId}/rating`, {
         rating: selectedRating,
         review: reviewText || undefined,
@@ -125,8 +128,12 @@ export default function LearningPage() {
       return await response.json();
     },
     onSuccess: () => {
+      // Invalidate all rating-related queries to ensure UI updates everywhere
       queryClient.invalidateQueries({ queryKey: ["/api/courses", courseId, "rating/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/courses/public"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/courses", courseId] }); // Course detail
+      queryClient.invalidateQueries({ queryKey: ["/api/courses", courseId, "rating/average"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/courses", courseId, "ratings"] });
       toast({
         title: "Baholandi",
         description: "Kursni baholaganingiz uchun rahmat!",
@@ -284,7 +291,7 @@ export default function LearningPage() {
           </Button>
           <h1 className="text-xl font-bold line-clamp-1" data-testid="text-course-title">{course.title}</h1>
           <div className="ml-auto flex items-center gap-2">
-            {!isPreviewMode && (
+            {!isPreviewMode && enrollment && (enrollment.paymentStatus === 'confirmed' || enrollment.paymentStatus === 'approved') && (
               <Button
                 variant="outline"
                 onClick={() => setRatingDialog(true)}

@@ -1087,37 +1087,26 @@ export class DatabaseStorage implements IStorage {
 
   // Course Rating operations
   async createOrUpdateCourseRating(courseId: string, userId: string, rating: number, review?: string): Promise<CourseRating> {
-    // Check if user already rated this course
-    const [existing] = await db
-      .select()
-      .from(courseRatings)
-      .where(
-        and(
-          eq(courseRatings.courseId, courseId),
-          eq(courseRatings.userId, userId)
-        )
-      );
-    
-    if (existing) {
-      // Update existing rating
-      const [updated] = await db
-        .update(courseRatings)
-        .set({ 
-          rating, 
-          review: review || existing.review,
-          updatedAt: new Date()
-        })
-        .where(eq(courseRatings.id, existing.id))
-        .returning();
-      return updated;
-    }
-    
-    // Create new rating
-    const [newRating] = await db
+    // Use atomic upsert with onConflictDoUpdate to prevent race conditions
+    // This ensures only one rating per user-course pair and is transaction-safe
+    const [upserted] = await db
       .insert(courseRatings)
-      .values({ courseId, userId, rating, review })
+      .values({ 
+        courseId, 
+        userId, 
+        rating, 
+        review: review || null 
+      })
+      .onConflictDoUpdate({
+        target: [courseRatings.courseId, courseRatings.userId],
+        set: {
+          rating,
+          review: review || null,
+          updatedAt: new Date(),
+        },
+      })
       .returning();
-    return newRating;
+    return upserted;
   }
 
   async getCourseRatings(courseId: string): Promise<Array<CourseRating & { user: User }>> {

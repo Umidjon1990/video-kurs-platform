@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   index,
+  uniqueIndex,
   jsonb,
   pgTable,
   timestamp,
@@ -98,7 +99,9 @@ export const courseRatings = pgTable("course_ratings", {
   review: text("review"), // Izoh (ixtiyoriy)
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  uniqueIndex("course_ratings_course_user_idx").on(table.courseId, table.userId),
+]);
 
 export const courseRatingsRelations = relations(courseRatings, ({ one }) => ({
   course: one(courses, {
