@@ -26,6 +26,7 @@ import {
   speakingSubmissions,
   speakingAnswers,
   speakingEvaluations,
+  testEnrollments,
   type User,
   type UpsertUser,
   type Course,
@@ -78,6 +79,8 @@ import {
   type InsertSpeakingAnswer,
   type SpeakingEvaluation,
   type InsertSpeakingEvaluation,
+  type TestEnrollment,
+  type InsertTestEnrollment,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, sql, inArray } from "drizzle-orm";
@@ -273,6 +276,19 @@ export interface IStorage {
   // Speaking Evaluation operations
   createSpeakingEvaluation(evaluation: InsertSpeakingEvaluation): Promise<SpeakingEvaluation>;
   getSpeakingEvaluations(answerId: string): Promise<SpeakingEvaluation[]>;
+  
+  // ============ TEST MARKETPLACE OPERATIONS ============
+  // Standalone test listing (tests without courseId - sold separately)
+  getPublicTests(): Promise<Test[]>; // Get all published standalone tests
+  getPublicSpeakingTests(): Promise<SpeakingTest[]>; // Get all published standalone speaking tests
+  
+  // Test Enrollment operations (test purchase/enrollment tracking)
+  createTestEnrollment(enrollment: InsertTestEnrollment): Promise<TestEnrollment>;
+  getTestEnrollmentsByUser(userId: string): Promise<any[]>; // Returns enrollments with test details
+  getTestEnrollment(id: string): Promise<TestEnrollment | undefined>;
+  checkTestEnrollment(userId: string, testId: string, testType: 'standard' | 'speaking'): Promise<TestEnrollment | null>; // Check if user has access
+  updateTestEnrollmentStatus(enrollmentId: string, status: string): Promise<TestEnrollment>; // Admin approval
+  getPendingTestPayments(): Promise<any[]>; // Admin: get all pending test purchases
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2011,7 +2027,7 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(speakingTests)
-      .where(eq(speakingTests.isPublished, true))
+      .where(eq(speakingTests.status, 'published'))
       .orderBy(desc(speakingTests.createdAt));
   }
   
@@ -2019,7 +2035,7 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(speakingTests)
-      .where(and(eq(speakingTests.isPublished, true), eq(speakingTests.isDemo, true)))
+      .where(and(eq(speakingTests.status, 'published'), eq(speakingTests.isDemo, true)))
       .orderBy(desc(speakingTests.createdAt));
   }
   
@@ -2193,6 +2209,121 @@ export class DatabaseStorage implements IStorage {
       .from(speakingEvaluations)
       .where(eq(speakingEvaluations.answerId, answerId))
       .orderBy(desc(speakingEvaluations.createdAt));
+  }
+  
+  // ============ TEST MARKETPLACE OPERATIONS ============
+  // Get all published standalone tests (not tied to any course)
+  async getPublicTests(): Promise<Test[]> {
+    return await db
+      .select()
+      .from(tests)
+      .where(and(
+        sql`${tests.courseId} IS NULL`,  // Standalone tests (not part of a course)
+        eq(tests.status, 'published')
+      ))
+      .orderBy(desc(tests.createdAt));
+  }
+  
+  // Get all published standalone speaking tests (not tied to any course)
+  async getPublicSpeakingTests(): Promise<SpeakingTest[]> {
+    return await db
+      .select()
+      .from(speakingTests)
+      .where(and(
+        sql`${speakingTests.courseId} IS NULL`,  // Standalone tests
+        eq(speakingTests.status, 'published')
+      ))
+      .orderBy(desc(speakingTests.createdAt));
+  }
+  
+  // Test Enrollment operations
+  async createTestEnrollment(enrollment: InsertTestEnrollment): Promise<TestEnrollment> {
+    const [created] = await db.insert(testEnrollments).values(enrollment).returning();
+    return created;
+  }
+  
+  async getTestEnrollmentsByUser(userId: string): Promise<any[]> {
+    // Get enrollments with test details
+    const results = await db
+      .select({
+        enrollment: testEnrollments,
+        test: tests,
+        speakingTest: speakingTests,
+      })
+      .from(testEnrollments)
+      .leftJoin(tests, eq(testEnrollments.testId, tests.id))
+      .leftJoin(speakingTests, eq(testEnrollments.speakingTestId, speakingTests.id))
+      .where(eq(testEnrollments.userId, userId))
+      .orderBy(desc(testEnrollments.enrolledAt));
+    
+    return results.map((r: any) => ({
+      ...r.enrollment,
+      test: r.test,
+      speakingTest: r.speakingTest,
+    }));
+  }
+  
+  async getTestEnrollment(id: string): Promise<TestEnrollment | undefined> {
+    const [enrollment] = await db
+      .select()
+      .from(testEnrollments)
+      .where(eq(testEnrollments.id, id));
+    return enrollment;
+  }
+  
+  async checkTestEnrollment(userId: string, testId: string, testType: 'standard' | 'speaking'): Promise<TestEnrollment | null> {
+    const condition = testType === 'standard'
+      ? and(
+          eq(testEnrollments.userId, userId),
+          eq(testEnrollments.testId, testId),
+          eq(testEnrollments.paymentStatus, 'approved')
+        )
+      : and(
+          eq(testEnrollments.userId, userId),
+          eq(testEnrollments.speakingTestId, testId),
+          eq(testEnrollments.paymentStatus, 'approved')
+        );
+    
+    const [enrollment] = await db
+      .select()
+      .from(testEnrollments)
+      .where(condition)
+      .limit(1);
+    
+    return enrollment || null;
+  }
+  
+  async updateTestEnrollmentStatus(enrollmentId: string, status: string): Promise<TestEnrollment> {
+    const [updated] = await db
+      .update(testEnrollments)
+      .set({ paymentStatus: status })
+      .where(eq(testEnrollments.id, enrollmentId))
+      .returning();
+    return updated;
+  }
+  
+  async getPendingTestPayments(): Promise<any[]> {
+    // Get all pending test purchases with user and test details
+    const results = await db
+      .select({
+        enrollment: testEnrollments,
+        user: users,
+        test: tests,
+        speakingTest: speakingTests,
+      })
+      .from(testEnrollments)
+      .leftJoin(users, eq(testEnrollments.userId, users.id))
+      .leftJoin(tests, eq(testEnrollments.testId, tests.id))
+      .leftJoin(speakingTests, eq(testEnrollments.speakingTestId, speakingTests.id))
+      .where(eq(testEnrollments.paymentStatus, 'pending'))
+      .orderBy(desc(testEnrollments.enrolledAt));
+    
+    return results.map((r: any) => ({
+      ...r.enrollment,
+      user: r.user,
+      test: r.test,
+      speakingTest: r.speakingTest,
+    }));
   }
 }
 

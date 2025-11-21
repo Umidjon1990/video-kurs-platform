@@ -1332,67 +1332,343 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const test = await storage.getTest(testId);
       if (!test) {
-        return res.status(404).json({ message: "Test not found" });
-      }
-      
-      const course = await storage.getCourse(test.courseId);
-      if (course?.instructorId !== instructorId) {
+        return res.status(404).json({ message: "Test not found"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
         const user = await storage.getUser(instructorId);
         if (user?.role !== 'admin') {
           return res.status(403).json({ message: "Forbidden" });
         }
-      }
+      
+      // Check ownership (standalone tests belong to instructor, course tests check course ownership)
+      if (test.courseId) {
+        // Check ownership
+      if (test.courseId) {
+        const course = await storage.getCourse(test.courseId);
+                if (course?.instructorId !== instructorId) {
+                    const user = await storage.getUser(instructorId);
+                    if (user?.role !== 'admin') {
+                        return res.status(403).json({ message: "Forbidden"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                    }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+                  }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } else {
+        // Standalone test - check direct instructor ownership
+        if (test.instructorId !== instructorId) {
+                    const user = await storage.getUser(instructorId);
+                    if (user?.role !== 'admin') {
+                        return res.status(403).json({ message: "Forbidden"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                    }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+                  }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
       
       const updatedTest = await storage.updateTest(testId, req.body);
       res.json(updatedTest);
-    } catch (error: any) {
-      res.status(400).json({ message: error.message });
-    }
-  });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } catch (error: any) {
+      res.status(400).json({ message: error.message           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+            }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
 
   app.delete('/api/instructor/tests/:testId', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
-      const { testId } = req.params;
+      const { testId           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } = req.params;
       const instructorId = req.user.claims.sub;
       
       const test = await storage.getTest(testId);
       if (!test) {
-        return res.status(404).json({ message: "Test not found" });
-      }
-      
-      const course = await storage.getCourse(test.courseId);
-      if (course?.instructorId !== instructorId) {
+        return res.status(404).json({ message: "Test not found"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
         const user = await storage.getUser(instructorId);
         if (user?.role !== 'admin') {
           return res.status(403).json({ message: "Forbidden" });
         }
-      }
+      
+      // Check ownership (standalone tests belong to instructor, course tests check course ownership)
+      if (test.courseId) {
+        // Check ownership
+      if (test.courseId) {
+        const course = await storage.getCourse(test.courseId);
+                if (course?.instructorId !== instructorId) {
+                    const user = await storage.getUser(instructorId);
+                    if (user?.role !== 'admin') {
+                        return res.status(403).json({ message: "Forbidden"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                    }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+                  }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } else {
+        // Standalone test - check direct instructor ownership
+        if (test.instructorId !== instructorId) {
+                    const user = await storage.getUser(instructorId);
+                    if (user?.role !== 'admin') {
+                        return res.status(403).json({ message: "Forbidden"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                    }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+                  }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
       
       await storage.deleteTest(testId);
-      res.json({ message: "Test deleted" });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+      res.json({ message: "Test deleted"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } catch (error: any) {
+      res.status(500).json({ message: error.message           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+            }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
 
   // Questions API
   app.get('/api/instructor/tests/:testId/questions', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
-      const { testId } = req.params;
+      const { testId           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } = req.params;
       const instructorId = req.user.claims.sub;
       
       const test = await storage.getTest(testId);
       if (!test) {
-        return res.status(404).json({ message: "Test not found" });
-      }
-      
-      const course = await storage.getCourse(test.courseId);
-      if (course?.instructorId !== instructorId) {
+        return res.status(404).json({ message: "Test not found"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
         const user = await storage.getUser(instructorId);
         if (user?.role !== 'admin') {
           return res.status(403).json({ message: "Forbidden" });
         }
-      }
+      
+      // Check ownership
+      if (test.courseId) {
+        // Check ownership
+      if (test.courseId) {
+        const course = await storage.getCourse(test.courseId);
+                if (course?.instructorId !== instructorId) {
+                    const user = await storage.getUser(instructorId);
+                    if (user?.role !== 'admin') {
+                        return res.status(403).json({ message: "Forbidden"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                    }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+                  }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } else if (test.instructorId !== instructorId) {
+                  const user = await storage.getUser(instructorId);
+                  if (user?.role !== 'admin') {
+                      return res.status(403).json({ message: "Forbidden"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                  }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
       
       const questions = await storage.getQuestionsByTest(testId);
       res.json(questions);
@@ -1408,16 +1684,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const test = await storage.getTest(testId);
       if (!test) {
-        return res.status(404).json({ message: "Test not found" });
-      }
-      
-      const course = await storage.getCourse(test.courseId);
-      if (course?.instructorId !== instructorId) {
+        return res.status(404).json({ message: "Test not found"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
         const user = await storage.getUser(instructorId);
         if (user?.role !== 'admin') {
           return res.status(403).json({ message: "Forbidden" });
         }
-      }
+      
+      // Check ownership
+      if (test.courseId) {
+        // Check ownership
+      if (test.courseId) {
+        const course = await storage.getCourse(test.courseId);
+                if (course?.instructorId !== instructorId) {
+                    const user = await storage.getUser(instructorId);
+                    if (user?.role !== 'admin') {
+                        return res.status(403).json({ message: "Forbidden"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                    }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+                  }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } else if (test.instructorId !== instructorId) {
+                  const user = await storage.getUser(instructorId);
+                  if (user?.role !== 'admin') {
+                      return res.status(403).json({ message: "Forbidden"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                  }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
       
       const questionData = insertQuestionSchema.parse({
         ...req.body,
@@ -1442,27 +1782,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const test = await storage.getTest(question.testId);
       if (!test) {
-        return res.status(404).json({ message: "Test not found" });
-      }
-      
-      const course = await storage.getCourse(test.courseId);
-      if (course?.instructorId !== instructorId) {
+        return res.status(404).json({ message: "Test not found"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
         const user = await storage.getUser(instructorId);
         if (user?.role !== 'admin') {
           return res.status(403).json({ message: "Forbidden" });
         }
-      }
+      
+      // Check ownership
+      if (test.courseId) {
+        const course = await storage.getCourse(test.courseId);
+              if (course?.instructorId !== instructorId) {
+                  const user = await storage.getUser(instructorId);
+                  if (user?.role !== 'admin') {
+                      return res.status(403).json({ message: "Forbidden"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                  }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
       
       const updatedQuestion = await storage.updateQuestion(questionId, req.body);
       res.json(updatedQuestion);
-    } catch (error: any) {
-      res.status(400).json({ message: error.message });
-    }
-  });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } catch (error: any) {
+      res.status(400).json({ message: error.message           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+            }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
 
   app.delete('/api/instructor/questions/:questionId', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
-      const { questionId } = req.params;
+      const { questionId           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } = req.params;
       const instructorId = req.user.claims.sub;
       
       const question = await storage.getQuestion(questionId);
@@ -1472,16 +1874,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const test = await storage.getTest(question.testId);
       if (!test) {
-        return res.status(404).json({ message: "Test not found" });
-      }
-      
-      const course = await storage.getCourse(test.courseId);
-      if (course?.instructorId !== instructorId) {
+        return res.status(404).json({ message: "Test not found"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
         const user = await storage.getUser(instructorId);
         if (user?.role !== 'admin') {
           return res.status(403).json({ message: "Forbidden" });
         }
-      }
+      
+      // Check ownership
+      if (test.courseId) {
+        const course = await storage.getCourse(test.courseId);
+              if (course?.instructorId !== instructorId) {
+                  const user = await storage.getUser(instructorId);
+                  if (user?.role !== 'admin') {
+                      return res.status(403).json({ message: "Forbidden"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                  }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
       
       await storage.deleteQuestion(questionId);
       res.json({ message: "Question deleted" });
@@ -1503,16 +1937,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const test = await storage.getTest(question.testId);
       if (!test) {
-        return res.status(404).json({ message: "Test not found" });
-      }
-      
-      const course = await storage.getCourse(test.courseId);
-      if (course?.instructorId !== instructorId) {
+        return res.status(404).json({ message: "Test not found"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
         const user = await storage.getUser(instructorId);
         if (user?.role !== 'admin') {
           return res.status(403).json({ message: "Forbidden" });
         }
-      }
+      
+      // Check ownership
+      if (test.courseId) {
+        const course = await storage.getCourse(test.courseId);
+              if (course?.instructorId !== instructorId) {
+                  const user = await storage.getUser(instructorId);
+                  if (user?.role !== 'admin') {
+                      return res.status(403).json({ message: "Forbidden"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                  }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
       
       const options = await storage.getQuestionOptionsByQuestion(questionId);
       res.json(options);
@@ -1533,16 +1999,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const test = await storage.getTest(question.testId);
       if (!test) {
-        return res.status(404).json({ message: "Test not found" });
-      }
-      
-      const course = await storage.getCourse(test.courseId);
-      if (course?.instructorId !== instructorId) {
+        return res.status(404).json({ message: "Test not found"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
         const user = await storage.getUser(instructorId);
         if (user?.role !== 'admin') {
           return res.status(403).json({ message: "Forbidden" });
         }
-      }
+      
+      // Check ownership
+      if (test.courseId) {
+        const course = await storage.getCourse(test.courseId);
+              if (course?.instructorId !== instructorId) {
+                  const user = await storage.getUser(instructorId);
+                  if (user?.role !== 'admin') {
+                      return res.status(403).json({ message: "Forbidden"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                  }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
       
       const optionData = insertQuestionOptionSchema.parse({
         ...req.body,
@@ -1572,16 +2070,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const test = await storage.getTest(question.testId);
       if (!test) {
-        return res.status(404).json({ message: "Test not found" });
-      }
-      
-      const course = await storage.getCourse(test.courseId);
-      if (course?.instructorId !== instructorId) {
+        return res.status(404).json({ message: "Test not found"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
         const user = await storage.getUser(instructorId);
         if (user?.role !== 'admin') {
           return res.status(403).json({ message: "Forbidden" });
         }
-      }
+      
+      // Check ownership
+      if (test.courseId) {
+        const course = await storage.getCourse(test.courseId);
+              if (course?.instructorId !== instructorId) {
+                  const user = await storage.getUser(instructorId);
+                  if (user?.role !== 'admin') {
+                      return res.status(403).json({ message: "Forbidden"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                  }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
       
       await storage.deleteQuestionOption(optionId);
       res.json({ message: "Option deleted" });
@@ -1599,16 +2129,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const test = await storage.getTest(testId);
       if (!test) {
-        return res.status(404).json({ message: "Test not found" });
-      }
-      
-      const course = await storage.getCourse(test.courseId);
-      if (course?.instructorId !== instructorId) {
+        return res.status(404).json({ message: "Test not found"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
         const user = await storage.getUser(instructorId);
         if (user?.role !== 'admin') {
           return res.status(403).json({ message: "Forbidden" });
         }
-      }
+      
+      // Check ownership
+      if (test.courseId) {
+        const course = await storage.getCourse(test.courseId);
+              if (course?.instructorId !== instructorId) {
+                  const user = await storage.getUser(instructorId);
+                  if (user?.role !== 'admin') {
+                      return res.status(403).json({ message: "Forbidden"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                  }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
       
       // Create Excel workbook
       const wb = XLSX.utils.book_new();
@@ -1646,52 +2208,172 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Essay (javob va options bo'sh)
           ['6', 'essay', 'Sun\'iy intellekt haqida fikringiz yozing', '', '', '2']
         );
-      }
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
       
       const ws = XLSX.utils.aoa_to_sheet(data);
       
       // Set column widths
       ws['!cols'] = [
-        { wch: 8 },   // Tartib
-        { wch: 18 },  // Turi
-        { wch: 40 },  // Savol
-        { wch: 50 },  // Options
-        { wch: 20 },  // Javob
-        { wch: 6 },   // Ball
+        { wch: 8           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        },   // Tartib
+        { wch: 18           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        },  // Turi
+        { wch: 40           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        },  // Savol
+        { wch: 50           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        },  // Options
+        { wch: 20           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        },  // Javob
+        { wch: 6           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        },   // Ball
       ];
       
       XLSX.utils.book_append_sheet(wb, ws, 'Savollar');
       
       // Generate buffer
-      const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+      const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx'           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
       
       // Set headers for file download
       const filename = type === 'sample' 
-        ? `test-template-namuna-${testId}.xlsx`
-        : `test-template-${testId}.xlsx`;
+        ? `test-template-namuna-${testId          }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }.xlsx`
+        : `test-template-${testId          }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }.xlsx`;
       
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Disposition', `attachment; filename="${filename          }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }"`);
       res.send(buffer);
-    } catch (error: any) {
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } catch (error: any) {
       console.error('Template generation error:', error);
-      res.status(500).json({ message: error.message });
-    }
-  });
+      res.status(500).json({ message: error.message           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+            }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
 
   // Helper functions for Excel import
   
   // Extract optional enumerator and body from option text
-  // Examples: "(A) Foo" -> { enumerator: "A", body: "Foo" }
-  //           "A) Bar" -> { enumerator: "A", body: "Bar" }
-  //           "Foo" -> { enumerator: null, body: "Foo" }
-  function extractOptionParts(value: string): { enumerator: string | null; body: string } {
+  // Examples: "(A) Foo" -> { enumerator: "A", body: "Foo"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+  //           "A) Bar" -> { enumerator: "A", body: "Bar"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+  //           "Foo" -> { enumerator: null, body: "Foo"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+  function extractOptionParts(value: string): { enumerator: string | null; body: string           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } {
     const trimmed = value.trim();
     
     // Match enumerator patterns - requires closing bracket OR punctuation delimiter:
     // ^\s*[\(\[\{]? - optional opening bracket
     // ([A-Za-z]+|\d+|[IVXLCDM]+) - letter(s), digit(s), or roman numeral (group 1)
-    // ([\)\]\}]\s*|\s*[\.\-:–—]+\s*) - EITHER closing bracket OR punctuation (with optional space before/after) (group 2)
+    // ([\)\]\          }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }]\s*|\s*[\.\-:–—]+\s*) - EITHER closing bracket OR punctuation (with optional space before/after) (group 2)
     // 
     // Matches:
     //   A)Foo ✓ (closing paren)
@@ -1704,33 +2386,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     //   Toshkent ✗ (no bracket/delimiter)
     //   Toshkent shahar ✗ (space only, no punctuation)
     //   A Foo ✗ (space only, no punctuation)
-    const enumeratorPattern = /^\s*[\(\[\{]?([A-Za-z]+|\d+|[IVXLCDM]+)([\)\]\}]\s*|\s*[\.\-:–—]+\s*)/;
+    const enumeratorPattern = /^\s*[\(\[\{]?([A-Za-z]+|\d+|[IVXLCDM]+)([\)\]\          }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }]\s*|\s*[\.\-:–—]+\s*)/;
     const match = trimmed.match(enumeratorPattern);
     
     if (match && match[1]) {
       const delimiterPart = match[2];
       
       // CRITICAL: Reject if delimiter contains ONLY whitespace (no bracket/punctuation)
-      // Accept if delimiter has ANY of: ), ], }, ., -, :, –, —
+      // Accept if delimiter has ANY of: ), ],           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }, ., -, :, –, —
       // This prevents "A Foo" or "Toshkent shahar" from being treated as enumerated
-      const hasPunctuation = /[\)\]\}\.\-:–—]/.test(delimiterPart);
+      const hasPunctuation = /[\)\]\          }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }\.\-:–—]/.test(delimiterPart);
       if (!hasPunctuation) {
-        return { enumerator: null, body: trimmed };
-      }
+        return { enumerator: null, body: trimmed           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        };
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
       
       const enumerator = match[1];
       const body = trimmed.slice(match[0].length).trim();
-      return { enumerator, body };
-    }
+      return { enumerator, body           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        };
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
     
     // No enumerator found, return full text as body
-    return { enumerator: null, body: trimmed };
-  }
+    return { enumerator: null, body: trimmed           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        };
+            }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
   
   // Normalize answer token for matching - removes punctuation, spaces, lowercase
   function normalizeAnswerToken(value: string): string {
     return value.toLowerCase().replace(/[().\s,;:!?\-–—]/g, '');
-  }
+            }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
   
   // Parse points with locale support (1,0 -> 1.0)
   function parsePoints(raw: string): number | null {
@@ -1743,15 +2485,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Validate
     if (!Number.isFinite(num) || num <= 0) {
       return null; // Invalid -> null (xato berish uchun)
-    }
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
     
     return num;
-  }
+            }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
   
   // Get letter label for variant index (0 -> A, 1 -> B, ...)
   function getLetterLabel(index: number): string {
     return String.fromCharCode(65 + index); // 65 = 'A'
-  }
+            }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
 
   // Test Import - Upload and Parse Excel
   app.post('/api/instructor/tests/:testId/import-questions', 
@@ -1760,31 +2520,134 @@ export async function registerRoutes(app: Express): Promise<Server> {
     upload.single('file'),
     async (req: any, res) => {
       try {
-        const { testId } = req.params;
+        const { testId           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } = req.params;
         const instructorId = req.user.claims.sub;
         
         if (!req.file) {
-          return res.status(400).json({ message: 'File yuklash kerak' });
+          return res.status(400).json({ message: 'File yuklash kerak'           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                  }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
         }
         
         const test = await storage.getTest(testId);
         if (!test) {
-          return res.status(404).json({ message: "Test not found" });
+          return res.status(404).json({ message: "Test not found"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                  }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
         }
         
+        // Check ownership (standalone tests belong to instructor, course tests check course ownership)
+        if (test.courseId) {
+          // Check ownership
+      if (test.courseId) {
         const course = await storage.getCourse(test.courseId);
-        if (course?.instructorId !== instructorId) {
-          const user = await storage.getUser(instructorId);
-          if (user?.role !== 'admin') {
-            return res.status(403).json({ message: "Forbidden" });
-          }
+                  if (course?.instructorId !== instructorId) {
+                      const user = await storage.getUser(instructorId);
+                      if (user?.role !== 'admin') {
+                          return res.status(403).json({ message: "Forbidden"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                      }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+                    }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+                  }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } else {
+          // Standalone test - check direct instructor ownership
+          if (test.instructorId !== instructorId) {
+                      const user = await storage.getUser(instructorId);
+                      if (user?.role !== 'admin') {
+                          return res.status(403).json({ message: "Forbidden"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                      }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+                    }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+                  }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
         }
         
         // Parse Excel file
-        const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+        const workbook = XLSX.read(req.file.buffer, { type: 'buffer'           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const rawData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        const rawData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
         
         // Remove header row
         const dataRows = rawData.slice(1);
@@ -1824,25 +2687,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Basic validation
           if (isNaN(order) || order < 1) {
-            errors.push(`Qator ${rowNum}: Tartib raqami noto'g'ri`);
+            errors.push(`Qator ${rowNum          }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }: Tartib raqami noto'g'ri`);
             continue;
-          }
+                    }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
           
           if (!type || !validQuestionTypes.includes(type)) {
-            errors.push(`Qator ${rowNum}: Turi noto'g'ri. Faqat: ${validQuestionTypes.join(', ')}`);
+            errors.push(`Qator ${rowNum          }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }: Turi noto'g'ri. Faqat: ${validQuestionTypes.join(', ')}`);
             continue;
-          }
+                    }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
           
           if (!questionText) {
-            errors.push(`Qator ${rowNum}: Savol matni bo'sh`);
+            errors.push(`Qator ${rowNum          }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }: Savol matni bo'sh`);
             continue;
-          }
+                    }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
           
           // Points validation - parsedPoints null bo'lsa va pointsText mavjud bo'lsa, xato
           if (pointsText && parsedPoints === null) {
-            errors.push(`Qator ${rowNum}: Ball noto'g'ri format. Raqam kiriting (masalan: 1, 1.5, 2,0)`);
+            errors.push(`Qator ${rowNum          }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }: Ball noto'g'ri format. Raqam kiriting (masalan: 1, 1.5, 2,0)`);
             continue;
-          }
+                    }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
           
           // Prepare question object
           const question: any = {
@@ -1852,27 +2763,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
             points,
             correctAnswer: null,
             options: []
-          };
+                    }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        };
           
           // Type-specific parsing
           if (type === 'multiple_choice') {
             // Options ustunida | bilan ajratilgan variantlar
             // Javob ustunida to'g'ri javob
             if (!optionsText) {
-              errors.push(`Qator ${rowNum}: Multiple choice uchun Options ustunida variantlar bo'lishi kerak (masalan: A|B|C|D)`);
+              errors.push(`Qator ${rowNum          }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }: Multiple choice uchun Options ustunida variantlar bo'lishi kerak (masalan: A|B|C|D)`);
               continue;
-            }
+                      }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
             
             const variants = optionsText.split('|').map((v: string) => v.trim()).filter((v: string) => v);
             if (variants.length < 2) {
-              errors.push(`Qator ${rowNum}: Kamida 2 ta variant bo'lishi kerak`);
+              errors.push(`Qator ${rowNum          }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }: Kamida 2 ta variant bo'lishi kerak`);
               continue;
-            }
+                      }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
             
             if (!answerText) {
-              errors.push(`Qator ${rowNum}: Javob ustunida to'g'ri javob bo'lishi kerak`);
+              errors.push(`Qator ${rowNum          }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }: Javob ustunida to'g'ri javob bo'lishi kerak`);
               continue;
-            }
+                      }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
             
             // Build multi-key lookup map with safe insertion (no overwrites)
             const answerMap = new Map<string, number>();
@@ -1881,12 +2834,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const addKey = (key: string, idx: number) => {
               if (key && !answerMap.has(key)) {
                 answerMap.set(key, idx);
-              }
-            };
+                        }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+                      }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        };
             
             variants.forEach((variant: string, idx: number) => {
               // Extract enumerator and body
-              const { enumerator, body } = extractOptionParts(variant);
+              const { enumerator, body           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } = extractOptionParts(variant);
               
               // Priority 1: Letter label (A, B, C, ...)
               const letterKey = getLetterLabel(idx).toLowerCase();
@@ -1895,7 +2866,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Priority 2: Enumerator from option text (if present)
               if (enumerator) {
                 addKey(enumerator.toLowerCase(), idx);
-              }
+                        }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
               
               // Priority 3: Normalized body text (most common for plain text answers)
               const normalizedBody = normalizeAnswerToken(body);
@@ -1908,7 +2885,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Priority 5: Lowercase full text
               const lowerFull = variant.toLowerCase().trim();
               addKey(lowerFull, idx);
-            });
+                      }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
             
             // Find correct answer by trying all normalized forms
             const normalizedAnswer = normalizeAnswerToken(answerText);
@@ -1920,17 +2903,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Try in priority order
             if (answerMap.has(normalizedAnswer)) {
               correctIndex = answerMap.get(normalizedAnswer);
-            } else if (answerMap.has(lowerAnswer)) {
+                      }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } else if (answerMap.has(lowerAnswer)) {
               correctIndex = answerMap.get(lowerAnswer);
-            } else if (answerMap.has(answerLetter) && /^[a-z]$/i.test(answerText.trim())) {
+                      }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } else if (answerMap.has(answerLetter) && /^[a-z]$/i.test(answerText.trim())) {
               // Single letter answer (A, B, C...)
               correctIndex = answerMap.get(answerLetter);
-            }
+                      }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
             
             if (correctIndex === undefined) {
-              errors.push(`Qator ${rowNum}: To'g'ri javob topilmadi. Javob "${answerText}" Options ichida yo'q. Harfli (A, B, C) yoki to'liq matnli javob kiriting.`);
+              errors.push(`Qator ${rowNum          }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }: To'g'ri javob topilmadi. Javob "${answerText}" Options ichida yo'q. Harfli (A, B, C) yoki to'liq matnli javob kiriting.`);
               continue;
-            }
+                      }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
             
             // Build options with correct answer marked
             variants.forEach((variant: string, idx: number) => {
@@ -1938,69 +2951,201 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 optionText: variant,
                 isCorrect: idx === correctIndex,
                 order: idx + 1
-              });
-            });
-          } else if (type === 'matching') {
+                        }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                      }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                    }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } else if (type === 'matching') {
             // Options ustunida vergul bilan ajratilgan juftliklar
             // Format: Chap1|O'ng1,Chap2|O'ng2,Chap3|O'ng3
             // Javob ustuni matching uchun ishlatilmaydi (bo'sh bo'lishi mumkin)
             if (!optionsText) {
-              errors.push(`Qator ${rowNum}: Matching uchun Options ustunida juftliklar bo'lishi kerak (masalan: Book|Kitob,Pen|Qalam)`);
+              errors.push(`Qator ${rowNum          }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }: Matching uchun Options ustunida juftliklar bo'lishi kerak (masalan: Book|Kitob,Pen|Qalam)`);
               continue;
-            }
+                      }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
             
             const pairs = optionsText.split(',').map((p: string) => p.trim()).filter((p: string) => p);
             if (pairs.length < 2) {
-              errors.push(`Qator ${rowNum}: Kamida 2 ta juftlik bo'lishi kerak`);
+              errors.push(`Qator ${rowNum          }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }: Kamida 2 ta juftlik bo'lishi kerak`);
               continue;
-            }
+                      }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
             
             // Har bir juftlikni tekshirish
             let hasInvalidPair = false;
             for (const pair of pairs) {
               if (!pair.includes('|')) {
-                errors.push(`Qator ${rowNum}: Matching juftlik noto'g'ri format: "${pair}". Format: Chap|O'ng`);
+                errors.push(`Qator ${rowNum          }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }: Matching juftlik noto'g'ri format: "${pair}". Format: Chap|O'ng`);
                 hasInvalidPair = true;
                 break;
-              }
+                        }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
               
               question.options.push({
                 optionText: pair,
                 isCorrect: false,
                 order: question.options.length + 1
-              });
-            }
+                        }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                      }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
             
             if (hasInvalidPair) continue;
-          } else if (type === 'true_false') {
+                    }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } else if (type === 'true_false') {
             // Javob ustunida faqat "true" yoki "false"
             if (!answerText) {
-              errors.push(`Qator ${rowNum}: True/False javob kiritish shart (Javob ustunida)`);
+              errors.push(`Qator ${rowNum          }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }: True/False javob kiritish shart (Javob ustunida)`);
               continue;
-            }
+                      }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
             
             const normalizedAnswer = answerText.toLowerCase();
             if (normalizedAnswer !== 'true' && normalizedAnswer !== 'false') {
-              errors.push(`Qator ${rowNum}: True/False javob faqat "true" yoki "false" bo'lishi kerak`);
+              errors.push(`Qator ${rowNum          }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }: True/False javob faqat "true" yoki "false" bo'lishi kerak`);
               continue;
-            }
+                      }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
             
             question.correctAnswer = normalizedAnswer;
-          } else if (['fill_blanks', 'short_answer'].includes(type)) {
+                    }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } else if (['fill_blanks', 'short_answer'].includes(type)) {
             // Javob ustunida to'g'ri javob
             if (!answerText) {
-              errors.push(`Qator ${rowNum}: Javob ustunida to'g'ri javob bo'lishi kerak`);
+              errors.push(`Qator ${rowNum          }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }: Javob ustunida to'g'ri javob bo'lishi kerak`);
               continue;
-            }
+                      }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
             
             question.correctAnswer = answerText;
-          } else if (type === 'essay') {
+                    }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } else if (type === 'essay') {
             // Essay uchun javob ixtiyoriy (bo'sh bo'lishi mumkin)
             // Downstream kod string kutmoqda, shuning uchun null o'rniga '' ishlatamiz
             question.correctAnswer = answerText || '';
-          }
+                    }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
           
           questionsToCreate.push(question);
+                  }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
         }
         
         // If there are validation errors, return them
@@ -2009,7 +3154,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             message: 'Faylda xatolar mavjud',
             errors,
             importedCount: 0
-          });
+                    }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                  }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
         }
         
         // Import questions in a transaction
@@ -2027,7 +3184,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 order: q.order,
                 mediaUrl: q.mediaUrl,
                 correctAnswer: q.correctAnswer,
-              })
+                        }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        })
               .returning();
             
             // Create options if any
@@ -2038,31 +3201,167 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   optionText: opt.optionText,
                   isCorrect: opt.isCorrect,
                   order: opt.order,
-                }))
+                          }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }))
               );
-            }
+                      }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
             
             importedCount++;
-          }
+                    }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+                  }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
         });
         
         res.json({ 
-          message: `${importedCount} ta savol muvaffaqiyatli yuklandi`,
+          message: `${importedCount          }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } ta savol muvaffaqiyatli yuklandi`,
           importedCount,
           errors: []
+                  }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
         });
-      } catch (error: any) {
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } catch (error: any) {
         console.error('Import error:', error);
-        res.status(500).json({ message: error.message });
-      }
-    }
+        res.status(500).json({ message: error.message           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
   );
 
   // ============ PUBLIC ROUTES (No Auth Required) ============
+  // ============ TEST MARKETPLACE PUBLIC ROUTES ============
+  // Get all published standalone tests (not part of any course)
+  app.get('/api/public/tests', async (req, res) => {
+    try {
+      const tests = await storage.getPublicTests();
+      res.json(tests);
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } catch (error: any) {
+      res.status(500).json({ message: error.message           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+            }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+
+  // Get all published standalone speaking tests (not part of any course)
+  app.get('/api/public/speaking-tests', async (req, res) => {
+    try {
+      const speakingTests = await storage.getPublicSpeakingTests();
+      res.json(speakingTests);
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } catch (error: any) {
+      res.status(500).json({ message: error.message           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+            }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+
+  // ============ COURSE PUBLIC ROUTES ============
   // Public courses endpoint with filters
   app.get('/api/courses/public', async (req, res) => {
     try {
-      const { search, category, minPrice, maxPrice, instructorId, hasDiscount } = req.query;
+      const { search, category, minPrice, maxPrice, instructorId, hasDiscount           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } = req.query;
       
       const filters = {
         search: search as string | undefined,
@@ -2071,35 +3370,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
         maxPrice: maxPrice ? parseFloat(maxPrice as string) : undefined,
         instructorId: instructorId as string | undefined,
         hasDiscount: hasDiscount === 'true' ? true : undefined,
-      };
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        };
 
       const courses = await storage.getPublicCourses(filters);
       res.json(courses);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } catch (error: any) {
+      res.status(500).json({ message: error.message           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+            }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
 
   // Public lessons endpoint - shows demo lessons with video, premium lessons with minimal info
   app.get('/api/courses/:courseId/lessons/public', async (req, res) => {
     try {
-      const { courseId } = req.params;
+      const { courseId           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } = req.params;
       
       // Check if course exists and is published
       const course = await storage.getCourse(courseId);
       if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
+        return res.status(404).json({ message: "Course not found"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
       if (course.status !== 'published') {
-        return res.status(404).json({ message: "Course not available" });
-      }
+        return res.status(404).json({ message: "Course not available"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
       
       const lessons = await storage.getLessonsByCourse(courseId);
       
       // Return 404 if no lessons exist
       if (!lessons || lessons.length === 0) {
-        return res.status(404).json({ message: "No lessons available" });
-      }
+        return res.status(404).json({ message: "No lessons available"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
       
       // Sort lessons by order
       const sortedLessons = lessons.sort((a, b) => a.order - b.order);
@@ -2117,7 +3488,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             order: lesson.order,
             isDemo: lesson.isDemo,
             courseId: lesson.courseId,
-          };
+                    }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        };
+                  }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
         } else {
           // Premium lessons - return only safe fields (no video URL)
           return {
@@ -2129,76 +3512,470 @@ export async function registerRoutes(app: Express): Promise<Server> {
             isDemo: lesson.isDemo,
             courseId: lesson.courseId,
             videoUrl: '', // Explicitly empty for security
-          };
+                    }
         }
-      });
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        };
+                  }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
       
       res.json(publicLessons);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } catch (error: any) {
+      res.status(500).json({ message: error.message           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+            }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
 
   // ============ STUDENT ROUTES ============
+  // ============ TEST MARKETPLACE STUDENT ROUTES ============
+  // Purchase a standalone test (student creates payment request)
+  app.post('/api/student/test-purchase', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { testId, speakingTestId, testType, paymentMethod, paymentProofUrl           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } = req.body;
+      
+      // Validate: exactly one of testId or speakingTestId must be provided
+      if ((!testId && !speakingTestId) || (testId && speakingTestId)) {
+        return res.status(400).json({ message: 'testId yoki speakingTestId dan faqat bittasini kiriting'           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+      
+      // Check if user already purchased this test
+      const existingEnrollment = await storage.checkTestEnrollment(
+        userId,
+        testId || speakingTestId,
+        testType
+      );
+      if (existingEnrollment) {
+        return res.status(400).json({ message: 'Siz bu testni allaqachon sotib olgan'           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+      
+      // Create test enrollment (pending approval)
+      const enrollment = await storage.createTestEnrollment({
+        userId,
+        testId: testId || null,
+        speakingTestId: speakingTestId || null,
+        testType,
+        paymentMethod,
+        paymentProofUrl,
+        paymentStatus: 'pending',
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+      
+      res.json(enrollment);
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } catch (error: any) {
+      res.status(400).json({ message: error.message           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+            }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+
+  // Get all test enrollments for current student
+  app.get('/api/student/test-enrollments', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const enrollments = await storage.getTestEnrollmentsByUser(userId);
+      res.json(enrollments);
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } catch (error: any) {
+      res.status(500).json({ message: error.message           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+            }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+
+  // Check if student has access to a specific test
+  app.get('/api/student/test-enrollment/:testId/:testType', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { testId, testType           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } = req.params;
+      
+      const enrollment = await storage.checkTestEnrollment(userId, testId, testType as 'standard' | 'speaking');
+      res.json({ hasAccess: !!enrollment, enrollment           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } catch (error: any) {
+      res.status(500).json({ message: error.message           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+            }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+
+  // ============ COURSE STUDENT ROUTES ============
   app.get('/api/courses', isAuthenticated, async (req, res) => {
     try {
       const courses = await storage.getPublishedCourses();
       res.json(courses);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } catch (error: any) {
+      res.status(500).json({ message: error.message           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+            }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
 
   app.get('/api/courses/:courseId', isAuthenticated, async (req, res) => {
     try {
-      const { courseId } = req.params;
+      const { courseId           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } = req.params;
       const course = await storage.getCourse(courseId);
       if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
+        return res.status(404).json({ message: "Course not found"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
       res.json(course);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } catch (error: any) {
+      res.status(500).json({ message: error.message           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+            }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
 
   app.get('/api/courses/:courseId/lessons', isAuthenticated, async (req, res) => {
     try {
-      const { courseId } = req.params;
+      const { courseId           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } = req.params;
       const lessons = await storage.getLessonsByCourse(courseId);
       res.json(lessons);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } catch (error: any) {
+      res.status(500).json({ message: error.message           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+            }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
 
   app.get('/api/courses/:courseId/demo-lessons', isAuthenticated, async (req, res) => {
     try {
-      const { courseId } = req.params;
+      const { courseId           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } = req.params;
       const demoLessons = await storage.getDemoLessonsByCourse(courseId);
       res.json(demoLessons);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } catch (error: any) {
+      res.status(500).json({ message: error.message           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+            }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
 
   // Lesson Progress endpoints
   app.get('/api/lessons/:lessonId/progress', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { lessonId } = req.params;
+      const { lessonId           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } = req.params;
       const progress = await storage.getLessonProgress(lessonId, userId);
       res.json(progress || null);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } catch (error: any) {
+      res.status(500).json({ message: error.message           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+            }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
 
   app.post('/api/lessons/:lessonId/progress', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { lessonId } = req.params;
-      const { watchedSeconds, totalSeconds, lastPosition, completed } = req.body;
+      const { lessonId           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } = req.params;
+      const { watchedSeconds, totalSeconds, lastPosition, completed           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } = req.body;
       
       const progress = await storage.upsertLessonProgress({
         userId,
@@ -2208,34 +3985,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastPosition,
         completed,
         completedAt: completed ? new Date() : undefined,
-      });
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
       
       res.json(progress);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } catch (error: any) {
+      res.status(500).json({ message: error.message           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+            }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
 
   app.get('/api/courses/:courseId/progress', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { courseId } = req.params;
+      const { courseId           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } = req.params;
       const progress = await storage.getLessonProgressByCourse(courseId, userId);
       res.json(progress);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } catch (error: any) {
+      res.status(500).json({ message: error.message           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+            }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
 
   app.get('/api/student/enrolled-courses', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const courses = await storage.getEnrolledCourses(userId);
       res.json(courses);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } catch (error: any) {
+      res.status(500).json({ message: error.message           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+            }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
 
   // Student Progress Tracking
   app.get('/api/student/progress', isAuthenticated, async (req: any, res) => {
@@ -2243,35 +4104,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const progress = await storage.getStudentProgress(userId);
       res.json(progress);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } catch (error: any) {
+      res.status(500).json({ message: error.message           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+            }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
 
   app.get('/api/student/enrollment/:courseId', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { courseId } = req.params;
+      const { courseId           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } = req.params;
       const enrollment = await storage.getEnrollmentByCourseAndUser(courseId, userId);
       res.json(enrollment);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } catch (error: any) {
+      res.status(500).json({ message: error.message           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+            }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
 
   app.post('/api/student/enroll', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { courseId, paymentMethod, paymentProofUrl } = req.body;
+      const { courseId, paymentMethod, paymentProofUrl           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } = req.body;
       
       // Manual payment only (naqd/karta/payme)
       if (!paymentMethod || (paymentMethod !== 'naqd' && paymentMethod !== 'karta' && paymentMethod !== 'payme')) {
-        return res.status(400).json({ message: "Faqat naqd, karta yoki payme to'lov usuli qabul qilinadi" });
-      }
+        return res.status(400).json({ message: "Faqat naqd, karta yoki payme to'lov usuli qabul qilinadi"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
       
       if (!paymentProofUrl) {
-        return res.status(400).json({ message: "To'lov cheki rasmi talab qilinadi" });
-      }
+        return res.status(400).json({ message: "To'lov cheki rasmi talab qilinadi"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
       
       const enrollmentData = insertEnrollmentSchema.parse({
         userId,
@@ -2279,19 +4224,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paymentMethod,
         paymentProofUrl,
         paymentStatus: 'pending', // Admin tasdiqini kutadi
-      });
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
       
       const enrollment = await storage.createEnrollment(enrollmentData);
       res.json(enrollment);
-    } catch (error: any) {
-      res.status(400).json({ message: error.message });
-    }
-  });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } catch (error: any) {
+      res.status(400).json({ message: error.message           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+              }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+            }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
 
   // Get test questions (student - for taking test) - SANITIZED (no correct answers)
   app.get('/api/tests/:testId/questions', isAuthenticated, async (req, res) => {
     try {
-      const { testId } = req.params;
+      const { testId           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        } = req.params;
       const questions = await storage.getQuestionsByTest(testId);
       
       // Remove correct answers and sensitive config
@@ -2360,8 +4341,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get test and questions
       const test = await storage.getTest(testId);
       if (!test) {
-        return res.status(404).json({ message: "Test topilmadi" });
-      }
+        return res.status(404).json({ message: "Test topilmadi"           }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        });
+                }
+        }
+      } else if (test.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
       
       const questions = await storage.getQuestionsByTest(testId);
       
@@ -3453,10 +5446,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         instructorId: userId,
       });
       
-      // Verify instructor owns the course
-      const course = await storage.getCourse(data.courseId);
-      if (!course || course.instructorId !== userId) {
-        return res.status(403).json({ message: 'Bu kursga ruxsat yo\'q' });
+      // Verify instructor owns the course (if test is part of a course)
+      if (data.courseId) {
+        const course = await storage.getCourse(data.courseId);
+        if (!course || course.instructorId !== userId) {
+          return res.status(403).json({ message: 'Bu kursga ruxsat yo\'q' });
+        }
       }
       
       const speakingTest = await storage.createSpeakingTest(data);
@@ -3779,7 +5774,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const speakingTests = await storage.getSpeakingTestsByCourse(courseId);
-      const published = speakingTests.filter(t => t.isPublished);
+      const published = speakingTests.filter(t => t.status === 'published');
       
       res.json(published);
     } catch (error: any) {
@@ -3794,11 +5789,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       
       const speakingTest = await storage.getSpeakingTest(id);
-      if (!speakingTest || !speakingTest.isPublished) {
+      if (!speakingTest || speakingTest.status !== 'published') {
         return res.status(404).json({ message: 'Speaking test topilmadi' });
       }
       
-      // Check enrollment
+      // Check enrollment (courseId can be null for standalone tests)
+      if (!speakingTest.courseId) {
+        return res.status(400).json({ message: 'Bu test kursga tegishli emas' });
+      }
       const enrollment = await storage.getEnrollmentByCourseAndUser(speakingTest.courseId, userId);
       if (!enrollment || enrollment.paymentStatus !== 'approved') {
         return res.status(403).json({ message: 'Kursga ro\'yxatdan o\'tmagan' });
@@ -3830,11 +5828,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const files = req.files as Express.Multer.File[];
       
       const speakingTest = await storage.getSpeakingTest(testId);
-      if (!speakingTest || !speakingTest.isPublished) {
+      if (!speakingTest || speakingTest.status !== 'published') {
         return res.status(404).json({ message: 'Speaking test topilmadi' });
       }
       
-      // Check enrollment
+      // Check enrollment (courseId can be null for standalone tests)
+      if (!speakingTest.courseId) {
+        return res.status(400).json({ message: 'Bu test kursga tegishli emas' });
+      }
       const enrollment = await storage.getEnrollmentByCourseAndUser(speakingTest.courseId, userId);
       if (!enrollment || enrollment.paymentStatus !== 'approved') {
         return res.status(403).json({ message: 'Kursga ro\'yxatdan o\'tmagan' });
