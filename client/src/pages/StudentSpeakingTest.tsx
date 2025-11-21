@@ -19,45 +19,14 @@ export default function StudentSpeakingTest() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordedAudios, setRecordedAudios] = useState<Map<string, Blob>>(new Map());
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
-  const [isDemo, setIsDemo] = useState(false);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Try public endpoint first (for demo tests)
-  const { data: testData, isLoading, error, status } = useQuery<any>({
-    queryKey: [`/api/speaking-tests/${testId}/public`],
-    retry: false,
-    queryFn: async () => {
-      const response = await fetch(`/api/speaking-tests/${testId}/public`, {
-        credentials: 'include'
-      });
-      if (response.status === 404) {
-        throw new Error('Not a demo test');
-      }
-      if (!response.ok) {
-        throw new Error('Failed to fetch demo test');
-      }
-      return response.json();
-    }
-  });
-
-  // If public endpoint fails (not a demo), try authenticated endpoint
-  const { data: authenticatedTestData, isLoading: isLoadingAuth } = useQuery<any>({
+  const { data: testData, isLoading } = useQuery<any>({
     queryKey: [`/api/student/speaking-tests/${testId}`],
-    enabled: status === 'error' && !testData,
   });
-
-  // Use whichever data is available
-  const finalTestData = testData || authenticatedTestData;
-  const finalLoading = isLoading || isLoadingAuth;
-
-  useEffect(() => {
-    if (finalTestData?.isDemo) {
-      setIsDemo(true);
-    }
-  }, [finalTestData]);
 
   const submitMutation = useMutation({
     mutationFn: async (formData: FormData) => {
@@ -129,7 +98,7 @@ export default function StudentSpeakingTest() {
       
       // Start timer - question speakingTime > section speakingTime > default 60s
       const currentQuestion = getCurrentQuestion();
-      const currentSection = finalTestData?.sections[currentSectionIndex];
+      const currentSection = testData?.sections[currentSectionIndex];
       const speakingTime = currentQuestion?.speakingTime || currentSection?.speakingTime || 60;
       
       setTimeLeft(speakingTime);
@@ -165,11 +134,11 @@ export default function StudentSpeakingTest() {
   };
 
   const handleNext = () => {
-    const currentSection = finalTestData.sections[currentSectionIndex];
+    const currentSection = testData.sections[currentSectionIndex];
     
     if (currentQuestionIndex < currentSection.questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
-    } else if (currentSectionIndex < finalTestData.sections.length - 1) {
+    } else if (currentSectionIndex < testData.sections.length - 1) {
       setCurrentSectionIndex(currentSectionIndex + 1);
       setCurrentQuestionIndex(0);
     }
@@ -182,7 +151,7 @@ export default function StudentSpeakingTest() {
       setCurrentQuestionIndex(currentQuestionIndex - 1);
     } else if (currentSectionIndex > 0) {
       setCurrentSectionIndex(currentSectionIndex - 1);
-      const prevSection = finalTestData.sections[currentSectionIndex - 1];
+      const prevSection = testData.sections[currentSectionIndex - 1];
       setCurrentQuestionIndex(prevSection.questions.length - 1);
     }
     
@@ -196,7 +165,7 @@ export default function StudentSpeakingTest() {
     const answersData: any[] = [];
     const audioFiles: Blob[] = [];
     
-    finalTestData.sections.forEach((section: any) => {
+    testData.sections.forEach((section: any) => {
       section.questions.forEach((question: any) => {
         const audio = recordedAudios.get(question.id);
         if (audio) {
@@ -217,22 +186,22 @@ export default function StudentSpeakingTest() {
   };
 
   const getCurrentQuestion = () => {
-    if (!finalTestData) return null;
-    return finalTestData.sections[currentSectionIndex]?.questions[currentQuestionIndex];
+    if (!testData) return null;
+    return testData.sections[currentSectionIndex]?.questions[currentQuestionIndex];
   };
 
   const getTotalQuestions = () => {
-    if (!finalTestData) return 0;
-    return finalTestData.sections.reduce((sum: number, section: any) => 
+    if (!testData) return 0;
+    return testData.sections.reduce((sum: number, section: any) => 
       sum + section.questions.length, 0
     );
   };
 
   const getCurrentQuestionNumber = () => {
-    if (!finalTestData) return 0;
+    if (!testData) return 0;
     let count = 0;
     for (let i = 0; i < currentSectionIndex; i++) {
-      count += finalTestData.sections[i].questions.length;
+      count += testData.sections[i].questions.length;
     }
     return count + currentQuestionIndex + 1;
   };
@@ -242,21 +211,21 @@ export default function StudentSpeakingTest() {
   };
 
   const isLastQuestion = () => {
-    if (!finalTestData) return false;
-    return currentSectionIndex === finalTestData.sections.length - 1 &&
-      currentQuestionIndex === finalTestData.sections[currentSectionIndex].questions.length - 1;
+    if (!testData) return false;
+    return currentSectionIndex === testData.sections.length - 1 &&
+      currentQuestionIndex === testData.sections[currentSectionIndex].questions.length - 1;
   };
 
-  if (finalLoading) {
+  if (isLoading) {
     return <div className="container mx-auto p-6">Yuklanmoqda...</div>;
   }
 
-  if (!finalTestData) {
+  if (!testData) {
     return <div className="container mx-auto p-6">Test topilmadi</div>;
   }
 
   const currentQuestion = getCurrentQuestion();
-  const currentSection = finalTestData.sections[currentSectionIndex];
+  const currentSection = testData.sections[currentSectionIndex];
   const totalQuestions = getTotalQuestions();
   const currentQuestionNumber = getCurrentQuestionNumber();
   const answeredCount = getAnsweredCount();
@@ -268,7 +237,7 @@ export default function StudentSpeakingTest() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold" data-testid="heading-test-title">{finalTestData.title}</h1>
+          <h1 className="text-2xl font-bold" data-testid="heading-test-title">{testData.title}</h1>
           <p className="text-sm text-muted-foreground">
             Savol {currentQuestionNumber} / {totalQuestions} - Javob berildi: {answeredCount}
           </p>
@@ -378,20 +347,14 @@ export default function StudentSpeakingTest() {
             </Button>
             
             {isLastQuestion() ? (
-              isDemo ? (
-                <div className="text-sm text-muted-foreground text-center flex-1" data-testid="text-demo-info">
-                  Demo testlarda natija saqlanmaydi. To'liq test topshirish uchun ro'yxatdan o'ting.
-                </div>
-              ) : (
-                <Button
-                  onClick={handleSubmit}
-                  disabled={submitMutation.isPending || answeredCount === 0}
-                  data-testid="button-submit"
-                >
-                  <Upload className="mr-2 h-4 w-4" />
-                  {submitMutation.isPending ? 'Yuborilmoqda...' : 'Testni yakunlash'}
-                </Button>
-              )
+              <Button
+                onClick={handleSubmit}
+                disabled={submitMutation.isPending || answeredCount === 0}
+                data-testid="button-submit"
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                {submitMutation.isPending ? 'Yuborilmoqda...' : 'Testni yakunlash'}
+              </Button>
             ) : (
               <Button onClick={handleNext} data-testid="button-next">
                 Keyingi
@@ -417,7 +380,7 @@ export default function StudentSpeakingTest() {
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">O'tish bali:</span>
-            <span className="font-medium">{finalTestData.passScore}/{finalTestData.totalScore}</span>
+            <span className="font-medium">{testData.passScore}/{testData.totalScore}</span>
           </div>
         </CardContent>
       </Card>
