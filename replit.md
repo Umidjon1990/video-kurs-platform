@@ -1,74 +1,52 @@
 # Video Course Platform (LMS)
 
 ## Overview
-
-This project is a comprehensive Learning Management System (LMS) platform for video-based courses, supporting Administrators, Instructors, and Students. It facilitates course creation, delivery, and student progress tracking through course management, lesson creation, diverse assessment types (assignments and tests), and a manual payment processing system with admin approval. The platform aims to provide a professional, trust-building, and scannable learning experience, localized in Uzbek. Key capabilities include a subscription-based pricing system, certificate image uploads, and robust CMS features for managing site content and testimonials.
+This project is a comprehensive Learning Management System (LMS) platform designed for video-based courses, catering to Administrators, Instructors, and Students. Its primary purpose is to facilitate course creation, delivery, and student progress tracking through robust course management, diverse assessment types (assignments and tests), and a manual payment system with admin approval. The platform emphasizes a professional, trustworthy, and scannable learning experience, localized in Uzbek, with key features including a subscription-based pricing model, certificate image uploads, and extensive CMS capabilities for managing site content and testimonials.
 
 ## User Preferences
-
 Preferred communication style: Simple, everyday language (Uzbek interface).
 
 ## System Architecture
 
-### Frontend Architecture
+### UI/UX Decisions
+The frontend, built with React, TypeScript, and Vite, uses Radix UI and Shadcn/ui components styled with Tailwind CSS, following a Material Design-inspired aesthetic. It supports distinct user role experiences, dark/light modes, and a responsive design. The navigation system features a role-based Shadcn Sidebar with collapsible options, user profile display, and active route highlighting. Public routes like login and registration exclude the sidebar. Dashboard enhancements include modern stats cards, interactive charts, and animated elements using `framer-motion`. Course thumbnail display is standardized with `h-56` and `object-contain`. Demo lessons are visually distinct with orange gradient cards, while premium lessons are muted with a lock icon. Course creation/edit dialogs are scrollable with fixed footers for accessibility.
 
-The frontend is built with React and TypeScript using Vite, Wouter for routing, and TanStack Query for state management. It utilizes Radix UI primitives and Shadcn/ui components, styled with Tailwind CSS, following a Material Design-inspired aesthetic with distinct user role experiences and dark/light mode support. 
+### Technical Implementations
+The frontend utilizes Wouter for routing and TanStack Query for state management. Authentication uses local phone/email + password, with Replit Auth removed from the login page. Public lesson previews display descriptions for both demo and premium lessons. Backend updates properly handle course categories, dual pricing (price and originalPrice), and plan-specific pricing.
 
-**Navigation System**: Implements Shadcn Sidebar component with role-based menus (Admin, Instructor, Student). Features include collapsible/expandable sidebar with icon mode, user profile display in sidebar header (avatar with initials, full name, role), logout in footer, active route highlighting, and mobile responsiveness. App layout uses SidebarProvider wrapping authenticated routes, with sticky header containing sidebar trigger. Public routes (login, register, explore) render without sidebar. Public homepage features "Kirish" (Login) button below search bar that navigates users to `/login` page.
-
-**Login Page Enhancements**: Login page includes informative alert with guidance text ("Administrator tomonidan berilgan login va parolingizni kiriting va shaxsiy kabinetingizga kiring"), and a "Back to Home" button with left arrow icon for easy navigation back to the public homepage. Replit Auth option removed from login page; platform uses local authentication only (phone/email + password).
-
-**Dashboard Enhancements**: Modern stats cards with KPI metrics, interactive charts, enhanced course cards, progress tracking systems with circular charts, and performance optimizations. Student dashboard displays: Total Enrolled Courses, Completed Courses (100% progress), In Progress Courses (0-99% progress), and Certificates count. Animations using `framer-motion` are used for a modern feel.
-
-**Course Thumbnail Display**: Course thumbnail images use `h-56` (224px) height with `object-contain` to display full images without cropping. Applied consistently across InstructorDashboard course cards, course creation dialog preview, and public HomePage course listings. Live preview shown in course creation/edit dialog when thumbnail URL is entered.
-
-**Public Lesson Preview**: Public course listing page (`/explore`, HomePage) displays lesson descriptions in the "Darslarni Ko'rish" (View Lessons) dialog. Both demo and premium lessons show their description/izoh to help users understand lesson content before enrollment. Server-side `/api/courses/:courseId/lessons/public` endpoint returns lesson descriptions for all lessons regardless of demo status.
-
-**Orange Lesson Cards**: Demo lessons display with vibrant orange/amber gradient design (bg-gradient from orange-50 to amber-50 in light mode, orange-950/30 to amber-950/30 in dark mode) with orange borders. Features include: Play icon in gradient orange circle badge, Clock icon for duration display, "Bosib ko'ring" prompt with Play icon, enhanced hover effects, and Shadow effects on icon badges. Premium lessons show Lock icon and muted styling. Design provides clear visual distinction between accessible demo content and premium locked lessons.
-
-**Scrollable Course Dialog**: Instructor course creation/edit dialog implements proper scrolling behavior with `max-h-[90vh]` viewport height limit, flex column layout, scrollable form content (`overflow-y-auto flex-1`), and fixed footer with action buttons (`flex-shrink-0`). This ensures that when thumbnail preview images are displayed, the Save/Update button remains visible and accessible at the bottom of the dialog. Dialog title and description dynamically change between "Yangi Kurs Yaratish" (Create New Course) and "Kursni Tahrirlash" (Edit Course) based on editing state. Backend properly handles course updates including category, both `price` and `originalPrice` fields (via pricing object), and plan-specific pricing updates through `updateCoursePlanPricing` storage method. Frontend cache invalidation includes both instructor courses list and public courses list to ensure price changes are immediately visible.
-
-### Backend Architecture
-
-The backend is an Express.js application in TypeScript, implementing a RESTful API with role-based route protection. Authentication uses session-based `express-session` with a PostgreSQL store, integrated with Passport.js and Replit Auth (OpenID Connect). Middleware enforces role-based access control and error handling. It includes a private messaging system, an announcement system with various targeting modes, and robust APIs for managing courses, assessments, user subscriptions, and site content.
-
-### Database Architecture
-
-The system uses Drizzle ORM with PostgreSQL (Neon Serverless) for type-safe database operations. Key models include Users (with roles), Courses (supporting dual pricing and subscription plans), Lessons (video-based with demo flags), Assignments (multi-file submissions and grading), Tests (6 question types), Enrollments, Submissions, Notifications, Conversations, Messages, Site Settings, Testimonials, Subscription Plans, Course Plan Pricing, and User Subscriptions. The schema uses UUID primary keys and timestamp tracking, with comprehensive relational design.
+### Feature Specifications
+*   **Role-Based Access Control**: Strict access control for Admin, Instructor, and Student roles.
+*   **Single-Device Login Enforcement**: Prevents credential sharing by invalidating previous sessions upon new device login, applicable to all user types and authentication methods.
+*   **Assessment System**: Supports six question types with auto and manual grading, question banks, and secure server-side grading.
+*   **Assignment Submission**: Multi-file upload with server-side validation.
+*   **Grading Workflow**: Integrated notifications from submission to grading and result viewing.
+*   **Course Structure**: Simplified course-to-lesson linkage, with demo lessons universally accessible.
+*   **Payment Flow**: Manual payment system with student receipt upload and admin approval, evolving into a subscription model.
+*   **Dual Student Registration**: Students can self-register (pending admin approval) or be created by admins (immediate active status).
+*   **Subscription System**: Flexible, admin-managed plans with customizable features, linked to course pricing.
+*   **Subscription Lifecycle Management**: Automated 30-day lifecycle with real-time expiration enforcement, daily notifications, and immediate access revocation upon expiry. Admin/Instructor dashboards facilitate extension.
+*   **Notification System**: Real-time, in-app notifications with unread counts and polling.
+*   **Video Player Support**: Compatible with YouTube, Kinescope, Vimeo, Dailymotion, Wistia, and generic HTTPS video URLs.
+*   **Private Messaging**: Direct communication between students and instructors with unread indicators and real-time polling, including notification integration.
+*   **Announcement System**: Instructors can send targeted announcements to individuals, groups, or all students.
+*   **CMS & Homepage Enhancements**: Dynamic "About Us," "Contact Us," Testimonials, and Certificates sections managed via Admin CMS, with certificate image upload to Replit Object Storage.
+*   **Admin Subscription Management**: Comprehensive CRUD for subscription plans, supporting base, dynamic, custom, and bonus features.
+*   **Admin Student Creation with Course Enrollment**: Admins can create students and automatically enroll them in courses, initiating a 30-day active subscription upon selection.
+*   **Admin User Deletion**: Comprehensive, atomic user deletion system for all associated data, with multi-level safeguards and detailed preview of affected data.
+*   **Course Rating System**: Enrolled students can submit 1-5 star ratings and optional reviews, with unique per-student-per-course rating enforcement and atomic upsert operations.
+*   **Custom Course Author Names**: Instructors can specify custom author names for courses, overriding default instructor names on public listings.
 
 ### System Design Choices
-
--   **Role-Based Access Control**: Strict access control for Admin, Instructor, and Student roles.
--   **Single-Device Login Enforcement**: Security feature that prevents credential sharing by allowing users to be logged in from only one device at a time. When a user logs in from a new device, all previous sessions are automatically destroyed. Implemented for both local authentication (phone/email + password) and OIDC authentication (Replit Auth). Uses PostgreSQL session store to track and manage active sessions. Applies universally to all user types (students, instructors, admins) regardless of account creation method (admin-created or self-registered).
--   **Assessment System**: Supports diverse question types (Multiple Choice, True/False, Fill in Blanks, Matching, Short Answer, Essay) with auto and manual grading, question banks, and secure server-side grading.
--   **Assignment Submission System**: Multi-file upload (images, audio, files) with server-side validation.
--   **Grading Workflow**: Integrated notification system from student submission to instructor grading and student result viewing.
--   **Course Structure**: Simplified to Courses directly linking to Lessons, with demo lessons accessible to all.
--   **Payment Flow**: Manual payment system requiring student receipt upload and admin approval, evolving into a subscription-based model.
--   **Dual Student Registration System**: Students can either (1) self-register with phone/email + password (status='pending', requires admin approval before login), or (2) be created directly by administrators with auto-generated credentials (status='active', immediate access). Admin panel provides pending student list with approve/reject actions. Authentication middleware blocks login attempts from pending/rejected users.
--   **Subscription System**: Flexible subscription plan management with admin-controlled creation, editing, and deletion. Each plan supports customizable features (tests, assignments, certificates, live classes), custom feature labels, additional custom features, and bonuses. Plans are linked to course pricing.
--   **Subscription Lifecycle Management**: Automated 30-day subscription lifecycle with real-time expiration enforcement. Upon enrollment approval, a 30-day subscription is auto-created with startDate and endDate tracking. Daily scheduler (runs at 2 AM) checks for expiring subscriptions and sends notifications at 7, 3, and 1 day before expiry. Real-time access control checks both subscription status AND endDate to immediately block access when subscription expires, preventing any delay window. Both frontend (LearningPage) and backend (getUserSubscriptions) perform on-demand expiration checking to ensure immediate access revocation. Admin and Instructor dashboards display expiring subscriptions (7-day warning) and allow extending subscription durations with custom day values. Expired subscriptions are visually highlighted with red background (`bg-destructive/10`) and display a one-click "Qayta faollashtirish" (Reactivate) button that extends the subscription by 30 days and sets status to active.
--   **Notification System**: Real-time, in-app notifications with unread counts and polling.
--   **Video Player Support**: Enhanced compatibility with various video platforms (YouTube, Kinescope, Vimeo, Dailymotion, Wistia) and generic HTTPS video URLs.
--   **Private Messaging**: A chat system enabling direct communication between students and instructors with unread indicators and real-time polling. Supports direct navigation via `/chat?userId=${userId}` parameter that automatically creates or finds existing conversations based on user roles (Admin/Instructor uses studentId, Student uses instructorId). Integrated notification system automatically creates bell notifications when messages are sent, showing sender name and message preview (max 50 chars). Clicking chat_message notifications navigates directly to the conversation.
--   **Announcement System**: Instructors can send announcements targeting individual students, course groups, or all students, with notification integration.
--   **CMS & Homepage Enhancements**: Dynamic "About Us", "Contact Us", Testimonials, and Certificates sections managed via Admin CMS, with certificate image upload to Replit Object Storage.
--   **Admin Subscription Management**: Comprehensive admin interface (/admin/subscription-plans) for subscription plan CRUD operations. Supports four feature types: (1) Base features with customizable labels (Tests, Assignments, Certificate, Live Classes/week), (2) Dynamic Features - admin-created switch features stored in JSONB array, (3) Custom Features - text-based features array, (4) Bonuses - special offers array. UI design: read-only plan cards with green CheckCircle icons for all features and yellow Star icons for bonuses; all editing exclusively via dialog to prevent data loss. Database stores features in JSONB column with full type safety via Drizzle schema.
--   **Admin Student Creation with Course Enrollment**: Admins can create students with optional course selection. When a course is selected during student creation, the system automatically: (1) creates an enrollment with paymentStatus='approved' using the first available subscription plan, (2) creates a 30-day active subscription, and (3) allows the student immediate access to the course upon first login. All operations wrapped in database transaction for data consistency.
--   **Admin User Deletion**: Comprehensive user deletion system allowing admins to permanently remove users and all associated data from the platform. Features atomic transaction-based deletion that removes: user profile, course enrollments, assignment/test submissions, subscriptions, notifications, messages, password reset requests, and for instructors, all created courses. Includes multi-level safeguards: (1) admins cannot delete themselves, (2) confirmation dialog displays full impact of deletion, (3) irreversible action warning, (4) atomic database transaction ensures data consistency. Frontend provides detailed deletion preview showing all data types that will be removed, with special warnings for instructor deletions affecting their courses.
--   **Course Rating System**: Students can rate courses from 1-5 stars with optional text reviews. Only enrolled students with approved payment status can submit ratings. Each student can rate a course only once (enforced by database UNIQUE constraint on courseId+userId). Ratings support atomic upsert operations using `onConflictDoUpdate` to prevent race conditions. Public course listings display average rating and total rating count. Student LearningPage provides rating submission dialog. Reusable StarRating component supports both interactive (editable) and read-only display modes with full/half-star precision.
--   **Custom Course Author Names**: Instructors can specify custom author names for their courses via the optional `author` field in course creation/edit dialog. When set, the author name is displayed on public course listings (HomePage) and course cards. If not set, the system defaults to displaying the instructor's firstName and lastName. This feature allows instructors to use pen names, institutional names, or collaborative authorship attribution. Backend POST and PUT /api/instructor/courses endpoints accept and persist the author field. Frontend InstructorDashboard includes "Muallif Nomi (ixtiyoriy)" input field with placeholder and helper text explaining its purpose.
+The backend is an Express.js application in TypeScript, providing a RESTful API with role-based route protection. It uses session-based `express-session` with a PostgreSQL store for authentication, integrated with Passport.js. The database uses Drizzle ORM with PostgreSQL (Neon Serverless) for type-safe operations, including models for Users, Courses, Lessons, Assignments, Tests, Enrollments, Submissions, Notifications, Conversations, Messages, Site Settings, Testimonials, Subscription Plans, Course Plan Pricing, and User Subscriptions. The schema utilizes UUID primary keys and timestamp tracking for a comprehensive relational design.
 
 ## External Dependencies
 
 ### Third-Party Services
-
--   **Replit Authentication**: OpenID Connect provider for user authentication.
--   **Neon Serverless PostgreSQL**: PostgreSQL database hosting.
--   **Object Storage (Replit)**: Cloud storage for multimedia files (e.g., certificates).
+*   **Replit Authentication**: OpenID Connect provider (for OIDC authentication).
+*   **Neon Serverless PostgreSQL**: PostgreSQL database hosting.
+*   **Object Storage (Replit)**: Cloud storage for multimedia files.
 
 ### Key NPM Packages
-
--   **Frontend**: `@tanstack/react-query`, `wouter`, `@radix-ui/*`, `react-hook-form`, `zod`, `date-fns`, `lucide-react`, `framer-motion`, `recharts`.
--   **Backend**: `express`, `drizzle-orm`, `passport`, `openid-client`, `express-session`, `connect-pg-simple`, `@google-cloud/storage`, `multer`.
--   **Development**: `typescript`, `vite`, `tailwindcss`, `drizzle-kit`, `tsx`.
+*   **Frontend**: `@tanstack/react-query`, `wouter`, `@radix-ui/*`, `react-hook-form`, `zod`, `date-fns`, `lucide-react`, `framer-motion`, `recharts`.
+*   **Backend**: `express`, `drizzle-orm`, `passport`, `openid-client`, `express-session`, `connect-pg-simple`, `@google-cloud/storage`, `multer`.
+*   **Development**: `typescript`, `vite`, `tailwindcss`, `drizzle-kit`, `tsx`.
