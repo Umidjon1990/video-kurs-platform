@@ -1296,11 +1296,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/instructor/courses/:courseId/tests', isAuthenticated, isInstructor, async (req: any, res) => {
-    try {
-// ============ CLEAN INSTRUCTOR TEST ROUTES ============
-// This will be appended to server/routes_new.ts
-
+  // ============ INSTRUCTOR TEST MANAGEMENT ROUTES ============
   app.patch('/api/instructor/tests/:testId', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
       const { testId } = req.params;
@@ -1594,14 +1590,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: error.message });
     }
   });
-// ============ TEST MARKETPLACE API ROUTES (MINIMAL) ============
-// These routes will be added to main server/routes.ts after fixing it
 
-import { Router } from 'express';
-
-export function setupTestMarketplaceRoutes(app: any, storage: any, isAuthenticated: any, isAdmin: any) {
-  
-  // ============ PUBLIC ROUTES ============
+  // ============ TEST MARKETPLACE API ROUTES ============
   // Get all published standalone tests (not part of any course)
   app.get('/api/public/tests', async (req: any, res: any) => {
     try {
@@ -1705,104 +1695,7 @@ export function setupTestMarketplaceRoutes(app: any, storage: any, isAuthenticat
       res.status(400).json({ message: error.message });
     }
   });
+
+  const httpServer = createServer(app);
+  return httpServer;
 }
-              }
-        }
-      } else if (test.instructorId !== instructorId) {
-        const user = await storage.getUser(instructorId);
-        if (user?.role !== 'admin') {
-          return res.status(403).json({ message: "Forbidden" });
-        } catch (error: any) {
-      res.status(500).json({ message: error.message           }
-        }
-      } else if (test.instructorId !== instructorId) {
-        const user = await storage.getUser(instructorId);
-        if (user?.role !== 'admin') {
-          return res.status(403).json({ message: "Forbidden" });
-        });
-              }
-        }
-      } else if (test.instructorId !== instructorId) {
-        const user = await storage.getUser(instructorId);
-        if (user?.role !== 'admin') {
-          return res.status(403).json({ message: "Forbidden" });
-        }
-            }
-        }
-      } else if (test.instructorId !== instructorId) {
-        const user = await storage.getUser(instructorId);
-        if (user?.role !== 'admin') {
-          return res.status(403).json({ message: "Forbidden" });
-        });
-
-  app.post('/api/lessons/:lessonId/progress', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const { lessonId           }
-        }
-      } else if (test.instructorId !== instructorId) {
-        const user = await storage.getUser(instructorId);
-        if (user?.role !== 'admin') {
-          return res.status(403).json({ message: "Forbidden" });
-        } = req.params;
-      const { watchedSeconds, totalSeconds, lastPosition, completed           }
-        }
-      } else if (test.instructorId !== instructorId) {
-        const user = await storage.getUser(instructorId);
-        if (user?.role !== 'admin') {
-          return res.status(403).json({ message: "Forbidden" });
-        } = req.body;
-      
-      const progress = await storage.upsertLessonProgress({
-        userId,
-        lessonId,
-        watchedSeconds,
-        totalSeconds,
-        lastPosition,
-        completed,
-        completedAt: completed ? new Date() : undefined,
-                }
-        }
-      } else if (test.instructorId !== instructorId) {
-        const user = await storage.getUser(instructorId);
-        if (user?.role !== 'admin') {
-          return res.status(403).json({ message: "Forbidden" });
-        });
-      
-      res.json(progress);
-              }
-        }
-      } else if (test.instructorId !== instructorId) {
-        const user = await storage.getUser(instructorId);
-        if (user?.role !== 'admin') {
-          return res.status(403).json({ message: "Forbidden" });
-        } catch (error: any) {
-      res.status(500).json({ message: error.message           }
-        }
-      } else if (test.instructorId !== instructorId) {
-        const user = await storage.getUser(instructorId);
-        if (user?.role !== 'admin') {
-          return res.status(403).json({ message: "Forbidden" });
-        });
-              }
-        }
-      } else if (test.instructorId !== instructorId) {
-        const user = await storage.getUser(instructorId);
-        if (user?.role !== 'admin') {
-          return res.status(403).json({ message: "Forbidden" });
-        }
-            }
-        }
-      } else if (test.instructorId !== instructorId) {
-        const user = await storage.getUser(instructorId);
-        if (user?.role !== 'admin') {
-          return res.status(403).json({ message: "Forbidden" });
-        });
-
-  app.get('/api/courses/:courseId/progress', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const { courseId           }
-        }
-      } else if (test.instructorId !== instructorId) {
-        const user = await storage.getUser(instructorId);
