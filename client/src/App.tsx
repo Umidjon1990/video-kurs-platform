@@ -17,6 +17,7 @@ import AdminPayments from "@/pages/AdminPayments";
 import AdminCMSPage from "@/pages/AdminCMSPage";
 import AdminSubscriptionPlansPage from "@/pages/AdminSubscriptionPlansPage";
 import AdminSubscriptions from "@/pages/AdminSubscriptions";
+import AdminTestPayments from "@/pages/AdminTestPayments";
 import InstructorDashboard from "@/pages/InstructorDashboard";
 import InstructorSubscriptions from "@/pages/InstructorSubscriptions";
 import SpeakingTests from "@/pages/SpeakingTests";
@@ -24,6 +25,7 @@ import SpeakingTestEdit from "@/pages/SpeakingTestEdit";
 import StudentCourses from "@/pages/StudentCourses";
 import StudentResults from "@/pages/StudentResults";
 import StudentSpeakingTest from "@/pages/StudentSpeakingTest";
+import StudentTestMarketplace from "@/pages/StudentTestMarketplace";
 import LearningPage from "@/pages/LearningPage";
 import Checkout from "@/pages/Checkout";
 import ChatPage from "@/pages/ChatPage";
@@ -69,6 +71,7 @@ function Router() {
                   <Route path="/admin" component={AdminDashboard} />
                   <Route path="/admin/courses" component={AdminCourses} />
                   <Route path="/admin/payments" component={AdminPayments} />
+                  <Route path="/admin/test-payments" component={AdminTestPayments} />
                   <Route path="/admin/cms" component={AdminCMSPage} />
                   <Route path="/admin/subscription-plans" component={AdminSubscriptionPlansPage} />
                   <Route path="/admin/subscriptions" component={AdminSubscriptions} />
@@ -94,6 +97,7 @@ function Router() {
                 <>
                   <Route path="/" component={StudentCourses} />
                   <Route path="/results" component={StudentResults} />
+                  <Route path="/test-marketplace" component={StudentTestMarketplace} />
                   <Route path="/checkout/:courseId" component={Checkout} />
                   <Route path="/student/speaking-test/:testId" component={StudentSpeakingTest} />
                   <Route path="/learn/:courseId" component={LearningPage} />
