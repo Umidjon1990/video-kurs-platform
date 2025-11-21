@@ -277,6 +277,10 @@ export default function HomePage() {
               const basePrice = Number(course.price);
               const displayPrice = discountPercent > 0 ? basePrice * (1 - discountPercent / 100) : basePrice;
               
+              // "Yangi" ribbon calculation - 7 kun ichida
+              const isNew = course.createdAt ? (Date.now() - new Date(course.createdAt).getTime()) / (1000 * 60 * 60 * 24) <= 7 : false;
+              const daysAgo = course.createdAt ? Math.floor((Date.now() - new Date(course.createdAt).getTime()) / (1000 * 60 * 60 * 24)) : 0;
+              
               // Gradient palette (6 modern gradients)
               const gradients = [
                 "from-blue-500 via-purple-500 to-pink-500",
@@ -310,8 +314,19 @@ export default function HomePage() {
                       data-testid={`card-course-${course.id}`}
                       onClick={() => setLocation(`/checkout/${course.id}`)}
                     >
-                      {/* Thumbnail with Sale Badge */}
-                      <div className="relative h-56 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-b">
+                      {/* Thumbnail with Sale Badge & New Ribbon */}
+                      <div className="relative h-56 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-b overflow-hidden">
+                        {/* "Yangi" ribbon - chap yuqori burchak */}
+                        {isNew && (
+                          <div className="absolute top-0 left-0 z-20 overflow-hidden w-32 h-32">
+                            <div className="absolute transform -rotate-45 bg-green-500 text-white text-center font-bold py-1 left-[-35px] top-[25px] w-[170px] shadow-md">
+                              <div className="text-xs">
+                                YANGI
+                                {daysAgo === 0 ? " (Bugun)" : ` (${daysAgo} kun)`}
+                              </div>
+                            </div>
+                          </div>
+                        )}
                         {discountPercent > 0 && (
                           <Badge variant="destructive" className="absolute top-3 right-3 z-10 text-sm font-bold px-3 py-1">
                             -{discountPercent}% CHEGIRMA
@@ -401,17 +416,17 @@ export default function HomePage() {
                       <div className="w-full">
                         <div className="flex items-baseline gap-2">
                           <span className="text-2xl font-bold">
-                            {formatPrice(displayPrice)}
+                            {formatPrice(displayPrice.toString())}
                           </span>
-                          {discountPercent && (
+                          {discountPercent > 0 && (
                             <Badge variant="destructive" className="text-xs">
                               -{discountPercent}%
                             </Badge>
                           )}
                         </div>
-                        {course.originalPrice && course.discountedPrice && (
+                        {discountPercent > 0 && (
                           <span className="text-sm text-muted-foreground line-through">
-                            {formatPrice(course.originalPrice)}
+                            {formatPrice(basePrice.toString())}
                           </span>
                         )}
                       </div>
