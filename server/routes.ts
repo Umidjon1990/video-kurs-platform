@@ -904,17 +904,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get public courses (no authentication required)
   app.get('/api/courses/public', async (req: any, res) => {
     try {
-      const { search, category, minPrice, maxPrice } = req.query;
+      const { search: rawSearch, category: rawCategory, minPrice: rawMinPrice, maxPrice: rawMaxPrice } = req.query;
       
-      // Validate price parameters
-      const parsedMinPrice = minPrice !== undefined ? parseFloat(minPrice) : null;
-      const parsedMaxPrice = maxPrice !== undefined ? parseFloat(maxPrice) : null;
-      
-      if (parsedMinPrice !== null && (isNaN(parsedMinPrice) || !isFinite(parsedMinPrice) || parsedMinPrice < 0)) {
-        return res.status(400).json({ message: "Invalid minPrice parameter - must be a finite non-negative number" });
+      // Reject array query params to eliminate ambiguity and prevent injection
+      if (Array.isArray(rawSearch) || Array.isArray(rawCategory) || Array.isArray(rawMinPrice) || Array.isArray(rawMaxPrice)) {
+        return res.status(400).json({ message: "Query parameters must be single values, not arrays" });
       }
-      if (parsedMaxPrice !== null && (isNaN(parsedMaxPrice) || !isFinite(parsedMaxPrice) || parsedMaxPrice < 0)) {
-        return res.status(400).json({ message: "Invalid maxPrice parameter - must be a finite non-negative number" });
+      
+      // Normalize all query params to single scalars
+      const search = String(rawSearch ?? '').trim();
+      const category = String(rawCategory ?? '').trim();
+      const minPriceStr = String(rawMinPrice ?? '').trim();
+      const maxPriceStr = String(rawMaxPrice ?? '').trim();
+      
+      // Harden numeric parsing: forbid scientific notation, -0, and invalid formats
+      const parseStrictPrice = (priceStr: string): number | null => {
+        if (!priceStr) return null;
+        
+        // Reject scientific notation (e, E), negative zero, and non-numeric chars
+        if (/[eE]/.test(priceStr) || priceStr === '-0' || !/^\d+(\.\d+)?$/.test(priceStr)) {
+          return NaN; // Signal validation error
+        }
+        
+        const parsed = parseFloat(priceStr);
+        if (!isFinite(parsed) || parsed < 0) {
+          return NaN;
+        }
+        
+        return parsed;
+      };
+      
+      const parsedMinPrice = minPriceStr ? parseStrictPrice(minPriceStr) : null;
+      const parsedMaxPrice = maxPriceStr ? parseStrictPrice(maxPriceStr) : null;
+      
+      if (parsedMinPrice !== null && isNaN(parsedMinPrice)) {
+        return res.status(400).json({ message: "Invalid minPrice parameter - must be a valid non-negative decimal number" });
+      }
+      if (parsedMaxPrice !== null && isNaN(parsedMaxPrice)) {
+        return res.status(400).json({ message: "Invalid maxPrice parameter - must be a valid non-negative decimal number" });
       }
       if (parsedMinPrice !== null && parsedMaxPrice !== null && parsedMinPrice > parsedMaxPrice) {
         return res.status(400).json({ message: "minPrice cannot be greater than maxPrice" });
@@ -923,26 +950,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Build where conditions - ALWAYS start with published status check
       const conditions = [eq(courses.status, 'published')];
       
-      if (typeof search === 'string' && search.trim().length > 0) {
-        const trimmedSearch = search.trim();
+      // Apply search filter
+      if (search.length > 0) {
         conditions.push(
           or(
-            sql`LOWER(${courses.title}) LIKE LOWER(${'%' + trimmedSearch + '%'})`,
-            sql`LOWER(${courses.description}) LIKE LOWER(${'%' + trimmedSearch + '%'})`
+            sql`LOWER(${courses.title}) LIKE LOWER(${'%' + search + '%'})`,
+            sql`LOWER(${courses.description}) LIKE LOWER(${'%' + search + '%'})`
           ) as any
         );
       }
       
-      if (category) {
+      if (category.length > 0) {
         conditions.push(eq(courses.category, category));
       }
       
-      if (parsedMinPrice !== null) {
+      // Use parsed numeric values (not strings) for price comparisons
+      if (parsedMinPrice !== null && !isNaN(parsedMinPrice)) {
         conditions.push(sql`${courses.price} >= ${parsedMinPrice}`);
       }
       
-      if (parsedMaxPrice !== null) {
+      if (parsedMaxPrice !== null && !isNaN(parsedMaxPrice)) {
         conditions.push(sql`${courses.price} <= ${parsedMaxPrice}`);
+      }
+      
+      // Defensive fallback: validate and filter conditions
+      // Ensure only proper SQL expressions are passed to .where()
+      const finalConditions = conditions.filter((c) => {
+        // Validate that it's a proper Drizzle SQL object (has toSQL method or Symbol.for('drizzle:SQL'))
+        return c && typeof c === 'object' && ('toSQL' in c || Symbol.for('drizzle:SQL') in c);
+      });
+      
+      // Always enforce published guard as last resort
+      if (finalConditions.length === 0) {
+        finalConditions.push(eq(courses.status, 'published'));
       }
       
       // Get all published courses with instructor info and enrollments
@@ -968,7 +1008,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(courses)
         .leftJoin(users, eq(courses.instructorId, users.id))
         .leftJoin(enrollments, eq(courses.id, enrollments.courseId))
-        .where(conditions.length > 1 ? and(...conditions) : conditions[0])
+        .where(finalConditions.length > 1 ? and(...finalConditions) : finalConditions[0])
         .groupBy(courses.id, users.id)
         .orderBy(desc(courses.createdAt));
       
