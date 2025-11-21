@@ -28,7 +28,7 @@ export function CourseCard({ course, onEnroll, onViewDemo, isEnrolled, index = 0
   const discountPercent = (course as any).discountPercentage && (course as any).discountPercentage > 0 
     ? (course as any).discountPercentage 
     : 0;
-  const basePrice = Number(course.price);
+  const basePrice = course.price ? Number(course.price) : 0;
   const displayPrice = discountPercent > 0 ? basePrice * (1 - discountPercent / 100) : basePrice;
   
   const isNew = course.createdAt 

@@ -806,7 +806,7 @@ export default function InstructorDashboard() {
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {courses?.map((course, index) => {
               const discountPercent = (course as any).discountPercentage || 0;
-              const basePrice = Number(course.price);
+              const basePrice = course.price ? Number(course.price) : 0;
               const displayPrice = discountPercent > 0 ? basePrice * (1 - discountPercent / 100) : basePrice;
               
               const isNew = course.createdAt 
