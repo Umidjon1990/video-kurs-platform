@@ -2081,8 +2081,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const avgRating = await storage.getCourseAverageRating(course.id);
           return {
             ...course,
-            averageRating: avgRating.average,
-            totalRatings: avgRating.count,
+            averageRating: avgRating.averageRating,
+            totalRatings: avgRating.totalRatings,
           };
         })
       );
