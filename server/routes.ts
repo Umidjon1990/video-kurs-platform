@@ -2074,7 +2074,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const courses = await storage.getPublicCourses(filters);
-      res.json(courses);
+      
+      // Add average rating and total ratings for each course
+      const coursesWithRatings = await Promise.all(
+        courses.map(async (course) => {
+          const avgRating = await storage.getCourseAverageRating(course.id);
+          return {
+            ...course,
+            averageRating: avgRating.averageRating,
+            totalRatings: avgRating.totalRatings,
+          };
+        })
+      );
+      
+      res.json(coursesWithRatings);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

@@ -13,12 +13,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { StarRating } from "@/components/StarRating";
 import type { Course, User, SiteSetting, Testimonial, CoursePlanPricing, SubscriptionPlan } from "@shared/schema";
 
 type PublicCourse = Course & {
   instructor: User;
   enrollmentsCount: number;
   planPricing?: Array<CoursePlanPricing & { plan: SubscriptionPlan }>;
+  averageRating?: number;
+  totalRatings?: number;
 };
 
 type Lesson = {
@@ -332,9 +335,23 @@ export default function HomePage() {
                     <p className="text-sm text-muted-foreground line-clamp-2">
                       {course.description || "Kurs tavsifi yo'q"}
                     </p>
-                    <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
-                      <Users className="w-4 h-4" />
-                      <span>{course.enrollmentsCount} talaba</span>
+                    <div className="flex items-center justify-between mt-3">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Users className="w-4 h-4" />
+                        <span>{course.enrollmentsCount} talaba</span>
+                      </div>
+                      {course.averageRating !== undefined && course.averageRating > 0 && (
+                        <div className="flex items-center gap-1">
+                          <StarRating 
+                            rating={course.averageRating} 
+                            size={14} 
+                            showValue={true}
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            ({course.totalRatings || 0})
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
 
