@@ -327,7 +327,7 @@ export default function HomePage() {
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {course.instructor.firstName} {course.instructor.lastName}
+                      {(course as any).author || `${course.instructor.firstName} ${course.instructor.lastName}`}
                     </p>
                   </CardHeader>
 

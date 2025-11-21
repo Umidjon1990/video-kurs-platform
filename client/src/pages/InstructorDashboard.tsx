@@ -1467,6 +1467,19 @@ export default function InstructorDashboard() {
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="author">Muallif Nomi (ixtiyoriy)</Label>
+              <Input
+                id="author"
+                value={courseForm.author}
+                onChange={(e) => setCourseForm({ ...courseForm, author: e.target.value })}
+                placeholder="Masalan: Prof. Ali Aliyev"
+                data-testid="input-course-author"
+              />
+              <p className="text-xs text-muted-foreground">
+                Kurs sahifasida ko'rsatiladi. Bo'sh qolsa, sizning ismingiz ko'rinadi.
+              </p>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="category">Kategoriya</Label>
               <Select
                 value={courseForm.category}
