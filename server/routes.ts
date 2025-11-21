@@ -1112,8 +1112,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: lessons.id,
           title: lessons.title,
           description: lessons.description,
-          durationMinutes: lessons.duration,
-          orderIndex: lessons.order,
+          videoUrl: lessons.videoUrl,
+          duration: lessons.duration,
+          order: lessons.order,
           isDemo: lessons.isDemo,
         })
         .from(lessons)
