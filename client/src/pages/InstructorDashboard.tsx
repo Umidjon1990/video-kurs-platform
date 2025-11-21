@@ -821,6 +821,7 @@ export default function InstructorDashboard() {
                             description: course.description || "",
                             category: course.category || "",
                             price: existingPrice.toString(),
+                            authorName: (course as any).authorName || "",
                             thumbnailUrl: course.thumbnailUrl || "",
                             imageUrl: (course as any).imageUrl || "",
                           });
