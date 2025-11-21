@@ -340,15 +340,15 @@ export default function HomePage() {
                         <Users className="w-4 h-4" />
                         <span>{course.enrollmentsCount} talaba</span>
                       </div>
-                      {course.averageRating !== undefined && course.averageRating > 0 && (
+                      {course.totalRatings !== undefined && course.totalRatings > 0 && (
                         <div className="flex items-center gap-1">
                           <StarRating 
-                            rating={course.averageRating} 
+                            rating={course.averageRating || 0} 
                             size={14} 
                             showValue={true}
                           />
                           <span className="text-xs text-muted-foreground">
-                            ({course.totalRatings || 0})
+                            ({course.totalRatings})
                           </span>
                         </div>
                       )}
