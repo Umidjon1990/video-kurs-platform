@@ -3,6 +3,7 @@ import {
   users,
   courses,
   courseRatings,
+  courseLikes,
   lessons,
   lessonProgress,
   assignments,
@@ -33,6 +34,8 @@ import {
   type InsertCourse,
   type CourseRating,
   type InsertCourseRating,
+  type CourseLike,
+  type InsertCourseLike,
   type Lesson,
   type InsertLesson,
   type LessonProgress,
@@ -185,6 +188,12 @@ export interface IStorage {
   getCourseRatings(courseId: string): Promise<Array<CourseRating & { user: User }>>;
   getUserCourseRating(courseId: string, userId: string): Promise<CourseRating | undefined>;
   getCourseAverageRating(courseId: string): Promise<{ average: number; count: number }>;
+  
+  // Course Like operations ("Qiziqtirdi" feature)
+  createCourseLike(courseId: string, userId: string): Promise<CourseLike>;
+  deleteCourseLike(courseId: string, userId: string): Promise<void>;
+  getCourseLikeCount(courseId: string): Promise<number>;
+  checkIfUserLikedCourse(courseId: string, userId: string): Promise<boolean>;
   
   // Chat operations (Private Messaging)
   getOrCreateConversation(studentId: string, instructorId: string): Promise<any>;
@@ -1152,6 +1161,38 @@ export class DatabaseStorage implements IStorage {
       average: Number(result[0]?.average || 0),
       count: result[0]?.count || 0,
     };
+  }
+
+  // Course Like operations ("Qiziqtirdi" feature)
+  async createCourseLike(courseId: string, userId: string): Promise<CourseLike> {
+    const [like] = await db
+      .insert(courseLikes)
+      .values({ courseId, userId })
+      .returning();
+    return like;
+  }
+
+  async deleteCourseLike(courseId: string, userId: string): Promise<void> {
+    await db
+      .delete(courseLikes)
+      .where(and(eq(courseLikes.courseId, courseId), eq(courseLikes.userId, userId)));
+  }
+
+  async getCourseLikeCount(courseId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`COUNT(*)::int` })
+      .from(courseLikes)
+      .where(eq(courseLikes.courseId, courseId));
+    return result[0]?.count || 0;
+  }
+
+  async checkIfUserLikedCourse(courseId: string, userId: string): Promise<boolean> {
+    const result = await db
+      .select()
+      .from(courseLikes)
+      .where(and(eq(courseLikes.courseId, courseId), eq(courseLikes.userId, userId)))
+      .limit(1);
+    return result.length > 0;
   }
 
   // Chat operations (Private Messaging)
