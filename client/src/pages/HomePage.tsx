@@ -286,7 +286,7 @@ export default function HomePage() {
                   key={course.id}
                   className="hover-elevate transition-all cursor-pointer"
                   data-testid={`card-course-${course.id}`}
-                  onClick={() => setLocation(`/checkout/${course.id}`)}
+                  onClick={() => setLocation(`/course/${course.id}`)}
                 >
                   {/* Thumbnail */}
                   <div className="h-56 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-b">

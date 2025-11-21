@@ -11,6 +11,7 @@ import HomePage from "@/pages/HomePage";
 import Landing from "@/pages/Landing";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
+import CourseDetail from "@/pages/CourseDetail";
 import AdminDashboard from "@/pages/AdminDashboard";
 import AdminCourses from "@/pages/AdminCourses";
 import AdminPayments from "@/pages/AdminPayments";
@@ -47,6 +48,7 @@ function Router() {
   const publicRoutes = (
     <Switch>
       <Route path="/explore" component={HomePage} />
+      <Route path="/course/:id" component={CourseDetail} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
       {!isAuthenticated && <Route path="/" component={HomePage} />}

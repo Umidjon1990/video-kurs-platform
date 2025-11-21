@@ -1069,6 +1069,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get single course details publicly
+  app.get('/api/courses/:courseId/public', async (req: any, res) => {
+    try {
+      const { courseId } = req.params;
+      
+      // Get course with instructor info
+      const [course] = await db
+        .select({
+          id: courses.id,
+          title: courses.title,
+          description: courses.description,
+          category: courses.category,
+          price: courses.price,
+          discountedPrice: courses.discountedPrice,
+          thumbnailUrl: courses.thumbnailUrl,
+          imageUrl: courses.imageUrl,
+          status: courses.status,
+          instructor: {
+            id: users.id,
+            firstName: users.firstName,
+            lastName: users.lastName,
+          },
+          enrollmentsCount: sql<number>`cast(count(distinct ${enrollments.id}) as int)`,
+        })
+        .from(courses)
+        .leftJoin(users, eq(courses.instructorId, users.id))
+        .leftJoin(enrollments, eq(courses.id, enrollments.courseId))
+        .where(and(
+          eq(courses.id, courseId),
+          eq(courses.status, 'published')
+        ))
+        .groupBy(courses.id, users.id);
+      
+      if (!course) {
+        return res.status(404).json({ message: "Kurs topilmadi" });
+      }
+      
+      // Get lessons for this course (only public info)
+      const courseLessons = await db
+        .select({
+          id: lessons.id,
+          title: lessons.title,
+          description: lessons.description,
+          durationMinutes: lessons.duration,
+          orderIndex: lessons.order,
+          isDemo: lessons.isDemo,
+        })
+        .from(lessons)
+        .where(eq(lessons.courseId, courseId))
+        .orderBy(lessons.order);
+      
+      // Get plan pricing
+      const planPricing = await db
+        .select({
+          id: coursePlanPricing.id,
+          price: coursePlanPricing.price,
+          plan: {
+            id: subscriptionPlans.id,
+            name: subscriptionPlans.name,
+            displayName: subscriptionPlans.displayName,
+          },
+        })
+        .from(coursePlanPricing)
+        .leftJoin(subscriptionPlans, eq(coursePlanPricing.planId, subscriptionPlans.id))
+        .where(eq(coursePlanPricing.courseId, courseId));
+      
+      res.json({
+        ...course,
+        lessons: courseLessons,
+        planPricing,
+      });
+    } catch (error: any) {
+      console.error("Error fetching course details:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ============ INSTRUCTOR ROUTES ============
   app.get('/api/instructor/courses', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
