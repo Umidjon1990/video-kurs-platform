@@ -10,9 +10,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PlayCircle, CheckCircle, FileText, ClipboardCheck, Lock, Home, MessageCircle, Download } from "lucide-react";
+import { PlayCircle, CheckCircle, FileText, ClipboardCheck, Lock, Home, MessageCircle, Download, Star } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { NotificationBell } from "@/components/NotificationBell";
+import { StarRating } from "@/components/StarRating";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Course, Lesson, Assignment, Test } from "@shared/schema";
 
@@ -30,6 +31,9 @@ export default function LearningPage() {
   const [submissionFiles, setSubmissionFiles] = useState<{ images: File[], audio: File[], files: File[] }>({ images: [], audio: [], files: [] });
   const [testDialog, setTestDialog] = useState<{ open: boolean; testId: string | null }>({ open: false, testId: null });
   const [testAnswers, setTestAnswers] = useState<Record<string, any>>({});
+  const [ratingDialog, setRatingDialog] = useState(false);
+  const [selectedRating, setSelectedRating] = useState(0);
+  const [reviewText, setReviewText] = useState("");
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -95,6 +99,43 @@ export default function LearningPage() {
   const { data: courseProgress } = useQuery<any[]>({
     queryKey: ["/api/courses", courseId, "progress"],
     enabled: !!courseId && isAuthenticated,
+  });
+
+  // Fetch user's course rating
+  const { data: userCourseRating } = useQuery<{ rating: number; review?: string } | null>({
+    queryKey: ["/api/courses", courseId, "rating/user"],
+    enabled: !!courseId && isAuthenticated && !isPreviewMode,
+  });
+
+  // Set initial rating when userCourseRating is loaded
+  useEffect(() => {
+    if (userCourseRating) {
+      setSelectedRating(userCourseRating.rating || 0);
+      setReviewText(userCourseRating.review || "");
+    }
+  }, [userCourseRating]);
+
+  const submitRatingMutation = useMutation({
+    mutationFn: async () => {
+      if (!courseId) return;
+      const response = await apiRequest("POST", `/api/courses/${courseId}/rating`, {
+        rating: selectedRating,
+        review: reviewText || undefined,
+      });
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/courses", courseId, "rating/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/courses/public"] });
+      toast({
+        title: "Baholandi",
+        description: "Kursni baholaganingiz uchun rahmat!",
+      });
+      setRatingDialog(false);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
   });
 
   const saveProgressMutation = useMutation({
@@ -243,6 +284,16 @@ export default function LearningPage() {
           </Button>
           <h1 className="text-xl font-bold line-clamp-1" data-testid="text-course-title">{course.title}</h1>
           <div className="ml-auto flex items-center gap-2">
+            {!isPreviewMode && (
+              <Button
+                variant="outline"
+                onClick={() => setRatingDialog(true)}
+                data-testid="button-rate-course"
+              >
+                <Star className="w-4 h-4 mr-2" />
+                {userCourseRating ? "Baholash o'zgartirish" : "Kursni Baholash"}
+              </Button>
+            )}
             <Button
               variant="outline"
               onClick={handleStartChat}
@@ -986,6 +1037,18 @@ export default function LearningPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Rating Dialog */}
+      <RatingDialog
+        open={ratingDialog}
+        onOpenChange={setRatingDialog}
+        rating={selectedRating}
+        onRatingChange={setSelectedRating}
+        review={reviewText}
+        onReviewChange={setReviewText}
+        onSubmit={() => submitRatingMutation.mutate()}
+        isPending={submitRatingMutation.isPending}
+      />
     </div>
   );
 }
@@ -1106,4 +1169,89 @@ function TestQuestionInput({ question, value, onChange }: { question: any; value
   }
   
   return null;
+}
+
+// Rating Dialog Component
+function RatingDialog({
+  open,
+  onOpenChange,
+  rating,
+  onRatingChange,
+  review,
+  onReviewChange,
+  onSubmit,
+  isPending,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  rating: number;
+  onRatingChange: (rating: number) => void;
+  review: string;
+  onReviewChange: (review: string) => void;
+  onSubmit: () => void;
+  isPending: boolean;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent data-testid="dialog-rate-course">
+        <DialogHeader>
+          <DialogTitle>Kursni Baholash</DialogTitle>
+          <DialogDescription>
+            Fikringizni bizga bildiring. Bu boshqa talabalarga yordam beradi.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label>Bahoingiz *</Label>
+            <div className="flex justify-center">
+              <StarRating
+                rating={rating}
+                size={32}
+                interactive={true}
+                onRatingChange={onRatingChange}
+              />
+            </div>
+            {rating > 0 && (
+              <p className="text-center text-sm text-muted-foreground">
+                {rating === 1 && "Yomon"}
+                {rating === 2 && "Qoniqarsiz"}
+                {rating === 3 && "O'rtacha"}
+                {rating === 4 && "Yaxshi"}
+                {rating === 5 && "Zo'r!"}
+              </p>
+            )}
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="review">Sharh (ixtiyoriy)</Label>
+            <Textarea
+              id="review"
+              value={review}
+              onChange={(e) => onReviewChange(e.target.value)}
+              placeholder="Kurs haqida fikringizni yozing..."
+              rows={4}
+              data-testid="textarea-review"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isPending}
+            data-testid="button-cancel-rating"
+          >
+            Bekor qilish
+          </Button>
+          <Button
+            onClick={onSubmit}
+            disabled={rating === 0 || isPending}
+            data-testid="button-submit-rating"
+          >
+            {isPending ? "Saqlanmoqda..." : "Saqlash"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }
