@@ -2062,7 +2062,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ============ PUBLIC ROUTES (No Auth Required) ============
   // Public courses endpoint with filters
-  app.get('/api/courses/public', async (req, res) => {
+  app.get('/api/courses/public', async (req: any, res) => {
     try {
       const { search, category, minPrice, maxPrice, instructorId, hasDiscount } = req.query;
       
@@ -2077,16 +2077,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const courses = await storage.getPublicCourses(filters);
       
-      // Add average rating, total ratings, and like count for each course
+      // Get current user if authenticated (optional for public endpoint)
+      const userId = req.user?.claims?.sub;
+      
+      // Add average rating, total ratings, like count, and isLiked for each course
       const coursesWithRatingsAndLikes = await Promise.all(
         courses.map(async (course) => {
           const avgRating = await storage.getCourseAverageRating(course.id);
           const likeCount = await storage.getCourseLikeCount(course.id);
+          const isLiked = userId ? await storage.checkIfUserLikedCourse(course.id, userId) : false;
           return {
             ...course,
             averageRating: avgRating.average,
             totalRatings: avgRating.count,
             likeCount,
+            isLiked,
           };
         })
       );
