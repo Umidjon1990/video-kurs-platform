@@ -64,6 +64,7 @@ export const courses = pgTable("courses", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
+  author: text("author"), // Muallif nomi (o'qituvchi tomonidan yoziladi)
   category: varchar("category", { length: 50 }), // IT, Design, Business, Language, Marketing, etc.
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   originalPrice: decimal("original_price", { precision: 10, scale: 2 }), // Asl narx
@@ -491,6 +492,8 @@ export const insertCourseSchema = createInsertSchema(courses).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  author: z.string().optional().nullable(),
 });
 
 export const insertCourseRatingSchema = createInsertSchema(courseRatings).omit({

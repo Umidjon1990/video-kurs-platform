@@ -47,6 +47,7 @@ export default function InstructorDashboard() {
   const [courseForm, setCourseForm] = useState({
     title: "",
     description: "",
+    author: "",
     category: "",
     price: "",
     thumbnailUrl: "",
