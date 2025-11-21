@@ -78,15 +78,13 @@ export default function HomePage() {
     queryKey: ["/api/testimonials"],
   });
 
-  // Fetch course details with lessons for selected course
-  const { data: courseDetails } = useQuery<PublicCourse & { lessons: Lesson[] }>({
+  // Fetch lessons for selected course
+  const { data: courseLessons } = useQuery<Lesson[]>({
     queryKey: selectedCourseForLessons 
-      ? [`/api/courses/${selectedCourseForLessons.id}/public`]
+      ? [`/api/courses/${selectedCourseForLessons.id}/lessons/public`]
       : [],
     enabled: !!selectedCourseForLessons,
   });
-  
-  const courseLessons = courseDetails?.lessons || [];
 
   // Helper to get setting value
   const getSetting = (key: string) => {
@@ -288,7 +286,7 @@ export default function HomePage() {
                   key={course.id}
                   className="hover-elevate transition-all cursor-pointer"
                   data-testid={`card-course-${course.id}`}
-                  onClick={() => setLocation(`/course/${course.id}`)}
+                  onClick={() => setLocation(`/checkout/${course.id}`)}
                 >
                   {/* Thumbnail */}
                   <div className="h-56 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-b">

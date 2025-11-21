@@ -46,7 +46,6 @@ export const users = pgTable("users", {
 export const usersRelations = relations(users, ({ many }) => ({
   coursesAsInstructor: many(courses),
   enrollments: many(enrollments),
-  testEnrollments: many(testEnrollments),
   submissions: many(submissions),
   testAttempts: many(testAttempts),
   notifications: many(notifications),
@@ -162,24 +161,17 @@ export const assignmentsRelations = relations(assignments, ({ one, many }) => ({
   submissions: many(submissions),
 }));
 
-// Tests table - Testlar alohida sotiladi
+// Tests table
 export const tests = pgTable("tests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  courseId: varchar("course_id").references(() => courses.id, { onDelete: 'cascade' }), // Optional - test kurs ichida yoki alohida bo'lishi mumkin
+  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: 'cascade' }),
   lessonId: varchar("lesson_id").references(() => lessons.id, { onDelete: 'cascade' }),
-  instructorId: varchar("instructor_id").notNull().references(() => users.id), // Kim yaratgan
-  testType: varchar("test_type", { length: 20 }).default('standard'), // standard, listening, reading, grammar, speaking
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
-  thumbnailUrl: varchar("thumbnail_url"), // Test rasmi
-  price: decimal("price", { precision: 10, scale: 2 }), // Test narxi (alohida sotilganda)
-  originalPrice: decimal("original_price", { precision: 10, scale: 2 }), // Asl narx
-  discountedPrice: decimal("discounted_price", { precision: 10, scale: 2 }), // Chegirmadagi narx
   passingScore: integer("passing_score"),
-  status: varchar("status", { length: 20 }).notNull().default('draft'), // draft, published
+  isDraft: boolean("is_draft").default(true),
   randomOrder: boolean("random_order").default(false),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Questions table
@@ -537,25 +529,21 @@ export const insertPasswordResetRequestSchema = createInsertSchema(passwordReset
 });
 
 // ============ SPEAKING TESTS SYSTEM ============
-// Speaking Tests table - Og'zaki testlar (alohida sotiladi)
+// Speaking Tests table - Og'zaki testlar
 export const speakingTests = pgTable("speaking_tests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  courseId: varchar("course_id").references(() => courses.id, { onDelete: 'cascade' }), // Optional - test kurs ichida yoki alohida bo'lishi mumkin
+  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: 'cascade' }),
   instructorId: varchar("instructor_id").notNull().references(() => users.id),
   lessonId: varchar("lesson_id").references(() => lessons.id, { onDelete: 'cascade' }),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
-  thumbnailUrl: varchar("thumbnail_url"), // Test rasmi
-  price: decimal("price", { precision: 10, scale: 2 }), // Test narxi (alohida sotilganda)
-  originalPrice: decimal("original_price", { precision: 10, scale: 2 }), // Asl narx
-  discountedPrice: decimal("discounted_price", { precision: 10, scale: 2 }), // Chegirmadagi narx
   duration: integer("duration").notNull().default(60), // Davomiyligi (daqiqalarda)
   passScore: integer("pass_score").notNull().default(60), // O'tish bali
   totalScore: integer("total_score").notNull().default(100), // Maksimal ball
   instructions: text("instructions"), // Ko'rsatmalar
   language: varchar("language", { length: 10 }).notNull().default('ar'), // ar, uz, en, etc.
   isDemo: boolean("is_demo").default(false), // Bepul demo test
-  status: varchar("status", { length: 20 }).notNull().default('draft'), // draft, published
+  isPublished: boolean("is_published").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -701,45 +689,6 @@ export const speakingEvaluationsRelations = relations(speakingEvaluations, ({ on
     references: [users.id],
   }),
 }));
-
-// ============ TEST ENROLLMENTS SYSTEM ============
-// Test Enrollments table - Test xaridlari (testlar alohida sotiladi)
-// IMPORTANT: testEnrollments MUST be defined AFTER speakingTests to avoid ReferenceError
-export const testEnrollments = pgTable("test_enrollments", (t) => ({
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id),
-  testId: varchar("test_id").references(() => tests.id, { onDelete: 'cascade' }), // Oddiy test
-  speakingTestId: varchar("speaking_test_id").references(() => speakingTests.id, { onDelete: 'cascade' }), // Speaking test
-  testType: varchar("test_type", { length: 20 }).notNull(), // standard, speaking
-  paymentMethod: varchar("payment_method", { length: 20 }), // karta, payme, naqd
-  paymentProofUrl: text("payment_proof_url"), // Chek rasmi URL
-  paymentStatus: varchar("payment_status", { length: 20 }).notNull().default('pending'), // pending, approved, rejected
-  enrolledAt: timestamp("enrolled_at").defaultNow(),
-}), (table) => ({
-  // CHECK constraint: kamida bittasi null bo'lmasligi kerak (faqat bittasi to'ldirilishi kerak)
-  checkTestReference: sql`CHECK ((test_id IS NOT NULL AND speaking_test_id IS NULL) OR (test_id IS NULL AND speaking_test_id IS NOT NULL))`,
-}));
-
-export const testEnrollmentsRelations = relations(testEnrollments, ({ one }) => ({
-  user: one(users, {
-    fields: [testEnrollments.userId],
-    references: [users.id],
-  }),
-  test: one(tests, {
-    fields: [testEnrollments.testId],
-    references: [tests.id],
-  }),
-  speakingTest: one(speakingTests, {
-    fields: [testEnrollments.speakingTestId],
-    references: [speakingTests.id],
-  }),
-}));
-
-// testEnrollments Zod schema
-export const insertTestEnrollmentSchema = createInsertSchema(testEnrollments).omit({
-  id: true,
-  enrolledAt: true,
-});
 
 // Insert schemas
 export const insertSpeakingTestSchema = createInsertSchema(speakingTests).omit({
@@ -910,9 +859,6 @@ export type TestAttempt = typeof testAttempts.$inferSelect;
 
 export type InsertEnrollment = z.infer<typeof insertEnrollmentSchema>;
 export type Enrollment = typeof enrollments.$inferSelect;
-
-export type InsertTestEnrollment = z.infer<typeof insertTestEnrollmentSchema>;
-export type TestEnrollment = typeof testEnrollments.$inferSelect;
 
 export type InsertSubmission = z.infer<typeof insertSubmissionSchema>;
 export type Submission = typeof submissions.$inferSelect;

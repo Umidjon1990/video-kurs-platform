@@ -11,23 +11,19 @@ import HomePage from "@/pages/HomePage";
 import Landing from "@/pages/Landing";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
-import CourseDetail from "@/pages/CourseDetail";
 import AdminDashboard from "@/pages/AdminDashboard";
 import AdminCourses from "@/pages/AdminCourses";
 import AdminPayments from "@/pages/AdminPayments";
 import AdminCMSPage from "@/pages/AdminCMSPage";
 import AdminSubscriptionPlansPage from "@/pages/AdminSubscriptionPlansPage";
 import AdminSubscriptions from "@/pages/AdminSubscriptions";
-import AdminTestPayments from "@/pages/AdminTestPayments";
 import InstructorDashboard from "@/pages/InstructorDashboard";
 import InstructorSubscriptions from "@/pages/InstructorSubscriptions";
 import SpeakingTests from "@/pages/SpeakingTests";
 import SpeakingTestEdit from "@/pages/SpeakingTestEdit";
-import InstructorStandaloneTests from "@/pages/InstructorStandaloneTests";
 import StudentCourses from "@/pages/StudentCourses";
 import StudentResults from "@/pages/StudentResults";
 import StudentSpeakingTest from "@/pages/StudentSpeakingTest";
-import StudentTestMarketplace from "@/pages/StudentTestMarketplace";
 import LearningPage from "@/pages/LearningPage";
 import Checkout from "@/pages/Checkout";
 import ChatPage from "@/pages/ChatPage";
@@ -48,7 +44,6 @@ function Router() {
   const publicRoutes = (
     <Switch>
       <Route path="/explore" component={HomePage} />
-      <Route path="/course/:id" component={CourseDetail} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
       {!isAuthenticated && <Route path="/" component={HomePage} />}
@@ -67,9 +62,6 @@ function Router() {
           </header>
           <main className="flex-1 overflow-auto">
             <Switch>
-              {/* Shared routes for all authenticated users */}
-              <Route path="/course/:id" component={CourseDetail} />
-              
               {/* Admin Routes */}
               {user?.role === 'admin' && (
                 <>
@@ -77,7 +69,6 @@ function Router() {
                   <Route path="/admin" component={AdminDashboard} />
                   <Route path="/admin/courses" component={AdminCourses} />
                   <Route path="/admin/payments" component={AdminPayments} />
-                  <Route path="/admin/test-payments" component={AdminTestPayments} />
                   <Route path="/admin/cms" component={AdminCMSPage} />
                   <Route path="/admin/subscription-plans" component={AdminSubscriptionPlansPage} />
                   <Route path="/admin/subscriptions" component={AdminSubscriptions} />
@@ -90,7 +81,6 @@ function Router() {
                 <>
                   <Route path="/" component={InstructorDashboard} />
                   <Route path="/instructor/subscriptions" component={InstructorSubscriptions} />
-                  <Route path="/instructor/standalone-tests" component={InstructorStandaloneTests} />
                   <Route path="/instructor/courses/:courseId/speaking-tests" component={SpeakingTests} />
                   <Route path="/instructor/speaking-tests/:testId" component={SpeakingTestEdit} />
                   <Route path="/learn/:courseId" component={LearningPage} />
@@ -104,7 +94,6 @@ function Router() {
                 <>
                   <Route path="/" component={StudentCourses} />
                   <Route path="/results" component={StudentResults} />
-                  <Route path="/test-marketplace" component={StudentTestMarketplace} />
                   <Route path="/checkout/:courseId" component={Checkout} />
                   <Route path="/student/speaking-test/:testId" component={StudentSpeakingTest} />
                   <Route path="/learn/:courseId" component={LearningPage} />

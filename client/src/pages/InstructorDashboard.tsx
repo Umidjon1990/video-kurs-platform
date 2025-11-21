@@ -43,15 +43,6 @@ export default function InstructorDashboard() {
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [deletingCourse, setDeletingCourse] = useState<Course | null>(null);
   const [isAddLessonOpen, setIsAddLessonOpen] = useState(false);
-  const [isCreateStandaloneTestOpen, setIsCreateStandaloneTestOpen] = useState(false);
-  const [standaloneTestForm, setStandaloneTestForm] = useState({
-    title: "",
-    description: "",
-    price: 50000,
-    duration: 60,
-    totalScore: 100,
-    thumbnailUrl: "",
-  });
 
   const [courseForm, setCourseForm] = useState({
     title: "",
@@ -1083,16 +1074,10 @@ export default function InstructorDashboard() {
                     ))
                   )}
                 </div>
-                <div className="flex gap-2">
-                  <Button onClick={() => setIsAddLessonOpen(true)} data-testid="button-add-lesson" className="flex-1">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Dars Qo'shish
-                  </Button>
-                  <Button onClick={() => setIsCreateStandaloneTestOpen(true)} variant="outline" data-testid="button-add-speaking-test" className="flex-1">
-                    <Mic className="w-4 h-4 mr-2" />
-                    Og'zaki Test Yaratish
-                  </Button>
-                </div>
+                <Button onClick={() => setIsAddLessonOpen(true)} data-testid="button-add-lesson" className="w-full">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Dars Qo'shish
+                </Button>
               </TabsContent>
 
               <TabsContent value="assignments" className="space-y-4">
@@ -3043,126 +3028,6 @@ function CourseAnalyticsPanel({ courseId }: { courseId: string }) {
           </CardContent>
         </Card>
       )}
-
-      {/* Create Standalone Speaking Test Dialog */}
-      <Dialog open={isCreateStandaloneTestOpen} onOpenChange={setIsCreateStandaloneTestOpen}>
-      <DialogContent className="max-w-2xl" data-testid="dialog-create-standalone-speaking-test">
-        <DialogHeader>
-          <DialogTitle>Yangi Og'zaki Test Yaratish</DialogTitle>
-          <DialogDescription>
-            Talabalar sotib ola oladigan standalone test yarating
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="test-title">Test Nomi</Label>
-            <Input
-              id="test-title"
-              placeholder="TOEFL Speaking Practice Test"
-              value={standaloneTestForm.title}
-              onChange={(e) => setStandaloneTestForm({ ...standaloneTestForm, title: e.target.value })}
-              data-testid="input-standalone-test-title"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="test-description">Tavsifi</Label>
-            <Textarea
-              id="test-description"
-              placeholder="Test haqida ma'lumot"
-              value={standaloneTestForm.description}
-              onChange={(e) => setStandaloneTestForm({ ...standaloneTestForm, description: e.target.value })}
-              data-testid="input-standalone-test-description"
-            />
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="test-price">Narx (so'm)</Label>
-              <Input
-                id="test-price"
-                type="number"
-                placeholder="50000"
-                value={standaloneTestForm.price}
-                onChange={(e) => setStandaloneTestForm({ ...standaloneTestForm, price: Number(e.target.value) })}
-                data-testid="input-standalone-test-price"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="test-duration">Vaqt (min)</Label>
-              <Input
-                id="test-duration"
-                type="number"
-                placeholder="60"
-                value={standaloneTestForm.duration}
-                onChange={(e) => setStandaloneTestForm({ ...standaloneTestForm, duration: Number(e.target.value) })}
-                data-testid="input-standalone-test-duration"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="test-score">Jami Ball</Label>
-              <Input
-                id="test-score"
-                type="number"
-                placeholder="100"
-                value={standaloneTestForm.totalScore}
-                onChange={(e) => setStandaloneTestForm({ ...standaloneTestForm, totalScore: Number(e.target.value) })}
-                data-testid="input-standalone-test-score"
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="test-thumbnail">Thumbnail URL (ixtiyoriy)</Label>
-            <Input
-              id="test-thumbnail"
-              placeholder="https://..."
-              value={standaloneTestForm.thumbnailUrl}
-              onChange={(e) => setStandaloneTestForm({ ...standaloneTestForm, thumbnailUrl: e.target.value })}
-              data-testid="input-standalone-test-thumbnail"
-            />
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => setIsCreateStandaloneTestOpen(false)}
-            data-testid="button-cancel-standalone-test"
-          >
-            Bekor qilish
-          </Button>
-          <Button
-            onClick={async () => {
-              try {
-                if (!standaloneTestForm.title.trim()) {
-                  toast({ title: "Xatolik", description: "Test nomi kerak", variant: "destructive" });
-                  return;
-                }
-                const response = await apiRequest("/api/instructor/speaking-tests", "POST", {
-                  ...standaloneTestForm,
-                  courseId: null,
-                  isPublished: false,
-                });
-                toast({ title: "Muvaffaqiyatli!", description: "Og'zaki test yaratildi" });
-                setIsCreateStandaloneTestOpen(false);
-                setStandaloneTestForm({ title: "", description: "", price: 50000, duration: 60, totalScore: 100, thumbnailUrl: "" });
-                queryClient.invalidateQueries({ queryKey: ["/api/instructor/standalone-tests"] });
-              } catch (error: any) {
-                toast({ variant: "destructive", title: "Xatolik", description: error.message });
-              }
-            }}
-            data-testid="button-submit-standalone-test"
-          >
-            <Mic className="w-4 h-4 mr-2" />
-            Test Yaratish
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-      </Dialog>
     </div>
   );
 }

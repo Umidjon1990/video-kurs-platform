@@ -901,252 +901,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get public courses (no authentication required)
-  app.get('/api/courses/public', async (req: any, res) => {
-    try {
-      const { search: rawSearch, category: rawCategory, minPrice: rawMinPrice, maxPrice: rawMaxPrice } = req.query;
-      
-      // Reject array query params to eliminate ambiguity and prevent injection
-      if (Array.isArray(rawSearch) || Array.isArray(rawCategory) || Array.isArray(rawMinPrice) || Array.isArray(rawMaxPrice)) {
-        return res.status(400).json({ message: "Query parameters must be single values, not arrays" });
-      }
-      
-      // Normalize all query params to single scalars
-      const search = String(rawSearch ?? '').trim();
-      const category = String(rawCategory ?? '').trim();
-      const minPriceStr = String(rawMinPrice ?? '').trim();
-      const maxPriceStr = String(rawMaxPrice ?? '').trim();
-      
-      // Harden numeric parsing: forbid scientific notation, -0, and invalid formats
-      const parseStrictPrice = (priceStr: string): number | null => {
-        if (!priceStr) return null;
-        
-        // Reject scientific notation (e, E), negative zero, and non-numeric chars
-        if (/[eE]/.test(priceStr) || priceStr === '-0' || !/^\d+(\.\d+)?$/.test(priceStr)) {
-          return NaN; // Signal validation error
-        }
-        
-        const parsed = parseFloat(priceStr);
-        if (!isFinite(parsed) || parsed < 0) {
-          return NaN;
-        }
-        
-        return parsed;
-      };
-      
-      const parsedMinPrice = minPriceStr ? parseStrictPrice(minPriceStr) : null;
-      const parsedMaxPrice = maxPriceStr ? parseStrictPrice(maxPriceStr) : null;
-      
-      if (parsedMinPrice !== null && isNaN(parsedMinPrice)) {
-        return res.status(400).json({ message: "Invalid minPrice parameter - must be a valid non-negative decimal number" });
-      }
-      if (parsedMaxPrice !== null && isNaN(parsedMaxPrice)) {
-        return res.status(400).json({ message: "Invalid maxPrice parameter - must be a valid non-negative decimal number" });
-      }
-      if (parsedMinPrice !== null && parsedMaxPrice !== null && parsedMinPrice > parsedMaxPrice) {
-        return res.status(400).json({ message: "minPrice cannot be greater than maxPrice" });
-      }
-      
-      // Build where conditions - ALWAYS start with published status check
-      const conditions = [eq(courses.status, 'published')];
-      
-      // Apply search filter
-      if (search.length > 0) {
-        conditions.push(
-          or(
-            sql`LOWER(${courses.title}) LIKE LOWER(${'%' + search + '%'})`,
-            sql`LOWER(${courses.description}) LIKE LOWER(${'%' + search + '%'})`
-          ) as any
-        );
-      }
-      
-      if (category.length > 0) {
-        conditions.push(eq(courses.category, category));
-      }
-      
-      // Use parsed numeric values (not strings) for price comparisons
-      if (parsedMinPrice !== null && !isNaN(parsedMinPrice)) {
-        conditions.push(sql`${courses.price} >= ${parsedMinPrice}`);
-      }
-      
-      if (parsedMaxPrice !== null && !isNaN(parsedMaxPrice)) {
-        conditions.push(sql`${courses.price} <= ${parsedMaxPrice}`);
-      }
-      
-      // Defensive fallback: validate and filter conditions
-      // Ensure only proper SQL expressions are passed to .where()
-      const finalConditions = conditions.filter((c) => {
-        // Validate that it's a proper Drizzle SQL object (has toSQL method or Symbol.for('drizzle:SQL'))
-        return c && typeof c === 'object' && ('toSQL' in c || Symbol.for('drizzle:SQL') in c);
-      });
-      
-      // Always enforce published guard as last resort
-      if (finalConditions.length === 0) {
-        finalConditions.push(eq(courses.status, 'published'));
-      }
-      
-      // Get all published courses with instructor info and enrollments
-      const publicCourses = await db
-        .select({
-          id: courses.id,
-          title: courses.title,
-          description: courses.description,
-          category: courses.category,
-          price: courses.price,
-          discountedPrice: courses.discountedPrice,
-          thumbnailUrl: courses.thumbnailUrl,
-          imageUrl: courses.imageUrl,
-          status: courses.status,
-          createdAt: courses.createdAt,
-          instructor: {
-            id: users.id,
-            firstName: users.firstName,
-            lastName: users.lastName,
-          },
-          enrollmentsCount: sql<number>`cast(count(distinct ${enrollments.id}) as int)`,
-        })
-        .from(courses)
-        .leftJoin(users, eq(courses.instructorId, users.id))
-        .leftJoin(enrollments, eq(courses.id, enrollments.courseId))
-        .where(finalConditions.length > 1 ? and(...finalConditions) : finalConditions[0])
-        .groupBy(courses.id, users.id)
-        .orderBy(desc(courses.createdAt));
-      
-      // Explicit type for course pricing to avoid type collapse
-      interface CoursePricing {
-        id: string;
-        courseId: string;
-        planId: string;
-        price: string;
-        plan: {
-          id: string;
-          name: string;
-          displayName: string;
-        } | null;
-      }
-      
-      // Optimize: Get all plan pricing in one query instead of N+1
-      const courseIds = publicCourses.map((c: typeof publicCourses[0]) => c.id);
-      let allPlanPricing: CoursePricing[] = [];
-      
-      if (courseIds.length > 0) {
-        allPlanPricing = await db
-          .select({
-            id: coursePlanPricing.id,
-            courseId: coursePlanPricing.courseId,
-            planId: coursePlanPricing.planId,
-            price: coursePlanPricing.price,
-            plan: {
-              id: subscriptionPlans.id,
-              name: subscriptionPlans.name,
-              displayName: subscriptionPlans.displayName,
-            },
-          })
-          .from(coursePlanPricing)
-          .leftJoin(subscriptionPlans, eq(coursePlanPricing.planId, subscriptionPlans.id))
-          .where(inArray(coursePlanPricing.courseId, courseIds));
-      }
-      
-      // Group plan pricing by course ID
-      const pricingByCourse: Record<string, CoursePricing[]> = {};
-      for (const pricing of allPlanPricing) {
-        if (!pricingByCourse[pricing.courseId]) {
-          pricingByCourse[pricing.courseId] = [];
-        }
-        pricingByCourse[pricing.courseId].push(pricing);
-      }
-      
-      // Attach plan pricing to courses
-      const coursesWithPricing = publicCourses.map((course: typeof publicCourses[0]) => ({
-        ...course,
-        planPricing: pricingByCourse[course.id] || [],
-      }));
-      
-      res.json(coursesWithPricing);
-    } catch (error: any) {
-      console.error("Error fetching public courses:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Get single course details publicly
-  app.get('/api/courses/:courseId/public', async (req: any, res) => {
-    try {
-      const { courseId } = req.params;
-      
-      // Get course with instructor info
-      const [course] = await db
-        .select({
-          id: courses.id,
-          title: courses.title,
-          description: courses.description,
-          category: courses.category,
-          price: courses.price,
-          discountedPrice: courses.discountedPrice,
-          thumbnailUrl: courses.thumbnailUrl,
-          imageUrl: courses.imageUrl,
-          status: courses.status,
-          instructor: {
-            id: users.id,
-            firstName: users.firstName,
-            lastName: users.lastName,
-          },
-          enrollmentsCount: sql<number>`cast(count(distinct ${enrollments.id}) as int)`,
-        })
-        .from(courses)
-        .leftJoin(users, eq(courses.instructorId, users.id))
-        .leftJoin(enrollments, eq(courses.id, enrollments.courseId))
-        .where(and(
-          eq(courses.id, courseId),
-          eq(courses.status, 'published')
-        ))
-        .groupBy(courses.id, users.id);
-      
-      if (!course) {
-        return res.status(404).json({ message: "Kurs topilmadi" });
-      }
-      
-      // Get lessons for this course (only public info)
-      const courseLessons = await db
-        .select({
-          id: lessons.id,
-          title: lessons.title,
-          description: lessons.description,
-          videoUrl: lessons.videoUrl,
-          duration: lessons.duration,
-          order: lessons.order,
-          isDemo: lessons.isDemo,
-        })
-        .from(lessons)
-        .where(eq(lessons.courseId, courseId))
-        .orderBy(lessons.order);
-      
-      // Get plan pricing
-      const planPricing = await db
-        .select({
-          id: coursePlanPricing.id,
-          price: coursePlanPricing.price,
-          plan: {
-            id: subscriptionPlans.id,
-            name: subscriptionPlans.name,
-            displayName: subscriptionPlans.displayName,
-          },
-        })
-        .from(coursePlanPricing)
-        .leftJoin(subscriptionPlans, eq(coursePlanPricing.planId, subscriptionPlans.id))
-        .where(eq(coursePlanPricing.courseId, courseId));
-      
-      res.json({
-        ...course,
-        lessons: courseLessons,
-        planPricing,
-      });
-    } catch (error: any) {
-      console.error("Error fetching course details:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
   // ============ INSTRUCTOR ROUTES ============
   app.get('/api/instructor/courses', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
@@ -1542,7 +1296,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ============ INSTRUCTOR TEST MANAGEMENT ROUTES ============
+  app.post('/api/instructor/courses/:courseId/tests', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { courseId } = req.params;
+      const instructorId = req.user.claims.sub;
+      
+      // Verify course belongs to instructor
+      const course = await storage.getCourse(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      if (course.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+      }
+      
+      const testData = insertTestSchema.parse({
+        ...req.body,
+        courseId,
+        lessonId: req.body.lessonId === "none" ? null : req.body.lessonId,
+      });
+      const test = await storage.createTest(testData);
+      res.json(test);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
   app.patch('/api/instructor/tests/:testId', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
       const { testId } = req.params;
@@ -1553,16 +1335,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Test not found" });
       }
       
-      // Check ownership (standalone tests OR course tests)
-      if (test.courseId) {
-        const course = await storage.getCourse(test.courseId);
-        if (course?.instructorId !== instructorId) {
-          const user = await storage.getUser(instructorId);
-          if (user?.role !== 'admin') {
-            return res.status(403).json({ message: "Forbidden" });
-          }
-        }
-      } else if (test.instructorId !== instructorId) {
+      const course = await storage.getCourse(test.courseId);
+      if (course?.instructorId !== instructorId) {
         const user = await storage.getUser(instructorId);
         if (user?.role !== 'admin') {
           return res.status(403).json({ message: "Forbidden" });
@@ -1586,16 +1360,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Test not found" });
       }
       
-      // Check ownership (standalone tests OR course tests)
-      if (test.courseId) {
-        const course = await storage.getCourse(test.courseId);
-        if (course?.instructorId !== instructorId) {
-          const user = await storage.getUser(instructorId);
-          if (user?.role !== 'admin') {
-            return res.status(403).json({ message: "Forbidden" });
-          }
-        }
-      } else if (test.instructorId !== instructorId) {
+      const course = await storage.getCourse(test.courseId);
+      if (course?.instructorId !== instructorId) {
         const user = await storage.getUser(instructorId);
         if (user?.role !== 'admin') {
           return res.status(403).json({ message: "Forbidden" });
@@ -1620,16 +1386,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Test not found" });
       }
       
-      // Check ownership
-      if (test.courseId) {
-        const course = await storage.getCourse(test.courseId);
-        if (course?.instructorId !== instructorId) {
-          const user = await storage.getUser(instructorId);
-          if (user?.role !== 'admin') {
-            return res.status(403).json({ message: "Forbidden" });
-          }
-        }
-      } else if (test.instructorId !== instructorId) {
+      const course = await storage.getCourse(test.courseId);
+      if (course?.instructorId !== instructorId) {
         const user = await storage.getUser(instructorId);
         if (user?.role !== 'admin') {
           return res.status(403).json({ message: "Forbidden" });
@@ -1653,16 +1411,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Test not found" });
       }
       
-      // Check ownership
-      if (test.courseId) {
-        const course = await storage.getCourse(test.courseId);
-        if (course?.instructorId !== instructorId) {
-          const user = await storage.getUser(instructorId);
-          if (user?.role !== 'admin') {
-            return res.status(403).json({ message: "Forbidden" });
-          }
-        }
-      } else if (test.instructorId !== instructorId) {
+      const course = await storage.getCourse(test.courseId);
+      if (course?.instructorId !== instructorId) {
         const user = await storage.getUser(instructorId);
         if (user?.role !== 'admin') {
           return res.status(403).json({ message: "Forbidden" });
@@ -1695,16 +1445,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Test not found" });
       }
       
-      // Check ownership
-      if (test.courseId) {
-        const course = await storage.getCourse(test.courseId);
-        if (course?.instructorId !== instructorId) {
-          const user = await storage.getUser(instructorId);
-          if (user?.role !== 'admin') {
-            return res.status(403).json({ message: "Forbidden" });
-          }
-        }
-      } else if (test.instructorId !== instructorId) {
+      const course = await storage.getCourse(test.courseId);
+      if (course?.instructorId !== instructorId) {
         const user = await storage.getUser(instructorId);
         if (user?.role !== 'admin') {
           return res.status(403).json({ message: "Forbidden" });
@@ -1733,16 +1475,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Test not found" });
       }
       
-      // Check ownership
-      if (test.courseId) {
-        const course = await storage.getCourse(test.courseId);
-        if (course?.instructorId !== instructorId) {
-          const user = await storage.getUser(instructorId);
-          if (user?.role !== 'admin') {
-            return res.status(403).json({ message: "Forbidden" });
-          }
-        }
-      } else if (test.instructorId !== instructorId) {
+      const course = await storage.getCourse(test.courseId);
+      if (course?.instructorId !== instructorId) {
         const user = await storage.getUser(instructorId);
         if (user?.role !== 'admin') {
           return res.status(403).json({ message: "Forbidden" });
@@ -1757,6 +1491,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Question Options API
+  app.get('/api/instructor/questions/:questionId/options', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { questionId } = req.params;
+      const instructorId = req.user.claims.sub;
+      
+      const question = await storage.getQuestion(questionId);
+      if (!question) {
+        return res.status(404).json({ message: "Question not found" });
+      }
+      
+      const test = await storage.getTest(question.testId);
+      if (!test) {
+        return res.status(404).json({ message: "Test not found" });
+      }
+      
+      const course = await storage.getCourse(test.courseId);
+      if (course?.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+      }
+      
+      const options = await storage.getQuestionOptionsByQuestion(questionId);
+      res.json(options);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.post('/api/instructor/questions/:questionId/options', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
       const { questionId } = req.params;
@@ -1772,16 +1536,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Test not found" });
       }
       
-      // Check ownership
-      if (test.courseId) {
-        const course = await storage.getCourse(test.courseId);
-        if (course?.instructorId !== instructorId) {
-          const user = await storage.getUser(instructorId);
-          if (user?.role !== 'admin') {
-            return res.status(403).json({ message: "Forbidden" });
-          }
-        }
-      } else if (test.instructorId !== instructorId) {
+      const course = await storage.getCourse(test.courseId);
+      if (course?.instructorId !== instructorId) {
         const user = await storage.getUser(instructorId);
         if (user?.role !== 'admin') {
           return res.status(403).json({ message: "Forbidden" });
@@ -1799,12 +1555,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/instructor/questions/:questionId/options', isAuthenticated, isInstructor, async (req: any, res) => {
+  app.delete('/api/instructor/options/:optionId', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
-      const { questionId } = req.params;
+      const { optionId } = req.params;
       const instructorId = req.user.claims.sub;
       
-      const question = await storage.getQuestion(questionId);
+      const option = await storage.getQuestionOption(optionId);
+      if (!option) {
+        return res.status(404).json({ message: "Option not found" });
+      }
+      
+      const question = await storage.getQuestion(option.questionId);
       if (!question) {
         return res.status(404).json({ message: "Question not found" });
       }
@@ -1814,8 +1575,203 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Test not found" });
       }
       
-      // Check ownership
-      if (test.courseId) {
+      const course = await storage.getCourse(test.courseId);
+      if (course?.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+      }
+      
+      await storage.deleteQuestionOption(optionId);
+      res.json({ message: "Option deleted" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Test Import/Export - Download Template
+  app.get('/api/instructor/tests/:testId/template', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { testId } = req.params;
+      const { type } = req.query; // 'blank' or 'sample'
+      const instructorId = req.user.claims.sub;
+      
+      const test = await storage.getTest(testId);
+      if (!test) {
+        return res.status(404).json({ message: "Test not found" });
+      }
+      
+      const course = await storage.getCourse(test.courseId);
+      if (course?.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+      }
+      
+      // Create Excel workbook
+      const wb = XLSX.utils.book_new();
+      
+      // Define headers - 6 ustunli sodda format
+      const headers = [
+        'Tartib',
+        'Turi',
+        'Savol',
+        'Options',
+        'Javob',
+        'Ball'
+      ];
+      
+      let data: any[][] = [headers];
+      
+      if (type === 'sample') {
+        // Add sample data for each question type - har bir savol bitta qatorda!
+        data.push(
+          // Multiple Choice - Variantlar Options ustunida | bilan ajratilgan
+          ['1', 'multiple_choice', "O'zbekiston poytaxti qayer", 'Toshkent|Samarqand|Buxoro|Namangan', 'Toshkent', '1'],
+          
+          // True/False
+          ['2', 'true_false', 'Yer dumaloq shakldami?', '', 'true', '1'],
+          
+          // Fill in Blanks
+          ['3', 'fill_blanks', "O'zbekistonning poytaxti ___", '', 'Toshkent', '1'],
+          
+          // Matching - Juftliklar Options ustunida vergul bilan ajratilgan
+          ['4', 'matching', "So'zlarni tarjima qiling", 'Book|Kitob,Pen|Qalam,House|Uy', '', '1'],
+          
+          // Short Answer
+          ['5', 'short_answer', 'Python nima?', '', 'Dasturlash tili', '1'],
+          
+          // Essay (javob va options bo'sh)
+          ['6', 'essay', 'Sun\'iy intellekt haqida fikringiz yozing', '', '', '2']
+        );
+      }
+      
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 8 },   // Tartib
+        { wch: 18 },  // Turi
+        { wch: 40 },  // Savol
+        { wch: 50 },  // Options
+        { wch: 20 },  // Javob
+        { wch: 6 },   // Ball
+      ];
+      
+      XLSX.utils.book_append_sheet(wb, ws, 'Savollar');
+      
+      // Generate buffer
+      const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+      
+      // Set headers for file download
+      const filename = type === 'sample' 
+        ? `test-template-namuna-${testId}.xlsx`
+        : `test-template-${testId}.xlsx`;
+      
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(buffer);
+    } catch (error: any) {
+      console.error('Template generation error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Helper functions for Excel import
+  
+  // Extract optional enumerator and body from option text
+  // Examples: "(A) Foo" -> { enumerator: "A", body: "Foo" }
+  //           "A) Bar" -> { enumerator: "A", body: "Bar" }
+  //           "Foo" -> { enumerator: null, body: "Foo" }
+  function extractOptionParts(value: string): { enumerator: string | null; body: string } {
+    const trimmed = value.trim();
+    
+    // Match enumerator patterns - requires closing bracket OR punctuation delimiter:
+    // ^\s*[\(\[\{]? - optional opening bracket
+    // ([A-Za-z]+|\d+|[IVXLCDM]+) - letter(s), digit(s), or roman numeral (group 1)
+    // ([\)\]\}]\s*|\s*[\.\-:–—]+\s*) - EITHER closing bracket OR punctuation (with optional space before/after) (group 2)
+    // 
+    // Matches:
+    //   A)Foo ✓ (closing paren)
+    //   A) Foo ✓ (closing paren + space)
+    //   A - Foo ✓ (space + hyphen + space)
+    //   A. Foo ✓ (dot + space)
+    //   (A) Foo ✓ (both brackets)
+    //   1.Bar ✓ (dot)
+    // Rejects:
+    //   Toshkent ✗ (no bracket/delimiter)
+    //   Toshkent shahar ✗ (space only, no punctuation)
+    //   A Foo ✗ (space only, no punctuation)
+    const enumeratorPattern = /^\s*[\(\[\{]?([A-Za-z]+|\d+|[IVXLCDM]+)([\)\]\}]\s*|\s*[\.\-:–—]+\s*)/;
+    const match = trimmed.match(enumeratorPattern);
+    
+    if (match && match[1]) {
+      const delimiterPart = match[2];
+      
+      // CRITICAL: Reject if delimiter contains ONLY whitespace (no bracket/punctuation)
+      // Accept if delimiter has ANY of: ), ], }, ., -, :, –, —
+      // This prevents "A Foo" or "Toshkent shahar" from being treated as enumerated
+      const hasPunctuation = /[\)\]\}\.\-:–—]/.test(delimiterPart);
+      if (!hasPunctuation) {
+        return { enumerator: null, body: trimmed };
+      }
+      
+      const enumerator = match[1];
+      const body = trimmed.slice(match[0].length).trim();
+      return { enumerator, body };
+    }
+    
+    // No enumerator found, return full text as body
+    return { enumerator: null, body: trimmed };
+  }
+  
+  // Normalize answer token for matching - removes punctuation, spaces, lowercase
+  function normalizeAnswerToken(value: string): string {
+    return value.toLowerCase().replace(/[().\s,;:!?\-–—]/g, '');
+  }
+  
+  // Parse points with locale support (1,0 -> 1.0)
+  function parsePoints(raw: string): number | null {
+    if (!raw) return null; // Bo'sh -> null (default 1 bo'ladi)
+    
+    // Trim and convert locale comma to dot
+    const cleaned = raw.trim().replace(',', '.');
+    const num = parseFloat(cleaned);
+    
+    // Validate
+    if (!Number.isFinite(num) || num <= 0) {
+      return null; // Invalid -> null (xato berish uchun)
+    }
+    
+    return num;
+  }
+  
+  // Get letter label for variant index (0 -> A, 1 -> B, ...)
+  function getLetterLabel(index: number): string {
+    return String.fromCharCode(65 + index); // 65 = 'A'
+  }
+
+  // Test Import - Upload and Parse Excel
+  app.post('/api/instructor/tests/:testId/import-questions', 
+    isAuthenticated, 
+    isInstructor, 
+    upload.single('file'),
+    async (req: any, res) => {
+      try {
+        const { testId } = req.params;
+        const instructorId = req.user.claims.sub;
+        
+        if (!req.file) {
+          return res.status(400).json({ message: 'File yuklash kerak' });
+        }
+        
+        const test = await storage.getTest(testId);
+        if (!test) {
+          return res.status(404).json({ message: "Test not found" });
+        }
+        
         const course = await storage.getCourse(test.courseId);
         if (course?.instructorId !== instructorId) {
           const user = await storage.getUser(instructorId);
@@ -1823,122 +1779,2141 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return res.status(403).json({ message: "Forbidden" });
           }
         }
-      } else if (test.instructorId !== instructorId) {
-        const user = await storage.getUser(instructorId);
-        if (user?.role !== 'admin') {
-          return res.status(403).json({ message: "Forbidden" });
+        
+        // Parse Excel file
+        const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const rawData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        
+        // Remove header row
+        const dataRows = rawData.slice(1);
+        
+        // Validate and prepare questions for import
+        const questionsToCreate: any[] = [];
+        const errors: string[] = [];
+        const validQuestionTypes = ['multiple_choice', 'true_false', 'fill_blanks', 'matching', 'short_answer', 'essay'];
+        
+        // Yangi 6 ustunli format - har bir savol bitta qatorda!
+        // Format: Tartib | Turi | Savol | Options | Javob | Ball
+        for (let i = 0; i < dataRows.length; i++) {
+          const row = dataRows[i];
+          const rowNum = i + 2; // Excel row number (1-indexed + header)
+          
+          // Skip completely empty rows
+          if (!row || row.length === 0) continue;
+          
+          // Parse row columns
+          // row[0] = Tartib (1, 2, 3...)
+          // row[1] = Turi (multiple_choice, true_false, ...)
+          // row[2] = Savol
+          // row[3] = Options (Multiple choice: A|B|C, Matching: L1|R1,L2|R2)
+          // row[4] = Javob (To'g'ri javob)
+          // row[5] = Ball
+          
+          const order = parseInt(row[0]?.toString().trim() || '');
+          const type = row[1]?.toString().trim();
+          const questionText = row[2]?.toString().trim();
+          const optionsText = row[3]?.toString().trim() || '';
+          const answerText = row[4]?.toString().trim() || '';
+          const pointsText = row[5]?.toString().trim();
+          
+          // Parse points with locale support
+          const parsedPoints = parsePoints(pointsText);
+          const points = parsedPoints !== null ? parsedPoints : 1; // Default 1 if empty or invalid
+          
+          // Basic validation
+          if (isNaN(order) || order < 1) {
+            errors.push(`Qator ${rowNum}: Tartib raqami noto'g'ri`);
+            continue;
+          }
+          
+          if (!type || !validQuestionTypes.includes(type)) {
+            errors.push(`Qator ${rowNum}: Turi noto'g'ri. Faqat: ${validQuestionTypes.join(', ')}`);
+            continue;
+          }
+          
+          if (!questionText) {
+            errors.push(`Qator ${rowNum}: Savol matni bo'sh`);
+            continue;
+          }
+          
+          // Points validation - parsedPoints null bo'lsa va pointsText mavjud bo'lsa, xato
+          if (pointsText && parsedPoints === null) {
+            errors.push(`Qator ${rowNum}: Ball noto'g'ri format. Raqam kiriting (masalan: 1, 1.5, 2,0)`);
+            continue;
+          }
+          
+          // Prepare question object
+          const question: any = {
+            order,
+            type,
+            questionText,
+            points,
+            correctAnswer: null,
+            options: []
+          };
+          
+          // Type-specific parsing
+          if (type === 'multiple_choice') {
+            // Options ustunida | bilan ajratilgan variantlar
+            // Javob ustunida to'g'ri javob
+            if (!optionsText) {
+              errors.push(`Qator ${rowNum}: Multiple choice uchun Options ustunida variantlar bo'lishi kerak (masalan: A|B|C|D)`);
+              continue;
+            }
+            
+            const variants = optionsText.split('|').map((v: string) => v.trim()).filter((v: string) => v);
+            if (variants.length < 2) {
+              errors.push(`Qator ${rowNum}: Kamida 2 ta variant bo'lishi kerak`);
+              continue;
+            }
+            
+            if (!answerText) {
+              errors.push(`Qator ${rowNum}: Javob ustunida to'g'ri javob bo'lishi kerak`);
+              continue;
+            }
+            
+            // Build multi-key lookup map with safe insertion (no overwrites)
+            const answerMap = new Map<string, number>();
+            
+            // Helper to add key only if not already present
+            const addKey = (key: string, idx: number) => {
+              if (key && !answerMap.has(key)) {
+                answerMap.set(key, idx);
+              }
+            };
+            
+            variants.forEach((variant: string, idx: number) => {
+              // Extract enumerator and body
+              const { enumerator, body } = extractOptionParts(variant);
+              
+              // Priority 1: Letter label (A, B, C, ...)
+              const letterKey = getLetterLabel(idx).toLowerCase();
+              addKey(letterKey, idx);
+              
+              // Priority 2: Enumerator from option text (if present)
+              if (enumerator) {
+                addKey(enumerator.toLowerCase(), idx);
+              }
+              
+              // Priority 3: Normalized body text (most common for plain text answers)
+              const normalizedBody = normalizeAnswerToken(body);
+              addKey(normalizedBody, idx);
+              
+              // Priority 4: Normalized full text
+              const normalizedFull = normalizeAnswerToken(variant);
+              addKey(normalizedFull, idx);
+              
+              // Priority 5: Lowercase full text
+              const lowerFull = variant.toLowerCase().trim();
+              addKey(lowerFull, idx);
+            });
+            
+            // Find correct answer by trying all normalized forms
+            const normalizedAnswer = normalizeAnswerToken(answerText);
+            const lowerAnswer = answerText.toLowerCase().trim();
+            const answerLetter = answerText.trim().charAt(0).toLowerCase();
+            
+            let correctIndex: number | undefined;
+            
+            // Try in priority order
+            if (answerMap.has(normalizedAnswer)) {
+              correctIndex = answerMap.get(normalizedAnswer);
+            } else if (answerMap.has(lowerAnswer)) {
+              correctIndex = answerMap.get(lowerAnswer);
+            } else if (answerMap.has(answerLetter) && /^[a-z]$/i.test(answerText.trim())) {
+              // Single letter answer (A, B, C...)
+              correctIndex = answerMap.get(answerLetter);
+            }
+            
+            if (correctIndex === undefined) {
+              errors.push(`Qator ${rowNum}: To'g'ri javob topilmadi. Javob "${answerText}" Options ichida yo'q. Harfli (A, B, C) yoki to'liq matnli javob kiriting.`);
+              continue;
+            }
+            
+            // Build options with correct answer marked
+            variants.forEach((variant: string, idx: number) => {
+              question.options.push({
+                optionText: variant,
+                isCorrect: idx === correctIndex,
+                order: idx + 1
+              });
+            });
+          } else if (type === 'matching') {
+            // Options ustunida vergul bilan ajratilgan juftliklar
+            // Format: Chap1|O'ng1,Chap2|O'ng2,Chap3|O'ng3
+            // Javob ustuni matching uchun ishlatilmaydi (bo'sh bo'lishi mumkin)
+            if (!optionsText) {
+              errors.push(`Qator ${rowNum}: Matching uchun Options ustunida juftliklar bo'lishi kerak (masalan: Book|Kitob,Pen|Qalam)`);
+              continue;
+            }
+            
+            const pairs = optionsText.split(',').map((p: string) => p.trim()).filter((p: string) => p);
+            if (pairs.length < 2) {
+              errors.push(`Qator ${rowNum}: Kamida 2 ta juftlik bo'lishi kerak`);
+              continue;
+            }
+            
+            // Har bir juftlikni tekshirish
+            let hasInvalidPair = false;
+            for (const pair of pairs) {
+              if (!pair.includes('|')) {
+                errors.push(`Qator ${rowNum}: Matching juftlik noto'g'ri format: "${pair}". Format: Chap|O'ng`);
+                hasInvalidPair = true;
+                break;
+              }
+              
+              question.options.push({
+                optionText: pair,
+                isCorrect: false,
+                order: question.options.length + 1
+              });
+            }
+            
+            if (hasInvalidPair) continue;
+          } else if (type === 'true_false') {
+            // Javob ustunida faqat "true" yoki "false"
+            if (!answerText) {
+              errors.push(`Qator ${rowNum}: True/False javob kiritish shart (Javob ustunida)`);
+              continue;
+            }
+            
+            const normalizedAnswer = answerText.toLowerCase();
+            if (normalizedAnswer !== 'true' && normalizedAnswer !== 'false') {
+              errors.push(`Qator ${rowNum}: True/False javob faqat "true" yoki "false" bo'lishi kerak`);
+              continue;
+            }
+            
+            question.correctAnswer = normalizedAnswer;
+          } else if (['fill_blanks', 'short_answer'].includes(type)) {
+            // Javob ustunida to'g'ri javob
+            if (!answerText) {
+              errors.push(`Qator ${rowNum}: Javob ustunida to'g'ri javob bo'lishi kerak`);
+              continue;
+            }
+            
+            question.correctAnswer = answerText;
+          } else if (type === 'essay') {
+            // Essay uchun javob ixtiyoriy (bo'sh bo'lishi mumkin)
+            // Downstream kod string kutmoqda, shuning uchun null o'rniga '' ishlatamiz
+            question.correctAnswer = answerText || '';
+          }
+          
+          questionsToCreate.push(question);
         }
+        
+        // If there are validation errors, return them
+        if (errors.length > 0) {
+          return res.status(400).json({ 
+            message: 'Faylda xatolar mavjud',
+            errors,
+            importedCount: 0
+          });
+        }
+        
+        // Import questions in a transaction
+        let importedCount = 0;
+        await db.transaction(async (tx: any) => {
+          for (const q of questionsToCreate) {
+            // Create question
+            const [createdQuestion] = await tx
+              .insert(questions)
+              .values({
+                testId,
+                type: q.type,
+                questionText: q.questionText,
+                points: q.points,
+                order: q.order,
+                mediaUrl: q.mediaUrl,
+                correctAnswer: q.correctAnswer,
+              })
+              .returning();
+            
+            // Create options if any
+            if (q.options.length > 0) {
+              await tx.insert(questionOptions).values(
+                q.options.map((opt: any) => ({
+                  questionId: createdQuestion.id,
+                  optionText: opt.optionText,
+                  isCorrect: opt.isCorrect,
+                  order: opt.order,
+                }))
+              );
+            }
+            
+            importedCount++;
+          }
+        });
+        
+        res.json({ 
+          message: `${importedCount} ta savol muvaffaqiyatli yuklandi`,
+          importedCount,
+          errors: []
+        });
+      } catch (error: any) {
+        console.error('Import error:', error);
+        res.status(500).json({ message: error.message });
+      }
+    }
+  );
+
+  // ============ PUBLIC ROUTES (No Auth Required) ============
+  // Public courses endpoint with filters
+  app.get('/api/courses/public', async (req, res) => {
+    try {
+      const { search, category, minPrice, maxPrice, instructorId, hasDiscount } = req.query;
+      
+      const filters = {
+        search: search as string | undefined,
+        category: category as string | undefined,
+        minPrice: minPrice ? parseFloat(minPrice as string) : undefined,
+        maxPrice: maxPrice ? parseFloat(maxPrice as string) : undefined,
+        instructorId: instructorId as string | undefined,
+        hasDiscount: hasDiscount === 'true' ? true : undefined,
+      };
+
+      const courses = await storage.getPublicCourses(filters);
+      res.json(courses);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Public lessons endpoint - shows demo lessons with video, premium lessons with minimal info
+  app.get('/api/courses/:courseId/lessons/public', async (req, res) => {
+    try {
+      const { courseId } = req.params;
+      
+      // Check if course exists and is published
+      const course = await storage.getCourse(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      if (course.status !== 'published') {
+        return res.status(404).json({ message: "Course not available" });
       }
       
-      const options = await storage.getQuestionOptionsByQuestion(questionId);
-      res.json(options);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // ============ TEST MARKETPLACE API ROUTES ============
-  // Get all published standalone tests (not part of any course)
-  app.get('/api/public/tests', async (req: any, res: any) => {
-    try {
-      const tests = await storage.getPublicTests();
-      res.json(tests);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Get all published standalone speaking tests
-  app.get('/api/public/speaking-tests', async (req: any, res: any) => {
-    try {
-      const speakingTests = await storage.getPublicSpeakingTests();
-      res.json(speakingTests);
+      const lessons = await storage.getLessonsByCourse(courseId);
+      
+      // Return 404 if no lessons exist
+      if (!lessons || lessons.length === 0) {
+        return res.status(404).json({ message: "No lessons available" });
+      }
+      
+      // Sort lessons by order
+      const sortedLessons = lessons.sort((a, b) => a.order - b.order);
+      
+      // For security: Return only safe fields for all lessons
+      const publicLessons = sortedLessons.map(lesson => {
+        if (lesson.isDemo) {
+          // Demo lessons - include video URL for viewing
+          return {
+            id: lesson.id,
+            title: lesson.title,
+            description: lesson.description || '',
+            videoUrl: lesson.videoUrl, // Include for demo lessons
+            duration: lesson.duration,
+            order: lesson.order,
+            isDemo: lesson.isDemo,
+            courseId: lesson.courseId,
+          };
+        } else {
+          // Premium lessons - return only safe fields (no video URL)
+          return {
+            id: lesson.id,
+            title: lesson.title,
+            description: lesson.description || '',
+            duration: lesson.duration,
+            order: lesson.order,
+            isDemo: lesson.isDemo,
+            courseId: lesson.courseId,
+            videoUrl: '', // Explicitly empty for security
+          };
+        }
+      });
+      
+      res.json(publicLessons);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   });
 
   // ============ STUDENT ROUTES ============
-  // Purchase a standalone test
-  app.post('/api/student/test-purchase', isAuthenticated, async (req: any, res: any) => {
+  app.get('/api/courses', isAuthenticated, async (req, res) => {
+    try {
+      const courses = await storage.getPublishedCourses();
+      res.json(courses);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/courses/:courseId', isAuthenticated, async (req, res) => {
+    try {
+      const { courseId } = req.params;
+      const course = await storage.getCourse(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      res.json(course);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/courses/:courseId/lessons', isAuthenticated, async (req, res) => {
+    try {
+      const { courseId } = req.params;
+      const lessons = await storage.getLessonsByCourse(courseId);
+      res.json(lessons);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/courses/:courseId/demo-lessons', isAuthenticated, async (req, res) => {
+    try {
+      const { courseId } = req.params;
+      const demoLessons = await storage.getDemoLessonsByCourse(courseId);
+      res.json(demoLessons);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Lesson Progress endpoints
+  app.get('/api/lessons/:lessonId/progress', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { testId, speakingTestId, testType, paymentMethod, paymentProofUrl } = req.body;
+      const { lessonId } = req.params;
+      const progress = await storage.getLessonProgress(lessonId, userId);
+      res.json(progress || null);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/lessons/:lessonId/progress', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { lessonId } = req.params;
+      const { watchedSeconds, totalSeconds, lastPosition, completed } = req.body;
       
-      if ((!testId && !speakingTestId) || (testId && speakingTestId)) {
-        return res.status(400).json({ message: 'testId yoki speakingTestId dan faqat bittasini kiriting' });
-      }
-      
-      const existingEnrollment = await storage.checkTestEnrollment(
+      const progress = await storage.upsertLessonProgress({
         userId,
-        testId || speakingTestId,
-        testType
-      );
-      if (existingEnrollment) {
-        return res.status(400).json({ message: 'Siz bu testni allaqachon sotib olgan' });
-      }
-      
-      const enrollment = await storage.createTestEnrollment({
-        userId,
-        testId: testId || null,
-        speakingTestId: speakingTestId || null,
-        testType,
-        paymentMethod,
-        paymentProofUrl,
-        paymentStatus: 'pending',
+        lessonId,
+        watchedSeconds,
+        totalSeconds,
+        lastPosition,
+        completed,
+        completedAt: completed ? new Date() : undefined,
       });
       
+      res.json(progress);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/courses/:courseId/progress', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { courseId } = req.params;
+      const progress = await storage.getLessonProgressByCourse(courseId, userId);
+      res.json(progress);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/student/enrolled-courses', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const courses = await storage.getEnrolledCourses(userId);
+      res.json(courses);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Student Progress Tracking
+  app.get('/api/student/progress', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const progress = await storage.getStudentProgress(userId);
+      res.json(progress);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/student/enrollment/:courseId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { courseId } = req.params;
+      const enrollment = await storage.getEnrollmentByCourseAndUser(courseId, userId);
+      res.json(enrollment);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/student/enroll', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { courseId, paymentMethod, paymentProofUrl } = req.body;
+      
+      // Manual payment only (naqd/karta/payme)
+      if (!paymentMethod || (paymentMethod !== 'naqd' && paymentMethod !== 'karta' && paymentMethod !== 'payme')) {
+        return res.status(400).json({ message: "Faqat naqd, karta yoki payme to'lov usuli qabul qilinadi" });
+      }
+      
+      if (!paymentProofUrl) {
+        return res.status(400).json({ message: "To'lov cheki rasmi talab qilinadi" });
+      }
+      
+      const enrollmentData = insertEnrollmentSchema.parse({
+        userId,
+        courseId,
+        paymentMethod,
+        paymentProofUrl,
+        paymentStatus: 'pending', // Admin tasdiqini kutadi
+      });
+      
+      const enrollment = await storage.createEnrollment(enrollmentData);
       res.json(enrollment);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
   });
 
-  // Get student's test enrollments
-  app.get('/api/student/test-enrollments', isAuthenticated, async (req: any, res: any) => {
+  // Get test questions (student - for taking test) - SANITIZED (no correct answers)
+  app.get('/api/tests/:testId/questions', isAuthenticated, async (req, res) => {
+    try {
+      const { testId } = req.params;
+      const questions = await storage.getQuestionsByTest(testId);
+      
+      // Remove correct answers and sensitive config
+      const sanitizedQuestions = questions.map((q: any) => ({
+        id: q.id,
+        testId: q.testId,
+        type: q.type,
+        questionText: q.questionText,
+        points: q.points,
+        order: q.order,
+        mediaUrl: q.mediaUrl,
+        // Remove correctAnswer
+        // Sanitize config for matching (remove correctPairs)
+        config: q.type === 'matching' ? {
+          leftColumn: (q.config as any)?.leftColumn || [],
+          rightColumn: (q.config as any)?.rightColumn || [],
+          // correctPairs removed
+        } : (q.config || {}),
+      }));
+      
+      res.json(sanitizedQuestions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get question options (student - for taking test) - SANITIZED (no isCorrect)
+  app.get('/api/questions/:questionId/options', isAuthenticated, async (req, res) => {
+    try {
+      const { questionId } = req.params;
+      const options = await storage.getQuestionOptionsByQuestion(questionId);
+      
+      // Remove isCorrect flag
+      const sanitizedOptions = options.map((o: any) => ({
+        id: o.id,
+        questionId: o.questionId,
+        optionText: o.optionText,
+        order: o.order,
+        // isCorrect removed
+      }));
+      
+      res.json(sanitizedOptions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get student test attempts (results)
+  app.get('/api/student/test-attempts', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const enrollments = await storage.getTestEnrollmentsByUser(userId);
-      res.json(enrollments);
+      const attempts = await storage.getTestAttemptsByUser(userId);
+      res.json(attempts);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   });
 
-  // Check test access
-  app.get('/api/student/test-enrollment/:testId/:testType', isAuthenticated, async (req: any, res: any) => {
+  //Test attempt submission (student)
+  app.post('/api/student/tests/:testId/submit', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { testId, testType } = req.params;
+      const { testId } = req.params;
+      const { answers } = req.body;
       
-      const enrollment = await storage.checkTestEnrollment(userId, testId, testType as 'standard' | 'speaking');
-      res.json({ hasAccess: !!enrollment, enrollment });
+      // Get test and questions
+      const test = await storage.getTest(testId);
+      if (!test) {
+        return res.status(404).json({ message: "Test topilmadi" });
+      }
+      
+      const questions = await storage.getQuestionsByTest(testId);
+      
+      // Calculate score (auto-grading)
+      let totalScore = 0;
+      let totalPoints = 0;
+      
+      for (const question of questions) {
+        totalPoints += question.points;
+        const studentAnswer = answers[question.id];
+        
+        // Skip if no answer or empty array
+        if (!studentAnswer || (Array.isArray(studentAnswer) && studentAnswer.length === 0)) {
+          continue;
+        }
+        
+        // Auto-grading logic based on question type
+        if (question.type === 'multiple_choice') {
+          const options = await storage.getQuestionOptionsByQuestion(question.id);
+          const correctOptions = options.filter((o: any) => o.isCorrect).map((o: any) => o.id);
+          const studentOptions = Array.isArray(studentAnswer) ? studentAnswer : [studentAnswer];
+          
+          if (JSON.stringify(correctOptions.sort()) === JSON.stringify(studentOptions.sort())) {
+            totalScore += question.points;
+          }
+        } else if (question.type === 'true_false') {
+          if (studentAnswer === question.correctAnswer) {
+            totalScore += question.points;
+          }
+        } else if (question.type === 'fill_blanks') {
+          if (studentAnswer.toLowerCase().trim() === question.correctAnswer?.toLowerCase().trim()) {
+            totalScore += question.points;
+          }
+        } else if (question.type === 'matching') {
+          const config = question.config as any;
+          const correctPairs = config.correctPairs || [];
+          const studentPairs = studentAnswer;
+          
+          if (JSON.stringify(correctPairs.sort()) === JSON.stringify(studentPairs.sort())) {
+            totalScore += question.points;
+          }
+        } else if (question.type === 'short_answer') {
+          const keywords = question.correctAnswer?.toLowerCase().split(',').map(k => k.trim()) || [];
+          const studentText = studentAnswer.toLowerCase();
+          const matchedKeywords = keywords.filter(k => studentText.includes(k));
+          
+          if (matchedKeywords.length >= keywords.length * 0.5) {
+            totalScore += question.points;
+          }
+        }
+        // Essay: manual grading required (score = 0 for now)
+      }
+      
+      const percentage = totalPoints > 0 ? (totalScore / totalPoints) * 100 : 0;
+      const isPassed = test.passingScore ? percentage >= test.passingScore : false;
+      
+      const attemptData = insertTestAttemptSchema.parse({
+        testId,
+        userId,
+        answers: JSON.stringify(answers),
+        score: totalScore,
+        totalPoints,
+        isPassed,
+      });
+      
+      const attempt = await storage.createTestAttempt(attemptData);
+      res.json({ 
+        ...attempt, 
+        score: totalScore,
+        percentage,
+        isPassed 
+      });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/courses/:courseId/assignments', isAuthenticated, async (req, res) => {
+    try {
+      const { courseId } = req.params;
+      const assignments = await storage.getAssignmentsByCourse(courseId);
+      res.json(assignments);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   });
 
-  // ============ ADMIN ROUTES ============
-  // Get all pending test payments
-  app.get('/api/admin/test-payments/pending', isAuthenticated, isAdmin, async (req: any, res: any) => {
+  app.post('/api/assignments/:assignmentId/submit', isAuthenticated, async (req: any, res) => {
     try {
-      const pendingPayments = await storage.getPendingTestPayments();
-      res.json(pendingPayments);
+      const userId = req.user.claims.sub;
+      const { assignmentId } = req.params;
+      
+      const submissionData = insertSubmissionSchema.parse({
+        ...req.body,
+        assignmentId,
+        userId,
+      });
+      
+      const submission = await storage.createSubmission(submissionData);
+      
+      // Create notification for instructor
+      const assignment = await storage.getAssignment(assignmentId);
+      if (assignment) {
+        const course = await storage.getCourse(assignment.courseId);
+        if (course) {
+          const student = await storage.getUser(userId);
+          await storage.createNotification({
+            userId: course.instructorId,
+            type: 'assignment_submission',
+            title: 'Yangi vazifa topshirildi',
+            message: `${student?.firstName || 'O\'quvchi'} "${assignment.title}" vazifasini topshirdi`,
+          });
+        }
+      }
+      
+      res.json(submission);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/courses/:courseId/tests', isAuthenticated, async (req, res) => {
+    try {
+      const { courseId } = req.params;
+      const tests = await storage.getTestsByCourse(courseId);
+      res.json(tests);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   });
 
-  // Approve/reject test enrollment
-  app.patch('/api/admin/test-enrollments/:enrollmentId/status', isAuthenticated, isAdmin, async (req: any, res: any) => {
+  app.post('/api/tests/:testId/submit', isAuthenticated, async (req: any, res) => {
     try {
-      const { enrollmentId } = req.params;
-      const { status } = req.body; // 'approved' or 'rejected'
+      const userId = req.user.claims.sub;
+      const { testId } = req.params;
       
-      const updated = await storage.updateTestEnrollmentStatus(enrollmentId, status);
+      const attemptData = insertTestAttemptSchema.parse({
+        ...req.body,
+        testId,
+        userId,
+      });
+      
+      const attempt = await storage.createTestAttempt(attemptData);
+      res.json(attempt);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // ============ FILE DOWNLOAD ROUTES ============
+  
+  // Download submission files (authenticated)
+  app.get('/submissions/*', isAuthenticated, async (req, res) => {
+    try {
+      const filePath = req.params[0]; // Get everything after /submissions/
+      const file = await objectStorage.searchPublicObject(`submissions/${filePath}`);
+      
+      if (!file) {
+        return res.status(404).json({ message: "Fayl topilmadi" });
+      }
+      
+      await objectStorage.downloadObject(file, res);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ============ SUBMISSION ROUTES ============
+  
+  // O'qituvchi - Kurs bo'yicha vazifalar
+  app.get('/api/instructor/submissions', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const instructorId = req.user.claims.sub;
+      const submissions = await storage.getSubmissionsByInstructor(instructorId);
+      res.json(submissions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // O'qituvchi - Kurs bo'yicha vazifalar (course-specific)
+  app.get('/api/instructor/courses/:courseId/submissions', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const instructorId = req.user.claims.sub;
+      const { courseId } = req.params;
+      
+      // Verify course belongs to instructor
+      const course = await storage.getCourse(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Kurs topilmadi" });
+      }
+      if (course.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Ruxsat yo'q" });
+        }
+      }
+      
+      const allSubmissions = await storage.getSubmissionsByInstructor(instructorId);
+      // Filter by course
+      const courseSubmissions = allSubmissions.filter((s: any) => s.course.id === courseId);
+      
+      // Prevent caching to ensure fresh data
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      res.json(courseSubmissions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // O'qituvchi - Vazifani baholash
+  app.post('/api/instructor/submissions/:id/grade', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const instructorId = req.user.claims.sub;
+      const { id } = req.params;
+      
+      // Validate request body with Zod
+      const validatedData = gradingSchema.parse(req.body);
+      const { grade, feedback, status } = validatedData;
+      
+      // Authorization check: ensure submission belongs to instructor's course
+      const submissions = await storage.getSubmissionsByInstructor(instructorId);
+      const submissionData = submissions.find((s: any) => s.submission.id === id);
+      
+      if (!submissionData) {
+        return res.status(403).json({ message: "Sizga bu vazifani baholash huquqi yo'q" });
+      }
+      
+      const submission = await storage.updateSubmissionGrade(id, grade, feedback, status);
+      
+      // O'quvchiga ogohlantirish yuborish
+      const statusMessage = status === 'graded' ? 'Vazifangiz tekshirildi' : 'Vazifani qayta topshiring';
+      const scoreMessage = `${grade}/100 ball`;
+      const fullMessage = status === 'graded' 
+        ? `${scoreMessage}. ${feedback}`
+        : `${feedback}`;
+      const notificationData = insertNotificationSchema.parse({
+        userId: submission.userId,
+        type: status === 'graded' ? 'assignment_graded' : 'revision_requested',
+        title: statusMessage,
+        message: fullMessage,
+        relatedId: submission.id,
+        isRead: false,
+      });
+      await storage.createNotification(notificationData);
+      
+      res.json(submission);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // O'qituvchi - Vazifani o'chirish
+  app.delete('/api/instructor/submissions/:id', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const instructorId = req.user.claims.sub;
+      const { id } = req.params;
+      
+      // Authorization check: ensure submission belongs to instructor's course
+      const submissions = await storage.getSubmissionsByInstructor(instructorId);
+      const submissionData = submissions.find((s: any) => s.submission.id === id);
+      
+      if (!submissionData) {
+        return res.status(403).json({ message: "Sizga bu vazifani o'chirish huquqi yo'q" });
+      }
+      
+      await storage.deleteSubmission(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // O'qituvchi - E'lon yuborish (Announcement)
+  app.post('/api/instructor/announcements', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const instructorId = req.user.claims.sub;
+      
+      const announcementData = insertAnnouncementSchema.parse({
+        ...req.body,
+        instructorId,
+      });
+      
+      // Create announcement
+      const announcement = await storage.createAnnouncement(announcementData);
+      
+      // Send notifications based on targetType
+      const { targetType, targetId, title, message, priority } = announcementData;
+      let recipients: string[] = [];
+      
+      if (targetType === 'individual' && targetId) {
+        // Yakka tartibda - bitta o'quvchiga
+        recipients = [targetId];
+      } else if (targetType === 'course' && targetId) {
+        // Guruhga - kurs o'quvchilariga
+        const courseEnrollments = await storage.getEnrollmentsByCourse(targetId);
+        recipients = courseEnrollments.map(e => e.userId);
+      } else if (targetType === 'all') {
+        // Barchaga - barcha o'quvchilarga
+        const students = await storage.getUsersByRole('student');
+        recipients = students.map(s => s.id);
+      }
+      
+      // Create notifications for all recipients
+      const notificationPromises = recipients.map(userId => {
+        const notificationData = insertNotificationSchema.parse({
+          userId,
+          type: 'announcement',
+          title: `${priority === 'urgent' ? '🔴 MUHIM: ' : '📢 '}${title}`,
+          message,
+          relatedId: announcement.id,
+          isRead: false,
+        });
+        return storage.createNotification(notificationData);
+      });
+      
+      await Promise.all(notificationPromises);
+      
+      res.json({ 
+        ...announcement, 
+        recipientCount: recipients.length 
+      });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // O'qituvchi - E'lonlarni olish
+  app.get('/api/instructor/announcements', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const instructorId = req.user.claims.sub;
+      const announcements = await storage.getAnnouncementsByInstructor(instructorId);
+      res.json(announcements);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // O'qituvchi - E'lonni o'chirish
+  app.delete('/api/instructor/announcements/:id', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const instructorId = req.user.claims.sub;
+      const { id } = req.params;
+      
+      // Authorization check
+      const announcement = await storage.getAnnouncement(id);
+      if (!announcement) {
+        return res.status(404).json({ message: "E'lon topilmadi" });
+      }
+      if (announcement.instructorId !== instructorId) {
+        return res.status(403).json({ message: "Sizga bu e'lonni o'chirish huquqi yo'q" });
+      }
+      
+      await storage.deleteAnnouncement(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ==================== COURSE ANALYTICS ====================
+  
+  // Get course analytics (enrollment trends, completion rate, scores)
+  app.get('/api/instructor/courses/:courseId/analytics', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const instructorId = req.user.claims.sub;
+      const { courseId } = req.params;
+      
+      // Verify course belongs to instructor
+      const course = await storage.getCourse(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Kurs topilmadi" });
+      }
+      if (course.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Ruxsat yo'q" });
+        }
+      }
+      
+      const analytics = await storage.getCourseAnalytics(courseId);
+      res.json(analytics);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ==================== CHAT (Private Messaging) ====================
+  
+  // Get or create conversation
+  app.post('/api/chat/conversations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { instructorId, studentId } = req.body;
+      
+      // Get user role from database to ensure accuracy
+      const currentUser = await storage.getUser(userId);
+      if (!currentUser) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      
+      // Determine who is the student and who is the instructor
+      let finalStudentId: string;
+      let finalInstructorId: string;
+      
+      if (currentUser.role === 'student') {
+        finalStudentId = userId;
+        finalInstructorId = instructorId;
+      } else if (currentUser.role === 'instructor') {
+        finalStudentId = studentId;
+        finalInstructorId = userId;
+      } else {
+        return res.status(400).json({ message: "Invalid role for chat" });
+      }
+      
+      // Validate both IDs are present
+      if (!finalStudentId || !finalInstructorId) {
+        return res.status(400).json({ message: "Missing required participant IDs" });
+      }
+      
+      const conversation = await storage.getOrCreateConversation(finalStudentId, finalInstructorId);
+      res.json(conversation);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get user's conversations
+  app.get('/api/chat/conversations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Get user role from database to ensure accuracy
+      const currentUser = await storage.getUser(userId);
+      if (!currentUser) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      
+      console.log('[CHAT DEBUG] Getting conversations for user:', userId, 'role:', currentUser.role);
+      const conversations = await storage.getConversations(userId, currentUser.role);
+      console.log('[CHAT DEBUG] Found conversations:', conversations.length);
+      res.json(conversations);
+    } catch (error: any) {
+      console.error('[CHAT DEBUG] Error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get messages in a conversation
+  app.get('/api/chat/conversations/:id/messages', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const messages = await storage.getMessages(id);
+      res.json(messages);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Send message
+  app.post('/api/chat/conversations/:id/messages', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.claims.sub;
+      const { content } = req.body;
+      
+      const message = await storage.sendMessage(id, userId, content);
+      
+      // Create notification for the recipient
+      const conversation = await storage.getConversationById(id);
+      
+      if (conversation) {
+        // Determine recipient (the other person in the conversation)
+        const recipientId = conversation.studentId === userId 
+          ? conversation.instructorId 
+          : conversation.studentId;
+        
+        // Get sender info for notification message
+        const sender = await storage.getUser(userId);
+        const senderName = sender ? `${sender.firstName} ${sender.lastName}` : 'Kimdir';
+        
+        // Create notification
+        await storage.createNotification({
+          userId: recipientId,
+          type: 'chat_message',
+          title: 'Yangi xabar',
+          message: `${senderName}: ${content.substring(0, 50)}${content.length > 50 ? '...' : ''}`,
+          relatedId: id,
+        });
+      }
+      
+      res.json(message);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Mark messages as read
+  app.patch('/api/chat/conversations/:id/read', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.claims.sub;
+      
+      await storage.markMessagesAsRead(id, userId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get unread message count
+  app.get('/api/chat/unread-count', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const count = await storage.getUnreadMessageCount(userId);
+      res.json({ count });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // O'quvchi - Vazifa yuborish
+  app.post('/api/student/submissions', isAuthenticated, upload.fields([
+    { name: 'images', maxCount: 5 },
+    { name: 'audios', maxCount: 3 },
+    { name: 'files', maxCount: 3 }
+  ]), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { assignmentId, content } = req.body;
+      
+      // Validate assignment exists
+      const assignment = await storage.getAssignment(assignmentId);
+      if (!assignment) {
+        return res.status(404).json({ message: "Vazifa topilmadi" });
+      }
+      
+      // Upload files to Google Cloud Storage
+      const imageUrls: string[] = [];
+      const audioUrls: string[] = [];
+      const fileUrls: string[] = [];
+      
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      
+      if (files.images) {
+        for (const file of files.images) {
+          const url = await uploadSubmissionFile(file, 'submissions/images');
+          imageUrls.push(url);
+        }
+      }
+      
+      if (files.audios) {
+        for (const file of files.audios) {
+          const url = await uploadSubmissionFile(file, 'submissions/audios');
+          audioUrls.push(url);
+        }
+      }
+      
+      if (files.files) {
+        for (const file of files.files) {
+          const url = await uploadSubmissionFile(file, 'submissions/files');
+          fileUrls.push(url);
+        }
+      }
+      
+      const submission = await storage.createSubmission({
+        assignmentId,
+        userId,
+        content,
+        imageUrls,
+        audioUrls,
+        fileUrls,
+        status: 'new_submitted',
+      });
+      
+      // O'qituvchiga ogohlantirish yuborish
+      const course = await storage.getCourse(assignment.courseId);
+      if (course) {
+        const student = await storage.getUser(userId);
+        const studentName = student?.firstName || student?.email || 'O\'quvchi';
+        const notificationData = insertNotificationSchema.parse({
+          userId: course.instructorId,
+          type: 'assignment_submitted',
+          title: 'Yangi vazifa topshirildi',
+          message: `${studentName} "${assignment.title}" vazifasini topshirdi`,
+          relatedId: submission.id,
+          isRead: false,
+        });
+        await storage.createNotification(notificationData);
+      }
+      
+      res.json(submission);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // O'quvchi - O'z vazifalari
+  app.get('/api/student/submissions', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const submissions = await storage.getSubmissionsByUser(userId);
+      res.json(submissions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ============ NOTIFICATION ROUTES ============
+  
+  // Ogohlantirishlarni olish
+  app.get('/api/notifications', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const notifications = await storage.getNotificationsByUser(userId);
+      
+      // Prevent caching to ensure fresh data
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      
+      res.json(notifications);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // O'qilgan deb belgilash
+  app.patch('/api/notifications/:id/read', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const notification = await storage.markNotificationAsRead(id);
+      res.json(notification);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Barchasini o'qilgan deb belgilash
+  app.patch('/api/notifications/mark-all-read', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      await storage.markAllNotificationsAsRead(userId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // O'qilgan ogohlantirishlarni tozalash
+  app.delete('/api/notifications/clear-read', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      await storage.clearReadNotifications(userId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Barcha ogohlantirishlarni tozalash
+  app.delete('/api/notifications/clear-all', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      await storage.clearAllNotifications(userId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // O'qilmagan soni
+  app.get('/api/notifications/unread-count', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const count = await storage.getUnreadCount(userId);
+      res.json({ count });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ============ SITE SETTINGS & TESTIMONIALS (CMS) ============
+  
+  // Admin: Upload certificate image
+  app.post('/api/admin/upload-certificate', isAdmin, upload.single('file'), async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "Fayl yuklanmadi" });
+      }
+
+      // Validate file type (only images)
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(req.file.mimetype)) {
+        return res.status(400).json({ message: "Faqat rasm fayllari (JPG, PNG, WEBP) qabul qilinadi" });
+      }
+
+      // Validate file size (max 5MB)
+      if (req.file.size > 5 * 1024 * 1024) {
+        return res.status(400).json({ message: "Fayl hajmi 5MB dan oshmasligi kerak" });
+      }
+
+      // Generate safe filename using UUID
+      const crypto = await import('crypto');
+      const fileExt = req.file.mimetype.split('/')[1];
+      const safeFileName = `certificate-${crypto.randomUUID()}.${fileExt}`;
+      
+      // Upload directly to Object Storage without timestamp
+      const filePath = await objectStorage.uploadToFolder(
+        req.file.buffer,
+        `certificates/${safeFileName}`,
+        req.file.mimetype
+      );
+
+      // Return the full URL
+      const fullUrl = `${req.protocol}://${req.get('host')}${filePath}`;
+      res.json({ url: fullUrl, path: filePath });
+    } catch (error: any) {
+      console.error("Certificate upload error:", error);
+      res.status(500).json({ message: error.message || "Fayl yuklashda xatolik" });
+    }
+  });
+  
+  // Public: Get all site settings (for HomePage)
+  app.get('/api/site-settings', async (_req, res) => {
+    try {
+      const settings = await storage.getSiteSettings();
+      res.json(settings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Admin: Upsert site setting (about, contact, etc.)
+  app.put('/api/admin/site-settings', isAdmin, async (req, res) => {
+    try {
+      const validated = insertSiteSettingSchema.parse(req.body);
+      const setting = await storage.upsertSiteSetting(validated);
+      res.json(setting);
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Public: Get published testimonials (for HomePage)
+  app.get('/api/testimonials', async (_req, res) => {
+    try {
+      const testimonials = await storage.getPublishedTestimonials();
+      res.json(testimonials);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Admin: Get all testimonials (including unpublished)
+  app.get('/api/admin/testimonials', isAdmin, async (_req, res) => {
+    try {
+      const testimonials = await storage.getAllTestimonials();
+      res.json(testimonials);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Admin: Create testimonial
+  app.post('/api/admin/testimonials', isAdmin, async (req, res) => {
+    try {
+      const validated = insertTestimonialSchema.parse(req.body);
+      const testimonial = await storage.createTestimonial(validated);
+      res.json(testimonial);
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Admin: Update testimonial
+  app.put('/api/admin/testimonials/:id', isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validated = insertTestimonialSchema.partial().parse(req.body);
+      const testimonial = await storage.updateTestimonial(id, validated);
+      res.json(testimonial);
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Admin: Delete testimonial
+  app.delete('/api/admin/testimonials/:id', isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteTestimonial(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Public: Get all subscription plans
+  app.get('/api/subscription-plans', async (_req, res) => {
+    try {
+      const plans = await storage.getSubscriptionPlans();
+      res.json(plans);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Create new subscription plan
+  app.post('/api/admin/subscription-plans', isAdmin, async (req, res) => {
+    try {
+      const { name, displayName, description, features } = req.body;
+      
+      // Get the highest order value
+      const existingPlans = await db.select().from(subscriptionPlans);
+      const maxOrder = existingPlans.length > 0 
+        ? Math.max(...existingPlans.map((p: any) => p.order))
+        : 0;
+      
+      const [newPlan] = await db
+        .insert(subscriptionPlans)
+        .values({
+          name,
+          displayName,
+          description,
+          features,
+          order: maxOrder + 1,
+        })
+        .returning();
+      
+      res.json(newPlan);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Update subscription plan
+  app.put('/api/admin/subscription-plans/:id', isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, displayName, description, features } = req.body;
+      
+      // Build update object dynamically
+      const updateData: any = {};
+      if (name !== undefined) updateData.name = name;
+      if (displayName !== undefined) updateData.displayName = displayName;
+      if (description !== undefined) updateData.description = description;
+      if (features !== undefined) updateData.features = features;
+      
+      // Update plan in database
+      const [updatedPlan] = await db
+        .update(subscriptionPlans)
+        .set(updateData)
+        .where(eq(subscriptionPlans.id, id))
+        .returning();
+      
+      if (!updatedPlan) {
+        return res.status(404).json({ message: "Tarif topilmadi" });
+      }
+      
+      res.json(updatedPlan);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Delete subscription plan
+  app.delete('/api/admin/subscription-plans/:id', isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      await db
+        .delete(subscriptionPlans)
+        .where(eq(subscriptionPlans.id, id));
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ============ SUBSCRIPTION MANAGEMENT ROUTES ============
+  // Get user subscriptions
+  app.get('/api/student/subscriptions', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const subscriptions = await storage.getUserSubscriptions(userId);
+      res.json(subscriptions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Instructor: Get subscriptions for their courses
+  app.get('/api/instructor/subscriptions', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const instructorId = req.user.claims.sub;
+      const subscriptions = await storage.getSubscriptionsByInstructor(instructorId);
+      res.json(subscriptions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Instructor: Get expiring subscriptions (7 days)
+  app.get('/api/instructor/subscriptions/expiring', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const instructorId = req.user.claims.sub;
+      const daysBeforeExpiry = parseInt(req.query.days as string) || 7;
+      
+      // Get all subscriptions for instructor's courses
+      const allSubs = await storage.getSubscriptionsByInstructor(instructorId);
+      
+      // Filter expiring subscriptions
+      const now = new Date();
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + daysBeforeExpiry);
+      
+      const expiringSubs = allSubs.filter((item: any) => {
+        const endDate = new Date(item.subscription.endDate);
+        return item.subscription.status === 'active' && 
+               endDate <= futureDate && 
+               endDate > now;
+      });
+      
+      res.json(expiringSubs);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Instructor: Cancel subscription
+  app.delete('/api/instructor/subscriptions/:id', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      const updated = await storage.cancelSubscription(id);
+      
+      // Send notification to student
+      await storage.createNotification({
+        userId: updated.userId,
+        type: 'warning',
+        title: 'Obuna bekor qilindi',
+        message: 'Sizning obunangiz bekor qilindi. Qo\'shimcha ma\'lumot uchun o\'qituvchi bilan bog\'laning',
+      });
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Instructor: Extend subscription
+  app.put('/api/instructor/subscriptions/:id/extend', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { additionalDays } = req.body;
+      
+      if (!additionalDays || additionalDays < 1) {
+        return res.status(400).json({ message: 'additionalDays parametri talab qilinadi va 1dan katta bo\'lishi kerak' });
+      }
+      
+      const updated = await storage.extendSubscription(id, parseInt(additionalDays));
+      
+      // Send notification to student
+      await storage.createNotification({
+        userId: updated.userId,
+        type: 'info',
+        title: 'Obuna muddati uzaytirildi',
+        message: `Sizning obuna muddatingiz ${additionalDays} kunga uzaytirildi`,
+      });
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Get all active subscriptions
+  app.get('/api/admin/subscriptions', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const subscriptions = await storage.getAllActiveSubscriptions();
+      res.json(subscriptions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Get expiring subscriptions
+  app.get('/api/admin/subscriptions/expiring', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const daysBeforeExpiry = parseInt(req.query.days as string) || 7;
+      const subscriptions = await storage.getExpiringSubscriptions(daysBeforeExpiry);
+      res.json(subscriptions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Cancel subscription
+  app.delete('/api/admin/subscriptions/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const updated = await storage.cancelSubscription(id);
+      
+      // Send notification to student
+      await storage.createNotification({
+        userId: updated.userId,
+        type: 'warning',
+        title: 'Obuna bekor qilindi',
+        message: 'Sizning obunangiz bekor qilindi. Qo\'shimcha ma\'lumot uchun admin bilan bog\'laning',
+      });
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Extend subscription
+  app.put('/api/admin/subscriptions/:id/extend', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { additionalDays } = req.body;
+      
+      if (!additionalDays || additionalDays < 1) {
+        return res.status(400).json({ message: 'additionalDays parametri talab qilinadi va 1dan katta bo\'lishi kerak' });
+      }
+      
+      const updated = await storage.extendSubscription(id, parseInt(additionalDays));
+      
+      // Send notification to student
+      await storage.createNotification({
+        userId: updated.userId,
+        type: 'info',
+        title: 'Obuna muddati uzaytirildi',
+        message: `Sizning obuna muddatingiz ${additionalDays} kunga uzaytirildi`,
+      });
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Update subscription status
+  app.put('/api/admin/subscriptions/:id/status', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      const updated = await storage.updateSubscriptionStatus(id, status);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Check and update expired subscriptions (cron-like endpoint)
+  app.post('/api/admin/subscriptions/check-expired', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      await storage.checkAndUpdateExpiredSubscriptions();
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ============ SPEAKING TESTS API ROUTES ============
+  
+  // INSTRUCTOR: Create speaking test
+  app.post('/api/instructor/speaking-tests', isAuthenticated, isInstructor, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const data = insertSpeakingTestSchema.parse({
+        ...req.body,
+        instructorId: userId,
+      });
+      
+      // Verify instructor owns the course
+      const course = await storage.getCourse(data.courseId);
+      if (!course || course.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu kursga ruxsat yo\'q' });
+      }
+      
+      const speakingTest = await storage.createSpeakingTest(data);
+      res.json(speakingTest);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // INSTRUCTOR: Get speaking tests by course
+  app.get('/api/instructor/courses/:courseId/speaking-tests', isAuthenticated, isInstructor, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { courseId } = req.params;
+      
+      // Verify instructor owns the course
+      const course = await storage.getCourse(courseId);
+      if (!course || course.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu kursga ruxsat yo\'q' });
+      }
+      
+      const speakingTests = await storage.getSpeakingTestsByCourse(courseId);
+      res.json(speakingTests);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // INSTRUCTOR: Get single speaking test with full structure
+  app.get('/api/instructor/speaking-tests/:id', isAuthenticated, isInstructor, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+      
+      const speakingTest = await storage.getSpeakingTest(id);
+      if (!speakingTest) {
+        return res.status(404).json({ message: 'Speaking test topilmadi' });
+      }
+      
+      // Verify instructor owns the test
+      if (speakingTest.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu testga ruxsat yo\'q' });
+      }
+      
+      // Get sections
+      const sections = await storage.getSpeakingTestSections(id);
+      
+      // Get questions for each section
+      const sectionsWithQuestions = await Promise.all(
+        sections.map(async (section) => {
+          const questions = await storage.getSpeakingQuestions(section.id);
+          return { ...section, questions };
+        })
+      );
+      
+      res.json({
+        ...speakingTest,
+        sections: sectionsWithQuestions,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // INSTRUCTOR: Update speaking test
+  app.put('/api/instructor/speaking-tests/:id', isAuthenticated, isInstructor, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+      
+      const speakingTest = await storage.getSpeakingTest(id);
+      if (!speakingTest) {
+        return res.status(404).json({ message: 'Speaking test topilmadi' });
+      }
+      
+      if (speakingTest.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu testga ruxsat yo\'q' });
+      }
+      
+      const data = insertSpeakingTestSchema.partial().parse(req.body);
+      const updated = await storage.updateSpeakingTest(id, data);
       res.json(updated);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // INSTRUCTOR: Delete speaking test
+  app.delete('/api/instructor/speaking-tests/:id', isAuthenticated, isInstructor, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+      
+      const speakingTest = await storage.getSpeakingTest(id);
+      if (!speakingTest) {
+        return res.status(404).json({ message: 'Speaking test topilmadi' });
+      }
+      
+      if (speakingTest.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu testga ruxsat yo\'q' });
+      }
+      
+      await storage.deleteSpeakingTest(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // INSTRUCTOR: Create section
+  app.post('/api/instructor/speaking-tests/:testId/sections', isAuthenticated, isInstructor, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { testId } = req.params;
+      
+      const speakingTest = await storage.getSpeakingTest(testId);
+      if (!speakingTest || speakingTest.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu testga ruxsat yo\'q' });
+      }
+      
+      const data = insertSpeakingTestSectionSchema.parse({
+        ...req.body,
+        speakingTestId: testId,
+      });
+      
+      const section = await storage.createSpeakingTestSection(data);
+      res.json(section);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // INSTRUCTOR: Update section
+  app.put('/api/instructor/sections/:id', isAuthenticated, isInstructor, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+      
+      const section = await storage.getSpeakingTestSection(id);
+      if (!section) {
+        return res.status(404).json({ message: 'Section topilmadi' });
+      }
+      
+      const speakingTest = await storage.getSpeakingTest(section.speakingTestId);
+      if (!speakingTest || speakingTest.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu sectionga ruxsat yo\'q' });
+      }
+      
+      const data = insertSpeakingTestSectionSchema.partial().parse(req.body);
+      const updated = await storage.updateSpeakingTestSection(id, data);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // INSTRUCTOR: Delete section
+  app.delete('/api/instructor/sections/:id', isAuthenticated, isInstructor, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+      
+      const section = await storage.getSpeakingTestSection(id);
+      if (!section) {
+        return res.status(404).json({ message: 'Section topilmadi' });
+      }
+      
+      const speakingTest = await storage.getSpeakingTest(section.speakingTestId);
+      if (!speakingTest || speakingTest.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu sectionga ruxsat yo\'q' });
+      }
+      
+      await storage.deleteSpeakingTestSection(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // INSTRUCTOR: Create question
+  app.post('/api/instructor/sections/:sectionId/questions', isAuthenticated, isInstructor, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { sectionId } = req.params;
+      
+      const section = await storage.getSpeakingTestSection(sectionId);
+      if (!section) {
+        return res.status(404).json({ message: 'Section topilmadi' });
+      }
+      
+      const speakingTest = await storage.getSpeakingTest(section.speakingTestId);
+      if (!speakingTest || speakingTest.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu sectionga ruxsat yo\'q' });
+      }
+      
+      const data = insertSpeakingQuestionSchema.parse({
+        ...req.body,
+        sectionId,
+      });
+      
+      const question = await storage.createSpeakingQuestion(data);
+      res.json(question);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // INSTRUCTOR: Update question
+  app.put('/api/instructor/questions/:id', isAuthenticated, isInstructor, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+      
+      const question = await storage.getSpeakingQuestion(id);
+      if (!question) {
+        return res.status(404).json({ message: 'Savol topilmadi' });
+      }
+      
+      const section = await storage.getSpeakingTestSection(question.sectionId);
+      const speakingTest = await storage.getSpeakingTest(section!.speakingTestId);
+      if (!speakingTest || speakingTest.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu savolga ruxsat yo\'q' });
+      }
+      
+      const data = insertSpeakingQuestionSchema.partial().parse(req.body);
+      const updated = await storage.updateSpeakingQuestion(id, data);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // INSTRUCTOR: Delete question
+  app.delete('/api/instructor/questions/:id', isAuthenticated, isInstructor, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+      
+      const question = await storage.getSpeakingQuestion(id);
+      if (!question) {
+        return res.status(404).json({ message: 'Savol topilmadi' });
+      }
+      
+      const section = await storage.getSpeakingTestSection(question.sectionId);
+      const speakingTest = await storage.getSpeakingTest(section!.speakingTestId);
+      if (!speakingTest || speakingTest.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu savolga ruxsat yo\'q' });
+      }
+      
+      await storage.deleteSpeakingQuestion(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // INSTRUCTOR: Get submissions for a speaking test
+  app.get('/api/instructor/speaking-tests/:testId/submissions', isAuthenticated, isInstructor, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { testId } = req.params;
+      
+      const speakingTest = await storage.getSpeakingTest(testId);
+      if (!speakingTest || speakingTest.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu testga ruxsat yo\'q' });
+      }
+      
+      const submissions = await storage.getSpeakingSubmissionsByTest(testId);
+      res.json(submissions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // INSTRUCTOR: Get single submission with answers and evaluations
+  app.get('/api/instructor/submissions/:submissionId', isAuthenticated, isInstructor, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { submissionId } = req.params;
+      
+      const submission = await storage.getSpeakingSubmission(submissionId);
+      if (!submission) {
+        return res.status(404).json({ message: 'Submission topilmadi' });
+      }
+      
+      // Verify instructor owns the test
+      if (submission.test.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu submissionga ruxsat yo\'q' });
+      }
+      
+      // Get answers with questions and evaluations
+      const answers = await storage.getSpeakingAnswers(submissionId);
+      
+      const answersWithEvaluations = await Promise.all(
+        answers.map(async (answer) => {
+          const evaluations = await storage.getSpeakingEvaluations(answer.answer.id);
+          return { ...answer, evaluations };
+        })
+      );
+      
+      res.json({
+        ...submission,
+        answers: answersWithEvaluations,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // STUDENT: Get published speaking tests for course
+  app.get('/api/student/courses/:courseId/speaking-tests', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { courseId } = req.params;
+      
+      // Check enrollment
+      const enrollment = await storage.getEnrollmentByCourseAndUser(courseId, userId);
+      if (!enrollment || enrollment.paymentStatus !== 'approved') {
+        return res.status(403).json({ message: 'Kursga ro\'yxatdan o\'tmagan' });
+      }
+      
+      const speakingTests = await storage.getSpeakingTestsByCourse(courseId);
+      const published = speakingTests.filter(t => t.isPublished);
+      
+      res.json(published);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // STUDENT: Get single speaking test to take
+  app.get('/api/student/speaking-tests/:id', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+      
+      const speakingTest = await storage.getSpeakingTest(id);
+      if (!speakingTest || !speakingTest.isPublished) {
+        return res.status(404).json({ message: 'Speaking test topilmadi' });
+      }
+      
+      // Check enrollment
+      const enrollment = await storage.getEnrollmentByCourseAndUser(speakingTest.courseId, userId);
+      if (!enrollment || enrollment.paymentStatus !== 'approved') {
+        return res.status(403).json({ message: 'Kursga ro\'yxatdan o\'tmagan' });
+      }
+      
+      // Get sections and questions
+      const sections = await storage.getSpeakingTestSections(id);
+      const sectionsWithQuestions = await Promise.all(
+        sections.map(async (section) => {
+          const questions = await storage.getSpeakingQuestions(section.id);
+          return { ...section, questions };
+        })
+      );
+      
+      res.json({
+        ...speakingTest,
+        sections: sectionsWithQuestions,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // STUDENT: Submit speaking test
+  app.post('/api/student/speaking-tests/:testId/submit', isAuthenticated, upload.array('audioFiles'), async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { testId } = req.params;
+      const files = req.files as Express.Multer.File[];
+      
+      const speakingTest = await storage.getSpeakingTest(testId);
+      if (!speakingTest || !speakingTest.isPublished) {
+        return res.status(404).json({ message: 'Speaking test topilmadi' });
+      }
+      
+      // Check enrollment
+      const enrollment = await storage.getEnrollmentByCourseAndUser(speakingTest.courseId, userId);
+      if (!enrollment || enrollment.paymentStatus !== 'approved') {
+        return res.status(403).json({ message: 'Kursga ro\'yxatdan o\'tmagan' });
+      }
+      
+      // Parse answers from request body
+      const answersData = JSON.parse(req.body.answers);
+      
+      // Create submission
+      const submission = await storage.createSpeakingSubmission({
+        speakingTestId: testId,
+        userId,
+        status: 'submitted',
+      });
+      
+      // Upload audio files and create answers
+      for (let i = 0; i < answersData.length; i++) {
+        const answerData = answersData[i];
+        const audioFile = files[i];
+        
+        // Upload audio to object storage
+        const audioUrl = await uploadSubmissionFile(audioFile, 'speaking-tests');
+        
+        await storage.createSpeakingAnswer({
+          submissionId: submission.id,
+          questionId: answerData.questionId,
+          audioUrl,
+        });
+      }
+      
+      res.json(submission);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // STUDENT: Get my submissions
+  app.get('/api/student/speaking-submissions', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const submissions = await storage.getSpeakingSubmissionsByUser(userId);
+      res.json(submissions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // STUDENT: Get single submission with results
+  app.get('/api/student/submissions/:submissionId', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { submissionId } = req.params;
+      
+      const submission = await storage.getSpeakingSubmission(submissionId);
+      if (!submission) {
+        return res.status(404).json({ message: 'Submission topilmadi' });
+      }
+      
+      // Verify student owns the submission
+      if (submission.submission.userId !== userId) {
+        return res.status(403).json({ message: 'Bu submissionga ruxsat yo\'q' });
+      }
+      
+      // Get answers with evaluations
+      const answers = await storage.getSpeakingAnswers(submissionId);
+      
+      const answersWithEvaluations = await Promise.all(
+        answers.map(async (answer) => {
+          const evaluations = await storage.getSpeakingEvaluations(answer.answer.id);
+          return { ...answer, evaluations };
+        })
+      );
+      
+      res.json({
+        ...submission,
+        answers: answersWithEvaluations,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   });
 
