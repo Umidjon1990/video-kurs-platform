@@ -915,12 +915,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/instructor/courses', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
       const instructorId = req.user.claims.sub;
-      const { title, description, category, thumbnailUrl, imageUrl, pricing } = req.body;
+      const { title, description, author, category, thumbnailUrl, imageUrl, pricing } = req.body;
       
       // Create course with minimal data
       const courseData = insertCourseSchema.parse({
         title,
         description,
+        author,
         category,
         thumbnailUrl,
         imageUrl,
@@ -980,6 +981,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const editableFields = insertCourseSchema.pick({
         title: true,
         description: true,
+        author: true,
         category: true,
         price: true,
         originalPrice: true,
