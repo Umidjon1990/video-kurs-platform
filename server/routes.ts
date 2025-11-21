@@ -2102,23 +2102,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const courses = await storage.getPublicCourses(filters);
       
-      // Get current user if authenticated (optional for public endpoint)
-      const userId = req.user?.claims?.sub;
-      
-      // Add average rating, total ratings, like count, and isLiked for each course
-      // Wrap in error handling to prevent like feature from breaking course display
-      const coursesWithRatingsAndLikes = await Promise.all(
+      // Add average rating and total ratings for each course
+      // Wrap in error handling to prevent rating feature from breaking course display
+      const coursesWithRatings = await Promise.all(
         courses.map(async (course) => {
           try {
             const avgRating = await storage.getCourseAverageRating(course.id);
-            const likeCount = await storage.getCourseLikeCount(course.id);
-            const isLiked = userId ? await storage.checkIfUserLikedCourse(course.id, userId) : false;
             return {
               ...course,
               averageRating: avgRating.average,
               totalRatings: avgRating.count,
-              likeCount,
-              isLiked,
             };
           } catch (aggregationError: any) {
             // If aggregation fails, return course with default values
@@ -2127,14 +2120,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               ...course,
               averageRating: 0,
               totalRatings: 0,
-              likeCount: 0,
-              isLiked: false,
             };
           }
         })
       );
       
-      res.json(coursesWithRatingsAndLikes);
+      res.json(coursesWithRatings);
     } catch (error: any) {
       console.error('Error in /api/courses/public:', error);
       res.status(500).json({ message: error.message });
