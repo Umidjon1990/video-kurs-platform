@@ -11,7 +11,25 @@ import { ProgressCard } from "@/components/ProgressCard";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useLocation } from "wouter";
 import { BookOpen, Trophy, GraduationCap, PlayCircle, CheckCircle, Star } from "lucide-react";
-import type { Course, StudentCourseProgress, SubscriptionPlan } from "@shared/schema";
+import type { Course, StudentCourseProgress, SubscriptionPlan, User } from "@shared/schema";
+
+type PublicCourse = Course & {
+  instructor: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+  enrollmentsCount: number;
+  planPricing?: Array<{
+    id: string;
+    price: string;
+    plan: {
+      id: string;
+      name: string;
+      displayName: string;
+    };
+  }>;
+};
 
 export default function StudentCourses() {
   const { toast } = useToast();
@@ -31,7 +49,7 @@ export default function StudentCourses() {
     }
   }, [isAuthenticated, authLoading, toast]);
 
-  const { data: allCourses, isLoading: allCoursesLoading } = useQuery<Course[]>({
+  const { data: allCourses, isLoading: allCoursesLoading } = useQuery<PublicCourse[]>({
     queryKey: ["/api/courses/public"],
     enabled: isAuthenticated,
   });
