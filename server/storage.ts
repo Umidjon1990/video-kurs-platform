@@ -2,6 +2,7 @@
 import {
   users,
   courses,
+  courseRatings,
   lessons,
   lessonProgress,
   assignments,
@@ -30,6 +31,8 @@ import {
   type UpsertUser,
   type Course,
   type InsertCourse,
+  type CourseRating,
+  type InsertCourseRating,
   type Lesson,
   type InsertLesson,
   type LessonProgress,
@@ -176,6 +179,12 @@ export interface IStorage {
   getAllAnnouncements(): Promise<Announcement[]>;
   getAnnouncement(id: string): Promise<Announcement | undefined>;
   deleteAnnouncement(id: string): Promise<void>;
+  
+  // Course Rating operations
+  createOrUpdateCourseRating(courseId: string, userId: string, rating: number, review?: string): Promise<CourseRating>;
+  getCourseRatings(courseId: string): Promise<Array<CourseRating & { user: User }>>;
+  getUserCourseRating(courseId: string, userId: string): Promise<CourseRating | undefined>;
+  getCourseAverageRating(courseId: string): Promise<{ average: number; count: number }>;
   
   // Chat operations (Private Messaging)
   getOrCreateConversation(studentId: string, instructorId: string): Promise<any>;
@@ -1074,6 +1083,86 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(announcements)
       .where(eq(announcements.id, id));
+  }
+
+  // Course Rating operations
+  async createOrUpdateCourseRating(courseId: string, userId: string, rating: number, review?: string): Promise<CourseRating> {
+    // Check if user already rated this course
+    const [existing] = await db
+      .select()
+      .from(courseRatings)
+      .where(
+        and(
+          eq(courseRatings.courseId, courseId),
+          eq(courseRatings.userId, userId)
+        )
+      );
+    
+    if (existing) {
+      // Update existing rating
+      const [updated] = await db
+        .update(courseRatings)
+        .set({ 
+          rating, 
+          review: review || existing.review,
+          updatedAt: new Date()
+        })
+        .where(eq(courseRatings.id, existing.id))
+        .returning();
+      return updated;
+    }
+    
+    // Create new rating
+    const [newRating] = await db
+      .insert(courseRatings)
+      .values({ courseId, userId, rating, review })
+      .returning();
+    return newRating;
+  }
+
+  async getCourseRatings(courseId: string): Promise<Array<CourseRating & { user: User }>> {
+    const result = await db
+      .select({
+        rating: courseRatings,
+        user: users,
+      })
+      .from(courseRatings)
+      .innerJoin(users, eq(courseRatings.userId, users.id))
+      .where(eq(courseRatings.courseId, courseId))
+      .orderBy(desc(courseRatings.createdAt));
+    
+    return result.map((r) => ({
+      ...r.rating,
+      user: r.user,
+    }));
+  }
+
+  async getUserCourseRating(courseId: string, userId: string): Promise<CourseRating | undefined> {
+    const [rating] = await db
+      .select()
+      .from(courseRatings)
+      .where(
+        and(
+          eq(courseRatings.courseId, courseId),
+          eq(courseRatings.userId, userId)
+        )
+      );
+    return rating;
+  }
+
+  async getCourseAverageRating(courseId: string): Promise<{ average: number; count: number }> {
+    const result = await db
+      .select({
+        average: sql<number>`COALESCE(AVG(${courseRatings.rating})::numeric(3,2), 0)`,
+        count: sql<number>`COUNT(*)::int`,
+      })
+      .from(courseRatings)
+      .where(eq(courseRatings.courseId, courseId));
+    
+    return {
+      average: Number(result[0]?.average || 0),
+      count: result[0]?.count || 0,
+    };
   }
 
   // Chat operations (Private Messaging)

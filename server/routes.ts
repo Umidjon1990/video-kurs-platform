@@ -2139,6 +2139,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public course ratings endpoints
+  app.get('/api/courses/:courseId/ratings', async (req, res) => {
+    try {
+      const { courseId } = req.params;
+      const ratings = await storage.getCourseRatings(courseId);
+      res.json(ratings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/courses/:courseId/rating/average', async (req, res) => {
+    try {
+      const { courseId } = req.params;
+      const averageRating = await storage.getCourseAverageRating(courseId);
+      res.json(averageRating);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ============ STUDENT ROUTES ============
   app.get('/api/courses', isAuthenticated, async (req, res) => {
     try {
@@ -2285,6 +2306,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(enrollment);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Student course rating endpoints (only enrolled students can rate)
+  app.post('/api/courses/:courseId/rating', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { courseId } = req.params;
+      const { rating, review } = req.body;
+      
+      // Validate rating
+      if (!rating || rating < 1 || rating > 5) {
+        return res.status(400).json({ message: "Rating 1 dan 5 gacha bo'lishi kerak" });
+      }
+      
+      // Check if user is enrolled and approved
+      const enrollment = await storage.getEnrollmentByCourseAndUser(courseId, userId);
+      if (!enrollment || (enrollment.paymentStatus !== 'confirmed' && enrollment.paymentStatus !== 'approved')) {
+        return res.status(403).json({ message: "Faqat kursga yozilgan talabalar baholashi mumkin" });
+      }
+      
+      const courseRating = await storage.createOrUpdateCourseRating(courseId, userId, rating, review);
+      res.json(courseRating);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/courses/:courseId/rating/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { courseId } = req.params;
+      const rating = await storage.getUserCourseRating(courseId, userId);
+      res.json(rating || null);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   });
 
