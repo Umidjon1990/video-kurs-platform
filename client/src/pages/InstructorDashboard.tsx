@@ -205,6 +205,7 @@ export default function InstructorDashboard() {
       await apiRequest(method, url, {
         title: courseForm.title,
         description: courseForm.description,
+        author: courseForm.author,
         category: courseForm.category,
         thumbnailUrl: courseForm.thumbnailUrl,
         imageUrl: courseForm.imageUrl,
@@ -223,7 +224,7 @@ export default function InstructorDashboard() {
         description: editingCourse ? "Kurs yangilandi" : "Kurs yaratildi" 
       });
       setIsCreateCourseOpen(false);
-      setCourseForm({ title: "", description: "", category: "", price: "", thumbnailUrl: "", imageUrl: "" });
+      setCourseForm({ title: "", description: "", author: "", category: "", price: "", thumbnailUrl: "", imageUrl: "" });
       setEditingCourse(null);
     },
     onError: (error: Error) => {
@@ -818,6 +819,7 @@ export default function InstructorDashboard() {
                           setCourseForm({
                             title: course.title,
                             description: course.description || "",
+                            author: (course as any).author || "",
                             category: course.category || "",
                             price: existingPrice.toString(),
                             thumbnailUrl: course.thumbnailUrl || "",
@@ -1545,7 +1547,7 @@ export default function InstructorDashboard() {
               onClick={() => {
                 setIsCreateCourseOpen(false);
                 setEditingCourse(null);
-                setCourseForm({ title: "", description: "", category: "", price: "", thumbnailUrl: "", imageUrl: "" });
+                setCourseForm({ title: "", description: "", author: "", category: "", price: "", thumbnailUrl: "", imageUrl: "" });
               }}
               data-testid="button-cancel-create-course"
             >
