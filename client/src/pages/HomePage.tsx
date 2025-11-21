@@ -1,10 +1,9 @@
-import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, BookOpen, Users, Award, Star, Mail, Phone, MapPin, Send, ExternalLink, X, ZoomIn, Play, Lock, Clock, Heart } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Search, Filter, BookOpen, Users, Award, Star, Mail, Phone, MapPin, Send, ExternalLink, X, ZoomIn, Play, Lock, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -46,7 +45,6 @@ export default function HomePage() {
   const [selectedCertificate, setSelectedCertificate] = useState<{ url: string; index: number } | null>(null);
   const [selectedCourseForLessons, setSelectedCourseForLessons] = useState<PublicCourse | null>(null);
   const [selectedDemoLesson, setSelectedDemoLesson] = useState<Lesson | null>(null);
-  const [likedCourses, setLikedCourses] = useState<Set<string>>(new Set());
 
   // Build query params
   const buildQueryParams = () => {
@@ -75,12 +73,6 @@ export default function HomePage() {
     queryKey: [`/api/courses/public${queryString ? `?${queryString}` : ''}`],
   });
 
-  // Fetch current user (for like functionality)
-  const { data: currentUser } = useQuery<User | null>({
-    queryKey: ["/api/user"],
-    retry: false,
-  });
-
   // Fetch site settings
   const { data: siteSettings } = useQuery<SiteSetting[]>({
     queryKey: ["/api/site-settings"],
@@ -98,67 +90,6 @@ export default function HomePage() {
       : [],
     enabled: !!selectedCourseForLessons,
   });
-
-  // Like toggle mutation
-  const likeMutation = useMutation({
-    mutationFn: async ({ courseId, isLiked }: { courseId: string; isLiked: boolean }) => {
-      if (isLiked) {
-        return await apiRequest("DELETE", `/api/courses/${courseId}/like`);
-      } else {
-        return await apiRequest("POST", `/api/courses/${courseId}/like`);
-      }
-    },
-    onMutate: async ({ courseId, isLiked }) => {
-      // Optimistic update
-      setLikedCourses(prev => {
-        const newSet = new Set(prev);
-        if (isLiked) {
-          newSet.delete(courseId);
-        } else {
-          newSet.add(courseId);
-        }
-        return newSet;
-      });
-    },
-    onSuccess: () => {
-      // Invalidate courses query to refresh like counts
-      queryClient.invalidateQueries({ queryKey: [`/api/courses/public${queryString ? `?${queryString}` : ''}`] });
-    },
-    onError: (error, { courseId, isLiked }) => {
-      // Revert optimistic update on error
-      setLikedCourses(prev => {
-        const newSet = new Set(prev);
-        if (isLiked) {
-          newSet.add(courseId);
-        } else {
-          newSet.delete(courseId);
-        }
-        return newSet;
-      });
-    },
-  });
-
-  const handleLikeToggle = (courseId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!currentUser) {
-      setLocation("/login");
-      return;
-    }
-    const isLiked = likedCourses.has(courseId);
-    likeMutation.mutate({ courseId, isLiked });
-  };
-
-  // Populate likedCourses from courses data (isLiked comes from backend)
-  useEffect(() => {
-    if (!courses) return;
-    const likedCoursesSet = new Set<string>();
-    courses.forEach(course => {
-      if (course.isLiked) {
-        likedCoursesSet.add(course.id);
-      }
-    });
-    setLikedCourses(likedCoursesSet);
-  }, [courses]);
 
   // Helper to get setting value
   const getSetting = (key: string) => {
@@ -411,36 +342,18 @@ export default function HomePage() {
                         <Users className="w-4 h-4" />
                         <span>{course.enrollmentsCount} talaba</span>
                       </div>
-                      <div className="flex items-center gap-3">
-                        {course.totalRatings !== undefined && course.totalRatings > 0 && (
-                          <div className="flex items-center gap-1">
-                            <StarRating 
-                              rating={course.averageRating || 0} 
-                              size={14} 
-                              showValue={true}
-                            />
-                            <span className="text-xs text-muted-foreground">
-                              ({course.totalRatings})
-                            </span>
-                          </div>
-                        )}
-                        <button
-                          onClick={(e) => handleLikeToggle(course.id, e)}
-                          className="flex items-center gap-1 hover-elevate active-elevate-2 px-2 py-1 rounded-md transition-colors"
-                          data-testid={`button-like-${course.id}`}
-                        >
-                          <Heart 
-                            className={`w-4 h-4 transition-colors ${
-                              likedCourses.has(course.id) 
-                                ? 'fill-red-500 text-red-500' 
-                                : 'text-muted-foreground'
-                            }`}
+                      {course.totalRatings !== undefined && course.totalRatings > 0 && (
+                        <div className="flex items-center gap-1">
+                          <StarRating 
+                            rating={course.averageRating || 0} 
+                            size={14} 
+                            showValue={true}
                           />
                           <span className="text-xs text-muted-foreground">
-                            {course.likeCount || 0}
+                            ({course.totalRatings})
                           </span>
-                        </button>
-                      </div>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
 
