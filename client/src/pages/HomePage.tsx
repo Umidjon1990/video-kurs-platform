@@ -78,13 +78,15 @@ export default function HomePage() {
     queryKey: ["/api/testimonials"],
   });
 
-  // Fetch lessons for selected course
-  const { data: courseLessons } = useQuery<Lesson[]>({
+  // Fetch course details with lessons for selected course
+  const { data: courseDetails } = useQuery<PublicCourse & { lessons: Lesson[] }>({
     queryKey: selectedCourseForLessons 
-      ? [`/api/courses/${selectedCourseForLessons.id}/lessons/public`]
+      ? [`/api/courses/${selectedCourseForLessons.id}/public`]
       : [],
     enabled: !!selectedCourseForLessons,
   });
+  
+  const courseLessons = courseDetails?.lessons || [];
 
   // Helper to get setting value
   const getSetting = (key: string) => {
