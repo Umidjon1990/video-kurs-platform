@@ -17,12 +17,16 @@ export default function StudentSpeakingTest() {
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
+  const [isPreparing, setIsPreparing] = useState(false); // Tayyorlanish bosqichi
+  const [isActivatingMic, setIsActivatingMic] = useState(false); // Mikrofon faollashtirish jarayoni
   const [recordedAudios, setRecordedAudios] = useState<Map<string, Blob>>(new Map());
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [prepTimeLeft, setPrepTimeLeft] = useState<number | null>(null); // Tayyorlanish vaqti
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const prepTimerRef = useRef<NodeJS.Timeout | null>(null); // Tayyorlanish timeri
 
   const { data: testData, isLoading } = useQuery<any>({
     queryKey: [`/api/student/speaking-tests/${testId}`],
@@ -64,11 +68,63 @@ export default function StudentSpeakingTest() {
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
+      if (prepTimerRef.current) {
+        clearInterval(prepTimerRef.current);
+      }
       stopRecording();
     };
   }, []);
 
+  // Tayyorlanish boshlash
+  const startPreparation = () => {
+    // Guard: agar allaqachon tayyorlanish, mikrofon faollashtirilmoqda yoki yozish boshlangan bo'lsa, qaytish
+    if (isPreparing || isActivatingMic || isRecording) {
+      return;
+    }
+    
+    // Mavjud prep timer'ni tozalash (defensive)
+    if (prepTimerRef.current) {
+      clearInterval(prepTimerRef.current);
+      prepTimerRef.current = null;
+    }
+    
+    const currentQuestion = getCurrentQuestion();
+    const currentSection = testData?.sections[currentSectionIndex];
+    const prepTime = currentQuestion?.preparationTime || currentSection?.preparationTime || 5;
+    
+    setIsPreparing(true);
+    setPrepTimeLeft(prepTime);
+    
+    prepTimerRef.current = setInterval(() => {
+      setPrepTimeLeft((prev) => {
+        if (prev === null || prev <= 1) {
+          // Tayyorlanish tugadi - avtomatik recording boshlash
+          if (prepTimerRef.current) {
+            clearInterval(prepTimerRef.current);
+            prepTimerRef.current = null;
+          }
+          setIsPreparing(false);
+          setPrepTimeLeft(null);
+          
+          // Guard: faqat recording boshlanmagan bo'lsa, boshlash
+          if (!isRecording && !isActivatingMic) {
+            startRecording(); // Avtomatik recording boshlash
+          }
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
   const startRecording = async () => {
+    // Guard: agar allaqachon mikrofon faollashtirilmoqda yoki recording boshlangan bo'lsa, qaytish
+    if (isActivatingMic || isRecording) {
+      return;
+    }
+    
+    setIsActivatingMic(true); // Mikrofon faollashtirish jarayoni boshlandi
+    
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
@@ -94,6 +150,7 @@ export default function StudentSpeakingTest() {
       };
       
       mediaRecorder.start();
+      setIsActivatingMic(false); // Mikrofon muvaffaqiyatli faollashtirildi
       setIsRecording(true);
       
       // Start timer - question speakingTime > section speakingTime > default 60s
@@ -112,6 +169,7 @@ export default function StudentSpeakingTest() {
         });
       }, 1000);
     } catch (error) {
+      setIsActivatingMic(false); // Xatolik bo'ldi, mikrofon faollashtirish muvaffaqiyatsiz
       toast({
         variant: 'destructive',
         title: 'Xatolik',
@@ -131,6 +189,14 @@ export default function StudentSpeakingTest() {
         timerRef.current = null;
       }
     }
+    
+    // Prep timerni ham to'xtatish
+    if (prepTimerRef.current) {
+      clearInterval(prepTimerRef.current);
+      prepTimerRef.current = null;
+    }
+    setIsPreparing(false);
+    setPrepTimeLeft(null);
   };
 
   const handleNext = () => {
@@ -143,7 +209,14 @@ export default function StudentSpeakingTest() {
       setCurrentQuestionIndex(0);
     }
     
+    // Prep va recording'ni to'xtatish
     stopRecording();
+    if (prepTimerRef.current) {
+      clearInterval(prepTimerRef.current);
+      prepTimerRef.current = null;
+    }
+    setIsPreparing(false);
+    setPrepTimeLeft(null);
   };
 
   const handlePrevious = () => {
@@ -155,7 +228,14 @@ export default function StudentSpeakingTest() {
       setCurrentQuestionIndex(prevSection.questions.length - 1);
     }
     
+    // Prep va recording'ni to'xtatish
     stopRecording();
+    if (prepTimerRef.current) {
+      clearInterval(prepTimerRef.current);
+      prepTimerRef.current = null;
+    }
+    setIsPreparing(false);
+    setPrepTimeLeft(null);
   };
 
   const handleSubmit = () => {
@@ -302,20 +382,41 @@ export default function StudentSpeakingTest() {
           </div>
 
           <div className="flex flex-col items-center gap-4 py-6">
-            {!isRecording ? (
-              <Button
-                size="lg"
-                className="h-24 w-24 rounded-full"
-                onClick={startRecording}
-                data-testid="button-start-recording"
-              >
-                <Mic className="h-8 w-8" />
-              </Button>
+            {isPreparing ? (
+              <>
+                {prepTimeLeft !== null && (
+                  <div className="text-center space-y-2">
+                    <p className="text-lg font-medium text-muted-foreground">Tayyorlanish vaqti</p>
+                    <div className="text-6xl font-bold text-orange-500" data-testid="text-prep-timer">
+                      {prepTimeLeft}
+                    </div>
+                    <p className="text-sm text-muted-foreground">Avtomatik yozish boshlanadi...</p>
+                  </div>
+                )}
+              </>
+            ) : !isRecording ? (
+              <>
+                <Button
+                  size="lg"
+                  className="h-24 w-24 rounded-full"
+                  onClick={startPreparation}
+                  disabled={isPreparing || isActivatingMic}
+                  data-testid="button-start-preparation"
+                >
+                  <Play className="h-8 w-8" />
+                </Button>
+                <p className="text-sm text-muted-foreground">
+                  {isActivatingMic ? 'Mikrofon faollashtirilmoqda...' : 'Tayyorlanishni boshlash'}
+                </p>
+              </>
             ) : (
               <>
                 {timeLeft !== null && (
-                  <div className="text-4xl font-bold text-primary" data-testid="text-timer">
-                    {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+                  <div className="text-center space-y-2">
+                    <p className="text-lg font-medium text-muted-foreground">Gapirish vaqti</p>
+                    <div className="text-6xl font-bold text-primary" data-testid="text-speaking-timer">
+                      {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+                    </div>
                   </div>
                 )}
                 <Button
@@ -327,12 +428,15 @@ export default function StudentSpeakingTest() {
                 >
                   <Square className="h-8 w-8 fill-current" />
                 </Button>
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                  </span>
+                  Yozish davom etmoqda...
+                </p>
               </>
             )}
-            
-            <p className="text-sm text-muted-foreground">
-              {isRecording ? 'Yozish davom etyapti...' : 'Javob berishni boshlash uchun bosing'}
-            </p>
           </div>
 
           <div className="flex gap-3 justify-between">
