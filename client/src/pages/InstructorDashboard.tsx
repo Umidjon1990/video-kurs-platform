@@ -29,10 +29,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, Download, Megaphone, Users, User, MessageCircle, TrendingUp, Award, Activity, Settings, UserCheck, Upload, FileSpreadsheet, Mic } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NotificationBell } from "@/components/NotificationBell";
+import { StarRating } from "@/components/StarRating";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import type { Course, Lesson, Assignment, Test, InstructorCourseWithCounts, CourseAnalytics } from "@shared/schema";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useLocation } from "wouter";
+import { motion } from "framer-motion";
 
 export default function InstructorDashboard() {
   const { toast } = useToast();
@@ -802,205 +804,274 @@ export default function InstructorDashboard() {
           </Card>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {courses?.map((course) => (
-              <Card key={course.id} className="hover-elevate" data-testid={`card-course-${course.id}`}>
-                <CardHeader>
-                  {course.thumbnailUrl ? (
-                    <img
-                      src={course.thumbnailUrl}
-                      alt={course.title}
-                      className="w-full h-56 object-contain rounded-lg mb-4 bg-muted"
-                    />
-                  ) : (
-                    <div className="w-full h-56 bg-muted rounded-lg flex items-center justify-center mb-4">
-                      <BookOpen className="w-12 h-12 text-muted-foreground" />
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between gap-2">
-                    <CardTitle data-testid={`text-course-title-${course.id}`}>{course.title}</CardTitle>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          const existingPrice = course.price || (course as any).planPricing?.[0]?.price || "";
-                          const existingDiscount = (course as any).discountPercentage || 0;
-                          setCourseForm({
-                            title: course.title,
-                            description: course.description || "",
-                            author: (course as any).author || "",
-                            category: course.category || "",
-                            price: existingPrice.toString(),
-                            discountPercentage: existingDiscount.toString(),
-                            thumbnailUrl: course.thumbnailUrl || "",
-                            imageUrl: (course as any).imageUrl || "",
-                          });
-                          setEditingCourse(course);
-                          setIsCreateCourseOpen(true);
-                        }}
-                        data-testid={`button-edit-${course.id}`}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setDeletingCourse(course);
-                        }}
-                        data-testid={`button-delete-${course.id}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-sm text-muted-foreground line-clamp-2">{course.description}</p>
-                  
-                  {/* Stats */}
-                  <div className="flex gap-4 text-sm">
-                    <div className="flex items-center gap-1">
-                      <Users className="w-4 h-4 text-muted-foreground" />
-                      <span data-testid={`text-enrollments-${course.id}`}>
-                        {course.enrollmentsCount || 0} o'quvchi
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Video className="w-4 h-4 text-muted-foreground" />
-                      <span data-testid={`text-lessons-${course.id}`}>
-                        {course.lessonsCount || 0} dars
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Pricing by Plan */}
-                  {course.planPricing && course.planPricing.length > 0 ? (
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold text-muted-foreground">Tariflar:</p>
-                      <div className="grid gap-2">
-                        {course.planPricing.map((pricing) => (
-                          <div 
-                            key={pricing.id} 
-                            className="flex items-center justify-between p-2 bg-muted/50 rounded-md"
-                            data-testid={`pricing-${course.id}-${pricing.plan.name}`}
-                          >
-                            <span className="text-sm font-medium">{pricing.plan.displayName}</span>
-                            <span className="text-sm font-bold text-primary">
-                              {Number(pricing.price).toLocaleString('uz-UZ')} so'm
-                            </span>
+            {courses?.map((course, index) => {
+              const discountPercent = (course as any).discountPercentage || 0;
+              const basePrice = Number(course.price);
+              const displayPrice = discountPercent > 0 ? basePrice * (1 - discountPercent / 100) : basePrice;
+              
+              const isNew = course.createdAt 
+                ? (Date.now() - new Date(course.createdAt).getTime()) / (1000 * 60 * 60 * 24) <= 7 
+                : false;
+              const daysAgo = course.createdAt 
+                ? Math.floor((Date.now() - new Date(course.createdAt).getTime()) / (1000 * 60 * 60 * 24)) 
+                : 0;
+              
+              const gradients = [
+                "from-blue-500 via-purple-500 to-pink-500",
+                "from-green-500 via-teal-500 to-cyan-500",
+                "from-orange-500 via-red-500 to-pink-500",
+                "from-indigo-500 via-purple-500 to-fuchsia-500",
+                "from-emerald-500 via-green-500 to-teal-500",
+                "from-amber-500 via-orange-500 to-red-500",
+              ];
+              const gradient = gradients[index % gradients.length];
+              
+              const averageRating = (course as any).averageRating ?? 5.0;
+              const totalRatings = (course as any).totalRatings ?? 0;
+
+              const cardContent = (
+                <Card 
+                  key={course.id} 
+                  className={`hover-elevate h-full flex flex-col ${discountPercent > 0 ? 'border-0' : ''}`}
+                  data-testid={`card-course-${course.id}`}
+                >
+                  <CardHeader className="relative">
+                    {isNew && (
+                      <div className="absolute top-0 left-0 z-20 overflow-hidden w-32 h-32">
+                        <div className="absolute transform -rotate-45 bg-green-500 text-white text-center font-bold py-1 left-[-35px] top-[25px] w-[170px] shadow-md">
+                          <div className="text-xs">
+                            YANGI
+                            {daysAgo === 0 ? " (Bugun)" : ` (${daysAgo} kun)`}
                           </div>
-                        ))}
+                        </div>
+                      </div>
+                    )}
+                    {discountPercent > 0 && (
+                      <Badge variant="destructive" className="absolute top-3 right-3 z-10 text-sm font-bold px-3 py-1">
+                        -{discountPercent}% CHEGIRMA
+                      </Badge>
+                    )}
+                    {course.thumbnailUrl ? (
+                      <img
+                        src={course.thumbnailUrl}
+                        alt={course.title}
+                        className="w-full h-56 object-contain rounded-lg mb-4 bg-muted"
+                      />
+                    ) : (
+                      <div className="w-full h-56 bg-muted rounded-lg flex items-center justify-center mb-4">
+                        <BookOpen className="w-12 h-12 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between gap-2">
+                      <CardTitle data-testid={`text-course-title-${course.id}`}>{course.title}</CardTitle>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            const existingPrice = course.price || (course as any).planPricing?.[0]?.price || "";
+                            const existingDiscount = (course as any).discountPercentage || 0;
+                            setCourseForm({
+                              title: course.title,
+                              description: course.description || "",
+                              author: (course as any).author || "",
+                              category: course.category || "",
+                              price: existingPrice.toString(),
+                              discountPercentage: existingDiscount.toString(),
+                              thumbnailUrl: course.thumbnailUrl || "",
+                              imageUrl: (course as any).imageUrl || "",
+                            });
+                            setEditingCourse(course);
+                            setIsCreateCourseOpen(true);
+                          }}
+                          data-testid={`button-edit-${course.id}`}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setDeletingCourse(course);
+                          }}
+                          data-testid={`button-delete-${course.id}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     </div>
-                  ) : (
-                    <div className="flex items-center justify-between">
-                      <div className="flex flex-col">
-                        {(course as any).discountPercentage && Number((course as any).discountPercentage) > 0 ? (
-                          <>
-                            <div className="flex items-center gap-2">
-                              <span className="text-lg font-bold">
-                                {(Number(course.price) * (1 - Number((course as any).discountPercentage) / 100)).toLocaleString('uz-UZ')} so'm
+                  </CardHeader>
+                  <CardContent className="flex-1 space-y-4">
+                    <p className="text-sm text-muted-foreground line-clamp-2">{course.description}</p>
+                    
+                    {/* Star Rating and Student Count */}
+                    <div className="flex items-center gap-3 pt-1">
+                      <StarRating rating={averageRating} size={16} showValue={false} className="text-amber-400" />
+                      <span className="text-xs text-muted-foreground">({totalRatings})</span>
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <Users className="w-4 h-4" />
+                        <span className="text-xs" data-testid={`text-enrollments-${course.id}`}>
+                          {course.enrollmentsCount || 0}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Stats */}
+                    <div className="flex gap-4 text-sm">
+                      <div className="flex items-center gap-1">
+                        <Video className="w-4 h-4 text-muted-foreground" />
+                        <span data-testid={`text-lessons-${course.id}`}>
+                          {course.lessonsCount || 0} dars
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Pricing by Plan */}
+                    {course.planPricing && course.planPricing.length > 0 ? (
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold text-muted-foreground">Tariflar:</p>
+                        <div className="grid gap-2">
+                          {course.planPricing.map((pricing) => (
+                            <div 
+                              key={pricing.id} 
+                              className="flex items-center justify-between p-2 bg-muted/50 rounded-md"
+                              data-testid={`pricing-${course.id}-${pricing.plan.name}`}
+                            >
+                              <span className="text-sm font-medium">{pricing.plan.displayName}</span>
+                              <span className="text-sm font-bold text-primary">
+                                {Number(pricing.price).toLocaleString('uz-UZ')} so'm
                               </span>
-                              <Badge variant="destructive" className="text-xs">
-                                -{(course as any).discountPercentage}%
-                              </Badge>
                             </div>
-                            <span className="text-sm text-muted-foreground line-through">
-                              {Number(course.price).toLocaleString('uz-UZ')} so'm
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-lg font-bold">
-                            {Number(course.price).toLocaleString('uz-UZ')} so'm
-                          </span>
-                        )}
+                          ))}
+                        </div>
                       </div>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-col">
+                          {discountPercent > 0 ? (
+                            <>
+                              <div className="flex items-center gap-2">
+                                <span className="text-lg font-bold">
+                                  {displayPrice.toLocaleString('uz-UZ')} so'm
+                                </span>
+                                <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 text-xs">
+                                  {discountPercent}% chegirma
+                                </Badge>
+                              </div>
+                              <span className="text-sm text-muted-foreground line-through">
+                                {basePrice.toLocaleString('uz-UZ')} so'm
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-lg font-bold">
+                              {basePrice.toLocaleString('uz-UZ')} so'm
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center justify-end">
+                      <Badge 
+                        variant={course.status === 'published' ? 'default' : 'secondary'}
+                        data-testid={`badge-status-${course.id}`}
+                      >
+                        {course.status === 'published' ? "E'lon qilingan" : "Qoralama"}
+                      </Badge>
                     </div>
-                  )}
-                  
-                  <div className="flex items-center justify-end">
-                    <Badge 
-                      variant={course.status === 'published' ? 'default' : 'secondary'}
-                      data-testid={`badge-status-${course.id}`}
+                    
+                    {/* Analytics Panel - Collapsible */}
+                    <Collapsible 
+                      open={expandedAnalytics.has(course.id)}
+                      onOpenChange={() => {
+                        const newSet = new Set(expandedAnalytics);
+                        if (newSet.has(course.id)) {
+                          newSet.delete(course.id);
+                        } else {
+                          newSet.add(course.id);
+                        }
+                        setExpandedAnalytics(newSet);
+                      }}
                     >
-                      {course.status === 'published' ? "E'lon qilingan" : "Qoralama"}
-                    </Badge>
-                  </div>
-                  
-                  {/* Analytics Panel - Collapsible */}
-                  <Collapsible 
-                    open={expandedAnalytics.has(course.id)}
-                    onOpenChange={() => {
-                      const newSet = new Set(expandedAnalytics);
-                      if (newSet.has(course.id)) {
-                        newSet.delete(course.id);
-                      } else {
-                        newSet.add(course.id);
-                      }
-                      setExpandedAnalytics(newSet);
-                    }}
-                  >
-                    <CollapsibleTrigger asChild>
+                      <CollapsibleTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-between"
+                          data-testid={`button-analytics-${course.id}`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <TrendingUp className="w-4 h-4" />
+                            Statistika
+                          </span>
+                          <ChevronDown className={`w-4 h-4 transition-transform ${expandedAnalytics.has(course.id) ? 'rotate-180' : ''}`} />
+                        </Button>
+                      </CollapsibleTrigger>
+                      
+                      <CollapsibleContent className="pt-4">
+                        <CourseAnalyticsPanel courseId={course.id} />
+                      </CollapsibleContent>
+                    </Collapsible>
+                    
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedCourse(course)}
+                        data-testid={`button-manage-${course.id}`}
+                      >
+                        Boshqarish
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setLocation(`/instructor/courses/${course.id}/speaking-tests`)}
+                        data-testid={`button-speaking-tests-${course.id}`}
+                      >
+                        <Mic className="w-4 h-4 mr-2" />
+                        Speaking
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="w-full justify-between"
-                        data-testid={`button-analytics-${course.id}`}
+                        onClick={() => setLocation(`/learn/${course.id}`)}
+                        data-testid={`button-preview-${course.id}`}
                       >
-                        <span className="flex items-center gap-2">
-                          <TrendingUp className="w-4 h-4" />
-                          Statistika
-                        </span>
-                        <ChevronDown className={`w-4 h-4 transition-transform ${expandedAnalytics.has(course.id) ? 'rotate-180' : ''}`} />
+                        <Eye className="w-4 h-4 mr-2" />
+                        Ko'rish
                       </Button>
-                    </CollapsibleTrigger>
-                    
-                    <CollapsibleContent className="pt-4">
-                      <CourseAnalyticsPanel courseId={course.id} />
-                    </CollapsibleContent>
-                  </Collapsible>
-                  
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedCourse(course)}
-                      data-testid={`button-manage-${course.id}`}
-                    >
-                      Boshqarish
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setLocation(`/instructor/courses/${course.id}/speaking-tests`)}
-                      data-testid={`button-speaking-tests-${course.id}`}
-                    >
-                      <Mic className="w-4 h-4 mr-2" />
-                      Speaking
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setLocation(`/learn/${course.id}`)}
-                      data-testid={`button-preview-${course.id}`}
-                    >
-                      <Eye className="w-4 h-4 mr-2" />
-                      Ko'rish
-                    </Button>
-                    {course.status === 'draft' && (
-                      <Button
-                        size="sm"
-                        onClick={() => publishCourseMutation.mutate(course.id)}
-                        data-testid={`button-publish-${course.id}`}
-                      >
-                        E'lon Qilish
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                      {course.status === 'draft' && (
+                        <Button
+                          size="sm"
+                          onClick={() => publishCourseMutation.mutate(course.id)}
+                          data-testid={`button-publish-${course.id}`}
+                        >
+                          E'lon Qilish
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+
+              return (
+                <motion.div
+                  key={course.id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3 }}
+                  className="h-full"
+                >
+                  {discountPercent > 0 ? (
+                    <div className={`p-1 bg-gradient-to-br ${gradient} rounded-lg h-full`}>
+                      {cardContent}
+                    </div>
+                  ) : (
+                    cardContent
+                  )}
+                </motion.div>
+              );
+            })}
           </div>
         )}
       </div>
