@@ -89,6 +89,7 @@ export const coursesRelations = relations(courses, ({ one, many }) => ({
   planPricing: many(coursePlanPricing),
   userSubscriptions: many(userSubscriptions),
   ratings: many(courseRatings),
+  likes: many(courseLikes),
 }));
 
 // Course Ratings table
@@ -111,6 +112,27 @@ export const courseRatingsRelations = relations(courseRatings, ({ one }) => ({
   }),
   user: one(users, {
     fields: [courseRatings.userId],
+    references: [users.id],
+  }),
+}));
+
+// Course Likes table - "Qiziqtirdi" feature for public interest tracking
+export const courseLikes = pgTable("course_likes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("course_likes_course_user_idx").on(table.courseId, table.userId),
+]);
+
+export const courseLikesRelations = relations(courseLikes, ({ one }) => ({
+  course: one(courses, {
+    fields: [courseLikes.courseId],
+    references: [courses.id],
+  }),
+  user: one(users, {
+    fields: [courseLikes.userId],
     references: [users.id],
   }),
 }));
@@ -502,6 +524,11 @@ export const insertCourseRatingSchema = createInsertSchema(courseRatings).omit({
   updatedAt: true,
 });
 
+export const insertCourseLikeSchema = createInsertSchema(courseLikes).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertLessonSchema = createInsertSchema(lessons).omit({
   id: true,
   createdAt: true,
@@ -853,6 +880,9 @@ export type Course = typeof courses.$inferSelect;
 
 export type InsertCourseRating = z.infer<typeof insertCourseRatingSchema>;
 export type CourseRating = typeof courseRatings.$inferSelect;
+
+export type InsertCourseLike = z.infer<typeof insertCourseLikeSchema>;
+export type CourseLike = typeof courseLikes.$inferSelect;
 
 // Extended course type with aggregated counts (for instructor dashboard)
 export type InstructorCourseWithCounts = Course & {
