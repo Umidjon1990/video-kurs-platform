@@ -3043,10 +3043,9 @@ function CourseAnalyticsPanel({ courseId }: { courseId: string }) {
           </CardContent>
         </Card>
       )}
-    </div>
 
-    {/* Create Standalone Speaking Test Dialog */}
-    <Dialog open={isCreateStandaloneTestOpen} onOpenChange={setIsCreateStandaloneTestOpen}>
+      {/* Create Standalone Speaking Test Dialog */}
+      <Dialog open={isCreateStandaloneTestOpen} onOpenChange={setIsCreateStandaloneTestOpen}>
       <DialogContent className="max-w-2xl" data-testid="dialog-create-standalone-speaking-test">
         <DialogHeader>
           <DialogTitle>Yangi Og'zaki Test Yaratish</DialogTitle>
@@ -3163,6 +3162,7 @@ function CourseAnalyticsPanel({ courseId }: { courseId: string }) {
           </Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
+      </Dialog>
+    </div>
   );
 }
