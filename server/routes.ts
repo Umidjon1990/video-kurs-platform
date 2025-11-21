@@ -88,13 +88,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Public user endpoint (returns null if not authenticated, used by HomePage)
   app.get('/api/user', async (req: any, res) => {
     try {
-      // Check if user is authenticated
-      if (!req.user?.claims?.sub) {
-        return res.json(null);
+      // Check session user (OIDC/Replit Auth)
+      if (req.user?.claims?.sub) {
+        const userId = req.user.claims.sub;
+        const user = await storage.getUser(userId);
+        return res.json(user);
       }
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
+      
+      // Check local auth user (passport session)
+      if (req.session?.passport?.user) {
+        const userId = req.session.passport.user;
+        const user = await storage.getUser(userId);
+        return res.json(user);
+      }
+      
+      // No user logged in
+      res.json(null);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.json(null); // Return null on error instead of 500
