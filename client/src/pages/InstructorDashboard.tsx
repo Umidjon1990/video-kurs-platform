@@ -206,6 +206,7 @@ export default function InstructorDashboard() {
         title: courseForm.title,
         description: courseForm.description,
         category: courseForm.category,
+        authorName: courseForm.authorName,
         thumbnailUrl: courseForm.thumbnailUrl,
         imageUrl: courseForm.imageUrl,
         pricing: {
@@ -223,7 +224,7 @@ export default function InstructorDashboard() {
         description: editingCourse ? "Kurs yangilandi" : "Kurs yaratildi" 
       });
       setIsCreateCourseOpen(false);
-      setCourseForm({ title: "", description: "", category: "", price: "", thumbnailUrl: "", imageUrl: "" });
+      setCourseForm({ title: "", description: "", category: "", price: "", authorName: "", thumbnailUrl: "", imageUrl: "" });
       setEditingCourse(null);
     },
     onError: (error: Error) => {
@@ -1498,6 +1499,16 @@ export default function InstructorDashboard() {
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="authorName">Kurs Muallifi</Label>
+              <Input
+                id="authorName"
+                value={courseForm.authorName}
+                onChange={(e) => setCourseForm({ ...courseForm, authorName: e.target.value })}
+                placeholder="Masalan: Alisher Navoiy"
+                data-testid="input-course-author"
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="thumbnail">Thumbnail URL (ixtiyoriy)</Label>
               <Input
                 id="thumbnail"
@@ -1545,7 +1556,7 @@ export default function InstructorDashboard() {
               onClick={() => {
                 setIsCreateCourseOpen(false);
                 setEditingCourse(null);
-                setCourseForm({ title: "", description: "", category: "", price: "", thumbnailUrl: "", imageUrl: "" });
+                setCourseForm({ title: "", description: "", category: "", price: "", authorName: "", thumbnailUrl: "", imageUrl: "" });
               }}
               data-testid="button-cancel-create-course"
             >
