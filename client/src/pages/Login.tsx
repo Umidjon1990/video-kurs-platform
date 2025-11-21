@@ -10,6 +10,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useState } from "react";
+import { ArrowLeft, Info } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Telefon yoki email kiriting"),
@@ -97,13 +99,35 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-secondary/10 p-4">
-      <Card className="w-full max-w-md" data-testid="card-login">
-        <CardHeader>
-          <CardTitle className="text-2xl">Kirish</CardTitle>
-          <CardDescription>
-            Video kurslar platformasiga kirish
-          </CardDescription>
-        </CardHeader>
+      <div className="w-full max-w-md space-y-4">
+        {/* Back to Home Button */}
+        <Button
+          variant="ghost"
+          onClick={() => setLocation("/")}
+          className="flex items-center gap-2"
+          data-testid="button-back-home"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Asosiy sahifaga qaytish
+        </Button>
+
+        <Card className="w-full" data-testid="card-login">
+          <CardHeader>
+            <CardTitle className="text-2xl">Kirish</CardTitle>
+            <CardDescription>
+              Video kurslar platformasiga kirish
+            </CardDescription>
+          </CardHeader>
+          
+          {/* Info Alert */}
+          <div className="px-6 pb-4">
+            <Alert className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
+              <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <AlertDescription className="text-sm text-blue-800 dark:text-blue-200">
+                Administrator tomonidan berilgan login va parolingizni kiriting va shaxsiy kabinetingizga kiring.
+              </AlertDescription>
+            </Alert>
+          </div>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleLogin)}>
             <CardContent className="space-y-4">
@@ -199,7 +223,8 @@ export default function Login() {
             </CardFooter>
           </form>
         </Form>
-      </Card>
+        </Card>
+      </div>
 
       {/* Forgot Password Dialog */}
       <Dialog open={isForgotPasswordOpen} onOpenChange={setIsForgotPasswordOpen}>
