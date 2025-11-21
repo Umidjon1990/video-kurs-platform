@@ -901,6 +901,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get public courses (no authentication required)
+  app.get('/api/courses/public', async (req: any, res) => {
+    try {
+      const { search, category, minPrice, maxPrice } = req.query;
+      
+      // Build where conditions
+      const conditions = [eq(courses.status, 'published')];
+      
+      if (search) {
+        conditions.push(
+          or(
+            sql`LOWER(${courses.title}) LIKE LOWER(${'%' + search + '%'})`,
+            sql`LOWER(${courses.description}) LIKE LOWER(${'%' + search + '%'})`
+          ) as any
+        );
+      }
+      
+      if (category) {
+        conditions.push(eq(courses.category, category));
+      }
+      
+      if (minPrice !== undefined) {
+        conditions.push(sql`${courses.price} >= ${parseFloat(minPrice)}`);
+      }
+      
+      if (maxPrice !== undefined) {
+        conditions.push(sql`${courses.price} <= ${parseFloat(maxPrice)}`);
+      }
+      
+      // Get all published courses with instructor info, enrollments, and plan pricing
+      const publicCourses = await db
+        .select({
+          id: courses.id,
+          title: courses.title,
+          description: courses.description,
+          category: courses.category,
+          price: courses.price,
+          discountedPrice: courses.discountedPrice,
+          thumbnailUrl: courses.thumbnailUrl,
+          imageUrl: courses.imageUrl,
+          status: courses.status,
+          createdAt: courses.createdAt,
+          instructor: {
+            id: users.id,
+            firstName: users.firstName,
+            lastName: users.lastName,
+          },
+          enrollmentsCount: sql<number>`cast(count(distinct ${enrollments.id}) as int)`,
+        })
+        .from(courses)
+        .leftJoin(users, eq(courses.instructorId, users.id))
+        .leftJoin(enrollments, eq(courses.id, enrollments.courseId))
+        .where(and(...conditions))
+        .groupBy(courses.id, users.id)
+        .orderBy(desc(courses.createdAt));
+      
+      // Get plan pricing for each course
+      const coursesWithPricing = await Promise.all(
+        publicCourses.map(async (course: typeof publicCourses[0]) => {
+          const planPricing = await db
+            .select({
+              id: coursePlanPricing.id,
+              courseId: coursePlanPricing.courseId,
+              planId: coursePlanPricing.planId,
+              price: coursePlanPricing.price,
+              plan: {
+                id: subscriptionPlans.id,
+                name: subscriptionPlans.name,
+                displayName: subscriptionPlans.displayName,
+              },
+            })
+            .from(coursePlanPricing)
+            .leftJoin(subscriptionPlans, eq(coursePlanPricing.planId, subscriptionPlans.id))
+            .where(eq(coursePlanPricing.courseId, course.id));
+          
+          return {
+            ...course,
+            planPricing,
+          };
+        })
+      );
+      
+      res.json(coursesWithPricing);
+    } catch (error: any) {
+      console.error("Error fetching public courses:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ============ INSTRUCTOR ROUTES ============
   app.get('/api/instructor/courses', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
