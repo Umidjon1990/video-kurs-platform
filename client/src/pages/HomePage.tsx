@@ -308,53 +308,52 @@ export default function HomePage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <div className={`p-1 bg-gradient-to-br ${gradient} rounded-lg`}>
-                    <Card
-                      className="hover-elevate transition-all cursor-pointer border-0 overflow-hidden h-full"
-                      data-testid={`card-course-${course.id}`}
-                      onClick={() => setLocation(`/checkout/${course.id}`)}
-                    >
-                      {/* Thumbnail with Sale Badge & New Ribbon */}
-                      <div className="relative h-56 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-b overflow-hidden">
-                        {/* "Yangi" ribbon - chap yuqori burchak */}
-                        {isNew && (
-                          <div className="absolute top-0 left-0 z-20 overflow-hidden w-32 h-32">
-                            <div className="absolute transform -rotate-45 bg-green-500 text-white text-center font-bold py-1 left-[-35px] top-[25px] w-[170px] shadow-md">
-                              <div className="text-xs">
-                                YANGI
-                                {daysAgo === 0 ? " (Bugun)" : ` (${daysAgo} kun)`}
+                  {/* Gradient wrapper FAQAT chegirmali kurslar uchun */}
+                  {discountPercent > 0 ? (
+                    <div className={`p-1 bg-gradient-to-br ${gradient} rounded-lg`}>
+                      <Card
+                        className="hover-elevate transition-all cursor-pointer border-0 overflow-hidden h-full"
+                        data-testid={`card-course-${course.id}`}
+                        onClick={() => setLocation(`/checkout/${course.id}`)}
+                      >
+                        {/* Thumbnail with Sale Badge & New Ribbon */}
+                        <div className="relative h-56 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-b overflow-hidden">
+                          {/* "Yangi" ribbon - chap yuqori burchak */}
+                          {isNew && (
+                            <div className="absolute top-0 left-0 z-20 overflow-hidden w-32 h-32">
+                              <div className="absolute transform -rotate-45 bg-green-500 text-white text-center font-bold py-1 left-[-35px] top-[25px] w-[170px] shadow-md">
+                                <div className="text-xs">
+                                  YANGI
+                                  {daysAgo === 0 ? " (Bugun)" : ` (${daysAgo} kun)`}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        )}
-                        {discountPercent > 0 && (
+                          )}
                           <Badge variant="destructive" className="absolute top-3 right-3 z-10 text-sm font-bold px-3 py-1">
                             -{discountPercent}% CHEGIRMA
                           </Badge>
-                        )}
-                        {thumbnailUrl ? (
-                      <img
-                        src={thumbnailUrl}
-                        alt={course.title}
-                        className="w-full h-full object-contain"
-                        loading="lazy"
-                        onError={(e) => {
-                          console.error('Course thumbnail failed to load:', course.thumbnailUrl);
-                          // Hide the broken image and show fallback icon
-                          e.currentTarget.style.display = 'none';
-                          const parent = e.currentTarget.parentElement;
-                          if (parent && parent.querySelector('.fallback-icon') === null) {
-                            const icon = document.createElement('div');
-                            icon.className = 'fallback-icon flex items-center justify-center w-full h-full';
-                            icon.innerHTML = '<svg class="w-16 h-16 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>';
-                            parent.appendChild(icon);
-                          }
-                        }}
-                      />
-                    ) : (
-                      <BookOpen className="w-16 h-16 text-muted-foreground" />
-                    )}
-                  </div>
+                          {thumbnailUrl ? (
+                            <img
+                              src={thumbnailUrl}
+                              alt={course.title}
+                              className="w-full h-full object-contain"
+                              loading="lazy"
+                              onError={(e) => {
+                                console.error('Course thumbnail failed to load:', course.thumbnailUrl);
+                                e.currentTarget.style.display = 'none';
+                                const parent = e.currentTarget.parentElement;
+                                if (parent && parent.querySelector('.fallback-icon') === null) {
+                                  const icon = document.createElement('div');
+                                  icon.className = 'fallback-icon flex items-center justify-center w-full h-full';
+                                  icon.innerHTML = '<svg class="w-16 h-16 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>';
+                                  parent.appendChild(icon);
+                                }
+                              }}
+                            />
+                          ) : (
+                            <BookOpen className="w-16 h-16 text-muted-foreground" />
+                          )}
+                        </div>
 
                   <CardHeader>
                     <div className="flex items-start justify-between gap-2">
@@ -457,7 +456,139 @@ export default function HomePage() {
                   </CardFooter>
                 </Card>
               </div>
-            </motion.div>
+            ) : (
+              {/* Oddiy karta (chegirmasiz) */}
+              <Card
+                className="hover-elevate transition-all cursor-pointer overflow-hidden h-full"
+                data-testid={`card-course-${course.id}`}
+                onClick={() => setLocation(`/checkout/${course.id}`)}
+              >
+                {/* Thumbnail with New Ribbon only */}
+                <div className="relative h-56 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-b overflow-hidden">
+                  {/* "Yangi" ribbon - chap yuqori burchak */}
+                  {isNew && (
+                    <div className="absolute top-0 left-0 z-20 overflow-hidden w-32 h-32">
+                      <div className="absolute transform -rotate-45 bg-green-500 text-white text-center font-bold py-1 left-[-35px] top-[25px] w-[170px] shadow-md">
+                        <div className="text-xs">
+                          YANGI
+                          {daysAgo === 0 ? " (Bugun)" : ` (${daysAgo} kun)`}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {thumbnailUrl ? (
+                    <img
+                      src={thumbnailUrl}
+                      alt={course.title}
+                      className="w-full h-full object-contain"
+                      loading="lazy"
+                      onError={(e) => {
+                        console.error('Course thumbnail failed to load:', course.thumbnailUrl);
+                        e.currentTarget.style.display = 'none';
+                        const parent = e.currentTarget.parentElement;
+                        if (parent && parent.querySelector('.fallback-icon') === null) {
+                          const icon = document.createElement('div');
+                          icon.className = 'fallback-icon flex items-center justify-center w-full h-full';
+                          icon.innerHTML = '<svg class="w-16 h-16 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>';
+                          parent.appendChild(icon);
+                        }
+                      }}
+                    />
+                  ) : (
+                    <BookOpen className="w-16 h-16 text-muted-foreground" />
+                  )}
+                </div>
+
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="font-semibold text-lg line-clamp-2">{course.title}</h3>
+                    {course.category && (
+                      <Badge variant="secondary" className="shrink-0">
+                        {course.category}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {(course as any).author || `${course.instructor.firstName} ${course.instructor.lastName}`}
+                  </p>
+                </CardHeader>
+
+                <CardContent>
+                  <p className="text-sm text-muted-foreground line-clamp-2">
+                    {course.description || "Kurs tavsifi yo'q"}
+                  </p>
+                  <div className="flex items-center justify-between mt-3">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Users className="w-4 h-4" />
+                      <span>{course.enrollmentsCount} talaba</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <StarRating 
+                        rating={course.averageRating || 0} 
+                        size={14} 
+                        showValue={true}
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        ({course.totalRatings || 0})
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+
+                <CardFooter className="flex flex-col gap-3">
+                  {/* Pricing by Plan */}
+                  {course.planPricing && course.planPricing.length > 0 ? (
+                    <div className="w-full space-y-2">
+                      <p className="text-xs font-semibold text-muted-foreground">Tariflar:</p>
+                      <div className="grid gap-1.5">
+                        {course.planPricing.map((pricing) => (
+                          <div 
+                            key={pricing.id} 
+                            className="flex items-center justify-between text-sm"
+                            data-testid={`pricing-${course.id}-${pricing.plan.name}`}
+                          >
+                            <span className="text-muted-foreground">{pricing.plan.displayName}</span>
+                            <span className="font-semibold text-primary">
+                              {Number(pricing.price).toLocaleString('uz-UZ')} so'm
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-full">
+                      <span className="text-2xl font-bold">
+                        {formatPrice(displayPrice.toString())}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex gap-2 w-full">
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedCourseForLessons(course);
+                      }}
+                      variant="outline"
+                      className="flex-1"
+                      data-testid={`button-view-lessons-${course.id}`}
+                    >
+                      Darslarni Ko'rish
+                    </Button>
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open("https://t.me/zamonaviytalimuz", "_blank", "noopener,noreferrer");
+                      }}
+                      className="flex-1"
+                      data-testid={`button-enroll-${course.id}`}
+                    >
+                      Yozilish
+                    </Button>
+                  </div>
+                </CardFooter>
+              </Card>
+            )}
+          </motion.div>
               );
             })}
           </div>
