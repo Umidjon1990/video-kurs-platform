@@ -84,6 +84,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch user" });
     }
   });
+
+  // Public user endpoint (returns null if not authenticated, used by HomePage)
+  app.get('/api/user', async (req: any, res) => {
+    try {
+      // Check if user is authenticated
+      if (!req.user?.claims?.sub) {
+        return res.json(null);
+      }
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.json(null); // Return null on error instead of 500
+    }
+  });
   
   app.patch('/api/auth/profile', isAuthenticated, async (req: any, res) => {
     try {
