@@ -55,6 +55,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   messages: many(messages),
   userSubscriptions: many(userSubscriptions),
   lessonProgress: many(lessonProgress),
+  courseRatings: many(courseRatings),
 }));
 
 // Courses table
@@ -85,6 +86,29 @@ export const coursesRelations = relations(courses, ({ one, many }) => ({
   enrollments: many(enrollments),
   planPricing: many(coursePlanPricing),
   userSubscriptions: many(userSubscriptions),
+  ratings: many(courseRatings),
+}));
+
+// Course Ratings table
+export const courseRatings = pgTable("course_ratings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  rating: integer("rating").notNull(), // 1-5 yulduz
+  review: text("review"), // Izoh (ixtiyoriy)
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const courseRatingsRelations = relations(courseRatings, ({ one }) => ({
+  course: one(courses, {
+    fields: [courseRatings.courseId],
+    references: [courses.id],
+  }),
+  user: one(users, {
+    fields: [courseRatings.userId],
+    references: [users.id],
+  }),
 }));
 
 // Lessons table
@@ -466,6 +490,12 @@ export const insertCourseSchema = createInsertSchema(courses).omit({
   updatedAt: true,
 });
 
+export const insertCourseRatingSchema = createInsertSchema(courseRatings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertLessonSchema = createInsertSchema(lessons).omit({
   id: true,
   createdAt: true,
@@ -814,6 +844,9 @@ export type User = typeof users.$inferSelect;
 
 export type InsertCourse = z.infer<typeof insertCourseSchema>;
 export type Course = typeof courses.$inferSelect;
+
+export type InsertCourseRating = z.infer<typeof insertCourseRatingSchema>;
+export type CourseRating = typeof courseRatings.$inferSelect;
 
 // Extended course type with aggregated counts (for instructor dashboard)
 export type InstructorCourseWithCounts = Course & {
