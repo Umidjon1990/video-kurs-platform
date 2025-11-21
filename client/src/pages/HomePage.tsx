@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, BookOpen, Users, Award, Star, Mail, Phone, MapPin, Send, ExternalLink, X, ZoomIn, Play, Lock, Clock } from "lucide-react";
+import { Search, Filter, BookOpen, Users, Award, Star, Mail, Phone, MapPin, Send, ExternalLink, X, ZoomIn, Play, Lock, Clock, Heart } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,7 @@ type PublicCourse = Course & {
   planPricing?: Array<CoursePlanPricing & { plan: SubscriptionPlan }>;
   averageRating?: number;
   totalRatings?: number;
+  likeCount?: number;
 };
 
 type Lesson = {
@@ -340,18 +342,28 @@ export default function HomePage() {
                         <Users className="w-4 h-4" />
                         <span>{course.enrollmentsCount} talaba</span>
                       </div>
-                      {course.totalRatings !== undefined && course.totalRatings > 0 && (
-                        <div className="flex items-center gap-1">
-                          <StarRating 
-                            rating={course.averageRating || 0} 
-                            size={14} 
-                            showValue={true}
-                          />
-                          <span className="text-xs text-muted-foreground">
-                            ({course.totalRatings})
-                          </span>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-3">
+                        {course.totalRatings !== undefined && course.totalRatings > 0 && (
+                          <div className="flex items-center gap-1">
+                            <StarRating 
+                              rating={course.averageRating || 0} 
+                              size={14} 
+                              showValue={true}
+                            />
+                            <span className="text-xs text-muted-foreground">
+                              ({course.totalRatings})
+                            </span>
+                          </div>
+                        )}
+                        {course.likeCount !== undefined && course.likeCount > 0 && (
+                          <div className="flex items-center gap-1">
+                            <Heart className="w-4 h-4 text-red-500" />
+                            <span className="text-xs text-muted-foreground">
+                              {course.likeCount}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </CardContent>
 
