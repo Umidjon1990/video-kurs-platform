@@ -216,6 +216,7 @@ export default function InstructorDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/instructor/courses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/courses/public"] });
       toast({ 
         title: "Muvaffaqiyatli", 
         description: editingCourse ? "Kurs yangilandi" : "Kurs yaratildi" 

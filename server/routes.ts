@@ -981,6 +981,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         title: true,
         description: true,
         category: true,
+        price: true,
         originalPrice: true,
         discountedPrice: true,
         thumbnailUrl: true,
@@ -991,6 +992,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Handle pricing object from frontend
       if (req.body.pricing && req.body.pricing.oddiy) {
+        updateData.price = req.body.pricing.oddiy;
         updateData.originalPrice = req.body.pricing.oddiy;
       }
       
