@@ -40,31 +40,18 @@ export function StarRating({
               "relative",
               interactive && "cursor-pointer transition-transform hover:scale-110"
             )}
-            onClick={() => handleStarClick(index)}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleStarClick(index);
+            }}
             data-testid={`star-${index}`}
           >
-            {/* Background star (empty) */}
+            {/* All stars are golden (filled) by default */}
             <Star
               size={size}
-              className="text-muted-foreground/30"
+              className="text-amber-400 dark:text-amber-500"
               fill="currentColor"
             />
-            
-            {/* Filled star overlay */}
-            {(isFilled || isPartial) && (
-              <div
-                className="absolute inset-0 overflow-hidden"
-                style={{
-                  width: isPartial ? `${fillPercentage}%` : '100%'
-                }}
-              >
-                <Star
-                  size={size}
-                  className="text-amber-400 dark:text-amber-500"
-                  fill="currentColor"
-                />
-              </div>
-            )}
           </div>
         );
       })}
