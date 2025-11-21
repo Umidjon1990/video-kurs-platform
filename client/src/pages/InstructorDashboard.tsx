@@ -1434,14 +1434,14 @@ export default function InstructorDashboard() {
         </Dialog>
       )}
 
-      {/* Create Course Dialog */}
+      {/* Create/Edit Course Dialog */}
       <Dialog open={isCreateCourseOpen} onOpenChange={setIsCreateCourseOpen}>
-        <DialogContent data-testid="dialog-create-course">
+        <DialogContent className="max-h-[90vh] flex flex-col" data-testid="dialog-create-course">
           <DialogHeader>
-            <DialogTitle>Yangi Kurs Yaratish</DialogTitle>
-            <DialogDescription>Kurs ma'lumotlarini kiriting</DialogDescription>
+            <DialogTitle>{editingCourse ? "Kursni Tahrirlash" : "Yangi Kurs Yaratish"}</DialogTitle>
+            <DialogDescription>Kurs ma'lumotlarini {editingCourse ? "yangilang" : "kiriting"}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 overflow-y-auto flex-1 pr-2">
             <div className="space-y-2">
               <Label htmlFor="title">Kurs Nomi</Label>
               <Input
@@ -1537,10 +1537,14 @@ export default function InstructorDashboard() {
               </p>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-shrink-0">
             <Button
               variant="outline"
-              onClick={() => setIsCreateCourseOpen(false)}
+              onClick={() => {
+                setIsCreateCourseOpen(false);
+                setEditingCourse(null);
+                setCourseForm({ title: "", description: "", category: "", price: "", thumbnailUrl: "", imageUrl: "" });
+              }}
               data-testid="button-cancel-create-course"
             >
               Bekor Qilish
@@ -1550,7 +1554,9 @@ export default function InstructorDashboard() {
               disabled={!courseForm.title || !courseForm.price || !courseForm.price.trim() || createCourseMutation.isPending}
               data-testid="button-confirm-create-course"
             >
-              {createCourseMutation.isPending ? "Yaratilmoqda..." : "Yaratish"}
+              {createCourseMutation.isPending 
+                ? (editingCourse ? "Yangilanmoqda..." : "Yaratilmoqda...") 
+                : (editingCourse ? "Yangilash" : "Yaratish")}
             </Button>
           </DialogFooter>
         </DialogContent>
