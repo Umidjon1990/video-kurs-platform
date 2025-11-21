@@ -85,6 +85,7 @@ function Router() {
                 <>
                   <Route path="/" component={InstructorDashboard} />
                   <Route path="/instructor/subscriptions" component={InstructorSubscriptions} />
+                  <Route path="/instructor/standalone-tests" component={InstructorStandaloneTests} />
                   <Route path="/instructor/courses/:courseId/speaking-tests" component={SpeakingTests} />
                   <Route path="/instructor/speaking-tests/:testId" component={SpeakingTestEdit} />
                   <Route path="/learn/:courseId" component={LearningPage} />

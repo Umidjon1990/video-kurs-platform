@@ -19,9 +19,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 const standaloneTestSchema = z.object({
   title: z.string().min(1, 'Test nomi kerak'),
   description: z.string().optional(),
-  price: z.string().min(1, 'Narx kerak').transform(Number),
-  duration: z.string().min(1, 'Vaqt kerak').transform(Number),
-  totalScore: z.string().min(1, 'Ball kerak').transform(Number),
+  price: z.number().min(0, 'Narx kerak'),
+  duration: z.number().min(1, 'Vaqt kerak'),
+  totalScore: z.number().min(1, 'Ball kerak'),
   thumbnailUrl: z.string().optional(),
   testType: z.enum(['standard', 'speaking']),
 });
@@ -46,12 +46,12 @@ export default function InstructorStandaloneTests() {
     defaultValues: {
       title: '',
       description: '',
-      price: '',
-      duration: '60',
-      totalScore: '100',
+      price: 50000,
+      duration: 60,
+      totalScore: 100,
       thumbnailUrl: '',
       testType: 'standard',
-    },
+    } as any,
   });
 
   const createMutation = useMutation({
@@ -268,7 +268,7 @@ export default function InstructorStandaloneTests() {
                     <FormItem>
                       <FormLabel>Narx (so'm)</FormLabel>
                       <FormControl>
-                        <Input {...field} type="number" placeholder="50000" data-testid="input-price" />
+                        <Input {...field} type="number" placeholder="50000" onChange={(e) => field.onChange(Number(e.target.value))} data-testid="input-price" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -282,7 +282,7 @@ export default function InstructorStandaloneTests() {
                     <FormItem>
                       <FormLabel>Vaqt (min)</FormLabel>
                       <FormControl>
-                        <Input {...field} type="number" placeholder="120" data-testid="input-duration" />
+                        <Input {...field} type="number" placeholder="120" onChange={(e) => field.onChange(Number(e.target.value))} data-testid="input-duration" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -296,7 +296,7 @@ export default function InstructorStandaloneTests() {
                     <FormItem>
                       <FormLabel>Jami Ball</FormLabel>
                       <FormControl>
-                        <Input {...field} type="number" placeholder="100" data-testid="input-score" />
+                        <Input {...field} type="number" placeholder="100" onChange={(e) => field.onChange(Number(e.target.value))} data-testid="input-score" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
