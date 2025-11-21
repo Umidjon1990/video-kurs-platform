@@ -49,6 +49,7 @@ export default function InstructorDashboard() {
     description: "",
     category: "",
     price: "",
+    authorName: "",
     thumbnailUrl: "",
     imageUrl: "",
   });

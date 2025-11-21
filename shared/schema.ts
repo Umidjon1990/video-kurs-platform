@@ -69,6 +69,7 @@ export const courses = pgTable("courses", {
   originalPrice: decimal("original_price", { precision: 10, scale: 2 }), // Asl narx
   discountedPrice: decimal("discounted_price", { precision: 10, scale: 2 }), // Chegirmadagi narx
   instructorId: varchar("instructor_id").notNull().references(() => users.id),
+  authorName: varchar("author_name", { length: 255 }), // Kurs muallifi
   thumbnailUrl: varchar("thumbnail_url"),
   imageUrl: text("image_url"), // Kurs sahifasi uchun rasm
   status: varchar("status", { length: 20 }).notNull().default('draft'), // draft, published
