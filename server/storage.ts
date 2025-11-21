@@ -222,6 +222,7 @@ export interface IStorage {
   getSubscriptionPlanByName(name: string): Promise<SubscriptionPlan | undefined>;
   createCoursePlanPricing(pricing: InsertCoursePlanPricing): Promise<CoursePlanPricing>;
   getCoursePlanPricing(courseId: string): Promise<CoursePlanPricing[]>;
+  updateCoursePlanPricing(courseId: string, planId: string, price: string): Promise<void>;
   
   // User Subscription management
   getUserSubscriptions(userId: string): Promise<any[]>;
@@ -1777,6 +1778,16 @@ export class DatabaseStorage implements IStorage {
   
   async getCoursePlanPricing(courseId: string): Promise<CoursePlanPricing[]> {
     return await db.select().from(coursePlanPricing).where(eq(coursePlanPricing.courseId, courseId));
+  }
+  
+  async updateCoursePlanPricing(courseId: string, planId: string, price: string): Promise<void> {
+    await db
+      .update(coursePlanPricing)
+      .set({ price })
+      .where(and(
+        eq(coursePlanPricing.courseId, courseId),
+        eq(coursePlanPricing.planId, planId)
+      ));
   }
   
   // User Subscription management

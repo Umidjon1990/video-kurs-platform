@@ -980,6 +980,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const editableFields = insertCourseSchema.pick({
         title: true,
         description: true,
+        category: true,
         originalPrice: true,
         discountedPrice: true,
         thumbnailUrl: true,
@@ -987,7 +988,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }).partial();
       
       const updateData = editableFields.parse(req.body);
+      
+      // Handle pricing object from frontend
+      if (req.body.pricing && req.body.pricing.oddiy) {
+        updateData.originalPrice = req.body.pricing.oddiy;
+      }
+      
       const updatedCourse = await storage.updateCourse(courseId, updateData);
+      
+      // Update plan pricing if pricing object is provided
+      if (req.body.pricing) {
+        const plans = await storage.getSubscriptionPlans();
+        for (const plan of plans) {
+          const planKey = plan.name as 'oddiy' | 'standard' | 'premium';
+          const newPrice = req.body.pricing[planKey];
+          if (newPrice) {
+            await storage.updateCoursePlanPricing(courseId, plan.id, newPrice);
+          }
+        }
+      }
+      
       res.json(updatedCourse);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
