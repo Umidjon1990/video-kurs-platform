@@ -2089,6 +2089,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return {
             id: lesson.id,
             title: lesson.title,
+            description: lesson.description || '',
             videoUrl: lesson.videoUrl, // Include for demo lessons
             duration: lesson.duration,
             order: lesson.order,
@@ -2100,6 +2101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return {
             id: lesson.id,
             title: lesson.title,
+            description: lesson.description || '',
             duration: lesson.duration,
             order: lesson.order,
             isDemo: lesson.isDemo,

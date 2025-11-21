@@ -24,6 +24,7 @@ type PublicCourse = Course & {
 type Lesson = {
   id: string;
   title: string;
+  description?: string;
   videoUrl: string;
   isDemo: boolean;
   duration?: number;
@@ -814,6 +815,11 @@ export default function HomePage() {
                               </Badge>
                             )}
                           </div>
+                          {lesson.description && (
+                            <p className="text-sm text-muted-foreground mb-2">
+                              {lesson.description}
+                            </p>
+                          )}
                           {lesson.duration && (
                             <p className="text-sm text-muted-foreground">
                               {lesson.duration} daqiqa
