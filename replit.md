@@ -18,6 +18,8 @@ The frontend is built with React and TypeScript using Vite, Wouter for routing, 
 
 **Dashboard Enhancements**: Modern stats cards with KPI metrics, interactive charts, enhanced course cards, progress tracking systems with circular charts, and performance optimizations. Student dashboard displays: Total Enrolled Courses, Completed Courses (100% progress), In Progress Courses (0-99% progress), and Certificates count. Animations using `framer-motion` are used for a modern feel.
 
+**Course Thumbnail Display**: Course thumbnail images use `h-56` (224px) height with `object-contain` to display full images without cropping. Applied consistently across InstructorDashboard course cards, course creation dialog preview, and public HomePage course listings. Live preview shown in course creation/edit dialog when thumbnail URL is entered.
+
 ### Backend Architecture
 
 The backend is an Express.js application in TypeScript, implementing a RESTful API with role-based route protection. Authentication uses session-based `express-session` with a PostgreSQL store, integrated with Passport.js and Replit Auth (OpenID Connect). Middleware enforces role-based access control and error handling. It includes a private messaging system, an announcement system with various targeting modes, and robust APIs for managing courses, assessments, user subscriptions, and site content.

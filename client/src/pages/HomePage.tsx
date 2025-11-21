@@ -257,7 +257,7 @@ export default function HomePage() {
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {[...Array(6)].map((_, i) => (
               <Card key={i} className="animate-pulse">
-                <div className="h-48 bg-muted" />
+                <div className="h-56 bg-muted" />
                 <CardHeader>
                   <div className="h-6 bg-muted rounded w-3/4 mb-2" />
                   <div className="h-4 bg-muted rounded w-1/2" />
@@ -288,12 +288,12 @@ export default function HomePage() {
                   onClick={() => setLocation(`/checkout/${course.id}`)}
                 >
                   {/* Thumbnail */}
-                  <div className="h-48 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-b overflow-hidden">
+                  <div className="h-56 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-b">
                     {thumbnailUrl ? (
                       <img
                         src={thumbnailUrl}
                         alt={course.title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
                         loading="lazy"
                         onError={(e) => {
                           console.error('Course thumbnail failed to load:', course.thumbnailUrl);

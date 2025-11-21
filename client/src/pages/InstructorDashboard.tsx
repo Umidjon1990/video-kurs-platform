@@ -798,10 +798,10 @@ export default function InstructorDashboard() {
                     <img
                       src={course.thumbnailUrl}
                       alt={course.title}
-                      className="w-full h-40 object-cover rounded-lg mb-4"
+                      className="w-full h-56 object-contain rounded-lg mb-4 bg-muted"
                     />
                   ) : (
-                    <div className="w-full h-40 bg-muted rounded-lg flex items-center justify-center mb-4">
+                    <div className="w-full h-56 bg-muted rounded-lg flex items-center justify-center mb-4">
                       <BookOpen className="w-12 h-12 text-muted-foreground" />
                     </div>
                   )}
@@ -1507,6 +1507,21 @@ export default function InstructorDashboard() {
               <p className="text-xs text-muted-foreground">
                 Kurs kartochkasi uchun kichik rasm
               </p>
+              {courseForm.thumbnailUrl && (
+                <div className="mt-2 border rounded-lg p-2 bg-muted">
+                  <p className="text-xs font-medium mb-2">Preview:</p>
+                  <img
+                    src={courseForm.thumbnailUrl}
+                    alt="Thumbnail preview"
+                    className="w-full h-56 object-contain rounded-lg bg-background"
+                    onError={(e) => {
+                      e.currentTarget.src = '';
+                      e.currentTarget.alt = 'Rasm yuklanmadi - URL noto\'g\'ri';
+                      e.currentTarget.className = 'w-full h-56 flex items-center justify-center text-sm text-destructive';
+                    }}
+                  />
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="imageUrl">Kurs Rasmi URL (ixtiyoriy)</Label>
