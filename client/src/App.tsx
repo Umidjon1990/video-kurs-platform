@@ -22,6 +22,7 @@ import InstructorDashboard from "@/pages/InstructorDashboard";
 import InstructorSubscriptions from "@/pages/InstructorSubscriptions";
 import SpeakingTests from "@/pages/SpeakingTests";
 import SpeakingTestEdit from "@/pages/SpeakingTestEdit";
+import InstructorStandaloneTests from "@/pages/InstructorStandaloneTests";
 import StudentCourses from "@/pages/StudentCourses";
 import StudentResults from "@/pages/StudentResults";
 import StudentSpeakingTest from "@/pages/StudentSpeakingTest";

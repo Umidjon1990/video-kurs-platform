@@ -12,6 +12,8 @@ import {
   Wallet,
   ListChecks,
   LogOut,
+  ShoppingCart,
+  Mic,
 } from "lucide-react";
 import {
   Sidebar,
@@ -41,6 +43,7 @@ const adminMenuItems: MenuItem[] = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
   { title: "Kurslar", url: "/admin/courses", icon: BookOpen },
   { title: "To'lovlar", url: "/admin/payments", icon: CreditCard },
+  { title: "Test To'lovlari", url: "/admin/test-payments", icon: ShoppingCart },
   { title: "Obunalar", url: "/admin/subscriptions", icon: Wallet },
   { title: "Obuna Rejalari", url: "/admin/subscription-plans", icon: ListChecks },
   { title: "CMS", url: "/admin/cms", icon: FileText },
@@ -54,6 +57,7 @@ const instructorMenuItems: MenuItem[] = [
 
 const studentMenuItems: MenuItem[] = [
   { title: "Mening Kurslarim", url: "/", icon: BookOpen },
+  { title: "Test Bozori", url: "/test-marketplace", icon: ShoppingCart },
   { title: "Natijalarim", url: "/results", icon: Award },
   { title: "Xabarlar", url: "/chat", icon: MessageSquare },
 ];
