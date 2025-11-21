@@ -22,8 +22,6 @@ type PublicCourse = Course & {
   planPricing?: Array<CoursePlanPricing & { plan: SubscriptionPlan }>;
   averageRating?: number;
   totalRatings?: number;
-  likeCount?: number;
-  isLiked?: boolean;
 };
 
 type Lesson = {
@@ -273,9 +271,22 @@ export default function HomePage() {
           </div>
         ) : courses && courses.length > 0 ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {courses.map((course) => {
-              const discountPercent = calculateDiscount(course.originalPrice, course.discountedPrice);
-              const displayPrice = course.discountedPrice || course.price;
+            {courses.map((course, index) => {
+              // Discount calculation
+              const discountPercent = course.discountPercentage && course.discountPercentage > 0 ? course.discountPercentage : 0;
+              const basePrice = Number(course.price);
+              const displayPrice = discountPercent > 0 ? basePrice * (1 - discountPercent / 100) : basePrice;
+              
+              // Gradient palette (6 modern gradients)
+              const gradients = [
+                "from-blue-500 via-purple-500 to-pink-500",
+                "from-green-500 via-teal-500 to-cyan-500",
+                "from-orange-500 via-red-500 to-pink-500",
+                "from-indigo-500 via-purple-500 to-fuchsia-500",
+                "from-emerald-500 via-green-500 to-teal-500",
+                "from-amber-500 via-orange-500 to-red-500",
+              ];
+              const gradient = gradients[index % gradients.length];
               
               // Auto-convert Google Drive thumbnail URL
               let thumbnailUrl = course.thumbnailUrl;
@@ -287,15 +298,26 @@ export default function HomePage() {
               }
 
               return (
-                <Card
+                <motion.div
                   key={course.id}
-                  className="hover-elevate transition-all cursor-pointer"
-                  data-testid={`card-course-${course.id}`}
-                  onClick={() => setLocation(`/checkout/${course.id}`)}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
                 >
-                  {/* Thumbnail */}
-                  <div className="h-56 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-b">
-                    {thumbnailUrl ? (
+                  <div className={`p-1 bg-gradient-to-br ${gradient} rounded-lg`}>
+                    <Card
+                      className="hover-elevate transition-all cursor-pointer border-0 overflow-hidden h-full"
+                      data-testid={`card-course-${course.id}`}
+                      onClick={() => setLocation(`/checkout/${course.id}`)}
+                    >
+                      {/* Thumbnail with Sale Badge */}
+                      <div className="relative h-56 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-b">
+                        {discountPercent > 0 && (
+                          <Badge variant="destructive" className="absolute top-3 right-3 z-10 text-sm font-bold px-3 py-1">
+                            -{discountPercent}% CHEGIRMA
+                          </Badge>
+                        )}
+                        {thumbnailUrl ? (
                       <img
                         src={thumbnailUrl}
                         alt={course.title}
@@ -342,18 +364,16 @@ export default function HomePage() {
                         <Users className="w-4 h-4" />
                         <span>{course.enrollmentsCount} talaba</span>
                       </div>
-                      {course.totalRatings !== undefined && course.totalRatings > 0 && (
-                        <div className="flex items-center gap-1">
-                          <StarRating 
-                            rating={course.averageRating || 0} 
-                            size={14} 
-                            showValue={true}
-                          />
-                          <span className="text-xs text-muted-foreground">
-                            ({course.totalRatings})
-                          </span>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-1">
+                        <StarRating 
+                          rating={course.averageRating || 0} 
+                          size={14} 
+                          showValue={true}
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          ({course.totalRatings || 0})
+                        </span>
+                      </div>
                     </div>
                   </CardContent>
 
@@ -421,6 +441,8 @@ export default function HomePage() {
                     </div>
                   </CardFooter>
                 </Card>
+              </div>
+            </motion.div>
               );
             })}
           </div>

@@ -1010,7 +1010,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         category: true,
         price: true,
         originalPrice: true,
-        discountedPrice: true,
+        discountPercentage: true,
         thumbnailUrl: true,
         imageUrl: true,
       }).partial();

@@ -68,7 +68,7 @@ export const courses = pgTable("courses", {
   category: varchar("category", { length: 50 }), // IT, Design, Business, Language, Marketing, etc.
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   originalPrice: decimal("original_price", { precision: 10, scale: 2 }), // Asl narx
-  discountedPrice: decimal("discounted_price", { precision: 10, scale: 2 }), // Chegirmadagi narx
+  discountPercentage: integer("discount_percentage"), // Chegirma foizi (0-100)
   instructorId: varchar("instructor_id").notNull().references(() => users.id),
   thumbnailUrl: varchar("thumbnail_url"),
   imageUrl: text("image_url"), // Kurs sahifasi uchun rasm
