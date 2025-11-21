@@ -906,14 +906,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { search, category, minPrice, maxPrice } = req.query;
       
-      // Build where conditions
+      // Validate price parameters
+      const parsedMinPrice = minPrice !== undefined ? parseFloat(minPrice) : null;
+      const parsedMaxPrice = maxPrice !== undefined ? parseFloat(maxPrice) : null;
+      
+      if (parsedMinPrice !== null && (isNaN(parsedMinPrice) || !isFinite(parsedMinPrice) || parsedMinPrice < 0)) {
+        return res.status(400).json({ message: "Invalid minPrice parameter - must be a finite non-negative number" });
+      }
+      if (parsedMaxPrice !== null && (isNaN(parsedMaxPrice) || !isFinite(parsedMaxPrice) || parsedMaxPrice < 0)) {
+        return res.status(400).json({ message: "Invalid maxPrice parameter - must be a finite non-negative number" });
+      }
+      if (parsedMinPrice !== null && parsedMaxPrice !== null && parsedMinPrice > parsedMaxPrice) {
+        return res.status(400).json({ message: "minPrice cannot be greater than maxPrice" });
+      }
+      
+      // Build where conditions - ALWAYS start with published status check
       const conditions = [eq(courses.status, 'published')];
       
-      if (search) {
+      if (typeof search === 'string' && search.trim().length > 0) {
+        const trimmedSearch = search.trim();
         conditions.push(
           or(
-            sql`LOWER(${courses.title}) LIKE LOWER(${'%' + search + '%'})`,
-            sql`LOWER(${courses.description}) LIKE LOWER(${'%' + search + '%'})`
+            sql`LOWER(${courses.title}) LIKE LOWER(${'%' + trimmedSearch + '%'})`,
+            sql`LOWER(${courses.description}) LIKE LOWER(${'%' + trimmedSearch + '%'})`
           ) as any
         );
       }
@@ -922,15 +937,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         conditions.push(eq(courses.category, category));
       }
       
-      if (minPrice !== undefined) {
-        conditions.push(sql`${courses.price} >= ${parseFloat(minPrice)}`);
+      if (parsedMinPrice !== null) {
+        conditions.push(sql`${courses.price} >= ${parsedMinPrice}`);
       }
       
-      if (maxPrice !== undefined) {
-        conditions.push(sql`${courses.price} <= ${parseFloat(maxPrice)}`);
+      if (parsedMaxPrice !== null) {
+        conditions.push(sql`${courses.price} <= ${parsedMaxPrice}`);
       }
       
-      // Get all published courses with instructor info, enrollments, and plan pricing
+      // Get all published courses with instructor info and enrollments
       const publicCourses = await db
         .select({
           id: courses.id,
@@ -953,35 +968,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(courses)
         .leftJoin(users, eq(courses.instructorId, users.id))
         .leftJoin(enrollments, eq(courses.id, enrollments.courseId))
-        .where(and(...conditions))
+        .where(conditions.length > 1 ? and(...conditions) : conditions[0])
         .groupBy(courses.id, users.id)
         .orderBy(desc(courses.createdAt));
       
-      // Get plan pricing for each course
-      const coursesWithPricing = await Promise.all(
-        publicCourses.map(async (course: typeof publicCourses[0]) => {
-          const planPricing = await db
-            .select({
-              id: coursePlanPricing.id,
-              courseId: coursePlanPricing.courseId,
-              planId: coursePlanPricing.planId,
-              price: coursePlanPricing.price,
-              plan: {
-                id: subscriptionPlans.id,
-                name: subscriptionPlans.name,
-                displayName: subscriptionPlans.displayName,
-              },
-            })
-            .from(coursePlanPricing)
-            .leftJoin(subscriptionPlans, eq(coursePlanPricing.planId, subscriptionPlans.id))
-            .where(eq(coursePlanPricing.courseId, course.id));
-          
-          return {
-            ...course,
-            planPricing,
-          };
-        })
-      );
+      // Explicit type for course pricing to avoid type collapse
+      interface CoursePricing {
+        id: string;
+        courseId: string;
+        planId: string;
+        price: string;
+        plan: {
+          id: string;
+          name: string;
+          displayName: string;
+        } | null;
+      }
+      
+      // Optimize: Get all plan pricing in one query instead of N+1
+      const courseIds = publicCourses.map((c: typeof publicCourses[0]) => c.id);
+      let allPlanPricing: CoursePricing[] = [];
+      
+      if (courseIds.length > 0) {
+        allPlanPricing = await db
+          .select({
+            id: coursePlanPricing.id,
+            courseId: coursePlanPricing.courseId,
+            planId: coursePlanPricing.planId,
+            price: coursePlanPricing.price,
+            plan: {
+              id: subscriptionPlans.id,
+              name: subscriptionPlans.name,
+              displayName: subscriptionPlans.displayName,
+            },
+          })
+          .from(coursePlanPricing)
+          .leftJoin(subscriptionPlans, eq(coursePlanPricing.planId, subscriptionPlans.id))
+          .where(inArray(coursePlanPricing.courseId, courseIds));
+      }
+      
+      // Group plan pricing by course ID
+      const pricingByCourse: Record<string, CoursePricing[]> = {};
+      for (const pricing of allPlanPricing) {
+        if (!pricingByCourse[pricing.courseId]) {
+          pricingByCourse[pricing.courseId] = [];
+        }
+        pricingByCourse[pricing.courseId].push(pricing);
+      }
+      
+      // Attach plan pricing to courses
+      const coursesWithPricing = publicCourses.map((course: typeof publicCourses[0]) => ({
+        ...course,
+        planPricing: pricingByCourse[course.id] || [],
+      }));
       
       res.json(coursesWithPricing);
     } catch (error: any) {
