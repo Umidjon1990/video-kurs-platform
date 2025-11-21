@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, BookOpen, Users, Award, Star, Mail, Phone, MapPin, Send, ExternalLink, X, ZoomIn } from "lucide-react";
+import { Search, Filter, BookOpen, Users, Award, Star, Mail, Phone, MapPin, Send, ExternalLink, X, ZoomIn, Play, Lock, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -784,7 +784,12 @@ export default function HomePage() {
                   
                   return <Card 
                     key={lesson.id}
-                    className={canViewDemo ? "hover-elevate cursor-pointer" : "opacity-75"}
+                    className={`
+                      ${canViewDemo 
+                        ? "bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 border-orange-200 dark:border-orange-800 hover-elevate cursor-pointer" 
+                        : "opacity-75"}
+                      transition-all duration-200
+                    `}
                     onClick={() => {
                       // SECURITY: Only allow demo lessons with valid video URLs
                       if (canViewDemo) {
@@ -795,18 +800,25 @@ export default function HomePage() {
                   >
                     <CardContent className="p-4">
                       <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mt-1">
+                        <div className={`
+                          flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center mt-1
+                          ${lesson.isDemo 
+                            ? "bg-gradient-to-br from-orange-400 to-amber-500 text-white shadow-lg shadow-orange-200 dark:shadow-orange-900/50" 
+                            : "bg-muted"}
+                        `}>
                           {lesson.isDemo ? (
-                            <span className="text-sm font-semibold text-primary">{index + 1}</span>
+                            <Play className="w-5 h-5 fill-white" />
                           ) : (
-                            <span className="text-sm font-semibold text-muted-foreground">{index + 1}</span>
+                            <Lock className="w-5 h-5 text-muted-foreground" />
                           )}
                         </div>
                         <div className="flex-1">
                           <div className="flex items-start justify-between gap-2 mb-1">
-                            <h4 className="font-medium">{lesson.title}</h4>
+                            <h4 className={`font-semibold ${lesson.isDemo ? 'text-orange-900 dark:text-orange-100' : ''}`}>
+                              {lesson.title}
+                            </h4>
                             {lesson.isDemo ? (
-                              <Badge variant="default" className="bg-green-500 hover:bg-green-600">
+                              <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-sm">
                                 Bepul Demo
                               </Badge>
                             ) : (
@@ -816,21 +828,25 @@ export default function HomePage() {
                             )}
                           </div>
                           {lesson.description && (
-                            <p className="text-sm text-muted-foreground mb-2">
+                            <p className={`text-sm mb-2 ${lesson.isDemo ? 'text-orange-700 dark:text-orange-300' : 'text-muted-foreground'}`}>
                               {lesson.description}
                             </p>
                           )}
                           {lesson.duration && (
-                            <p className="text-sm text-muted-foreground">
+                            <p className={`text-sm flex items-center gap-1 ${lesson.isDemo ? 'text-orange-600 dark:text-orange-400' : 'text-muted-foreground'}`}>
+                              <Clock className="w-4 h-4" />
                               {lesson.duration} daqiqa
                             </p>
                           )}
-                          {canViewDemo ? (
-                            <p className="text-xs text-green-600 dark:text-green-400 mt-2">
+                          {canViewDemo && (
+                            <p className="text-xs font-medium text-orange-600 dark:text-orange-400 mt-2 flex items-center gap-1">
+                              <Play className="w-3 h-3" />
                               Bosib ko'ring
                             </p>
-                          ) : !lesson.isDemo && (
-                            <p className="text-xs text-muted-foreground mt-2">
+                          )}
+                          {!lesson.isDemo && (
+                            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                              <Lock className="w-3 h-3" />
                               Bu darsni ko'rish uchun kursga yoziling
                             </p>
                           )}

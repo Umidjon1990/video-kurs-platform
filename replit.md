@@ -22,6 +22,8 @@ The frontend is built with React and TypeScript using Vite, Wouter for routing, 
 
 **Public Lesson Preview**: Public course listing page (`/explore`, HomePage) displays lesson descriptions in the "Darslarni Ko'rish" (View Lessons) dialog. Both demo and premium lessons show their description/izoh to help users understand lesson content before enrollment. Server-side `/api/courses/:courseId/lessons/public` endpoint returns lesson descriptions for all lessons regardless of demo status.
 
+**Orange Lesson Cards**: Demo lessons display with vibrant orange/amber gradient design (bg-gradient from orange-50 to amber-50 in light mode, orange-950/30 to amber-950/30 in dark mode) with orange borders. Features include: Play icon in gradient orange circle badge, Clock icon for duration display, "Bosib ko'ring" prompt with Play icon, enhanced hover effects, and Shadow effects on icon badges. Premium lessons show Lock icon and muted styling. Design provides clear visual distinction between accessible demo content and premium locked lessons.
+
 ### Backend Architecture
 
 The backend is an Express.js application in TypeScript, implementing a RESTful API with role-based route protection. Authentication uses session-based `express-session` with a PostgreSQL store, integrated with Passport.js and Replit Auth (OpenID Connect). Middleware enforces role-based access control and error handling. It includes a private messaging system, an announcement system with various targeting modes, and robust APIs for managing courses, assessments, user subscriptions, and site content.

@@ -10,6 +10,19 @@ import connectPg from "connect-pg-simple";
 import bcrypt from "bcryptjs";
 import { storage } from "./storage";
 
+// Augment Express.User type to include id field
+declare global {
+  namespace Express {
+    interface User {
+      id: string;
+      claims?: any;
+      access_token?: string | null;
+      refresh_token?: string | null;
+      expires_at?: number;
+    }
+  }
+}
+
 const getOidcConfig = memoize(
   async () => {
     return await client.discovery(
@@ -93,9 +106,12 @@ export async function setupAuth(app: Express) {
       tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
       verified: passport.AuthenticateCallback
     ) => {
-      const user = {};
+      const claims = tokens.claims();
+      const user: any = {
+        id: claims?.sub || '',
+      };
       updateUserSession(user, tokens);
-      await upsertUser(tokens.claims());
+      await upsertUser(claims);
       verified(null, user);
     };
 
@@ -217,6 +233,7 @@ export async function setupAuth(app: Express) {
         
         // Create user object for session (same format as OIDC)
         const sessionUser = {
+          id: user.id,
           claims: {
             sub: user.id,
             email: user.email,
