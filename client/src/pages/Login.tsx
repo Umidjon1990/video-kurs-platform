@@ -71,10 +71,6 @@ export default function Login() {
     }
   };
 
-  const handleReplitAuth = () => {
-    window.location.href = "/api/login"; // Replit Auth
-  };
-
   const handleForgotPassword = async (data: ForgotPasswordFormData) => {
     try {
       await apiRequest("POST", "/api/auth/forgot-password", {
@@ -186,27 +182,6 @@ export default function Login() {
                 data-testid="button-login"
               >
                 {form.formState.isSubmitting ? "Yuklanmoqda..." : "Kirish"}
-              </Button>
-              
-              <div className="relative w-full">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">
-                    yoki
-                  </span>
-                </div>
-              </div>
-              
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={handleReplitAuth}
-                data-testid="button-replit-auth"
-              >
-                Replit orqali kirish
               </Button>
               
               <div className="text-sm text-center text-muted-foreground">

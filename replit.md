@@ -16,7 +16,7 @@ The frontend is built with React and TypeScript using Vite, Wouter for routing, 
 
 **Navigation System**: Implements Shadcn Sidebar component with role-based menus (Admin, Instructor, Student). Features include collapsible/expandable sidebar with icon mode, user profile display in sidebar header (avatar with initials, full name, role), logout in footer, active route highlighting, and mobile responsiveness. App layout uses SidebarProvider wrapping authenticated routes, with sticky header containing sidebar trigger. Public routes (login, register, explore) render without sidebar. Public homepage features "Kirish" (Login) button below search bar that navigates users to `/login` page.
 
-**Login Page Enhancements**: Login page includes informative alert with guidance text ("Administrator tomonidan berilgan login va parolingizni kiriting va shaxsiy kabinetingizga kiring"), and a "Back to Home" button with left arrow icon for easy navigation back to the public homepage.
+**Login Page Enhancements**: Login page includes informative alert with guidance text ("Administrator tomonidan berilgan login va parolingizni kiriting va shaxsiy kabinetingizga kiring"), and a "Back to Home" button with left arrow icon for easy navigation back to the public homepage. Replit Auth option removed from login page; platform uses local authentication only (phone/email + password).
 
 **Dashboard Enhancements**: Modern stats cards with KPI metrics, interactive charts, enhanced course cards, progress tracking systems with circular charts, and performance optimizations. Student dashboard displays: Total Enrolled Courses, Completed Courses (100% progress), In Progress Courses (0-99% progress), and Certificates count. Animations using `framer-motion` are used for a modern feel.
 
