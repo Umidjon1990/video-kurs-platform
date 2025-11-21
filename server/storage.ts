@@ -373,12 +373,20 @@ export class DatabaseStorage implements IStorage {
                 )
               )
             )
-            .then(result => result[0]?.count || 0),
+            .then(result => result[0]?.count || 0)
+            .catch(err => {
+              console.error(`Error fetching enrollments for course ${course.id}:`, err);
+              return 0;
+            }),
           db
             .select({ count: sql<number>`count(*)::int` })
             .from(lessons)
             .where(eq(lessons.courseId, course.id))
-            .then(result => result[0]?.count || 0),
+            .then(result => result[0]?.count || 0)
+            .catch(err => {
+              console.error(`Error fetching lessons for course ${course.id}:`, err);
+              return 0;
+            }),
           db
             .select({
               pricing: coursePlanPricing,
@@ -389,6 +397,10 @@ export class DatabaseStorage implements IStorage {
             .where(eq(coursePlanPricing.courseId, course.id))
             .orderBy(subscriptionPlans.order)
             .then(results => results.map(r => ({ ...r.pricing, plan: r.plan })))
+            .catch(err => {
+              console.error(`Error fetching plan pricing for course ${course.id}:`, err);
+              return [];
+            })
         ]);
         
         return {
