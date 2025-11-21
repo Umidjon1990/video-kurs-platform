@@ -103,19 +103,21 @@ export default function CourseDetail() {
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
-      {/* Header */}
-      <div className="border-b bg-background/80 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <Button
-            variant="ghost"
-            onClick={() => setLocation("/")}
-            data-testid="button-back"
-          >
-            <ChevronLeft className="w-4 h-4 mr-2" />
-            Orqaga
-          </Button>
+      {/* Header - only show if not authenticated (no sidebar) */}
+      {!isAuthenticated && (
+        <div className="border-b bg-background/80 backdrop-blur-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <Button
+              variant="ghost"
+              onClick={() => setLocation("/")}
+              data-testid="button-back"
+            >
+              <ChevronLeft className="w-4 h-4 mr-2" />
+              Orqaga
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
       
       {/* Hero Section */}
       <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-background">

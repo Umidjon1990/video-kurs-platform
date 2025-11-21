@@ -67,6 +67,9 @@ function Router() {
           </header>
           <main className="flex-1 overflow-auto">
             <Switch>
+              {/* Shared routes for all authenticated users */}
+              <Route path="/course/:id" component={CourseDetail} />
+              
               {/* Admin Routes */}
               {user?.role === 'admin' && (
                 <>
