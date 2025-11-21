@@ -2081,23 +2081,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user?.claims?.sub;
       
       // Add average rating, total ratings, like count, and isLiked for each course
+      // Wrap in error handling to prevent like feature from breaking course display
       const coursesWithRatingsAndLikes = await Promise.all(
         courses.map(async (course) => {
-          const avgRating = await storage.getCourseAverageRating(course.id);
-          const likeCount = await storage.getCourseLikeCount(course.id);
-          const isLiked = userId ? await storage.checkIfUserLikedCourse(course.id, userId) : false;
-          return {
-            ...course,
-            averageRating: avgRating.average,
-            totalRatings: avgRating.count,
-            likeCount,
-            isLiked,
-          };
+          try {
+            const avgRating = await storage.getCourseAverageRating(course.id);
+            const likeCount = await storage.getCourseLikeCount(course.id);
+            const isLiked = userId ? await storage.checkIfUserLikedCourse(course.id, userId) : false;
+            return {
+              ...course,
+              averageRating: avgRating.average,
+              totalRatings: avgRating.count,
+              likeCount,
+              isLiked,
+            };
+          } catch (aggregationError: any) {
+            // If aggregation fails, return course with default values
+            console.error(`Error aggregating data for course ${course.id}:`, aggregationError.message);
+            return {
+              ...course,
+              averageRating: 0,
+              totalRatings: 0,
+              likeCount: 0,
+              isLiked: false,
+            };
+          }
         })
       );
       
       res.json(coursesWithRatingsAndLikes);
     } catch (error: any) {
+      console.error('Error in /api/courses/public:', error);
       res.status(500).json({ message: error.message });
     }
   });

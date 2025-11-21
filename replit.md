@@ -35,6 +35,7 @@ The frontend utilizes Wouter for routing and TanStack Query for state management
 *   **Admin User Deletion**: Comprehensive, atomic user deletion system for all associated data, with multi-level safeguards and detailed preview of affected data.
 *   **Course Rating System**: Enrolled students can submit 1-5 star ratings and optional reviews, with unique per-student-per-course rating enforcement and atomic upsert operations.
 *   **Custom Course Author Names**: Instructors can specify custom author names for courses, overriding default instructor names on public listings.
+*   **Course Like System ("Qiziqtirdi")**: Public like feature allowing authenticated users to like/unlike courses with heart icon, unique constraint preventing duplicates, graceful degradation if feature fails (courses still display).
 
 ### System Design Choices
 The backend is an Express.js application in TypeScript, providing a RESTful API with role-based route protection. It uses session-based `express-session` with a PostgreSQL store for authentication, integrated with Passport.js. The database uses Drizzle ORM with PostgreSQL (Neon Serverless) for type-safe operations, including models for Users, Courses, Lessons, Assignments, Tests, Enrollments, Submissions, Notifications, Conversations, Messages, Site Settings, Testimonials, Subscription Plans, Course Plan Pricing, and User Subscriptions. The schema utilizes UUID primary keys and timestamp tracking for a comprehensive relational design.
