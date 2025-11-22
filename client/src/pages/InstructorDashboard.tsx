@@ -56,6 +56,7 @@ export default function InstructorDashboard() {
     thumbnailUrl: "",
     imageUrl: "",
     isFree: false,
+    customStudentCount: "0",
   });
 
   const [lessonForm, setLessonForm] = useState({
@@ -222,6 +223,7 @@ export default function InstructorDashboard() {
         thumbnailUrl: courseForm.thumbnailUrl,
         imageUrl: courseForm.imageUrl,
         isFree: courseForm.isFree,
+        customStudentCount: parseInt(courseForm.customStudentCount) || 0,
       };
       
       // Only include pricing data for paid courses
@@ -244,7 +246,7 @@ export default function InstructorDashboard() {
         description: editingCourse ? "Kurs yangilandi" : "Kurs yaratildi" 
       });
       setIsCreateCourseOpen(false);
-      setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "", isFree: false });
+      setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "", isFree: false, customStudentCount: "0" });
       setEditingCourse(null);
     },
     onError: (error: Error) => {
@@ -881,6 +883,7 @@ export default function InstructorDashboard() {
                           onClick={() => {
                             const existingPrice = course.price || (course as any).planPricing?.[0]?.price || "";
                             const existingDiscount = (course as any).discountPercentage || 0;
+                            const existingCustomCount = (course as any).customStudentCount || 0;
                             setCourseForm({
                               title: course.title,
                               description: course.description || "",
@@ -891,6 +894,7 @@ export default function InstructorDashboard() {
                               thumbnailUrl: course.thumbnailUrl || "",
                               imageUrl: (course as any).imageUrl || "",
                               isFree: (course as any).isFree || false,
+                              customStudentCount: existingCustomCount.toString(),
                             });
                             setEditingCourse(course);
                             setIsCreateCourseOpen(true);
@@ -1649,6 +1653,24 @@ export default function InstructorDashboard() {
               </div>
             </div>
             <div className="space-y-2">
+              <Label htmlFor="customStudentCount">Qo'shimcha Talabalar Soni (marketing uchun)</Label>
+              <Input
+                id="customStudentCount"
+                type="text"
+                inputMode="numeric"
+                value={courseForm.customStudentCount}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '');
+                  setCourseForm({ ...courseForm, customStudentCount: value });
+                }}
+                placeholder="0"
+                data-testid="input-custom-student-count"
+              />
+              <p className="text-xs text-muted-foreground">
+                Kursni ko'proq mashhur ko'rsatish uchun talabalar sonini oshiring. Bu son haqiqiy talabalar soniga qo'shiladi.
+              </p>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="thumbnail">Thumbnail URL (ixtiyoriy)</Label>
               <Input
                 id="thumbnail"
@@ -1696,7 +1718,7 @@ export default function InstructorDashboard() {
               onClick={() => {
                 setIsCreateCourseOpen(false);
                 setEditingCourse(null);
-                setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "", isFree: false });
+                setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "", isFree: false, customStudentCount: "0" });
               }}
               data-testid="button-cancel-create-course"
             >
