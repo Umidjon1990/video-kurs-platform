@@ -149,7 +149,7 @@ export default function StudentCourses() {
               <p className="text-center text-muted-foreground py-16">Hali hech qanday kursga yozilmagansiz</p>
             ) : (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {enrolledCourses?.map((course) => {
+                {enrolledCourses?.map((course, index) => {
                   const progress = progressData?.find(p => p.course.id === course.id);
                   
                   if (progress) {
@@ -167,7 +167,8 @@ export default function StudentCourses() {
                       <CourseCard 
                         course={course} 
                         onViewDemo={handleViewDemo}
-                        isEnrolled={true} 
+                        isEnrolled={true}
+                        index={index}
                       />
                     </div>
                   );
@@ -182,13 +183,14 @@ export default function StudentCourses() {
               <p className="text-center text-muted-foreground py-16">Hozircha kurslar yo'q</p>
             ) : (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {allCourses?.map((course) => (
+                {allCourses?.map((course, index) => (
                   <CourseCard
                     key={course.id}
                     course={course}
                     onEnroll={handleEnroll}
                     onViewDemo={handleViewDemo}
                     isEnrolled={enrolledCourseIds.has(course.id)}
+                    index={index}
                   />
                 ))}
               </div>
