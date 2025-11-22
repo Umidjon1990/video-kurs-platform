@@ -70,14 +70,6 @@ export default function HomePage() {
   const { data: courses, isLoading } = useQuery<PublicCourse[]>({
     queryKey: [`/api/courses/public${queryString ? `?${queryString}` : ''}`],
   });
-  
-  // DEBUG: Log courses data
-  console.log('[HomePage Debug]', { 
-    isLoading, 
-    coursesExists: !!courses, 
-    coursesLength: courses?.length,
-    courses 
-  });
 
   // Fetch site settings
   const { data: siteSettings } = useQuery<SiteSetting[]>({
@@ -395,7 +387,7 @@ export default function HomePage() {
                           <div className="flex items-center justify-between mt-3">
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <Users className="w-4 h-4" />
-                              <span>{(course.enrollmentsCount || 0) + ((course as any).customStudentCount || 0)} talaba</span>
+                              <span>{course.enrollmentsCount} talaba</span>
                             </div>
                             <div className="flex items-center gap-1">
                               <StarRating 
@@ -513,7 +505,7 @@ export default function HomePage() {
                     <div className="flex items-center justify-between mt-3">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Users className="w-4 h-4" />
-                        <span>{(course.enrollmentsCount || 0) + ((course as any).customStudentCount || 0)} talaba</span>
+                        <span>{course.enrollmentsCount} talaba</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <StarRating 
@@ -594,11 +586,13 @@ export default function HomePage() {
                 </Card>
               </div>
             ) : (
-              <Card
-                className="hover-elevate transition-all cursor-pointer overflow-hidden h-full"
-                data-testid={`card-course-${course.id}`}
-                onClick={() => setLocation(`/checkout/${course.id}`)}
-              >
+              <>
+                {/* Oddiy karta (chegirmasiz) */}
+                <Card
+                  className="hover-elevate transition-all cursor-pointer overflow-hidden h-full"
+                  data-testid={`card-course-${course.id}`}
+                  onClick={() => setLocation(`/checkout/${course.id}`)}
+                >
                 {/* Thumbnail with New Ribbon only */}
                 <div className="relative h-56 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-b overflow-hidden">
                   {/* "Yangi" ribbon - chap yuqori burchak */}
@@ -656,7 +650,7 @@ export default function HomePage() {
                   <div className="flex items-center justify-between mt-3">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Users className="w-4 h-4" />
-                      <span>{(course.enrollmentsCount || 0) + ((course as any).customStudentCount || 0)} talaba</span>
+                      <span>{course.enrollmentsCount} talaba</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <StarRating 
@@ -723,6 +717,7 @@ export default function HomePage() {
                   </div>
                 </CardFooter>
               </Card>
+              </>
             )}
           </motion.div>
               );

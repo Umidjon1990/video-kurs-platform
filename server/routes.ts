@@ -1130,13 +1130,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/instructor/courses', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
       const instructorId = req.user.claims.sub;
-      const { title, description, author, category, thumbnailUrl, imageUrl, pricing, isFree, customStudentCount } = req.body;
-      
-      // Validate customStudentCount
-      const validatedCustomCount = parseInt(customStudentCount) || 0;
-      if (validatedCustomCount < 0 || validatedCustomCount > 100000) {
-        return res.status(400).json({ message: "Talabalar soni 0 dan 100,000 gacha bo'lishi kerak" });
-      }
+      const { title, description, author, category, thumbnailUrl, imageUrl, pricing, isFree } = req.body;
       
       // If course is free, force price to 0; otherwise require pricing
       if (!isFree && (!pricing || !pricing.oddiy)) {
@@ -1157,7 +1151,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         originalPrice: isFree ? "0" : (req.body.originalPrice || null),
         discountPercentage: isFree ? 0 : (req.body.discountPercentage != null ? req.body.discountPercentage : 0),
         isFree: isFree || false,
-        customStudentCount: validatedCustomCount,
       });
       const course = await storage.createCourse(courseData);
       
@@ -1223,19 +1216,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         thumbnailUrl: true,
         imageUrl: true,
         isFree: true,
-        customStudentCount: true,
       }).partial();
       
       const updateData = editableFields.parse(req.body);
-      
-      // Validate customStudentCount if provided
-      if (updateData.customStudentCount != null) {
-        const validatedCustomCount = parseInt(updateData.customStudentCount.toString()) || 0;
-        if (validatedCustomCount < 0 || validatedCustomCount > 100000) {
-          return res.status(400).json({ message: "Talabalar soni 0 dan 100,000 gacha bo'lishi kerak" });
-        }
-        updateData.customStudentCount = validatedCustomCount;
-      }
       
       // If course is being marked as free, force price to 0 and delete plan pricing
       if (updateData.isFree === true) {
