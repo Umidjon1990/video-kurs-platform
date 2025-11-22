@@ -527,7 +527,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Student Management APIs
   app.post('/api/admin/create-student', isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const { phone, email, firstName, lastName, courseId, subscriptionDays } = req.body;
+      const { phone, email, firstName, lastName, courseIds, subscriptionDays } = req.body;
       
       // Server-side validation
       const createStudentSchema = z.object({
@@ -538,14 +538,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ),
         firstName: z.string().min(1, 'Ism kiritish shart'),
         lastName: z.string().min(1, 'Familiya kiritish shart'),
-        courseId: z.preprocess(
-          (val) => (val === '' || val === undefined || val === null) ? undefined : val,
-          z.string().optional()
+        courseIds: z.preprocess(
+          (val) => (val === '' || val === undefined || val === null || (Array.isArray(val) && val.length === 0)) ? undefined : val,
+          z.array(z.string()).optional()
         ),
         subscriptionDays: z.string().transform((val) => parseInt(val, 10)).pipe(z.number().min(1, 'Obuna muddati kamida 1 kun bo\'lishi kerak')),
       });
       
-      const validatedData = createStudentSchema.parse({ phone, email, firstName, lastName, courseId, subscriptionDays });
+      const validatedData = createStudentSchema.parse({ phone, email, firstName, lastName, courseIds, subscriptionDays });
       
       // Check if phone already exists
       const existingUser = await storage.getUserByPhoneOrEmail(validatedData.phone);
@@ -592,9 +592,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           })
           .returning();
         
-        // If courseId is provided, create enrollment and subscription
-        let enrollmentCreated = false;
-        if (validatedData.courseId) {
+        // If courseIds are provided, create enrollment and subscription for each
+        let enrollmentsCreated = 0;
+        if (validatedData.courseIds && validatedData.courseIds.length > 0) {
           // Get the first subscription plan as default
           const [defaultPlan] = await tx
             .select()
@@ -602,39 +602,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .limit(1);
           
           if (defaultPlan) {
-            // Create enrollment with approved payment status (admin-created enrollments are immediately approved)
-            const [enrollment] = await tx
-              .insert(enrollments)
-              .values({
-                userId: createdUser.id,
-                courseId: validatedData.courseId,
-                planId: defaultPlan.id,
-                paymentStatus: 'approved', // Admin-created enrollments are immediately approved
-              })
-              .returning();
-            
-            // Create subscription with custom duration
-            const startDate = new Date();
-            const endDate = new Date();
-            endDate.setDate(endDate.getDate() + validatedData.subscriptionDays);
-            
-            await tx
-              .insert(userSubscriptions)
-              .values({
-                userId: createdUser.id,
-                courseId: validatedData.courseId,
-                planId: defaultPlan.id,
-                enrollmentId: enrollment.id,
-                status: 'active',
-                startDate,
-                endDate,
-              });
-            
-            enrollmentCreated = true;
+            // Create enrollment and subscription for each course
+            for (const courseId of validatedData.courseIds) {
+              // Create enrollment with approved payment status (admin-created enrollments are immediately approved)
+              const [enrollment] = await tx
+                .insert(enrollments)
+                .values({
+                  userId: createdUser.id,
+                  courseId: courseId,
+                  planId: defaultPlan.id,
+                  paymentStatus: 'approved', // Admin-created enrollments are immediately approved
+                })
+                .returning();
+              
+              // Create subscription with custom duration
+              const startDate = new Date();
+              const endDate = new Date();
+              endDate.setDate(endDate.getDate() + validatedData.subscriptionDays);
+              
+              await tx
+                .insert(userSubscriptions)
+                .values({
+                  userId: createdUser.id,
+                  courseId: courseId,
+                  planId: defaultPlan.id,
+                  enrollmentId: enrollment.id,
+                  status: 'active',
+                  startDate,
+                  endDate,
+                });
+              
+              enrollmentsCreated++;
+            }
           }
         }
         
-        return { user: createdUser, enrollmentCreated };
+        return { user: createdUser, enrollmentsCreated };
       });
       
       // Remove password from response
@@ -642,13 +645,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Return user with login credentials (phone as login) and enrollment status
       res.json({ 
-        message: newUser.enrollmentCreated 
-          ? 'O\'quvchi muvaffaqiyatli yaratildi va kursga yozildi' 
-          : validatedData.courseId 
-            ? 'O\'quvchi yaratildi (Kursga yozilmadi - tarif topilmadi)'
+        message: newUser.enrollmentsCreated > 0
+          ? `O'quvchi muvaffaqiyatli yaratildi va ${newUser.enrollmentsCreated} ta kursga yozildi` 
+          : validatedData.courseIds && validatedData.courseIds.length > 0
+            ? 'O\'quvchi yaratildi (Kurslarga yozilmadi - tarif topilmadi)'
             : 'O\'quvchi muvaffaqiyatli yaratildi',
         user: userWithoutPassword,
-        enrollmentCreated: newUser.enrollmentCreated,
+        enrollmentsCreated: newUser.enrollmentsCreated,
         credentials: {
           login: validatedData.phone,
           password: generatedPassword
