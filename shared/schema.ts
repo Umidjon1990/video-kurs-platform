@@ -74,6 +74,7 @@ export const courses = pgTable("courses", {
   imageUrl: text("image_url"), // Kurs sahifasi uchun rasm
   status: varchar("status", { length: 20 }).notNull().default('draft'), // draft, published
   isFree: boolean("is_free").default(false), // Bepul kurs
+  customStudentCount: integer("custom_student_count").default(0), // Qo'shimcha talabalar soni (marketing)
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
