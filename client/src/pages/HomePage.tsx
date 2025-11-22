@@ -586,13 +586,11 @@ export default function HomePage() {
                 </Card>
               </div>
             ) : (
-              <>
-                {/* Oddiy karta (chegirmasiz) */}
-                <Card
-                  className="hover-elevate transition-all cursor-pointer overflow-hidden h-full"
-                  data-testid={`card-course-${course.id}`}
-                  onClick={() => setLocation(`/checkout/${course.id}`)}
-                >
+              <Card
+                className="hover-elevate transition-all cursor-pointer overflow-hidden h-full"
+                data-testid={`card-course-${course.id}`}
+                onClick={() => setLocation(`/checkout/${course.id}`)}
+              >
                 {/* Thumbnail with New Ribbon only */}
                 <div className="relative h-56 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-b overflow-hidden">
                   {/* "Yangi" ribbon - chap yuqori burchak */}
@@ -717,7 +715,6 @@ export default function HomePage() {
                   </div>
                 </CardFooter>
               </Card>
-              </>
             )}
           </motion.div>
               );
