@@ -60,15 +60,14 @@ export default function Login() {
         description: "Tizimga muvaffaqiyatli kirdingiz",
       });
 
-      // Redirect based on user role to avoid showing wrong page temporarily
+      // Use window.location for full page reload to ensure auth state is properly initialized
+      // This prevents the HomePage flash issue completely
       const userRole = response.user.role;
       if (userRole === 'admin') {
-        setLocation("/admin");
-      } else if (userRole === 'instructor') {
-        setLocation("/");
+        window.location.href = "/admin";
       } else {
-        // student
-        setLocation("/");
+        // instructor and student both go to "/" which routes to their respective dashboards
+        window.location.href = "/";
       }
     } catch (error: any) {
       toast({
