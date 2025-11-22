@@ -32,6 +32,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Users, BookOpen, CreditCard, DollarSign, UserCheck, TrendingUp, Settings, UserPlus, Check, X, Copy, CheckCircle, Key, Trash2 } from "lucide-react";
 import { useLocation } from "wouter";
 import type { User } from "@shared/schema";
@@ -57,7 +59,7 @@ export default function AdminDashboard() {
     email: "",
     firstName: "",
     lastName: "",
-    courseId: "",
+    courseIds: [] as string[],
     subscriptionDays: "30",
   });
   const [createdCredentials, setCreatedCredentials] = useState<{
@@ -173,7 +175,7 @@ export default function AdminDashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       setCreatedCredentials(data.credentials);
-      setNewStudent({ phone: "", email: "", firstName: "", lastName: "", courseId: "", subscriptionDays: "30" });
+      setNewStudent({ phone: "", email: "", firstName: "", lastName: "", courseIds: [], subscriptionDays: "30" });
       toast({
         title: "Muvaffaqiyatli",
         description: "O'quvchi yaratildi",
@@ -757,7 +759,7 @@ export default function AdminDashboard() {
           setIsCreateStudentOpen(open);
           if (!open) {
             setCreatedCredentials(null);
-            setNewStudent({ phone: "", email: "", firstName: "", lastName: "", courseId: "", subscriptionDays: "30" });
+            setNewStudent({ phone: "", email: "", firstName: "", lastName: "", courseIds: [], subscriptionDays: "30" });
           }
         }}
       >
@@ -879,24 +881,48 @@ export default function AdminDashboard() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="course">Kursni tanlang (ixtiyoriy)</Label>
-                <Select
-                  value={newStudent.courseId}
-                  onValueChange={(value) => setNewStudent({ ...newStudent, courseId: value })}
-                >
-                  <SelectTrigger id="course" data-testid="select-course">
-                    <SelectValue placeholder="Kursni tanlang" />
-                  </SelectTrigger>
-                  <SelectContent>
+                <div className="flex items-center justify-between">
+                  <Label>Kurslarni tanlang (ixtiyoriy)</Label>
+                  {newStudent.courseIds.length > 0 && (
+                    <Badge variant="secondary" data-testid="badge-course-count">
+                      {newStudent.courseIds.length} ta tanlangan
+                    </Badge>
+                  )}
+                </div>
+                <ScrollArea className="h-[200px] w-full rounded-md border p-4">
+                  <div className="space-y-3">
                     {courses?.map((course) => (
-                      <SelectItem key={course.id} value={course.id}>
-                        {course.title}
-                      </SelectItem>
+                      <div key={course.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`course-${course.id}`}
+                          checked={newStudent.courseIds.includes(course.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setNewStudent({
+                                ...newStudent,
+                                courseIds: [...newStudent.courseIds, course.id],
+                              });
+                            } else {
+                              setNewStudent({
+                                ...newStudent,
+                                courseIds: newStudent.courseIds.filter((id) => id !== course.id),
+                              });
+                            }
+                          }}
+                          data-testid={`checkbox-course-${course.id}`}
+                        />
+                        <label
+                          htmlFor={`course-${course.id}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        >
+                          {course.title}
+                        </label>
+                      </div>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </div>
+                </ScrollArea>
                 <p className="text-xs text-muted-foreground">
-                  Agar kurs tanlasangiz, o'quvchi avtomatik ravishda shu kursga yoziladi.
+                  Tanlangan kurslar uchun o'quvchi avtomatik ravishda yoziladi.
                 </p>
               </div>
               <div className="space-y-2">
