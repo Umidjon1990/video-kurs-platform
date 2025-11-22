@@ -1661,13 +1661,16 @@ export default function InstructorDashboard() {
                 value={courseForm.customStudentCount}
                 onChange={(e) => {
                   const value = e.target.value.replace(/\D/g, '');
-                  setCourseForm({ ...courseForm, customStudentCount: value });
+                  const numValue = Number(value);
+                  if (value === '' || (numValue >= 0 && numValue <= 100000)) {
+                    setCourseForm({ ...courseForm, customStudentCount: value });
+                  }
                 }}
                 placeholder="0"
                 data-testid="input-custom-student-count"
               />
               <p className="text-xs text-muted-foreground">
-                Kursni ko'proq mashhur ko'rsatish uchun talabalar sonini oshiring. Bu son haqiqiy talabalar soniga qo'shiladi.
+                Kursni ko'proq mashhur ko'rsatish uchun talabalar sonini oshiring (0-100,000). Bu son haqiqiy talabalar soniga qo'shiladi.
               </p>
             </div>
             <div className="space-y-2">

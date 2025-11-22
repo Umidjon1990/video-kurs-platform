@@ -387,7 +387,7 @@ export default function HomePage() {
                           <div className="flex items-center justify-between mt-3">
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <Users className="w-4 h-4" />
-                              <span>{course.enrollmentsCount} talaba</span>
+                              <span>{(course.enrollmentsCount || 0) + ((course as any).customStudentCount || 0)} talaba</span>
                             </div>
                             <div className="flex items-center gap-1">
                               <StarRating 
@@ -505,7 +505,7 @@ export default function HomePage() {
                     <div className="flex items-center justify-between mt-3">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Users className="w-4 h-4" />
-                        <span>{course.enrollmentsCount} talaba</span>
+                        <span>{(course.enrollmentsCount || 0) + ((course as any).customStudentCount || 0)} talaba</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <StarRating 
@@ -650,7 +650,7 @@ export default function HomePage() {
                   <div className="flex items-center justify-between mt-3">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Users className="w-4 h-4" />
-                      <span>{course.enrollmentsCount} talaba</span>
+                      <span>{(course.enrollmentsCount || 0) + ((course as any).customStudentCount || 0)} talaba</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <StarRating 
