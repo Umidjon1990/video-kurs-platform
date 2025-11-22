@@ -29,8 +29,10 @@ export async function ensureDefaultSubscriptionPlan() {
       .insert(subscriptionPlans)
       .values({
         name: 'Asosiy Tarif',
-        price: 0,
+        displayName: 'Asosiy Tarif',
+        description: 'Standart obuna tarifi - barcha kurslar uchun',
         features: sql`'{"access": "full", "description": "Avtomatik yaratilgan asosiy tarif"}'::jsonb`,
+        order: 1,
       })
       .returning();
     
