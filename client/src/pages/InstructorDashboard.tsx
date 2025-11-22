@@ -220,6 +220,7 @@ export default function InstructorDashboard() {
         thumbnailUrl: courseForm.thumbnailUrl,
         imageUrl: courseForm.imageUrl,
         discountPercentage: discountNumber || 0,
+        isFree: courseForm.isFree,
         pricing: {
           oddiy: priceValue,
           standard: priceValue,

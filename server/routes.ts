@@ -1130,7 +1130,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/instructor/courses', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
       const instructorId = req.user.claims.sub;
-      const { title, description, author, category, thumbnailUrl, imageUrl, pricing } = req.body;
+      const { title, description, author, category, thumbnailUrl, imageUrl, pricing, isFree } = req.body;
       
       // Create course with minimal data
       const courseData = insertCourseSchema.parse({
@@ -1142,6 +1142,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         imageUrl,
         instructorId,
         price: pricing.oddiy, // Default price (oddiy plan)
+        isFree: isFree || false,
       });
       const course = await storage.createCourse(courseData);
       
@@ -1203,6 +1204,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         discountPercentage: true,
         thumbnailUrl: true,
         imageUrl: true,
+        isFree: true,
       }).partial();
       
       const updateData = editableFields.parse(req.body);
