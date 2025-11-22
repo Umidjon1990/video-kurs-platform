@@ -47,10 +47,12 @@ export default function Login() {
 
   const handleLogin = async (data: LoginFormData) => {
     try {
-      const response: any = await apiRequest("POST", "/api/auth/login", {
+      const res = await apiRequest("POST", "/api/auth/login", {
         username: data.username,
         password: data.password,
       });
+      
+      const response = await res.json();
 
       // Set user data in query cache
       queryClient.setQueryData(["/api/auth/user"], response.user);

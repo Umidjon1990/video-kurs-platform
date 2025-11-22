@@ -229,6 +229,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Fetch full user data from database
         const fullUser = await storage.getUser(user.claims.sub);
+        
+        if (!fullUser) {
+          // If user not found in database, return session user data
+          console.error('[Login] User not found in database after authentication:', user.claims.sub);
+          return res.json({ 
+            message: 'Login muvaffaqiyatli', 
+            user: {
+              id: user.claims.sub,
+              email: user.claims.email,
+              firstName: user.claims.first_name,
+              lastName: user.claims.last_name,
+              profileImageUrl: user.claims.profile_image_url,
+              role: user.claims.role,
+            }
+          });
+        }
+        
         return res.json({ 
           message: 'Login muvaffaqiyatli', 
           user: fullUser 
