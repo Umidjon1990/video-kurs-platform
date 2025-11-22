@@ -969,7 +969,7 @@ export default function AdminDashboard() {
                 </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="subscriptionDays">Obuna muddati (kunlar) *</Label>
+                <Label htmlFor="subscriptionDays">Obuna muddati (kunlarda)</Label>
                 <Input
                   id="subscriptionDays"
                   type="number"
@@ -978,10 +978,9 @@ export default function AdminDashboard() {
                   value={newStudent.subscriptionDays}
                   onChange={(e) => setNewStudent({ ...newStudent, subscriptionDays: e.target.value })}
                   data-testid="input-subscription-days"
-                  required
                 />
                 <p className="text-xs text-muted-foreground">
-                  Kurs tanlangan bo'lsa, shu muddat uchun obuna yaratiladi
+                  Agar bo'sh qoldirilsa, 30 kunlik obuna yaratiladi
                 </p>
               </div>
             </div>
@@ -1287,7 +1286,7 @@ export default function AdminDashboard() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="assignSubscriptionDays">Obuna muddati (kunlarda) *</Label>
+              <Label htmlFor="assignSubscriptionDays">Obuna muddati (kunlarda)</Label>
               <Input
                 id="assignSubscriptionDays"
                 type="number"
@@ -1300,7 +1299,7 @@ export default function AdminDashboard() {
                 data-testid="input-assign-subscription-days"
               />
               <p className="text-xs text-muted-foreground">
-                O'quvchi tanlangan kurslardan qancha vaqt foydalanishi mumkin
+                Agar bo'sh qoldirilsa, 30 kunlik obuna yaratiladi
               </p>
             </div>
           </div>
@@ -1320,8 +1319,7 @@ export default function AdminDashboard() {
               disabled={
                 assignCoursesMutation.isPending ||
                 !assignCoursesData.studentId ||
-                assignCoursesData.courseIds.length === 0 ||
-                !assignCoursesData.subscriptionDays
+                assignCoursesData.courseIds.length === 0
               }
               data-testid="button-submit-assign"
             >
