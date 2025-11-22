@@ -31,7 +31,7 @@ The frontend utilizes Wouter for routing and TanStack Query for state management
 *   **Announcement System**: Instructors can send targeted announcements to individuals, groups, or all students.
 *   **CMS & Homepage Enhancements**: Dynamic "About Us," "Contact Us," Testimonials, and Certificates sections managed via Admin CMS, with certificate image upload to Replit Object Storage.
 *   **Admin Subscription Management**: Comprehensive CRUD for subscription plans, supporting base, dynamic, custom, and bonus features.
-*   **Admin Student Creation with Course Enrollment**: Admins can create students and automatically enroll them in courses, initiating a 30-day active subscription upon selection.
+*   **Admin Student Creation with Course Enrollment**: Admins can create students and automatically enroll them in courses. Subscription duration is optional and defaults to 30 days if not specified. Admin-created enrollments have immediate `paymentStatus: 'approved'` status, bypassing the manual payment approval workflow.
 *   **Admin User Deletion**: Comprehensive, atomic user deletion system for all associated data, with multi-level safeguards and detailed preview of affected data.
 *   **Course Rating System**: Enrolled students can submit 1-5 star ratings and optional reviews, with unique per-student-per-course rating enforcement and atomic upsert operations. All star ratings display in golden (amber) color by default for visual consistency.
 *   **Custom Course Author Names**: Instructors can specify custom author names for courses, overriding default instructor names on public listings.
@@ -40,6 +40,8 @@ The frontend utilizes Wouter for routing and TanStack Query for state management
 
 ### System Design Choices
 The backend is an Express.js application in TypeScript, providing a RESTful API with role-based route protection. It uses session-based `express-session` with a PostgreSQL store for authentication, integrated with Passport.js. The database uses Drizzle ORM with PostgreSQL (Neon Serverless) for type-safe operations, including models for Users, Courses, Lessons, Assignments, Tests, Enrollments, Submissions, Notifications, Conversations, Messages, Site Settings, Testimonials, Subscription Plans, Course Plan Pricing, and User Subscriptions. The schema utilizes UUID primary keys and timestamp tracking for a comprehensive relational design.
+
+**Database Initialization**: On server startup, the system automatically checks for subscription plans and creates a default "Asosiy Tarif" plan if none exists. This ensures course enrollment functionality works immediately in fresh production environments without manual database seeding.
 
 ## External Dependencies
 
