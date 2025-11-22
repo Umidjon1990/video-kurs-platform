@@ -72,8 +72,8 @@ export function AppSidebar() {
 
   const handleLogout = async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      window.location.href = "/login";
+      // Backend'da GET /api/logout endpoint bor
+      window.location.href = "/api/logout";
     } catch (error) {
       toast({
         title: "Xatolik",
