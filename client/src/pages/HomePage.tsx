@@ -70,6 +70,14 @@ export default function HomePage() {
   const { data: courses, isLoading } = useQuery<PublicCourse[]>({
     queryKey: [`/api/courses/public${queryString ? `?${queryString}` : ''}`],
   });
+  
+  // DEBUG: Log courses data
+  console.log('[HomePage Debug]', { 
+    isLoading, 
+    coursesExists: !!courses, 
+    coursesLength: courses?.length,
+    courses 
+  });
 
   // Fetch site settings
   const { data: siteSettings } = useQuery<SiteSetting[]>({
