@@ -2493,9 +2493,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/student/enrolled-courses', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      console.log('[Enrolled Courses] Request from userId:', userId);
       const courses = await storage.getEnrolledCourses(userId);
+      console.log('[Enrolled Courses] Found', courses.length, 'courses for user:', userId);
       res.json(courses);
     } catch (error: any) {
+      console.error('[Enrolled Courses] Error:', error);
       res.status(500).json({ message: error.message });
     }
   });

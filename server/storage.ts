@@ -846,6 +846,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getEnrolledCourses(userId: string): Promise<Course[]> {
+    console.log('[Storage] getEnrolledCourses called for userId:', userId);
     const result = await db
       .select({ course: courses })
       .from(enrollments)
@@ -856,6 +857,7 @@ export class DatabaseStorage implements IStorage {
       ))
       .orderBy(desc(enrollments.enrolledAt));
     
+    console.log('[Storage] getEnrolledCourses found', result.length, 'results');
     return result.map(r => r.course);
   }
 
