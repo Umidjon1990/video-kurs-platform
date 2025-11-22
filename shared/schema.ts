@@ -73,6 +73,7 @@ export const courses = pgTable("courses", {
   thumbnailUrl: varchar("thumbnail_url"),
   imageUrl: text("image_url"), // Kurs sahifasi uchun rasm
   status: varchar("status", { length: 20 }).notNull().default('draft'), // draft, published
+  isFree: boolean("is_free").default(false), // Bepul kurs
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
