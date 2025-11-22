@@ -617,15 +617,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // If courseIds are provided, create enrollment and subscription for each
         let enrollmentsCreated = 0;
         if (validatedData.courseIds && validatedData.courseIds.length > 0) {
+          console.log(`[Create Student] Creating enrollments for ${validatedData.courseIds.length} courses`);
+          
           // Get the first subscription plan as default
           const [defaultPlan] = await tx
             .select()
             .from(subscriptionPlans)
             .limit(1);
           
-          if (defaultPlan) {
+          if (!defaultPlan) {
+            console.error('[Create Student] ❌ No subscription plan found! Cannot create enrollments.');
+          } else {
+            console.log(`[Create Student] ✓ Using plan: ${defaultPlan.name} (ID: ${defaultPlan.id})`);
+            
             // Create enrollment and subscription for each course
             for (const courseId of validatedData.courseIds) {
+              console.log(`[Create Student] Creating enrollment for course ${courseId}...`);
+              
               // Create enrollment with approved payment status (admin-created enrollments are immediately approved)
               const [enrollment] = await tx
                 .insert(enrollments)
@@ -636,6 +644,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   paymentStatus: 'approved', // Admin-created enrollments are immediately approved
                 })
                 .returning();
+              
+              console.log(`[Create Student] ✓ Enrollment created (ID: ${enrollment.id})`);
               
               // Create subscription with custom duration
               const startDate = new Date();
@@ -654,10 +664,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   endDate,
                 });
               
+              console.log(`[Create Student] ✓ Subscription created (${validatedData.subscriptionDays} days: ${startDate.toISOString()} to ${endDate.toISOString()})`);
+              
               enrollmentsCreated++;
             }
           }
         }
+        
+        console.log(`[Create Student] Final result: ${enrollmentsCreated} enrollments created for user ${createdUser.id}`);
         
         return { user: createdUser, enrollmentsCreated };
       });
@@ -718,6 +732,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Execute all operations in a transaction
       const result = await db.transaction(async (tx: any) => {
+        console.log(`[Assign Courses] Processing ${validatedData.courseIds.length} courses for student ${validatedData.studentId}`);
+        
         // Get the first subscription plan as default
         const [defaultPlan] = await tx
           .select()
@@ -725,8 +741,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .limit(1);
         
         if (!defaultPlan) {
+          console.error('[Assign Courses] ❌ No subscription plan found!');
           throw new Error('Obuna tarifi topilmadi. Avval tarif yarating.');
         }
+        
+        console.log(`[Assign Courses] ✓ Using plan: ${defaultPlan.name} (ID: ${defaultPlan.id})`);
         
         let enrollmentsCreated = 0;
         let enrollmentsSkipped = 0;
@@ -734,6 +753,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Create enrollment and subscription for each course
         for (const courseId of validatedData.courseIds) {
+          console.log(`[Assign Courses] Processing course ${courseId}...`);
+          
           // Check if student is already enrolled in this course
           const [existingEnrollment] = await tx
             .select()
@@ -746,6 +767,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (existingEnrollment) {
             // Skip if already enrolled
+            console.log(`[Assign Courses] ⚠️  Student already enrolled in course ${courseId}, skipping`);
             enrollmentsSkipped++;
             
             // Get course name for better feedback
@@ -772,6 +794,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             })
             .returning();
           
+          console.log(`[Assign Courses] ✓ Enrollment created (ID: ${enrollment.id})`);
+          
           // Create subscription with custom duration
           const startDate = new Date();
           const endDate = new Date();
@@ -789,8 +813,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               endDate,
             });
           
+          console.log(`[Assign Courses] ✓ Subscription created (${validatedData.subscriptionDays} days: ${startDate.toISOString()} to ${endDate.toISOString()})`);
+          
           enrollmentsCreated++;
         }
+        
+        console.log(`[Assign Courses] Final result: ${enrollmentsCreated} created, ${enrollmentsSkipped} skipped`);
         
         return { enrollmentsCreated, enrollmentsSkipped, skippedCourses };
       });
