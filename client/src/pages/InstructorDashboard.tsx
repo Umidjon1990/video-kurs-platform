@@ -55,6 +55,7 @@ export default function InstructorDashboard() {
     discountPercentage: "0",
     thumbnailUrl: "",
     imageUrl: "",
+    isFree: false,
   });
 
   const [lessonForm, setLessonForm] = useState({
@@ -234,7 +235,7 @@ export default function InstructorDashboard() {
         description: editingCourse ? "Kurs yangilandi" : "Kurs yaratildi" 
       });
       setIsCreateCourseOpen(false);
-      setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "" });
+      setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "", isFree: false });
       setEditingCourse(null);
     },
     onError: (error: Error) => {
@@ -880,6 +881,7 @@ export default function InstructorDashboard() {
                               discountPercentage: existingDiscount.toString(),
                               thumbnailUrl: course.thumbnailUrl || "",
                               imageUrl: (course as any).imageUrl || "",
+                              isFree: (course as any).isFree || false,
                             });
                             setEditingCourse(course);
                             setIsCreateCourseOpen(true);
@@ -1619,6 +1621,22 @@ export default function InstructorDashboard() {
                 0 = chegirma yo'q, 20 = 20% chegirma
               </p>
             </div>
+            <div className="flex items-center space-x-2 p-4 border rounded-lg bg-muted/50">
+              <Checkbox 
+                id="isFree"
+                checked={courseForm.isFree}
+                onCheckedChange={(checked) => setCourseForm({ ...courseForm, isFree: checked === true })}
+                data-testid="checkbox-course-free"
+              />
+              <div className="space-y-1">
+                <Label htmlFor="isFree" className="text-base font-semibold cursor-pointer">
+                  Bu kurs bepul
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Bepul kurslar bosh sahifada maxsus belgisi bilan ko'rsatiladi ⭐
+                </p>
+              </div>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="thumbnail">Thumbnail URL (ixtiyoriy)</Label>
               <Input
@@ -1667,7 +1685,7 @@ export default function InstructorDashboard() {
               onClick={() => {
                 setIsCreateCourseOpen(false);
                 setEditingCourse(null);
-                setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "" });
+                setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "", isFree: false });
               }}
               data-testid="button-cancel-create-course"
             >
