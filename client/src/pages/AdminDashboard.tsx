@@ -66,6 +66,14 @@ export default function AdminDashboard() {
     login: string;
     password: string;
   } | null>(null);
+  
+  // Assign courses to existing student
+  const [isAssignCoursesOpen, setIsAssignCoursesOpen] = useState(false);
+  const [assignCoursesData, setAssignCoursesData] = useState({
+    studentId: "",
+    courseIds: [] as string[],
+    subscriptionDays: "30",
+  });
   const [userResetPasswordDialog, setUserResetPasswordDialog] = useState<{
     isOpen: boolean;
     userId: string;
@@ -179,6 +187,30 @@ export default function AdminDashboard() {
       toast({
         title: "Muvaffaqiyatli",
         description: "O'quvchi yaratildi",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Xatolik",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const assignCoursesMutation = useMutation({
+    mutationFn: async (data: typeof assignCoursesData) => {
+      const response = await apiRequest("POST", "/api/admin/assign-courses", data);
+      return await response.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      setIsAssignCoursesOpen(false);
+      setAssignCoursesData({ studentId: "", courseIds: [], subscriptionDays: "30" });
+      toast({
+        title: "Muvaffaqiyatli",
+        description: data.message || "Kurslar biriktirildi",
       });
     },
     onError: (error: Error) => {
@@ -350,17 +382,28 @@ export default function AdminDashboard() {
         <h1 className="text-3xl font-bold" data-testid="text-admin-title">
           Admin Dashboard
         </h1>
-        <Button
-          onClick={() => {
-            setCreatedCredentials(null);
-            setIsCreateStudentOpen(true);
-          }}
-          data-testid="button-create-student"
-          className="flex items-center gap-2"
-        >
-          <UserPlus className="w-4 h-4" />
-          Yangi O'quvchi
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => setIsAssignCoursesOpen(true)}
+            data-testid="button-assign-courses"
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <BookOpen className="w-4 h-4" />
+            Kurs Biriktirish
+          </Button>
+          <Button
+            onClick={() => {
+              setCreatedCredentials(null);
+              setIsCreateStudentOpen(true);
+            }}
+            data-testid="button-create-student"
+            className="flex items-center gap-2"
+          >
+            <UserPlus className="w-4 h-4" />
+            Yangi O'quvchi
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-6">
@@ -1160,6 +1203,131 @@ export default function AdminDashboard() {
               </DialogFooter>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Courses Dialog */}
+      <Dialog open={isAssignCoursesOpen} onOpenChange={setIsAssignCoursesOpen}>
+        <DialogContent className="max-h-[90vh] flex flex-col" data-testid="dialog-assign-courses">
+          <DialogHeader>
+            <DialogTitle>O'quvchiga Kurs Biriktirish</DialogTitle>
+            <DialogDescription>
+              Mavjud o'quvchiga yangi kurslarni biriktiring
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="studentSelect">O'quvchi *</Label>
+              <Select
+                value={assignCoursesData.studentId}
+                onValueChange={(value) =>
+                  setAssignCoursesData({ ...assignCoursesData, studentId: value })
+                }
+              >
+                <SelectTrigger id="studentSelect" data-testid="select-student">
+                  <SelectValue placeholder="O'quvchini tanlang" />
+                </SelectTrigger>
+                <SelectContent>
+                  {users
+                    ?.filter((u) => u.role === 'student')
+                    .map((student) => (
+                      <SelectItem key={student.id} value={student.id}>
+                        {student.firstName} {student.lastName} ({student.phone || student.email})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Kurslar *</Label>
+                <Badge variant="secondary" data-testid="badge-selected-courses-count">
+                  {assignCoursesData.courseIds.length} ta tanlangan
+                </Badge>
+              </div>
+              <ScrollArea className="h-48 border rounded-md p-4">
+                <div className="space-y-3">
+                  {courses && courses.length > 0 ? (
+                    courses.map((course) => (
+                      <div key={course.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`assign-course-${course.id}`}
+                          checked={assignCoursesData.courseIds.includes(course.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setAssignCoursesData({
+                                ...assignCoursesData,
+                                courseIds: [...assignCoursesData.courseIds, course.id],
+                              });
+                            } else {
+                              setAssignCoursesData({
+                                ...assignCoursesData,
+                                courseIds: assignCoursesData.courseIds.filter(
+                                  (id) => id !== course.id
+                                ),
+                              });
+                            }
+                          }}
+                          data-testid={`checkbox-assign-course-${course.id}`}
+                        />
+                        <label
+                          htmlFor={`assign-course-${course.id}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        >
+                          {course.title}
+                        </label>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Kurslar topilmadi</p>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="assignSubscriptionDays">Obuna muddati (kunlarda) *</Label>
+              <Input
+                id="assignSubscriptionDays"
+                type="number"
+                min="1"
+                placeholder="30"
+                value={assignCoursesData.subscriptionDays}
+                onChange={(e) =>
+                  setAssignCoursesData({ ...assignCoursesData, subscriptionDays: e.target.value })
+                }
+                data-testid="input-assign-subscription-days"
+              />
+              <p className="text-xs text-muted-foreground">
+                O'quvchi tanlangan kurslardan qancha vaqt foydalanishi mumkin
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="border-t pt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsAssignCoursesOpen(false);
+                setAssignCoursesData({ studentId: "", courseIds: [], subscriptionDays: "30" });
+              }}
+              data-testid="button-cancel-assign"
+            >
+              Bekor qilish
+            </Button>
+            <Button
+              onClick={() => assignCoursesMutation.mutate(assignCoursesData)}
+              disabled={
+                assignCoursesMutation.isPending ||
+                !assignCoursesData.studentId ||
+                assignCoursesData.courseIds.length === 0 ||
+                !assignCoursesData.subscriptionDays
+              }
+              data-testid="button-submit-assign"
+            >
+              {assignCoursesMutation.isPending ? "Biriktirilmoqda..." : "Kurslarni Biriktirish"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
