@@ -561,7 +561,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           (val) => (val === '' || val === undefined || val === null || (Array.isArray(val) && val.length === 0)) ? undefined : val,
           z.array(z.string()).optional()
         ),
-        subscriptionDays: z.string().transform((val) => parseInt(val, 10)).pipe(z.number().min(1, 'Obuna muddati kamida 1 kun bo\'lishi kerak')),
+        subscriptionDays: z.preprocess(
+          (val) => (val === '' || val === undefined || val === null) ? '30' : val,
+          z.string().transform((val) => parseInt(val, 10)).pipe(z.number().min(1, 'Obuna muddati kamida 1 kun bo\'lishi kerak'))
+        ),
       });
       
       const validatedData = createStudentSchema.parse({ phone, email, firstName, lastName, courseIds, subscriptionDays });
@@ -696,7 +699,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const assignCoursesSchema = z.object({
         studentId: z.string().min(1, 'O\'quvchi tanlash shart'),
         courseIds: z.array(z.string()).min(1, 'Kamida bitta kurs tanlash shart'),
-        subscriptionDays: z.string().transform((val) => parseInt(val, 10)).pipe(z.number().min(1, 'Obuna muddati kamida 1 kun bo\'lishi kerak')),
+        subscriptionDays: z.preprocess(
+          (val) => (val === '' || val === undefined || val === null) ? '30' : val,
+          z.string().transform((val) => parseInt(val, 10)).pipe(z.number().min(1, 'Obuna muddati kamida 1 kun bo\'lishi kerak'))
+        ),
       });
       
       const validatedData = assignCoursesSchema.parse({ studentId, courseIds, subscriptionDays });
