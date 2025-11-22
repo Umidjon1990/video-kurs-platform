@@ -201,32 +201,40 @@ export default function InstructorDashboard() {
         ? `/api/instructor/courses/${editingCourse.id}` 
         : "/api/instructor/courses";
       
-      const priceValue = courseForm.price.trim();
-      if (!priceValue || isNaN(Number(priceValue)) || Number(priceValue) <= 0) {
+      // If course is free, skip price validation
+      const priceValue = courseForm.isFree ? "0" : courseForm.price.trim();
+      if (!courseForm.isFree && (!priceValue || isNaN(Number(priceValue)) || Number(priceValue) <= 0)) {
         throw new Error("Iltimos, to'g'ri narx kiriting");
       }
       
-      const discountValue = courseForm.discountPercentage.trim();
+      const discountValue = courseForm.isFree ? "0" : courseForm.discountPercentage.trim();
       const discountNumber = Number(discountValue);
-      if (discountValue && (isNaN(discountNumber) || discountNumber < 0 || discountNumber > 90)) {
+      if (!courseForm.isFree && discountValue && (isNaN(discountNumber) || discountNumber < 0 || discountNumber > 90)) {
         throw new Error("Chegirma 0-90 oralig'ida bo'lishi kerak");
       }
       
-      await apiRequest(method, url, {
+      // Build request payload
+      const payload: any = {
         title: courseForm.title,
         description: courseForm.description,
         author: courseForm.author,
         category: courseForm.category,
         thumbnailUrl: courseForm.thumbnailUrl,
         imageUrl: courseForm.imageUrl,
-        discountPercentage: discountNumber || 0,
         isFree: courseForm.isFree,
-        pricing: {
+      };
+      
+      // Only include pricing data for paid courses
+      if (!courseForm.isFree) {
+        payload.discountPercentage = discountNumber || 0;
+        payload.pricing = {
           oddiy: priceValue,
           standard: priceValue,
           premium: priceValue,
-        }
-      });
+        };
+      }
+      
+      await apiRequest(method, url, payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/instructor/courses"] });
@@ -1587,27 +1595,28 @@ export default function InstructorDashboard() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="price">Narxi (so'm)</Label>
+              <Label htmlFor="price">Narxi (so'm) {courseForm.isFree && <span className="text-xs text-muted-foreground">(Bepul kurs uchun narx kiritish shart emas)</span>}</Label>
               <Input
                 id="price"
                 type="text"
                 inputMode="numeric"
-                value={courseForm.price}
+                value={courseForm.isFree ? "0" : courseForm.price}
                 onChange={(e) => {
                   const value = e.target.value.replace(/\D/g, '');
                   setCourseForm({ ...courseForm, price: value });
                 }}
-                placeholder="150000"
+                placeholder={courseForm.isFree ? "Bepul kurs - 0 so'm" : "150000"}
+                disabled={courseForm.isFree}
                 data-testid="input-course-price"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="discount">Chegirma (%, 0-90 oralig'ida)</Label>
+              <Label htmlFor="discount">Chegirma (%, 0-90 oralig'ida) {courseForm.isFree && <span className="text-xs text-muted-foreground">(Bepul kurs uchun chegirma kiritish shart emas)</span>}</Label>
               <Input
                 id="discount"
                 type="text"
                 inputMode="numeric"
-                value={courseForm.discountPercentage}
+                value={courseForm.isFree ? "0" : courseForm.discountPercentage}
                 onChange={(e) => {
                   const value = e.target.value.replace(/\D/g, '');
                   const numValue = Number(value);
@@ -1615,11 +1624,12 @@ export default function InstructorDashboard() {
                     setCourseForm({ ...courseForm, discountPercentage: value });
                   }
                 }}
-                placeholder="0"
+                placeholder={courseForm.isFree ? "Bepul kurs - 0%" : "0"}
+                disabled={courseForm.isFree}
                 data-testid="input-course-discount"
               />
               <p className="text-xs text-muted-foreground">
-                0 = chegirma yo'q, 20 = 20% chegirma
+                {courseForm.isFree ? "Bepul kurs uchun chegirma berilmaydi" : "0 = chegirma yo'q, 20 = 20% chegirma"}
               </p>
             </div>
             <div className="flex items-center space-x-2 p-4 border rounded-lg bg-muted/50">
@@ -1694,7 +1704,7 @@ export default function InstructorDashboard() {
             </Button>
             <Button
               onClick={() => createCourseMutation.mutate()}
-              disabled={!courseForm.title || !courseForm.price || !courseForm.price.trim() || createCourseMutation.isPending}
+              disabled={!courseForm.title || (!courseForm.isFree && (!courseForm.price || !courseForm.price.trim())) || createCourseMutation.isPending}
               data-testid="button-confirm-create-course"
             >
               {createCourseMutation.isPending 

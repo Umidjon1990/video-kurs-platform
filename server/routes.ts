@@ -1132,6 +1132,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const instructorId = req.user.claims.sub;
       const { title, description, author, category, thumbnailUrl, imageUrl, pricing, isFree } = req.body;
       
+      // If course is free, force price to 0; otherwise require pricing
+      if (!isFree && (!pricing || !pricing.oddiy)) {
+        return res.status(400).json({ message: "Pullik kurslar uchun narx kiritish shart" });
+      }
+      const finalPrice = isFree ? "0" : (pricing?.oddiy || "0");
+      
       // Create course with minimal data
       const courseData = insertCourseSchema.parse({
         title,
@@ -1141,37 +1147,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         thumbnailUrl,
         imageUrl,
         instructorId,
-        price: pricing.oddiy, // Default price (oddiy plan)
+        price: finalPrice, // 0 if free, otherwise oddiy plan price
+        originalPrice: isFree ? "0" : (req.body.originalPrice || null),
+        discountPercentage: isFree ? 0 : (req.body.discountPercentage != null ? req.body.discountPercentage : 0),
         isFree: isFree || false,
       });
       const course = await storage.createCourse(courseData);
       
-      // Get subscription plans
-      const planOddiy = await storage.getSubscriptionPlanByName('oddiy');
-      const planStandard = await storage.getSubscriptionPlanByName('standard');
-      const planPremium = await storage.getSubscriptionPlanByName('premium');
-      
-      // Create pricing for each plan
-      if (planOddiy && pricing.oddiy) {
-        await storage.createCoursePlanPricing({
-          courseId: course.id,
-          planId: planOddiy.id,
-          price: pricing.oddiy,
-        });
-      }
-      if (planStandard && pricing.standard) {
-        await storage.createCoursePlanPricing({
-          courseId: course.id,
-          planId: planStandard.id,
-          price: pricing.standard,
-        });
-      }
-      if (planPremium && pricing.premium) {
-        await storage.createCoursePlanPricing({
-          courseId: course.id,
-          planId: planPremium.id,
-          price: pricing.premium,
-        });
+      // Skip plan pricing for free courses
+      if (!isFree) {
+        // Get subscription plans
+        const planOddiy = await storage.getSubscriptionPlanByName('oddiy');
+        const planStandard = await storage.getSubscriptionPlanByName('standard');
+        const planPremium = await storage.getSubscriptionPlanByName('premium');
+        
+        // Create pricing for each plan
+        if (planOddiy && pricing.oddiy) {
+          await storage.createCoursePlanPricing({
+            courseId: course.id,
+            planId: planOddiy.id,
+            price: pricing.oddiy,
+          });
+        }
+        if (planStandard && pricing.standard) {
+          await storage.createCoursePlanPricing({
+            courseId: course.id,
+            planId: planStandard.id,
+            price: pricing.standard,
+          });
+        }
+        if (planPremium && pricing.premium) {
+          await storage.createCoursePlanPricing({
+            courseId: course.id,
+            planId: planPremium.id,
+            price: pricing.premium,
+          });
+        }
       }
       
       res.json(course);
@@ -1209,16 +1220,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const updateData = editableFields.parse(req.body);
       
-      // Handle pricing object from frontend
-      if (req.body.pricing && req.body.pricing.oddiy) {
+      // If course is being marked as free, force price to 0 and delete plan pricing
+      if (updateData.isFree === true) {
+        updateData.price = "0";
+        updateData.originalPrice = "0";
+        updateData.discountPercentage = 0;
+        
+        // Delete existing coursePlanPricing entries
+        await db.delete(coursePlanPricing).where(eq(coursePlanPricing.courseId, courseId));
+      } else if (req.body.pricing && req.body.pricing.oddiy) {
+        // Handle pricing object from frontend (only if not free)
         updateData.price = req.body.pricing.oddiy;
-        updateData.originalPrice = req.body.pricing.oddiy;
+        // Only update originalPrice if explicitly provided
+        if (req.body.originalPrice != null) {
+          updateData.originalPrice = req.body.originalPrice;
+        }
+        // Only update discountPercentage if explicitly provided
+        if (req.body.discountPercentage != null) {
+          updateData.discountPercentage = req.body.discountPercentage;
+        }
       }
       
       const updatedCourse = await storage.updateCourse(courseId, updateData);
       
-      // Update plan pricing if pricing object is provided
-      if (req.body.pricing) {
+      // Update plan pricing if pricing object is provided (skip for free courses)
+      if (req.body.pricing && updateData.isFree !== true) {
         const plans = await storage.getSubscriptionPlans();
         for (const plan of plans) {
           const planKey = plan.name as 'oddiy' | 'standard' | 'premium';

@@ -41,35 +41,36 @@
   }
 }
 
-.free-course-star {
+.free-course-wrapper .free-course-star {
   position: absolute;
   color: #fbbf24;
   animation: sparkle 2s ease-in-out infinite;
   pointer-events: none;
+  z-index: 5;
 }
 
-.free-course-star:nth-child(1) {
+.free-course-wrapper .free-course-star:nth-child(1) {
   top: 10%;
   left: 5%;
   animation-delay: 0s;
   font-size: 1.5rem;
 }
 
-.free-course-star:nth-child(2) {
+.free-course-wrapper .free-course-star:nth-child(2) {
   top: 15%;
   right: 8%;
   animation-delay: 0.4s;
   font-size: 1.2rem;
 }
 
-.free-course-star:nth-child(3) {
+.free-course-wrapper .free-course-star:nth-child(3) {
   bottom: 20%;
   left: 10%;
   animation-delay: 0.8s;
   font-size: 1rem;
 }
 
-.free-course-star:nth-child(4) {
+.free-course-wrapper .free-course-star:nth-child(4) {
   bottom: 15%;
   right: 5%;
   animation-delay: 1.2s;
