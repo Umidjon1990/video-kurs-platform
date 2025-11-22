@@ -529,6 +529,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { phone, email, firstName, lastName, courseIds, subscriptionDays } = req.body;
       
+      console.log('[Create Student] Request body:', { phone, email, firstName, lastName, courseIds, subscriptionDays });
+      
       // Server-side validation
       const createStudentSchema = z.object({
         phone: z.string().min(1, 'Telefon raqam kiritish shart'),

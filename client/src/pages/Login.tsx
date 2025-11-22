@@ -60,8 +60,16 @@ export default function Login() {
         description: "Tizimga muvaffaqiyatli kirdingiz",
       });
 
-      // Redirect to home - router will handle role-based routing
-      setLocation("/");
+      // Redirect based on user role to avoid showing wrong page temporarily
+      const userRole = response.user.role;
+      if (userRole === 'admin') {
+        setLocation("/admin");
+      } else if (userRole === 'instructor') {
+        setLocation("/");
+      } else {
+        // student
+        setLocation("/");
+      }
     } catch (error: any) {
       toast({
         title: "Xato",
