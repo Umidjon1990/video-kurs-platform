@@ -92,7 +92,7 @@ export default function InstructorDashboard() {
     message: "",
     priority: "normal",
     targetType: "all",
-    targetId: "",
+    targetId: [] as string[],
   });
   
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -579,7 +579,7 @@ export default function InstructorDashboard() {
         message: "",
         priority: "normal",
         targetType: "all",
-        targetId: "",
+        targetId: [],
       });
       toast({ 
         title: "E'lon yuborildi!", 
@@ -2288,7 +2288,7 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
                     setAnnouncementForm({ 
                       ...announcementForm, 
                       targetType: value,
-                      targetId: value === 'all' ? '' : announcementForm.targetId
+                      targetId: []
                     });
                   }}
                 >
@@ -2321,22 +2321,49 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
 
             {announcementForm.targetType === 'course' && (
               <div>
-                <Label>Kursni tanlang</Label>
-                <Select
-                  value={announcementForm.targetId}
-                  onValueChange={(value) => setAnnouncementForm({ ...announcementForm, targetId: value })}
-                >
-                  <SelectTrigger data-testid="select-course">
-                    <SelectValue placeholder="Kursni tanlang" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {courses?.map((course) => (
-                      <SelectItem key={course.id} value={course.id}>
+                <Label>
+                  Kurslarni tanlang 
+                  {announcementForm.targetId.length > 0 && (
+                    <span className="text-muted-foreground ml-2">
+                      ({announcementForm.targetId.length} ta tanlandi)
+                    </span>
+                  )}
+                </Label>
+                <div className="border rounded-md p-3 max-h-48 overflow-y-auto space-y-2" data-testid="course-checkbox-list">
+                  {courses?.map((course) => (
+                    <div key={course.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`course-${course.id}`}
+                        checked={announcementForm.targetId.includes(course.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setAnnouncementForm({
+                              ...announcementForm,
+                              targetId: [...announcementForm.targetId, course.id]
+                            });
+                          } else {
+                            setAnnouncementForm({
+                              ...announcementForm,
+                              targetId: announcementForm.targetId.filter(id => id !== course.id)
+                            });
+                          }
+                        }}
+                        data-testid={`checkbox-course-${course.id}`}
+                      />
+                      <label
+                        htmlFor={`course-${course.id}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                      >
                         {course.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                      </label>
+                    </div>
+                  ))}
+                  {(!courses || courses.length === 0) && (
+                    <p className="text-sm text-muted-foreground text-center py-2">
+                      Hozircha kurslar yo'q
+                    </p>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -2351,7 +2378,12 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
             </Button>
             <Button
               onClick={() => sendAnnouncementMutation.mutate(announcementForm)}
-              disabled={sendAnnouncementMutation.isPending || !announcementForm.title || !announcementForm.message}
+              disabled={
+                sendAnnouncementMutation.isPending || 
+                !announcementForm.title || 
+                !announcementForm.message ||
+                (announcementForm.targetType === 'course' && announcementForm.targetId.length === 0)
+              }
               data-testid="button-send-announcement"
             >
               {sendAnnouncementMutation.isPending ? "Yuborilmoqda..." : "Yuborish"}

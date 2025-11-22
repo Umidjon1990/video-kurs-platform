@@ -2805,8 +2805,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const instructorId = req.user.claims.sub;
       
+      // Extract targetId before parsing to handle array case
+      const { targetId: rawTargetId, ...otherFields } = req.body;
+      
+      // For database storage, convert array to JSON string if needed
+      const targetIdForStorage = Array.isArray(rawTargetId) 
+        ? JSON.stringify(rawTargetId) 
+        : rawTargetId;
+      
       const announcementData = insertAnnouncementSchema.parse({
-        ...req.body,
+        ...otherFields,
+        targetId: targetIdForStorage,
         instructorId,
       });
       
@@ -2814,16 +2823,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const announcement = await storage.createAnnouncement(announcementData);
       
       // Send notifications based on targetType
-      const { targetType, targetId, title, message, priority } = announcementData;
+      const { targetType, title, message, priority } = announcementData;
       let recipients: string[] = [];
       
-      if (targetType === 'individual' && targetId) {
+      if (targetType === 'individual' && rawTargetId) {
         // Yakka tartibda - bitta o'quvchiga
-        recipients = [targetId];
-      } else if (targetType === 'course' && targetId) {
-        // Guruhga - kurs o'quvchilariga
-        const courseEnrollments = await storage.getEnrollmentsByCourse(targetId);
-        recipients = courseEnrollments.map(e => e.userId);
+        recipients = [rawTargetId];
+      } else if (targetType === 'course' && rawTargetId) {
+        // Guruhga - kurs o'quvchilariga (supports single or multiple courses)
+        const courseIds = Array.isArray(rawTargetId) ? rawTargetId : [rawTargetId];
+        const allEnrollments = await Promise.all(
+          courseIds.map(id => storage.getEnrollmentsByCourse(id))
+        );
+        // Flatten and deduplicate recipients from all courses
+        recipients = Array.from(new Set(allEnrollments.flat().map(e => e.userId)));
       } else if (targetType === 'all') {
         // Barchaga - barcha o'quvchilarga
         const students = await storage.getUsersByRole('student');
