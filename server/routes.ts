@@ -668,6 +668,140 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Assign courses to existing student
+  app.post('/api/admin/assign-courses', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { studentId, courseIds, subscriptionDays } = req.body;
+      
+      console.log('[Assign Courses] Request body:', { studentId, courseIds, subscriptionDays });
+      
+      // Server-side validation
+      const assignCoursesSchema = z.object({
+        studentId: z.string().min(1, 'O\'quvchi tanlash shart'),
+        courseIds: z.array(z.string()).min(1, 'Kamida bitta kurs tanlash shart'),
+        subscriptionDays: z.string().transform((val) => parseInt(val, 10)).pipe(z.number().min(1, 'Obuna muddati kamida 1 kun bo\'lishi kerak')),
+      });
+      
+      const validatedData = assignCoursesSchema.parse({ studentId, courseIds, subscriptionDays });
+      
+      // Check if student exists and is actually a student
+      const student = await storage.getUser(validatedData.studentId);
+      if (!student) {
+        return res.status(404).json({ message: 'O\'quvchi topilmadi' });
+      }
+      if (student.role !== 'student') {
+        return res.status(400).json({ message: 'Faqat o\'quvchilarga kurs biriktirish mumkin' });
+      }
+      
+      // Execute all operations in a transaction
+      const result = await db.transaction(async (tx: any) => {
+        // Get the first subscription plan as default
+        const [defaultPlan] = await tx
+          .select()
+          .from(subscriptionPlans)
+          .limit(1);
+        
+        if (!defaultPlan) {
+          throw new Error('Obuna tarifi topilmadi. Avval tarif yarating.');
+        }
+        
+        let enrollmentsCreated = 0;
+        let enrollmentsSkipped = 0;
+        const skippedCourses: string[] = [];
+        
+        // Create enrollment and subscription for each course
+        for (const courseId of validatedData.courseIds) {
+          // Check if student is already enrolled in this course
+          const [existingEnrollment] = await tx
+            .select()
+            .from(enrollments)
+            .where(and(
+              eq(enrollments.userId, validatedData.studentId),
+              eq(enrollments.courseId, courseId)
+            ))
+            .limit(1);
+          
+          if (existingEnrollment) {
+            // Skip if already enrolled
+            enrollmentsSkipped++;
+            
+            // Get course name for better feedback
+            const [course] = await tx
+              .select({ title: courses.title })
+              .from(courses)
+              .where(eq(courses.id, courseId))
+              .limit(1);
+            
+            if (course) {
+              skippedCourses.push(course.title);
+            }
+            continue;
+          }
+          
+          // Create enrollment with approved payment status
+          const [enrollment] = await tx
+            .insert(enrollments)
+            .values({
+              userId: validatedData.studentId,
+              courseId: courseId,
+              planId: defaultPlan.id,
+              paymentStatus: 'approved',
+            })
+            .returning();
+          
+          // Create subscription with custom duration
+          const startDate = new Date();
+          const endDate = new Date();
+          endDate.setDate(endDate.getDate() + validatedData.subscriptionDays);
+          
+          await tx
+            .insert(userSubscriptions)
+            .values({
+              userId: validatedData.studentId,
+              courseId: courseId,
+              planId: defaultPlan.id,
+              enrollmentId: enrollment.id,
+              status: 'active',
+              startDate,
+              endDate,
+            });
+          
+          enrollmentsCreated++;
+        }
+        
+        return { enrollmentsCreated, enrollmentsSkipped, skippedCourses };
+      });
+      
+      // Build response message
+      let message = '';
+      if (result.enrollmentsCreated > 0) {
+        message = `${result.enrollmentsCreated} ta kurs muvaffaqiyatli biriktirildi`;
+      }
+      if (result.enrollmentsSkipped > 0) {
+        const skippedMessage = result.skippedCourses.length > 0
+          ? `O'quvchi allaqachon quyidagi kurslarga yozilgan: ${result.skippedCourses.join(', ')}`
+          : `${result.enrollmentsSkipped} ta kurs o'tkazib yuborildi (allaqachon yozilgan)`;
+        message = message ? `${message}. ${skippedMessage}` : skippedMessage;
+      }
+      if (!message) {
+        message = 'Hech qanday o\'zgarish kiritilmadi';
+      }
+      
+      res.json({ 
+        success: true,
+        message,
+        enrollmentsCreated: result.enrollmentsCreated,
+        enrollmentsSkipped: result.enrollmentsSkipped,
+      });
+    } catch (error: any) {
+      console.error('Assign courses error:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get('/api/admin/pending-students', isAuthenticated, isAdmin, async (req, res) => {
     try {
       const pendingStudents = await db
