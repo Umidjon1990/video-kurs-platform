@@ -20,6 +20,67 @@
   animation-play-state: paused;
 }
 
+/* Free Course Stars Animation */
+@keyframes sparkle {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(180deg);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.free-course-star {
+  position: absolute;
+  color: #fbbf24;
+  animation: sparkle 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.free-course-star:nth-child(1) {
+  top: 10%;
+  left: 5%;
+  animation-delay: 0s;
+  font-size: 1.5rem;
+}
+
+.free-course-star:nth-child(2) {
+  top: 15%;
+  right: 8%;
+  animation-delay: 0.4s;
+  font-size: 1.2rem;
+}
+
+.free-course-star:nth-child(3) {
+  bottom: 20%;
+  left: 10%;
+  animation-delay: 0.8s;
+  font-size: 1rem;
+}
+
+.free-course-star:nth-child(4) {
+  bottom: 15%;
+  right: 5%;
+  animation-delay: 1.2s;
+  font-size: 1.3rem;
+}
+
+.free-course-wrapper {
+  position: relative;
+  animation: float 3s ease-in-out infinite;
+}
+
 /* LIGHT MODE */
 :root {
   --button-outline: rgba(0,0,0, .10);

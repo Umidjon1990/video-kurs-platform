@@ -301,15 +301,144 @@ export default function HomePage() {
                 }
               }
 
+              // Check if course is free
+              const isFree = (course as any).isFree === true;
+
               return (
                 <motion.div
                   key={course.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
+                  className={isFree ? "free-course-wrapper" : ""}
                 >
-                  {/* Gradient wrapper FAQAT chegirmali kurslar uchun */}
-                  {discountPercent > 0 ? (
+                  {/* BEPUL KURSLAR - maxsus dizayn */}
+                  {isFree ? (
+                    <div className="relative">
+                      {/* Animated Stars */}
+                      <div className="free-course-star">⭐</div>
+                      <div className="free-course-star">✨</div>
+                      <div className="free-course-star">⭐</div>
+                      <div className="free-course-star">✨</div>
+                      
+                      <Card
+                        className="hover-elevate transition-all cursor-pointer overflow-hidden h-full border-4 border-amber-400 shadow-lg"
+                        data-testid={`card-course-${course.id}`}
+                        onClick={() => setLocation(`/checkout/${course.id}`)}
+                      >
+                        {/* Thumbnail with BEPUL Badge */}
+                        <div className="relative h-56 bg-gradient-to-br from-amber-100 to-yellow-100 dark:from-amber-900 dark:to-yellow-900 flex items-center justify-center border-b overflow-hidden">
+                          {/* "Yangi" ribbon */}
+                          {isNew && (
+                            <div className="absolute top-0 left-0 z-20 overflow-hidden w-32 h-32">
+                              <div className="absolute transform -rotate-45 bg-green-500 text-white text-center font-bold py-1 left-[-35px] top-[25px] w-[170px] shadow-md">
+                                <div className="text-xs">
+                                  YANGI
+                                  {daysAgo === 0 ? " (Bugun)" : ` (${daysAgo} kun)`}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          {/* BEPUL Badge - katta va ko'zga tashlanadigan */}
+                          <div className="absolute top-3 right-3 z-10 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-lg shadow-xl transform rotate-3">
+                            <div className="text-2xl font-black">BEPUL</div>
+                            <div className="text-xs text-center">100% Tekin</div>
+                          </div>
+                          {thumbnailUrl ? (
+                            <img
+                              src={thumbnailUrl}
+                              alt={course.title}
+                              className="w-full h-full object-contain"
+                              loading="lazy"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                const parent = e.currentTarget.parentElement;
+                                if (parent && parent.querySelector('.fallback-icon') === null) {
+                                  const icon = document.createElement('div');
+                                  icon.className = 'fallback-icon flex items-center justify-center w-full h-full';
+                                  icon.innerHTML = '<svg class="w-16 h-16 text-amber-600" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>';
+                                  parent.appendChild(icon);
+                                }
+                              }}
+                            />
+                          ) : (
+                            <BookOpen className="w-16 h-16 text-amber-600" />
+                          )}
+                        </div>
+
+                        <CardHeader>
+                          <div className="flex items-start justify-between gap-2">
+                            <h3 className="font-semibold text-lg line-clamp-2">{course.title}</h3>
+                            {course.category && (
+                              <Badge variant="secondary" className="shrink-0">
+                                {course.category}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {(course as any).author || `${course.instructor.firstName} ${course.instructor.lastName}`}
+                          </p>
+                        </CardHeader>
+
+                        <CardContent>
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {course.description || "Kurs tavsifi yo'q"}
+                          </p>
+                          <div className="flex items-center justify-between mt-3">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Users className="w-4 h-4" />
+                              <span>{course.enrollmentsCount} talaba</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <StarRating 
+                                rating={course.averageRating || 0} 
+                                size={14} 
+                                showValue={true}
+                              />
+                              <span className="text-xs text-muted-foreground">
+                                ({course.totalRatings || 0})
+                              </span>
+                            </div>
+                          </div>
+                        </CardContent>
+
+                        <CardFooter className="flex flex-col gap-3">
+                          {/* BEPUL narx ko'rsatish */}
+                          <div className="w-full">
+                            <div className="flex items-center justify-center gap-2 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-4 rounded-lg border-2 border-green-300 dark:border-green-700">
+                              <span className="text-3xl font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                                BEPUL
+                              </span>
+                              <span className="text-2xl">🎁</span>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 w-full">
+                            <Button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedCourseForLessons(course);
+                              }}
+                              variant="outline"
+                              className="flex-1"
+                              data-testid={`button-view-lessons-${course.id}`}
+                            >
+                              Darslarni Ko'rish
+                            </Button>
+                            <Button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.open("https://t.me/zamonaviytalimuz", "_blank", "noopener,noreferrer");
+                              }}
+                              className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+                              data-testid={`button-enroll-${course.id}`}
+                            >
+                              Bepul Yozilish
+                            </Button>
+                          </div>
+                        </CardFooter>
+                      </Card>
+                    </div>
+                  ) : discountPercent > 0 ? (
                     <div className={`p-1 bg-gradient-to-br ${gradient} rounded-lg`}>
                       <Card
                         className="hover-elevate transition-all cursor-pointer border-0 overflow-hidden h-full"
