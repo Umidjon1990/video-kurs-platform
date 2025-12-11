@@ -142,123 +142,99 @@
   pointer-events: none;
 }
 
-/* Modern Card Hover with Glow */
+/* Modern Card Hover - Clean & Crisp */
 .modern-card {
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
   position: relative;
-  overflow: visible;
 }
 
-.modern-card::before {
+.modern-card:hover {
+  transform: translateY(-6px);
+  border-color: hsl(220 90% 60% / 0.5);
+  box-shadow: 
+    0 20px 40px -15px hsl(220 90% 50% / 0.2),
+    0 8px 16px -8px hsl(220 90% 50% / 0.1),
+    0 0 0 1px hsl(220 90% 60% / 0.1);
+}
+
+.dark .modern-card:hover {
+  border-color: hsl(220 90% 60% / 0.6);
+  box-shadow: 
+    0 20px 40px -15px hsl(220 90% 60% / 0.3),
+    0 8px 16px -8px hsl(220 90% 60% / 0.15),
+    0 0 0 1px hsl(220 90% 60% / 0.2);
+}
+
+/* Gradient Border Card */
+.glow-border {
+  position: relative;
+  background: hsl(var(--card));
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.glow-border::before {
   content: "";
   position: absolute;
   inset: -2px;
   border-radius: inherit;
   padding: 2px;
-  background: linear-gradient(135deg, hsl(220 90% 60% / 0), hsl(250 90% 60% / 0));
+  background: linear-gradient(135deg, hsl(220 90% 60%), hsl(280 80% 60%));
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-  transition: all 0.4s ease;
+  opacity: 0;
+  transition: opacity 0.3s ease;
   pointer-events: none;
 }
 
-.modern-card:hover {
-  transform: translateY(-8px) scale(1.02);
-  box-shadow: 
-    0 25px 50px -12px hsl(220 90% 56% / 0.25),
-    0 0 40px -10px hsl(250 90% 60% / 0.3);
-  border-color: transparent;
+.glow-border:hover::before {
+  opacity: 1;
 }
 
-.modern-card:hover::before {
-  background: linear-gradient(135deg, hsl(220 90% 60%), hsl(280 80% 60%), hsl(340 80% 60%));
-}
-
-.dark .modern-card:hover {
-  box-shadow: 
-    0 25px 50px -12px hsl(220 90% 60% / 0.3),
-    0 0 60px -10px hsl(250 90% 60% / 0.4);
-}
-
-/* Glow Effect Animation */
-@keyframes glow-pulse {
+/* Discount Card - Animated border */
+@keyframes border-glow {
   0%, 100% {
-    box-shadow: 
-      0 0 20px hsl(220 90% 60% / 0.2),
-      0 0 40px hsl(250 90% 60% / 0.1);
+    border-color: hsl(220 90% 60% / 0.6);
   }
   50% {
-    box-shadow: 
-      0 0 30px hsl(220 90% 60% / 0.4),
-      0 0 60px hsl(250 90% 60% / 0.2);
+    border-color: hsl(280 80% 60% / 0.6);
   }
 }
 
 .glow-card {
-  animation: glow-pulse 3s ease-in-out infinite;
+  animation: border-glow 2s ease-in-out infinite;
 }
 
-/* Gradient Glow Border */
-.glow-border {
-  position: relative;
+.glow-card:hover {
+  animation: none;
+  border-color: hsl(280 80% 60%);
 }
 
-.glow-border::after {
-  content: "";
-  position: absolute;
-  inset: -3px;
-  border-radius: inherit;
-  background: linear-gradient(135deg, hsl(220 90% 60%), hsl(280 80% 60%), hsl(340 80% 60%), hsl(220 90% 60%));
-  background-size: 300% 300%;
-  animation: gradient-shift 4s ease infinite;
-  z-index: -1;
-  filter: blur(8px);
-  opacity: 0;
-  transition: opacity 0.4s ease;
+/* Rainbow Border for Free Courses */
+@keyframes rainbow-border {
+  0% { border-color: hsl(0 80% 60%); }
+  16% { border-color: hsl(60 80% 50%); }
+  33% { border-color: hsl(120 80% 50%); }
+  50% { border-color: hsl(180 80% 50%); }
+  66% { border-color: hsl(240 80% 60%); }
+  83% { border-color: hsl(300 80% 60%); }
+  100% { border-color: hsl(360 80% 60%); }
 }
 
-.glow-border:hover::after {
-  opacity: 0.7;
+.rainbow-glow {
+  animation: rainbow-border 4s linear infinite;
+  border-width: 3px;
 }
 
-@keyframes gradient-shift {
-  0%, 100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-}
-
-/* Rainbow Glow for Premium/Featured Cards */
-@keyframes rainbow-glow {
-  0% {
-    filter: hue-rotate(0deg) blur(12px);
-  }
-  100% {
-    filter: hue-rotate(360deg) blur(12px);
-  }
-}
-
-.rainbow-glow::before {
-  content: "";
-  position: absolute;
-  inset: -4px;
-  border-radius: inherit;
-  background: linear-gradient(135deg, #ff006e, #8338ec, #3a86ff, #06ffa5, #ffbe0b, #ff006e);
-  background-size: 400% 400%;
-  z-index: -1;
-  opacity: 0;
-  transition: opacity 0.4s ease;
-  animation: gradient-shift 3s ease infinite;
-}
-
-.rainbow-glow:hover::before {
-  opacity: 0.6;
-  filter: blur(15px);
+.rainbow-glow:hover {
+  animation: rainbow-border 1s linear infinite;
+  box-shadow: 
+    0 0 20px hsl(280 80% 60% / 0.3),
+    0 20px 40px -15px hsl(220 90% 50% / 0.25);
 }
 
 /* Shimmer Loading Effect */
