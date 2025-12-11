@@ -225,10 +225,17 @@ export function ModernFooter() {
           <p className="text-sm text-muted-foreground">
             © {currentYear} EduPlatform. Barcha huquqlar himoyalangan.
           </p>
-          <p className="text-sm text-muted-foreground flex items-center gap-1">
-            <span>O'zbekistonda ishlab chiqildi</span>
-            <span className="text-lg">🇺🇿</span>
-          </p>
+          <div className="flex items-center gap-4">
+            <Link href="/admin-dashboard">
+              <span className="text-xs text-muted-foreground/50 hover:text-primary transition-colors cursor-pointer" data-testid="link-admin-panel">
+                Admin Panel
+              </span>
+            </Link>
+            <p className="text-sm text-muted-foreground flex items-center gap-1">
+              <span>O'zbekistonda ishlab chiqildi</span>
+              <span className="text-lg">🇺🇿</span>
+            </p>
+          </div>
         </div>
       </div>
     </footer>
