@@ -226,7 +226,7 @@ export function ModernFooter() {
             © {currentYear} EduPlatform. Barcha huquqlar himoyalangan.
           </p>
           <div className="flex items-center gap-4">
-            <Link href="/admin-dashboard">
+            <Link href="/login">
               <span className="text-xs text-muted-foreground/50 hover:text-primary transition-colors cursor-pointer" data-testid="link-admin-panel">
                 Admin Panel
               </span>
