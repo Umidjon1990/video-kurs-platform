@@ -25,19 +25,43 @@ export function ModernFooter() {
 
   const currentYear = new Date().getFullYear();
 
-  const quickLinks = [
+  // Default links (used when no settings exist)
+  const defaultQuickLinks = [
     { href: "/", label: "Bosh sahifa" },
-    { href: "/about", label: "Biz haqimizda" },
-    { href: "/contact", label: "Aloqa" },
     { href: "/login", label: "Kirish" },
     { href: "/register", label: "Ro'yxatdan o'tish" },
   ];
-
-  const legalLinks = [
+  
+  const defaultLegalLinks = [
     { href: "/privacy", label: "Maxfiylik siyosati" },
     { href: "/terms", label: "Foydalanish shartlari" },
-    { href: "/refund", label: "Pul qaytarish" },
   ];
+
+  // Get footer links from settings - if setting exists, use it (even if empty array)
+  const getQuickLinks = () => {
+    const saved = getSetting("footer_quick_links");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed; // Accept empty arrays too
+      } catch {}
+    }
+    return defaultQuickLinks;
+  };
+
+  const getLegalLinks = () => {
+    const saved = getSetting("footer_legal_links");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed; // Accept empty arrays too
+      } catch {}
+    }
+    return defaultLegalLinks;
+  };
+
+  const quickLinks = getQuickLinks();
+  const legalLinks = getLegalLinks();
 
   return (
     <footer className="relative bg-card border-t">
@@ -110,37 +134,55 @@ export function ModernFooter() {
             </div>
           </div>
 
-          {/* Quick Links */}
-          <div>
-            <h3 className="font-semibold text-lg mb-4">Tezkor havolalar</h3>
-            <ul className="space-y-2">
-              {quickLinks.map((link) => (
-                <li key={link.href}>
-                  <Link href={link.href}>
-                    <span className="text-muted-foreground hover:text-primary transition-colors text-sm cursor-pointer">
-                      {link.label}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {/* Quick Links - only show if there are links */}
+          {quickLinks.length > 0 && (
+            <div>
+              <h3 className="font-semibold text-lg mb-4">Tezkor havolalar</h3>
+              <ul className="space-y-2">
+                {quickLinks.map((link, index) => (
+                  <li key={`${link.href}-${index}`}>
+                    {link.href.startsWith("http") ? (
+                      <a href={link.href} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors text-sm cursor-pointer flex items-center gap-1">
+                        {link.label}
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    ) : (
+                      <Link href={link.href}>
+                        <span className="text-muted-foreground hover:text-primary transition-colors text-sm cursor-pointer">
+                          {link.label}
+                        </span>
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
-          {/* Legal Links */}
-          <div>
-            <h3 className="font-semibold text-lg mb-4">Huquqiy</h3>
-            <ul className="space-y-2">
-              {legalLinks.map((link) => (
-                <li key={link.href}>
-                  <Link href={link.href}>
-                    <span className="text-muted-foreground hover:text-primary transition-colors text-sm cursor-pointer">
-                      {link.label}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {/* Legal Links - only show if there are links */}
+          {legalLinks.length > 0 && (
+            <div>
+              <h3 className="font-semibold text-lg mb-4">Huquqiy</h3>
+              <ul className="space-y-2">
+                {legalLinks.map((link, index) => (
+                  <li key={`${link.href}-${index}`}>
+                    {link.href.startsWith("http") ? (
+                      <a href={link.href} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors text-sm cursor-pointer flex items-center gap-1">
+                        {link.label}
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    ) : (
+                      <Link href={link.href}>
+                        <span className="text-muted-foreground hover:text-primary transition-colors text-sm cursor-pointer">
+                          {link.label}
+                        </span>
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Contact Info */}
           <div>

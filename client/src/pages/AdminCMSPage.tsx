@@ -25,7 +25,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, MessageSquare, Save, Trash2, Plus, Star, Edit, ArrowLeft, Upload, X } from "lucide-react";
+import { Settings, MessageSquare, Save, Trash2, Plus, Star, Edit, ArrowLeft, Upload, X, Link2, ExternalLink } from "lucide-react";
 import type { SiteSetting, Testimonial } from "@shared/schema";
 import { useLocation } from "wouter";
 
@@ -45,6 +45,25 @@ export default function AdminCMSPage() {
   // Certificate upload state
   const [uploadingCertificate, setUploadingCertificate] = useState(false);
   const [uploadedCertificates, setUploadedCertificates] = useState<string[]>([]);
+  
+  // Footer links state
+  interface FooterLink {
+    href: string;
+    label: string;
+  }
+  const [quickLinks, setQuickLinks] = useState<FooterLink[]>([
+    { href: "/", label: "Bosh sahifa" },
+    { href: "/login", label: "Kirish" },
+    { href: "/register", label: "Ro'yxatdan o'tish" },
+  ]);
+  const [legalLinks, setLegalLinks] = useState<FooterLink[]>([
+    { href: "/privacy", label: "Maxfiylik siyosati" },
+    { href: "/terms", label: "Foydalanish shartlari" },
+  ]);
+  const [footerLinkDialogOpen, setFooterLinkDialogOpen] = useState(false);
+  const [editingLinkType, setEditingLinkType] = useState<"quick" | "legal">("quick");
+  const [editingLinkIndex, setEditingLinkIndex] = useState<number | null>(null);
+  const [linkForm, setLinkForm] = useState({ href: "", label: "" });
   
   // Load uploaded certificates from certificateUrls
   useEffect(() => {
@@ -103,6 +122,18 @@ export default function AdminCMSPage() {
         if (setting.key === "contact_address") setContactAddress(setting.value || "");
         if (setting.key === "contact_telegram") setContactTelegram(setting.value || "");
         if (setting.key === "certificate_urls") setCertificateUrls(setting.value || "");
+        if (setting.key === "footer_quick_links") {
+          try {
+            const parsed = JSON.parse(setting.value || "[]");
+            if (Array.isArray(parsed) && parsed.length > 0) setQuickLinks(parsed);
+          } catch {}
+        }
+        if (setting.key === "footer_legal_links") {
+          try {
+            const parsed = JSON.parse(setting.value || "[]");
+            if (Array.isArray(parsed) && parsed.length > 0) setLegalLinks(parsed);
+          } catch {}
+        }
       });
     }
   }, [siteSettings]);
@@ -277,6 +308,79 @@ export default function AdminCMSPage() {
     updateSettingMutation.mutate({ key: "certificate_urls", value: certificateUrls });
   };
 
+  const saveFooterLinks = async () => {
+    try {
+      await apiRequest("PUT", "/api/admin/site-settings", { key: "footer_quick_links", value: JSON.stringify(quickLinks) });
+      await apiRequest("PUT", "/api/admin/site-settings", { key: "footer_legal_links", value: JSON.stringify(legalLinks) });
+      queryClient.invalidateQueries({ queryKey: ["/api/site-settings"] });
+      toast({ title: "Muvaffaqiyatli", description: "Footer havolalar saqlandi" });
+    } catch (error: any) {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    }
+  };
+
+  // Footer link management
+  const handleAddLink = (type: "quick" | "legal") => {
+    setEditingLinkType(type);
+    setEditingLinkIndex(null);
+    setLinkForm({ href: "", label: "" });
+    setFooterLinkDialogOpen(true);
+  };
+
+  const handleEditLink = (type: "quick" | "legal", index: number) => {
+    const links = type === "quick" ? quickLinks : legalLinks;
+    setEditingLinkType(type);
+    setEditingLinkIndex(index);
+    setLinkForm(links[index]);
+    setFooterLinkDialogOpen(true);
+  };
+
+  const handleSaveLink = () => {
+    const trimmedHref = linkForm.href.trim();
+    const trimmedLabel = linkForm.label.trim();
+    
+    if (!trimmedHref || !trimmedLabel) {
+      toast({ title: "Xatolik", description: "Barcha maydonlarni to'ldiring", variant: "destructive" });
+      return;
+    }
+    
+    // Basic URL validation - must start with / or http
+    if (!trimmedHref.startsWith("/") && !trimmedHref.startsWith("http")) {
+      toast({ title: "Xatolik", description: "Link / yoki http bilan boshlanishi kerak", variant: "destructive" });
+      return;
+    }
+    
+    const validatedForm = { href: trimmedHref, label: trimmedLabel };
+    
+    if (editingLinkType === "quick") {
+      if (editingLinkIndex !== null) {
+        const updated = [...quickLinks];
+        updated[editingLinkIndex] = validatedForm;
+        setQuickLinks(updated);
+      } else {
+        setQuickLinks([...quickLinks, validatedForm]);
+      }
+    } else {
+      if (editingLinkIndex !== null) {
+        const updated = [...legalLinks];
+        updated[editingLinkIndex] = validatedForm;
+        setLegalLinks(updated);
+      } else {
+        setLegalLinks([...legalLinks, validatedForm]);
+      }
+    }
+    setFooterLinkDialogOpen(false);
+    toast({ title: "Muvaffaqiyatli", description: "Havola qo'shildi. Saqlash tugmasini bosing!" });
+  };
+
+  const handleDeleteLink = (type: "quick" | "legal", index: number) => {
+    if (type === "quick") {
+      setQuickLinks(quickLinks.filter((_, i) => i !== index));
+    } else {
+      setLegalLinks(legalLinks.filter((_, i) => i !== index));
+    }
+  };
+
   const resetTestimonialForm = () => {
     setTestimonialForm({
       studentName: "",
@@ -340,10 +444,14 @@ export default function AdminCMSPage() {
 
       <div className="container mx-auto p-6 max-w-6xl">
         <Tabs defaultValue="settings" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
             <TabsTrigger value="settings" data-testid="tab-settings">
               <Settings className="w-4 h-4 mr-2" />
               Sayt Sozlamalari
+            </TabsTrigger>
+            <TabsTrigger value="footer" data-testid="tab-footer">
+              <Link2 className="w-4 h-4 mr-2" />
+              Footer Havolalar
             </TabsTrigger>
             <TabsTrigger value="testimonials" data-testid="tab-testimonials">
               <MessageSquare className="w-4 h-4 mr-2" />
@@ -502,6 +610,157 @@ export default function AdminCMSPage() {
                 </Button>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Footer Links Tab */}
+          <TabsContent value="footer">
+            <div className="space-y-6">
+              {/* Quick Links Card */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                      <CardTitle>Tezkor Havolalar</CardTitle>
+                      <CardDescription>
+                        Footer "Tezkor havolalar" bo'limidagi linklar
+                      </CardDescription>
+                    </div>
+                    <Button onClick={() => handleAddLink("quick")} data-testid="button-add-quick-link">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Havola qo'shish
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nomi</TableHead>
+                        <TableHead>Link</TableHead>
+                        <TableHead className="w-24">Amallar</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {quickLinks.map((link, index) => (
+                        <TableRow key={index}>
+                          <TableCell>{link.label}</TableCell>
+                          <TableCell className="text-muted-foreground">{link.href}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => handleEditLink("quick", index)} data-testid={`button-edit-quick-${index}`}>
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleDeleteLink("quick", index)} data-testid={`button-delete-quick-${index}`}>
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              {/* Legal Links Card */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                      <CardTitle>Huquqiy Havolalar</CardTitle>
+                      <CardDescription>
+                        Footer "Huquqiy" bo'limidagi linklar
+                      </CardDescription>
+                    </div>
+                    <Button onClick={() => handleAddLink("legal")} data-testid="button-add-legal-link">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Havola qo'shish
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nomi</TableHead>
+                        <TableHead>Link</TableHead>
+                        <TableHead className="w-24">Amallar</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {legalLinks.map((link, index) => (
+                        <TableRow key={index}>
+                          <TableCell>{link.label}</TableCell>
+                          <TableCell className="text-muted-foreground">{link.href}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => handleEditLink("legal", index)} data-testid={`button-edit-legal-${index}`}>
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleDeleteLink("legal", index)} data-testid={`button-delete-legal-${index}`}>
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              <Button onClick={saveFooterLinks} disabled={updateSettingMutation.isPending} data-testid="button-save-footer-links">
+                <Save className="w-4 h-4 mr-2" />
+                {updateSettingMutation.isPending ? "Saqlanmoqda..." : "Havolalarni Saqlash"}
+              </Button>
+            </div>
+
+            {/* Footer Link Dialog */}
+            <Dialog open={footerLinkDialogOpen} onOpenChange={setFooterLinkDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingLinkIndex !== null ? "Havolani tahrirlash" : "Yangi havola qo'shish"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {editingLinkType === "quick" ? "Tezkor havola" : "Huquqiy havola"} ma'lumotlarini kiriting
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="link-label">Havola nomi</Label>
+                    <Input
+                      id="link-label"
+                      data-testid="input-link-label"
+                      placeholder="Masalan: Biz haqimizda"
+                      value={linkForm.label}
+                      onChange={(e) => setLinkForm({ ...linkForm, label: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="link-href">Link manzili</Label>
+                    <Input
+                      id="link-href"
+                      data-testid="input-link-href"
+                      placeholder="Masalan: /about yoki https://example.com"
+                      value={linkForm.href}
+                      onChange={(e) => setLinkForm({ ...linkForm, href: e.target.value })}
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Ichki sahifalar uchun / bilan boshlang. Tashqi sahifalar uchun to'liq URL kiriting.
+                    </p>
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="outline" onClick={() => setFooterLinkDialogOpen(false)}>
+                      Bekor qilish
+                    </Button>
+                    <Button onClick={handleSaveLink} data-testid="button-save-link">
+                      Saqlash
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           {/* Testimonials Tab */}
