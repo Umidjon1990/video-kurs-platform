@@ -1,0 +1,194 @@
+import { Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { 
+  GraduationCap, 
+  Mail, 
+  Phone, 
+  MapPin, 
+  Facebook, 
+  Instagram, 
+  Send,
+  Youtube,
+  ExternalLink
+} from "lucide-react";
+import { SiTelegram } from "react-icons/si";
+import type { SiteSetting } from "@shared/schema";
+
+export function ModernFooter() {
+  const { data: siteSettings } = useQuery<SiteSetting[]>({
+    queryKey: ["/api/site-settings"],
+  });
+
+  const getSetting = (key: string) => {
+    return siteSettings?.find(s => s.key === key)?.value || "";
+  };
+
+  const currentYear = new Date().getFullYear();
+
+  const quickLinks = [
+    { href: "/", label: "Bosh sahifa" },
+    { href: "/about", label: "Biz haqimizda" },
+    { href: "/contact", label: "Aloqa" },
+    { href: "/login", label: "Kirish" },
+    { href: "/register", label: "Ro'yxatdan o'tish" },
+  ];
+
+  const legalLinks = [
+    { href: "/privacy", label: "Maxfiylik siyosati" },
+    { href: "/terms", label: "Foydalanish shartlari" },
+    { href: "/refund", label: "Pul qaytarish" },
+  ];
+
+  return (
+    <footer className="relative bg-card border-t">
+      {/* Decorative gradient */}
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Main Footer Content */}
+        <div className="py-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {/* Brand Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
+                <GraduationCap className="w-6 h-6 text-white" />
+              </div>
+              <span className="font-bold text-xl">
+                <span className="text-gradient">Edu</span>Platform
+              </span>
+            </div>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              {getSetting("aboutDescription") || "Professional video kurslar platformasi. Bilimingizni oshiring va kelajagingizni yarating!"}
+            </p>
+            
+            {/* Social Links */}
+            <div className="flex items-center gap-3 pt-2">
+              {getSetting("telegram") && (
+                <a 
+                  href={getSetting("telegram")} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="w-9 h-9 rounded-lg bg-muted hover:bg-primary hover:text-primary-foreground flex items-center justify-center transition-colors"
+                  data-testid="link-telegram"
+                >
+                  <SiTelegram className="w-4 h-4" />
+                </a>
+              )}
+              {getSetting("instagram") && (
+                <a 
+                  href={getSetting("instagram")} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="w-9 h-9 rounded-lg bg-muted hover:bg-primary hover:text-primary-foreground flex items-center justify-center transition-colors"
+                  data-testid="link-instagram"
+                >
+                  <Instagram className="w-4 h-4" />
+                </a>
+              )}
+              {getSetting("facebook") && (
+                <a 
+                  href={getSetting("facebook")} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="w-9 h-9 rounded-lg bg-muted hover:bg-primary hover:text-primary-foreground flex items-center justify-center transition-colors"
+                  data-testid="link-facebook"
+                >
+                  <Facebook className="w-4 h-4" />
+                </a>
+              )}
+              {getSetting("youtube") && (
+                <a 
+                  href={getSetting("youtube")} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="w-9 h-9 rounded-lg bg-muted hover:bg-primary hover:text-primary-foreground flex items-center justify-center transition-colors"
+                  data-testid="link-youtube"
+                >
+                  <Youtube className="w-4 h-4" />
+                </a>
+              )}
+            </div>
+          </div>
+
+          {/* Quick Links */}
+          <div>
+            <h3 className="font-semibold text-lg mb-4">Tezkor havolalar</h3>
+            <ul className="space-y-2">
+              {quickLinks.map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href}>
+                    <span className="text-muted-foreground hover:text-primary transition-colors text-sm cursor-pointer">
+                      {link.label}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Legal Links */}
+          <div>
+            <h3 className="font-semibold text-lg mb-4">Huquqiy</h3>
+            <ul className="space-y-2">
+              {legalLinks.map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href}>
+                    <span className="text-muted-foreground hover:text-primary transition-colors text-sm cursor-pointer">
+                      {link.label}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Contact Info */}
+          <div>
+            <h3 className="font-semibold text-lg mb-4">Aloqa</h3>
+            <ul className="space-y-3">
+              {getSetting("contactPhone") && (
+                <li className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Phone className="w-4 h-4 text-primary" />
+                  </div>
+                  <a href={`tel:${getSetting("contactPhone")}`} className="hover:text-primary transition-colors">
+                    {getSetting("contactPhone")}
+                  </a>
+                </li>
+              )}
+              {getSetting("contactEmail") && (
+                <li className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Mail className="w-4 h-4 text-primary" />
+                  </div>
+                  <a href={`mailto:${getSetting("contactEmail")}`} className="hover:text-primary transition-colors">
+                    {getSetting("contactEmail")}
+                  </a>
+                </li>
+              )}
+              {getSetting("contactAddress") && (
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <MapPin className="w-4 h-4 text-primary" />
+                  </div>
+                  <span>{getSetting("contactAddress")}</span>
+                </li>
+              )}
+            </ul>
+          </div>
+        </div>
+
+        {/* Bottom Bar */}
+        <div className="py-6 border-t border-border/50 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-sm text-muted-foreground">
+            © {currentYear} EduPlatform. Barcha huquqlar himoyalangan.
+          </p>
+          <p className="text-sm text-muted-foreground flex items-center gap-1">
+            <span>O'zbekistonda ishlab chiqildi</span>
+            <span className="text-lg">🇺🇿</span>
+          </p>
+        </div>
+      </div>
+    </footer>
+  );
+}

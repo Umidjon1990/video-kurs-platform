@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, BookOpen, Users, Award, Star, Mail, Phone, MapPin, Send, ExternalLink, X, ZoomIn, Play, Lock, Clock } from "lucide-react";
+import { Search, Filter, BookOpen, Users, Award, Star, Mail, Phone, MapPin, Send, ExternalLink, X, ZoomIn, Play, Lock, Clock, GraduationCap, TrendingUp, CheckCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { StarRating } from "@/components/StarRating";
+import { ModernHeader } from "@/components/ModernHeader";
+import { ModernFooter } from "@/components/ModernFooter";
 import type { Course, User, SiteSetting, Testimonial, CoursePlanPricing, SubscriptionPlan } from "@shared/schema";
 
 type PublicCourse = Course & {
@@ -131,10 +133,14 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Modern Header */}
+      <ModernHeader />
+
+      <main className="flex-1">
       {/* Hero Section */}
       <motion.div 
-        className="relative bg-gradient-to-br from-primary/20 via-primary/10 to-background border-b"
+        className="relative gradient-hero border-b"
         initial="hidden"
         animate="visible"
         variants={fadeInUp}
@@ -1184,14 +1190,10 @@ export default function HomePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Footer */}
-      <footer className="border-t bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Zamonaviy Ta'lim loyihasi. Barcha huquqlar himoyalangan.
-          </div>
-        </div>
-      </footer>
+      </main>
+
+      {/* Modern Footer */}
+      <ModernFooter />
     </div>
   );
 }
