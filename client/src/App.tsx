@@ -1,5 +1,5 @@
 // Replit Auth integration
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -29,9 +29,37 @@ import Checkout from "@/pages/Checkout";
 import ChatPage from "@/pages/ChatPage";
 import NotFound from "@/pages/not-found";
 
+// Public routes that don't require auth
+const PUBLIC_PATHS = ["/explore", "/login", "/register", "/checkout"];
+
 function Router() {
+  const [location] = useLocation();
   const { isAuthenticated, isLoading, user } = useAuth();
 
+  // Check if current path is public
+  const isPublicPath = PUBLIC_PATHS.some(path => 
+    location === path || location.startsWith(path + "/")
+  );
+
+  // Always render public routes immediately without waiting for auth
+  if (isPublicPath) {
+    return (
+      <Switch>
+        <Route path="/explore" component={HomePage} />
+        <Route path="/login" component={Login} />
+        <Route path="/register" component={Register} />
+        <Route path="/checkout/:courseId" component={Checkout} />
+        <Route component={NotFound} />
+      </Switch>
+    );
+  }
+
+  // For root path ("/"), show HomePage if not authenticated or still loading
+  if (location === "/" && (!isAuthenticated || isLoading)) {
+    return <HomePage />;
+  }
+
+  // Show loading spinner for authenticated routes while checking auth
   if (isLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -40,18 +68,13 @@ function Router() {
     );
   }
 
-  // Public routes (no sidebar)
-  const publicRoutes = (
-    <Switch>
-      <Route path="/explore" component={HomePage} />
-      <Route path="/login" component={Login} />
-      <Route path="/register" component={Register} />
-      {!isAuthenticated && <Route path="/" component={HomePage} />}
-    </Switch>
-  );
+  // If not authenticated and trying to access protected route, show HomePage
+  if (!isAuthenticated) {
+    return <HomePage />;
+  }
 
   // Authenticated routes (with sidebar)
-  const authenticatedRoutes = isAuthenticated && (
+  return (
     <SidebarProvider defaultOpen={true}>
       <div className="flex h-screen w-full">
         <AppSidebar />
@@ -107,13 +130,6 @@ function Router() {
         </div>
       </div>
     </SidebarProvider>
-  );
-
-  return (
-    <>
-      {publicRoutes}
-      {authenticatedRoutes}
-    </>
   );
 }
 
