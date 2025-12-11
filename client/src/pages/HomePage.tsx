@@ -328,7 +328,7 @@ export default function HomePage() {
                       <div className="free-course-star">✨</div>
                       
                       <Card
-                        className="hover-elevate transition-all cursor-pointer overflow-hidden h-full border-4 border-amber-400 shadow-lg"
+                        className="modern-card glow-border rainbow-glow hover-elevate transition-all cursor-pointer overflow-hidden h-full border-4 border-amber-400 shadow-lg"
                         data-testid={`card-course-${course.id}`}
                         onClick={() => setLocation(`/checkout/${course.id}`)}
                       >
@@ -445,9 +445,9 @@ export default function HomePage() {
                       </Card>
                     </div>
                   ) : discountPercent > 0 ? (
-                    <div className={`p-1 bg-gradient-to-br ${gradient} rounded-lg`}>
+                    <div className={`p-1 bg-gradient-to-br ${gradient} rounded-lg glow-border`}>
                       <Card
-                        className="hover-elevate transition-all cursor-pointer border-0 overflow-hidden h-full"
+                        className="modern-card glow-card hover-elevate transition-all cursor-pointer border-0 overflow-hidden h-full"
                         data-testid={`card-course-${course.id}`}
                         onClick={() => setLocation(`/checkout/${course.id}`)}
                       >
@@ -595,7 +595,7 @@ export default function HomePage() {
               <>
                 {/* Oddiy karta (chegirmasiz) */}
                 <Card
-                  className="hover-elevate transition-all cursor-pointer overflow-hidden h-full"
+                  className="modern-card glow-border hover-elevate transition-all cursor-pointer overflow-hidden h-full"
                   data-testid={`card-course-${course.id}`}
                   onClick={() => setLocation(`/checkout/${course.id}`)}
                 >
