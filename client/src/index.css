@@ -142,21 +142,123 @@
   pointer-events: none;
 }
 
-/* Modern Card Hover */
+/* Modern Card Hover with Glow */
 .modern-card {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid hsl(var(--border));
+  position: relative;
+  overflow: visible;
+}
+
+.modern-card::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(135deg, hsl(220 90% 60% / 0), hsl(250 90% 60% / 0));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  transition: all 0.4s ease;
+  pointer-events: none;
 }
 
 .modern-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 20px 40px -12px hsl(220 90% 56% / 0.15);
-  border-color: hsl(220 90% 56% / 0.3);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 
+    0 25px 50px -12px hsl(220 90% 56% / 0.25),
+    0 0 40px -10px hsl(250 90% 60% / 0.3);
+  border-color: transparent;
+}
+
+.modern-card:hover::before {
+  background: linear-gradient(135deg, hsl(220 90% 60%), hsl(280 80% 60%), hsl(340 80% 60%));
 }
 
 .dark .modern-card:hover {
-  box-shadow: 0 20px 40px -12px hsl(220 90% 60% / 0.2);
-  border-color: hsl(220 90% 60% / 0.4);
+  box-shadow: 
+    0 25px 50px -12px hsl(220 90% 60% / 0.3),
+    0 0 60px -10px hsl(250 90% 60% / 0.4);
+}
+
+/* Glow Effect Animation */
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 
+      0 0 20px hsl(220 90% 60% / 0.2),
+      0 0 40px hsl(250 90% 60% / 0.1);
+  }
+  50% {
+    box-shadow: 
+      0 0 30px hsl(220 90% 60% / 0.4),
+      0 0 60px hsl(250 90% 60% / 0.2);
+  }
+}
+
+.glow-card {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+/* Gradient Glow Border */
+.glow-border {
+  position: relative;
+}
+
+.glow-border::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, hsl(220 90% 60%), hsl(280 80% 60%), hsl(340 80% 60%), hsl(220 90% 60%));
+  background-size: 300% 300%;
+  animation: gradient-shift 4s ease infinite;
+  z-index: -1;
+  filter: blur(8px);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.glow-border:hover::after {
+  opacity: 0.7;
+}
+
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Rainbow Glow for Premium/Featured Cards */
+@keyframes rainbow-glow {
+  0% {
+    filter: hue-rotate(0deg) blur(12px);
+  }
+  100% {
+    filter: hue-rotate(360deg) blur(12px);
+  }
+}
+
+.rainbow-glow::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, #ff006e, #8338ec, #3a86ff, #06ffa5, #ffbe0b, #ff006e);
+  background-size: 400% 400%;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  animation: gradient-shift 3s ease infinite;
+}
+
+.rainbow-glow:hover::before {
+  opacity: 0.6;
+  filter: blur(15px);
 }
 
 /* Shimmer Loading Effect */

@@ -70,9 +70,9 @@ export function ModernCourseCard({ course, index = 0, onViewLessons }: ModernCou
       )}
 
       <Card 
-        className={`group overflow-hidden modern-card h-full flex flex-col ${
-          isFree ? "border-amber-400/50 dark:border-amber-500/50" : ""
-        }`}
+        className={`group overflow-visible modern-card glow-border h-full flex flex-col ${
+          isFree ? "border-amber-400/50 dark:border-amber-500/50 rainbow-glow" : ""
+        } ${hasDiscount ? "glow-card" : ""}`}
         data-testid={`card-course-${course.id}`}
       >
         {/* Thumbnail Section */}
