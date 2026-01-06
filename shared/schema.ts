@@ -59,6 +59,59 @@ export const usersRelations = relations(users, ({ many }) => ({
   courseRatings: many(courseRatings),
 }));
 
+// Language Levels table - CEFR standard (A0-C2)
+export const languageLevels = pgTable("language_levels", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: varchar("code", { length: 10 }).notNull().unique(), // A0, A1, A2, B1, B2, C1, C2
+  name: varchar("name", { length: 100 }).notNull(), // Boshlang'ich, O'rta, Yuqori
+  description: text("description"),
+  order: integer("order").notNull().default(0), // Tartib raqami
+  isActive: boolean("is_active").default(true), // Admin yoqishi/o'chirishi mumkin
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const languageLevelsRelations = relations(languageLevels, ({ many }) => ({
+  courses: many(courses),
+}));
+
+// Resource Types table - Admin-managed categories (Insho, O'qish, Grammatika, etc.)
+export const resourceTypes = pgTable("resource_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull(), // Insho, O'qish, Eshitish
+  nameUz: varchar("name_uz", { length: 100 }), // O'zbek tilida
+  description: text("description"),
+  icon: varchar("icon", { length: 50 }), // Lucide icon nomi
+  color: varchar("color", { length: 20 }), // Rang (primary, green, blue, etc.)
+  order: integer("order").notNull().default(0), // Tartib raqami
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const resourceTypesRelations = relations(resourceTypes, ({ many }) => ({
+  courseResourceTypes: many(courseResourceTypes),
+}));
+
+// Course-ResourceType join table (many-to-many)
+export const courseResourceTypes = pgTable("course_resource_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: 'cascade' }),
+  resourceTypeId: varchar("resource_type_id").notNull().references(() => resourceTypes.id, { onDelete: 'cascade' }),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("course_resource_type_idx").on(table.courseId, table.resourceTypeId),
+]);
+
+export const courseResourceTypesRelations = relations(courseResourceTypes, ({ one }) => ({
+  course: one(courses, {
+    fields: [courseResourceTypes.courseId],
+    references: [courses.id],
+  }),
+  resourceType: one(resourceTypes, {
+    fields: [courseResourceTypes.resourceTypeId],
+    references: [resourceTypes.id],
+  }),
+}));
+
 // Courses table
 export const courses = pgTable("courses", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -66,6 +119,7 @@ export const courses = pgTable("courses", {
   description: text("description"),
   author: text("author"), // Muallif nomi (o'qituvchi tomonidan yoziladi)
   category: varchar("category", { length: 50 }), // IT, Design, Business, Language, Marketing, etc.
+  levelId: varchar("level_id").references(() => languageLevels.id), // CEFR daraja (A1, B1, etc.)
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   originalPrice: decimal("original_price", { precision: 10, scale: 2 }), // Asl narx
   discountPercentage: integer("discount_percentage"), // Chegirma foizi (0-100)
@@ -83,6 +137,10 @@ export const coursesRelations = relations(courses, ({ one, many }) => ({
     fields: [courses.instructorId],
     references: [users.id],
   }),
+  level: one(languageLevels, {
+    fields: [courses.levelId],
+    references: [languageLevels.id],
+  }),
   lessons: many(lessons),
   assignments: many(assignments),
   tests: many(tests),
@@ -91,6 +149,7 @@ export const coursesRelations = relations(courses, ({ one, many }) => ({
   userSubscriptions: many(userSubscriptions),
   ratings: many(courseRatings),
   likes: many(courseLikes),
+  resourceTypes: many(courseResourceTypes),
 }));
 
 // Course Ratings table
@@ -530,6 +589,21 @@ export const insertCourseLikeSchema = createInsertSchema(courseLikes).omit({
   createdAt: true,
 });
 
+export const insertLanguageLevelSchema = createInsertSchema(languageLevels).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertResourceTypeSchema = createInsertSchema(resourceTypes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCourseResourceTypeSchema = createInsertSchema(courseResourceTypes).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertLessonSchema = createInsertSchema(lessons).omit({
   id: true,
   createdAt: true,
@@ -884,6 +958,21 @@ export type CourseRating = typeof courseRatings.$inferSelect;
 
 export type InsertCourseLike = z.infer<typeof insertCourseLikeSchema>;
 export type CourseLike = typeof courseLikes.$inferSelect;
+
+export type InsertLanguageLevel = z.infer<typeof insertLanguageLevelSchema>;
+export type LanguageLevel = typeof languageLevels.$inferSelect;
+
+export type InsertResourceType = z.infer<typeof insertResourceTypeSchema>;
+export type ResourceType = typeof resourceTypes.$inferSelect;
+
+export type InsertCourseResourceType = z.infer<typeof insertCourseResourceTypeSchema>;
+export type CourseResourceType = typeof courseResourceTypes.$inferSelect;
+
+// Extended course type with level and resource types
+export type CourseWithFilters = Course & {
+  level?: LanguageLevel | null;
+  resourceTypes?: Array<CourseResourceType & { resourceType: ResourceType }>;
+};
 
 // Extended course type with aggregated counts (for instructor dashboard)
 export type InstructorCourseWithCounts = Course & {
