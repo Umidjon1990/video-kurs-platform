@@ -3568,6 +3568,183 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ LANGUAGE LEVEL ROUTES ============
+  // Public: Get active language levels
+  app.get('/api/language-levels', async (_req, res) => {
+    try {
+      const levels = await storage.getActiveLanguageLevels();
+      res.json(levels);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Get all language levels
+  app.get('/api/admin/language-levels', isAdmin, async (_req, res) => {
+    try {
+      const levels = await storage.getLanguageLevels();
+      res.json(levels);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Create language level
+  app.post('/api/admin/language-levels', isAdmin, async (req, res) => {
+    try {
+      const { name, displayName, description, order, isActive } = req.body;
+      const level = await storage.createLanguageLevel({
+        name,
+        displayName,
+        description,
+        order: order ?? 0,
+        isActive: isActive ?? true,
+      });
+      res.json(level);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Update language level
+  app.put('/api/admin/language-levels/:id', isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, displayName, description, order, isActive } = req.body;
+      const level = await storage.updateLanguageLevel(id, {
+        name,
+        displayName,
+        description,
+        order,
+        isActive,
+      });
+      res.json(level);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Delete language level
+  app.delete('/api/admin/language-levels/:id', isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteLanguageLevel(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ============ RESOURCE TYPE ROUTES ============
+  // Public: Get active resource types
+  app.get('/api/resource-types', async (_req, res) => {
+    try {
+      const types = await storage.getActiveResourceTypes();
+      res.json(types);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Get all resource types
+  app.get('/api/admin/resource-types', isAdmin, async (_req, res) => {
+    try {
+      const types = await storage.getResourceTypes();
+      res.json(types);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Create resource type
+  app.post('/api/admin/resource-types', isAdmin, async (req, res) => {
+    try {
+      const { name, displayName, description, icon, order, isActive } = req.body;
+      const type = await storage.createResourceType({
+        name,
+        displayName,
+        description,
+        icon,
+        order: order ?? 0,
+        isActive: isActive ?? true,
+      });
+      res.json(type);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Update resource type
+  app.put('/api/admin/resource-types/:id', isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, displayName, description, icon, order, isActive } = req.body;
+      const type = await storage.updateResourceType(id, {
+        name,
+        displayName,
+        description,
+        icon,
+        order,
+        isActive,
+      });
+      res.json(type);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Delete resource type
+  app.delete('/api/admin/resource-types/:id', isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteResourceType(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ============ COURSE RESOURCE TYPES ROUTES ============
+  // Get resource types for a course
+  app.get('/api/courses/:courseId/resource-types', async (req, res) => {
+    try {
+      const { courseId } = req.params;
+      const resourceTypes = await storage.getCourseResourceTypes(courseId);
+      res.json(resourceTypes);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Set resource types for a course (instructor/admin only)
+  app.put('/api/courses/:courseId/resource-types', isAuthenticated, async (req: any, res) => {
+    try {
+      const { courseId } = req.params;
+      const { resourceTypeIds } = req.body;
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(401).json({ message: "Foydalanuvchi topilmadi" });
+      }
+      
+      // Check if user is admin or course instructor
+      const course = await storage.getCourse(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Kurs topilmadi" });
+      }
+      
+      if (user.role !== 'admin' && course.instructorId !== userId) {
+        return res.status(403).json({ message: "Ruxsat yo'q" });
+      }
+      
+      await storage.setCourseResourceTypes(courseId, resourceTypeIds || []);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Public: Get all subscription plans
   app.get('/api/subscription-plans', async (_req, res) => {
     try {
