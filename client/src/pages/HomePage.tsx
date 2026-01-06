@@ -392,7 +392,7 @@ export default function HomePage() {
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {[...Array(6)].map((_, i) => (
               <Card key={i} className="animate-pulse">
-                <div className="h-56 bg-muted" />
+                <div className="aspect-[3/4] bg-muted" />
                 <CardHeader>
                   <div className="h-6 bg-muted rounded w-3/4 mb-2" />
                   <div className="h-4 bg-muted rounded w-1/2" />
@@ -490,7 +490,7 @@ export default function HomePage() {
                         onClick={() => setLocation(`/checkout/${course.id}`)}
                       >
                         {/* Thumbnail with BEPUL Badge */}
-                        <div className="relative h-56 bg-gradient-to-br from-amber-100 to-yellow-100 dark:from-amber-900 dark:to-yellow-900 flex items-center justify-center border-b overflow-hidden">
+                        <div className="relative aspect-[3/4] bg-gradient-to-br from-amber-100 to-yellow-100 dark:from-amber-900 dark:to-yellow-900 flex items-center justify-center border-b overflow-hidden">
                           {/* "Yangi" ribbon */}
                           {isNew && (
                             <div className="absolute top-0 left-0 z-20 overflow-hidden w-32 h-32">
@@ -598,7 +598,7 @@ export default function HomePage() {
                         onClick={() => setLocation(`/checkout/${course.id}`)}
                       >
                         {/* Thumbnail with Sale Badge & New Ribbon */}
-                        <div className="relative h-56 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-b overflow-hidden">
+                        <div className="relative aspect-[3/4] bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-b overflow-hidden">
                           {/* "Yangi" ribbon - chap yuqori burchak */}
                           {isNew && (
                             <div className="absolute top-0 left-0 z-20 overflow-hidden w-32 h-32">
@@ -746,7 +746,7 @@ export default function HomePage() {
                   onClick={() => setLocation(`/checkout/${course.id}`)}
                 >
                 {/* Thumbnail with New Ribbon only */}
-                <div className="relative h-56 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-b overflow-hidden">
+                <div className="relative aspect-[3/4] bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-b overflow-hidden">
                   {/* "Yangi" ribbon - chap yuqori burchak */}
                   {isNew && (
                     <div className="absolute top-0 left-0 z-20 overflow-hidden w-32 h-32">

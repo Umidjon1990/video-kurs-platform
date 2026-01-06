@@ -100,12 +100,12 @@ export function ModernCourseCard({ course, index = 0, onViewLessons }: ModernCou
         data-testid={`card-course-${course.id}`}
       >
         {/* Thumbnail Section */}
-        <div className="relative aspect-video overflow-hidden bg-muted">
+        <div className="relative aspect-[3/4] overflow-hidden bg-muted">
           {thumbnailUrl ? (
             <img
               src={thumbnailUrl}
               alt={course.title}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
             <div className="w-full h-full gradient-primary opacity-20" />
