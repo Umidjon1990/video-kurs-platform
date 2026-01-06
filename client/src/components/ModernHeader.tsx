@@ -157,13 +157,8 @@ export function ModernHeader() {
             ) : (
               <div className="flex items-center gap-2">
                 <Link href="/login">
-                  <Button variant="ghost" size="sm" data-testid="button-login">
+                  <Button size="sm" className="gradient-primary text-white border-0" data-testid="button-login">
                     Kirish
-                  </Button>
-                </Link>
-                <Link href="/register">
-                  <Button size="sm" className="gradient-primary text-white border-0" data-testid="button-register">
-                    Ro'yxatdan o'tish
                   </Button>
                 </Link>
               </div>
