@@ -387,10 +387,10 @@ export default function LearningPage() {
               }
               
               return (
-                <div className="space-y-6">
+                <div className="space-y-4">
                   <div>
-                    <h2 className="text-2xl font-bold mb-2" data-testid="text-lesson-title">{currentLesson.title}</h2>
-                    <p className="text-muted-foreground">
+                    <h2 className="text-lg sm:text-xl font-bold mb-1" data-testid="text-lesson-title">{currentLesson.title}</h2>
+                    <p className="text-sm text-muted-foreground">
                       {currentLesson.duration ? `Davomiyligi: ${currentLesson.duration} daqiqa` : ''}
                     </p>
                   </div>
@@ -437,10 +437,12 @@ export default function LearningPage() {
                         if (videoId) {
                           return (
                             <iframe
-                              src={`https://www.youtube.com/embed/${videoId}`}
+                              src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1`}
                               className="w-full h-full"
-                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                               allowFullScreen
+                              referrerPolicy="strict-origin-when-cross-origin"
+                              loading="lazy"
                               data-testid="video-player"
                             />
                           );
