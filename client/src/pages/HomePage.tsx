@@ -41,6 +41,8 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [priceRange, setPriceRange] = useState<string>("");
+  const [selectedLevel, setSelectedLevel] = useState<string>("");
+  const [selectedResourceTypes, setSelectedResourceTypes] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCertificate, setSelectedCertificate] = useState<{ url: string; index: number } | null>(null);
   const [selectedCourseForLessons, setSelectedCourseForLessons] = useState<PublicCourse | null>(null);
@@ -51,6 +53,10 @@ export default function HomePage() {
     const params = new URLSearchParams();
     if (searchQuery) params.append("search", searchQuery);
     if (selectedCategory) params.append("category", selectedCategory);
+    if (selectedLevel) params.append("levelId", selectedLevel);
+    if (selectedResourceTypes.length > 0) {
+      params.append("resourceTypeIds", selectedResourceTypes.join(","));
+    }
     
     if (priceRange === "free") {
       params.append("minPrice", "0");
@@ -81,6 +87,16 @@ export default function HomePage() {
   // Fetch testimonials
   const { data: testimonials } = useQuery<Testimonial[]>({
     queryKey: ["/api/testimonials"],
+  });
+
+  // Fetch language levels for filtering
+  const { data: languageLevels } = useQuery<any[]>({
+    queryKey: ["/api/language-levels"],
+  });
+
+  // Fetch resource types for filtering
+  const { data: resourceTypes } = useQuery<any[]>({
+    queryKey: ["/api/resource-types"],
   });
 
   // Fetch lessons for selected course
@@ -197,7 +213,7 @@ export default function HomePage() {
               {/* Filters */}
               {showFilters && (
                 <Card className="mt-4 p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div>
                       <label className="text-sm font-medium mb-2 block">Kategoriya</label>
                       <select
@@ -209,6 +225,22 @@ export default function HomePage() {
                         {categories.map((cat) => (
                           <option key={cat.value} value={cat.value}>
                             {cat.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Til Darajasi (CEFR)</label>
+                      <select
+                        value={selectedLevel}
+                        onChange={(e) => setSelectedLevel(e.target.value)}
+                        className="w-full h-10 px-3 rounded-md border bg-background"
+                        data-testid="select-level"
+                      >
+                        <option value="">Barcha darajalar</option>
+                        {languageLevels?.map((level) => (
+                          <option key={level.id} value={level.id}>
+                            {level.code} - {level.name}
                           </option>
                         ))}
                       </select>
@@ -229,6 +261,52 @@ export default function HomePage() {
                       </select>
                     </div>
                   </div>
+                  
+                  {/* Resource Types */}
+                  {resourceTypes && resourceTypes.length > 0 && (
+                    <div className="mt-4">
+                      <label className="text-sm font-medium mb-2 block">Resurs Turlari</label>
+                      <div className="flex flex-wrap gap-2">
+                        {resourceTypes.map((type) => (
+                          <Badge
+                            key={type.id}
+                            variant={selectedResourceTypes.includes(type.id) ? "default" : "outline"}
+                            className="cursor-pointer"
+                            onClick={() => {
+                              if (selectedResourceTypes.includes(type.id)) {
+                                setSelectedResourceTypes(selectedResourceTypes.filter((id) => id !== type.id));
+                              } else {
+                                setSelectedResourceTypes([...selectedResourceTypes, type.id]);
+                              }
+                            }}
+                            data-testid={`filter-resource-type-${type.id}`}
+                          >
+                            {type.nameUz || type.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Clear Filters */}
+                  {(selectedCategory || selectedLevel || priceRange || selectedResourceTypes.length > 0) && (
+                    <div className="mt-4 pt-4 border-t">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedCategory("");
+                          setSelectedLevel("");
+                          setPriceRange("");
+                          setSelectedResourceTypes([]);
+                        }}
+                        data-testid="button-clear-filters"
+                      >
+                        <X className="w-4 h-4 mr-2" />
+                        Filtrlarni tozalash
+                      </Button>
+                    </div>
+                  )}
                 </Card>
               )}
             </div>

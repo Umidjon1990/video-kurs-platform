@@ -251,9 +251,12 @@ export default function InstructorDashboard() {
       const response = await apiRequest(method, url, payload);
       const courseData = await response.json();
       
+      // Get the course ID (from response for new courses, from editingCourse for updates)
+      const courseId = courseData?.id || editingCourse?.id;
+      
       // Set resource types for the course
-      if (courseForm.selectedResourceTypes.length > 0 && courseData?.id) {
-        await apiRequest("PUT", `/api/courses/${courseData.id}/resource-types`, {
+      if (courseId) {
+        await apiRequest("PUT", `/api/courses/${courseId}/resource-types`, {
           resourceTypeIds: courseForm.selectedResourceTypes,
         });
       }

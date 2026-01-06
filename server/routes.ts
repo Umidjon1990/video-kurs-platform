@@ -2309,7 +2309,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Public courses endpoint with filters
   app.get('/api/courses/public', async (req: any, res) => {
     try {
-      const { search, category, minPrice, maxPrice, instructorId, hasDiscount } = req.query;
+      const { search, category, minPrice, maxPrice, instructorId, hasDiscount, levelId, resourceTypeIds } = req.query;
       
       const filters = {
         search: search as string | undefined,
@@ -2318,6 +2318,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         maxPrice: maxPrice ? parseFloat(maxPrice as string) : undefined,
         instructorId: instructorId as string | undefined,
         hasDiscount: hasDiscount === 'true' ? true : undefined,
+        levelId: levelId as string | undefined,
+        resourceTypeIds: resourceTypeIds ? (resourceTypeIds as string).split(',') : undefined,
       };
 
       const courses = await storage.getPublicCourses(filters);

@@ -477,6 +477,8 @@ export class DatabaseStorage implements IStorage {
     maxPrice?: number;
     instructorId?: string;
     hasDiscount?: boolean;
+    levelId?: string;
+    resourceTypeIds?: string[];
   }): Promise<Array<Course & { instructor: User; enrollmentsCount: number; planPricing?: Array<CoursePlanPricing & { plan: SubscriptionPlan }> }>> {
     let query = db
       .select({
@@ -518,6 +520,26 @@ export class DatabaseStorage implements IStorage {
 
     if (filters?.hasDiscount) {
       conditions.push(sql`${courses.discountedPrice} IS NOT NULL`);
+    }
+
+    if (filters?.levelId) {
+      conditions.push(eq(courses.levelId, filters.levelId));
+    }
+
+    // Filter by resource types - get course IDs that have any of the selected resource types
+    let resourceTypeFilterCourseIds: string[] | null = null;
+    if (filters?.resourceTypeIds && filters.resourceTypeIds.length > 0) {
+      const matchingCourses = await db
+        .selectDistinct({ courseId: courseResourceTypes.courseId })
+        .from(courseResourceTypes)
+        .where(inArray(courseResourceTypes.resourceTypeId, filters.resourceTypeIds));
+      resourceTypeFilterCourseIds = matchingCourses.map(c => c.courseId);
+      
+      if (resourceTypeFilterCourseIds.length === 0) {
+        // No courses match the resource type filter, return empty
+        return [];
+      }
+      conditions.push(inArray(courses.id, resourceTypeFilterCourseIds));
     }
 
     const results = await db
