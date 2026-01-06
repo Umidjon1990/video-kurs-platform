@@ -1033,13 +1033,32 @@ export default function InstructorDashboard() {
                       </div>
                     )}
                     
-                    <div className="flex items-center justify-end">
+                    <div className="flex items-center justify-between gap-2">
                       <Badge 
                         variant={course.status === 'published' ? 'default' : 'secondary'}
                         data-testid={`badge-status-${course.id}`}
                       >
                         {course.status === 'published' ? "E'lon qilingan" : "Qoralama"}
                       </Badge>
+                      {course.status === 'draft' ? (
+                        <Button
+                          size="sm"
+                          onClick={() => publishCourseMutation.mutate(course.id)}
+                          data-testid={`button-publish-${course.id}`}
+                        >
+                          E'lon Qilish
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => unpublishCourseMutation.mutate(course.id)}
+                          data-testid={`button-unpublish-${course.id}`}
+                        >
+                          <EyeOff className="w-4 h-4 mr-2" />
+                          Yashirish
+                        </Button>
+                      )}
                     </div>
                     
                     {/* Analytics Panel - Collapsible */}
@@ -1102,25 +1121,6 @@ export default function InstructorDashboard() {
                         <Eye className="w-4 h-4 mr-2" />
                         Ko'rish
                       </Button>
-                      {course.status === 'draft' ? (
-                        <Button
-                          size="sm"
-                          onClick={() => publishCourseMutation.mutate(course.id)}
-                          data-testid={`button-publish-${course.id}`}
-                        >
-                          E'lon Qilish
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => unpublishCourseMutation.mutate(course.id)}
-                          data-testid={`button-unpublish-${course.id}`}
-                        >
-                          <EyeOff className="w-4 h-4 mr-2" />
-                          Yashirish
-                        </Button>
-                      )}
                     </div>
                   </CardContent>
                 </Card>
