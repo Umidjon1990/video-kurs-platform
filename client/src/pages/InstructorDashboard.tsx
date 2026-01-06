@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, Download, Megaphone, Users, User, MessageCircle, TrendingUp, Award, Activity, Settings, UserCheck, Upload, FileSpreadsheet, Mic } from "lucide-react";
+import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, EyeOff, Download, Megaphone, Users, User, MessageCircle, TrendingUp, Award, Activity, Settings, UserCheck, Upload, FileSpreadsheet, Mic } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NotificationBell } from "@/components/NotificationBell";
 import { StarRating } from "@/components/StarRating";
@@ -569,6 +569,19 @@ export default function InstructorDashboard() {
     },
   });
 
+  const unpublishCourseMutation = useMutation({
+    mutationFn: async (courseId: string) => {
+      await apiRequest("PATCH", `/api/instructor/courses/${courseId}/unpublish`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/instructor/courses"] });
+      toast({ title: "Muvaffaqiyatli", description: "Kurs yashirildi" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+
   const gradingMutation = useMutation({
     mutationFn: async () => {
       if (!selectedSubmission) return;
@@ -1089,13 +1102,23 @@ export default function InstructorDashboard() {
                         <Eye className="w-4 h-4 mr-2" />
                         Ko'rish
                       </Button>
-                      {course.status === 'draft' && (
+                      {course.status === 'draft' ? (
                         <Button
                           size="sm"
                           onClick={() => publishCourseMutation.mutate(course.id)}
                           data-testid={`button-publish-${course.id}`}
                         >
                           E'lon Qilish
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => unpublishCourseMutation.mutate(course.id)}
+                          data-testid={`button-unpublish-${course.id}`}
+                        >
+                          <EyeOff className="w-4 h-4 mr-2" />
+                          Yashirish
                         </Button>
                       )}
                     </div>

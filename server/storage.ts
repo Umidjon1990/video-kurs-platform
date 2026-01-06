@@ -611,6 +611,84 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteCourse(id: string): Promise<void> {
+    // Delete all dependent records first to avoid foreign key constraint violations
+    // Tables without onDelete: 'cascade' need to be deleted manually
+    
+    // 1. Delete enrollments (no cascade)
+    await db.delete(enrollments).where(eq(enrollments.courseId, id));
+    
+    // 2. Delete user subscriptions linked to this course (no cascade)
+    await db.delete(userSubscriptions).where(eq(userSubscriptions.courseId, id));
+    
+    // 3. Delete course plan pricing (has cascade but delete for safety)
+    await db.delete(coursePlanPricing).where(eq(coursePlanPricing.courseId, id));
+    
+    // 4. Delete course resource types (has cascade but delete for safety)
+    await db.delete(courseResourceTypes).where(eq(courseResourceTypes.courseId, id));
+    
+    // 5. Delete course ratings (has cascade but delete for safety)
+    await db.delete(courseRatings).where(eq(courseRatings.courseId, id));
+    
+    // 6. Delete course likes (has cascade but delete for safety)
+    await db.delete(courseLikes).where(eq(courseLikes.courseId, id));
+    
+    // 7. Get all lessons for this course to delete lesson progress
+    const courseLessons = await db.select({ id: lessons.id }).from(lessons).where(eq(lessons.courseId, id));
+    for (const lesson of courseLessons) {
+      await db.delete(lessonProgress).where(eq(lessonProgress.lessonId, lesson.id));
+    }
+    
+    // 8. Delete lessons (has cascade)
+    await db.delete(lessons).where(eq(lessons.courseId, id));
+    
+    // 9. Get all tests for this course to delete test attempts and questions
+    const courseTests = await db.select({ id: tests.id }).from(tests).where(eq(tests.courseId, id));
+    for (const test of courseTests) {
+      await db.delete(testAttempts).where(eq(testAttempts.testId, test.id));
+      // Get questions to delete options
+      const testQuestions = await db.select({ id: questions.id }).from(questions).where(eq(questions.testId, test.id));
+      for (const q of testQuestions) {
+        await db.delete(questionOptions).where(eq(questionOptions.questionId, q.id));
+      }
+      await db.delete(questions).where(eq(questions.testId, test.id));
+    }
+    
+    // 10. Delete tests (has cascade)
+    await db.delete(tests).where(eq(tests.courseId, id));
+    
+    // 11. Get all assignments for this course to delete submissions
+    const courseAssignments = await db.select({ id: assignments.id }).from(assignments).where(eq(assignments.courseId, id));
+    for (const assignment of courseAssignments) {
+      await db.delete(submissions).where(eq(submissions.assignmentId, assignment.id));
+    }
+    
+    // 12. Delete assignments (has cascade)
+    await db.delete(assignments).where(eq(assignments.courseId, id));
+    
+    // 13. Get all speaking tests for this course and delete related records
+    const courseSpeakingTests = await db.select({ id: speakingTests.id }).from(speakingTests).where(eq(speakingTests.courseId, id));
+    for (const st of courseSpeakingTests) {
+      // Delete evaluations, answers, submissions, questions, sections
+      const stSubmissions = await db.select({ id: speakingSubmissions.id }).from(speakingSubmissions).where(eq(speakingSubmissions.speakingTestId, st.id));
+      for (const sub of stSubmissions) {
+        // Get answers for this submission to delete evaluations
+        const subAnswers = await db.select({ id: speakingAnswers.id }).from(speakingAnswers).where(eq(speakingAnswers.submissionId, sub.id));
+        for (const ans of subAnswers) {
+          await db.delete(speakingEvaluations).where(eq(speakingEvaluations.answerId, ans.id));
+        }
+        await db.delete(speakingAnswers).where(eq(speakingAnswers.submissionId, sub.id));
+      }
+      await db.delete(speakingSubmissions).where(eq(speakingSubmissions.speakingTestId, st.id));
+      
+      const stSections = await db.select({ id: speakingTestSections.id }).from(speakingTestSections).where(eq(speakingTestSections.speakingTestId, st.id));
+      for (const sec of stSections) {
+        await db.delete(speakingQuestions).where(eq(speakingQuestions.sectionId, sec.id));
+      }
+      await db.delete(speakingTestSections).where(eq(speakingTestSections.speakingTestId, st.id));
+    }
+    await db.delete(speakingTests).where(eq(speakingTests.courseId, id));
+    
+    // Finally, delete the course itself
     await db.delete(courses).where(eq(courses.id, id));
   }
 

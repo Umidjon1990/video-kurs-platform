@@ -1307,6 +1307,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Unpublish course - set status to draft (hide from public)
+  app.patch('/api/instructor/courses/:courseId/unpublish', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { courseId } = req.params;
+      const instructorId = req.user.claims.sub;
+      
+      // Verify course belongs to instructor
+      const course = await storage.getCourse(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Kurs topilmadi" });
+      }
+      if (course.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Ruxsat yo'q" });
+        }
+      }
+      
+      const updatedCourse = await storage.updateCourseStatus(courseId, 'draft');
+      res.json(updatedCourse);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get('/api/instructor/courses/:courseId/lessons', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
       const { courseId } = req.params;
