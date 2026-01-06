@@ -78,7 +78,7 @@ export function ModernFooter() {
                 <GraduationCap className="w-6 h-6 text-white" />
               </div>
               <span className="font-bold text-xl">
-                <span className="text-gradient">Edu</span>Platform
+                <span className="text-gradient">Zamonaviy</span>-EDU
               </span>
             </div>
             <p className="text-muted-foreground text-sm leading-relaxed">
@@ -223,7 +223,7 @@ export function ModernFooter() {
         {/* Bottom Bar */}
         <div className="py-6 border-t border-border/50 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            © {currentYear} EduPlatform. Barcha huquqlar himoyalangan.
+            © {currentYear} Zamonaviy-EDU. Barcha huquqlar himoyalangan.
           </p>
           <div className="flex items-center gap-4">
             <Link href="/login">

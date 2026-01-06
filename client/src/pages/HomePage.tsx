@@ -171,9 +171,9 @@ export default function HomePage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
             >
-             Zamonaviy Ta'lim
+             Zamonaviy-EDU
               <br />
-              <span className="text-primary">Video Kurslar Platformasi</span>
+              <span className="text-primary">Zamonaviy Ta'lim loyihasi</span>
             </motion.h1>
             <motion.p 
               className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto"

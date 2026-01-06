@@ -72,7 +72,7 @@ export function ModernHeader() {
               <div className="absolute -inset-1 rounded-xl gradient-primary opacity-30 blur-sm group-hover:opacity-50 transition-opacity" />
             </div>
             <span className="font-bold text-xl hidden sm:block">
-              <span className="text-gradient">Edu</span>Platform
+              <span className="text-gradient">Zamonaviy</span>-EDU
             </span>
           </Link>
 

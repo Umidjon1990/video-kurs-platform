@@ -1,4 +1,4 @@
-# Video Course Platform (LMS)
+# Zamonaviy-EDU - Video Course Platform (LMS)
 
 ## Overview
 This project is a comprehensive Learning Management System (LMS) platform designed for video-based courses, catering to Administrators, Instructors, and Students. Its primary purpose is to facilitate course creation, delivery, and student progress tracking through robust course management, diverse assessment types (assignments and tests), and a manual payment system with admin approval. The platform emphasizes a professional, trustworthy, and scannable learning experience, localized in Uzbek, with key features including a subscription-based pricing model, certificate image uploads, and extensive CMS capabilities for managing site content and testimonials.
