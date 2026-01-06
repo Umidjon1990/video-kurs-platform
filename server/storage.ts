@@ -527,13 +527,12 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Filter by resource types - get course IDs that have any of the selected resource types
-    let resourceTypeFilterCourseIds: string[] | null = null;
     if (filters?.resourceTypeIds && filters.resourceTypeIds.length > 0) {
       const matchingCourses = await db
         .selectDistinct({ courseId: courseResourceTypes.courseId })
         .from(courseResourceTypes)
         .where(inArray(courseResourceTypes.resourceTypeId, filters.resourceTypeIds));
-      resourceTypeFilterCourseIds = matchingCourses.map(c => c.courseId);
+      const resourceTypeFilterCourseIds = matchingCourses.map((c: { courseId: string }) => c.courseId);
       
       if (resourceTypeFilterCourseIds.length === 0) {
         // No courses match the resource type filter, return empty
@@ -1428,7 +1427,7 @@ export class DatabaseStorage implements IStorage {
       .select({
         enrolledAt: enrollments.enrolledAt,
         price: courses.price,
-        discountedPrice: courses.discountedPrice,
+        discountPercentage: courses.discountPercentage,
       })
       .from(enrollments)
       .leftJoin(courses, eq(enrollments.courseId, courses.id))
@@ -1451,8 +1450,8 @@ export class DatabaseStorage implements IStorage {
       trendsByDay.set(dateKey, { enrollments: 0, revenue: 0 });
     }
     
-    // Aggregate data
-    allEnrollments.forEach(({ enrolledAt, price, discountedPrice }) => {
+    // Aggregate data - calculate discounted price from percentage
+    allEnrollments.forEach(({ enrolledAt, price, discountPercentage }: { enrolledAt: Date | null; price: string | null; discountPercentage: number | null }) => {
       if (!enrolledAt) return;
       
       const dateKey = new Date(enrolledAt).toISOString().split('T')[0];
@@ -1460,7 +1459,10 @@ export class DatabaseStorage implements IStorage {
       
       if (existing) {
         existing.enrollments += 1;
-        existing.revenue += Number(discountedPrice) || Number(price) || 0;
+        const basePrice = Number(price) || 0;
+        const discount = discountPercentage || 0;
+        const finalPrice = basePrice * (1 - discount / 100);
+        existing.revenue += finalPrice;
       }
     });
     
