@@ -953,7 +953,7 @@ export default function InstructorDashboard() {
                               const response = await fetch(`/api/courses/${course.id}/resource-types`);
                               if (response.ok) {
                                 const data = await response.json();
-                                courseResourceTypes = data.map((rt: any) => rt.id);
+                                courseResourceTypes = data.map((rt: any) => rt.resourceTypeId);
                               }
                             } catch (e) {
                               console.error("Failed to fetch course resource types", e);
