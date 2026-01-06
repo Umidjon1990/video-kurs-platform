@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, BookOpen, Users, Award, Star, Mail, Phone, MapPin, Send, ExternalLink, X, ZoomIn, Play, Lock, Clock, GraduationCap, TrendingUp, CheckCircle } from "lucide-react";
+import { Search, Filter, BookOpen, Users, Award, Star, Mail, Phone, MapPin, Send, ExternalLink, X, ZoomIn, Play, Lock, Clock, GraduationCap, TrendingUp, CheckCircle, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -1051,18 +1051,30 @@ export default function HomePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Demo Video Player Modal */}
+      {/* Demo Video Player Modal - Mobile Optimized */}
       <Dialog 
         open={selectedDemoLesson !== null} 
         onOpenChange={() => setSelectedDemoLesson(null)}
       >
-        <DialogContent className="max-w-5xl">
-          <DialogHeader>
-            <DialogTitle>{selectedDemoLesson?.title}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
+        <DialogContent className="w-full max-w-5xl h-[100dvh] sm:h-auto sm:max-h-[90vh] p-0 sm:p-6 gap-0 border-0 sm:border rounded-none sm:rounded-lg">
+          {/* Mobile-friendly header with back button */}
+          <div className="flex items-center gap-3 p-4 sm:p-0 sm:pb-4 bg-background sticky top-0 z-10 border-b sm:border-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSelectedDemoLesson(null)}
+              className="shrink-0"
+              data-testid="button-back-from-video"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <DialogHeader className="flex-1 space-y-0">
+              <DialogTitle className="text-base sm:text-lg line-clamp-1">{selectedDemoLesson?.title}</DialogTitle>
+            </DialogHeader>
+          </div>
+          <div className="flex-1 flex flex-col sm:space-y-4 overflow-hidden">
             {selectedDemoLesson?.videoUrl && (
-              <div className="w-full aspect-video bg-black rounded-lg overflow-hidden">
+              <div className="w-full flex-1 sm:flex-none sm:aspect-video bg-black sm:rounded-lg overflow-hidden">
                 {(() => {
                   const videoContent = selectedDemoLesson.videoUrl.trim();
                   
@@ -1150,7 +1162,7 @@ export default function HomePage() {
               </div>
             )}
             {selectedDemoLesson?.duration && (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground p-4 sm:p-0">
                 Davomiyligi: {selectedDemoLesson.duration} daqiqa
               </p>
             )}
@@ -1158,16 +1170,28 @@ export default function HomePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Course Lessons Modal */}
+      {/* Course Lessons Modal - Mobile Optimized */}
       <Dialog 
         open={selectedCourseForLessons !== null} 
         onOpenChange={() => setSelectedCourseForLessons(null)}
       >
-        <DialogContent className="max-w-3xl max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle>{selectedCourseForLessons?.title}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+        <DialogContent className="w-full max-w-3xl h-[100dvh] sm:h-auto sm:max-h-[90vh] p-0 sm:p-6 gap-0 border-0 sm:border rounded-none sm:rounded-lg">
+          {/* Mobile-friendly header with back button */}
+          <div className="flex items-center gap-3 p-4 sm:p-0 sm:pb-4 bg-background sticky top-0 z-10 border-b sm:border-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSelectedCourseForLessons(null)}
+              className="shrink-0"
+              data-testid="button-back-from-lessons"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <DialogHeader className="flex-1 space-y-0">
+              <DialogTitle className="text-base sm:text-lg line-clamp-1">{selectedCourseForLessons?.title}</DialogTitle>
+            </DialogHeader>
+          </div>
+          <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-0">
             {courseLessons && courseLessons.length > 0 ? (
               <div className="space-y-2">
                 {courseLessons.map((lesson, index) => {
