@@ -376,12 +376,44 @@ export default function HomePage() {
               ];
               const gradient = gradients[index % gradients.length];
               
-              // Auto-convert Google Drive thumbnail URL
+              // Auto-convert Google Drive thumbnail URL (supports multiple formats)
               let thumbnailUrl = course.thumbnailUrl;
-              if (thumbnailUrl && thumbnailUrl.includes('drive.google.com/file/d/')) {
-                const match = thumbnailUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
-                if (match && match[1]) {
-                  thumbnailUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+              if (thumbnailUrl && thumbnailUrl.includes('drive.google.com')) {
+                let fileId = null;
+                
+                // Format 1: drive.google.com/file/d/FILE_ID/view
+                const fileMatch = thumbnailUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+                if (fileMatch && fileMatch[1]) {
+                  fileId = fileMatch[1];
+                }
+                
+                // Format 2: drive.google.com/open?id=FILE_ID
+                if (!fileId) {
+                  const openMatch = thumbnailUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+                  if (openMatch && openMatch[1]) {
+                    fileId = openMatch[1];
+                  }
+                }
+                
+                // Format 3: drive.google.com/uc?id=FILE_ID (already correct format)
+                if (!fileId && thumbnailUrl.includes('/uc?')) {
+                  const ucMatch = thumbnailUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+                  if (ucMatch && ucMatch[1]) {
+                    fileId = ucMatch[1];
+                  }
+                }
+                
+                // Format 4: drive.google.com/thumbnail?id=FILE_ID
+                if (!fileId && thumbnailUrl.includes('/thumbnail?')) {
+                  const thumbMatch = thumbnailUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+                  if (thumbMatch && thumbMatch[1]) {
+                    fileId = thumbMatch[1];
+                  }
+                }
+                
+                if (fileId) {
+                  // Use lh3.googleusercontent.com for better image loading
+                  thumbnailUrl = `https://lh3.googleusercontent.com/d/${fileId}`;
                 }
               }
 

@@ -45,6 +45,30 @@ export function ModernCourseCard({ course, index = 0, onViewLessons }: ModernCou
   const hasDiscount = course.discountPercentage && course.discountPercentage > 0;
   const isFree = course.isFree;
 
+  // Convert Google Drive URL to direct image link
+  const getDirectThumbnailUrl = (url: string | null | undefined) => {
+    if (!url || !url.includes('drive.google.com')) return url;
+    
+    let fileId = null;
+    
+    // Format 1: drive.google.com/file/d/FILE_ID/view
+    const fileMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (fileMatch && fileMatch[1]) fileId = fileMatch[1];
+    
+    // Format 2: drive.google.com/open?id=FILE_ID or uc?id= or thumbnail?id=
+    if (!fileId) {
+      const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+      if (idMatch && idMatch[1]) fileId = idMatch[1];
+    }
+    
+    if (fileId) {
+      return `https://lh3.googleusercontent.com/d/${fileId}`;
+    }
+    return url;
+  };
+
+  const thumbnailUrl = getDirectThumbnailUrl(course.thumbnailUrl);
+
   // Calculate discounted price
   const getDiscountedPrice = () => {
     if (!course.price || !course.discountPercentage) return course.price;
@@ -77,9 +101,9 @@ export function ModernCourseCard({ course, index = 0, onViewLessons }: ModernCou
       >
         {/* Thumbnail Section */}
         <div className="relative aspect-video overflow-hidden bg-muted">
-          {course.thumbnailUrl ? (
+          {thumbnailUrl ? (
             <img
-              src={course.thumbnailUrl}
+              src={thumbnailUrl}
               alt={course.title}
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
