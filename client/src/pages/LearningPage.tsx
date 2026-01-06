@@ -459,7 +459,7 @@ export default function LearningPage() {
                                 <div className="relative w-full h-full flex flex-col">
                                   <div className="flex-1 relative">
                                     <iframe
-                                      src={`https://www.youtube-nocookie.com/embed/${ytId}?rel=0&modestbranding=1&playsinline=1`}
+                                      src={`https://www.youtube.com/embed/${ytId}?rel=0&modestbranding=1&playsinline=1&enablejsapi=1`}
                                       className="w-full h-full"
                                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                                       allowFullScreen
@@ -546,7 +546,7 @@ export default function LearningPage() {
                             <div className="relative w-full h-full flex flex-col">
                               <div className="flex-1 relative">
                                 <iframe
-                                  src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1`}
+                                  src={`https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&enablejsapi=1`}
                                   className="w-full h-full"
                                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                                   allowFullScreen
