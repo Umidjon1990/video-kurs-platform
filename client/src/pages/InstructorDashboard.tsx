@@ -36,6 +36,28 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 
+function convertToDirectImageUrl(url: string): string {
+  if (!url) return url;
+  
+  // Convert Google Drive share links to direct image URLs
+  // Format: https://drive.google.com/file/d/{FILE_ID}/view?usp=drive_link
+  // To: https://drive.google.com/uc?export=view&id={FILE_ID}
+  const googleDriveMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (googleDriveMatch) {
+    return `https://drive.google.com/uc?export=view&id=${googleDriveMatch[1]}`;
+  }
+  
+  // Convert Dropbox links
+  // Format: https://www.dropbox.com/s/{ID}/filename.jpg?dl=0
+  // To: https://dl.dropboxusercontent.com/s/{ID}/filename.jpg
+  const dropboxMatch = url.match(/dropbox\.com\/s\/([^?]+)/);
+  if (dropboxMatch) {
+    return `https://dl.dropboxusercontent.com/s/${dropboxMatch[1]}`;
+  }
+  
+  return url;
+}
+
 export default function InstructorDashboard() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
@@ -1786,7 +1808,7 @@ export default function InstructorDashboard() {
                 <div className="mt-2 border rounded-lg p-2 bg-muted">
                   <p className="text-xs font-medium mb-2">Preview:</p>
                   <img
-                    src={courseForm.thumbnailUrl}
+                    src={convertToDirectImageUrl(courseForm.thumbnailUrl)}
                     alt="Thumbnail preview"
                     className="w-full h-56 object-contain rounded-lg bg-background"
                     onError={(e) => {
