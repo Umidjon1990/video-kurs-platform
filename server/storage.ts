@@ -28,6 +28,9 @@ import {
   speakingSubmissions,
   speakingAnswers,
   speakingEvaluations,
+  languageLevels,
+  resourceTypes,
+  courseResourceTypes,
   type User,
   type UpsertUser,
   type Course,
@@ -84,6 +87,12 @@ import {
   type InsertSpeakingAnswer,
   type SpeakingEvaluation,
   type InsertSpeakingEvaluation,
+  type LanguageLevel,
+  type InsertLanguageLevel,
+  type ResourceType,
+  type InsertResourceType,
+  type CourseResourceType,
+  type InsertCourseResourceType,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, sql, inArray } from "drizzle-orm";
@@ -291,6 +300,26 @@ export interface IStorage {
   // Speaking Evaluation operations
   createSpeakingEvaluation(evaluation: InsertSpeakingEvaluation): Promise<SpeakingEvaluation>;
   getSpeakingEvaluations(answerId: string): Promise<SpeakingEvaluation[]>;
+  
+  // Language Level operations
+  getLanguageLevels(): Promise<LanguageLevel[]>;
+  getActiveLanguageLevels(): Promise<LanguageLevel[]>;
+  getLanguageLevel(id: string): Promise<LanguageLevel | undefined>;
+  createLanguageLevel(level: InsertLanguageLevel): Promise<LanguageLevel>;
+  updateLanguageLevel(id: string, data: Partial<InsertLanguageLevel>): Promise<LanguageLevel>;
+  deleteLanguageLevel(id: string): Promise<void>;
+  
+  // Resource Type operations
+  getResourceTypes(): Promise<ResourceType[]>;
+  getActiveResourceTypes(): Promise<ResourceType[]>;
+  getResourceType(id: string): Promise<ResourceType | undefined>;
+  createResourceType(type: InsertResourceType): Promise<ResourceType>;
+  updateResourceType(id: string, data: Partial<InsertResourceType>): Promise<ResourceType>;
+  deleteResourceType(id: string): Promise<void>;
+  
+  // Course Resource Type operations
+  getCourseResourceTypes(courseId: string): Promise<(CourseResourceType & { resourceType: ResourceType })[]>;
+  setCourseResourceTypes(courseId: string, resourceTypeIds: string[]): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2314,6 +2343,123 @@ export class DatabaseStorage implements IStorage {
       .from(speakingEvaluations)
       .where(eq(speakingEvaluations.answerId, answerId))
       .orderBy(desc(speakingEvaluations.createdAt));
+  }
+  
+  // Language Level operations
+  async getLanguageLevels(): Promise<LanguageLevel[]> {
+    return await db
+      .select()
+      .from(languageLevels)
+      .orderBy(languageLevels.order);
+  }
+  
+  async getActiveLanguageLevels(): Promise<LanguageLevel[]> {
+    return await db
+      .select()
+      .from(languageLevels)
+      .where(eq(languageLevels.isActive, true))
+      .orderBy(languageLevels.order);
+  }
+  
+  async getLanguageLevel(id: string): Promise<LanguageLevel | undefined> {
+    const [level] = await db
+      .select()
+      .from(languageLevels)
+      .where(eq(languageLevels.id, id));
+    return level;
+  }
+  
+  async createLanguageLevel(level: InsertLanguageLevel): Promise<LanguageLevel> {
+    const [created] = await db.insert(languageLevels).values(level).returning();
+    return created;
+  }
+  
+  async updateLanguageLevel(id: string, data: Partial<InsertLanguageLevel>): Promise<LanguageLevel> {
+    const [updated] = await db
+      .update(languageLevels)
+      .set(data)
+      .where(eq(languageLevels.id, id))
+      .returning();
+    return updated;
+  }
+  
+  async deleteLanguageLevel(id: string): Promise<void> {
+    await db.delete(languageLevels).where(eq(languageLevels.id, id));
+  }
+  
+  // Resource Type operations
+  async getResourceTypes(): Promise<ResourceType[]> {
+    return await db
+      .select()
+      .from(resourceTypes)
+      .orderBy(resourceTypes.order);
+  }
+  
+  async getActiveResourceTypes(): Promise<ResourceType[]> {
+    return await db
+      .select()
+      .from(resourceTypes)
+      .where(eq(resourceTypes.isActive, true))
+      .orderBy(resourceTypes.order);
+  }
+  
+  async getResourceType(id: string): Promise<ResourceType | undefined> {
+    const [type] = await db
+      .select()
+      .from(resourceTypes)
+      .where(eq(resourceTypes.id, id));
+    return type;
+  }
+  
+  async createResourceType(type: InsertResourceType): Promise<ResourceType> {
+    const [created] = await db.insert(resourceTypes).values(type).returning();
+    return created;
+  }
+  
+  async updateResourceType(id: string, data: Partial<InsertResourceType>): Promise<ResourceType> {
+    const [updated] = await db
+      .update(resourceTypes)
+      .set(data)
+      .where(eq(resourceTypes.id, id))
+      .returning();
+    return updated;
+  }
+  
+  async deleteResourceType(id: string): Promise<void> {
+    await db.delete(resourceTypes).where(eq(resourceTypes.id, id));
+  }
+  
+  // Course Resource Type operations
+  async getCourseResourceTypes(courseId: string): Promise<(CourseResourceType & { resourceType: ResourceType })[]> {
+    const results = await db
+      .select({
+        id: courseResourceTypes.id,
+        courseId: courseResourceTypes.courseId,
+        resourceTypeId: courseResourceTypes.resourceTypeId,
+        createdAt: courseResourceTypes.createdAt,
+        resourceType: resourceTypes,
+      })
+      .from(courseResourceTypes)
+      .innerJoin(resourceTypes, eq(courseResourceTypes.resourceTypeId, resourceTypes.id))
+      .where(eq(courseResourceTypes.courseId, courseId))
+      .orderBy(resourceTypes.order);
+    
+    return results.map((r) => ({
+      ...r,
+      resourceType: r.resourceType,
+    }));
+  }
+  
+  async setCourseResourceTypes(courseId: string, resourceTypeIds: string[]): Promise<void> {
+    await db.delete(courseResourceTypes).where(eq(courseResourceTypes.courseId, courseId));
+    
+    if (resourceTypeIds.length > 0) {
+      const values = resourceTypeIds.map((resourceTypeId) => ({
+        courseId,
+        resourceTypeId,
+      }));
+      await db.insert(courseResourceTypes).values(values);
+    }
   }
 }
 
