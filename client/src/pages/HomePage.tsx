@@ -502,21 +502,10 @@ export default function HomePage() {
                                 e.stopPropagation();
                                 setSelectedCourseForLessons(course);
                               }}
-                              variant="outline"
-                              className="flex-1"
+                              className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
                               data-testid={`button-view-lessons-${course.id}`}
                             >
                               Darslarni Ko'rish
-                            </Button>
-                            <Button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                window.open("https://t.me/zamonaviytalimuz", "_blank", "noopener,noreferrer");
-                              }}
-                              className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
-                              data-testid={`button-enroll-${course.id}`}
-                            >
-                              Bepul Yozilish
                             </Button>
                           </div>
                         </CardFooter>

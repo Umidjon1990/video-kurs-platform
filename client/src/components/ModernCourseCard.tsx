@@ -216,7 +216,7 @@ export function ModernCourseCard({ course, index = 0, onViewLessons }: ModernCou
               }
               data-testid={`button-enroll-${course.id}`}
             >
-              {isFree ? "Bepul Yozilish" : "Kursga Yozilish"}
+              {isFree ? "Darslarni Ko'rish" : "Kursga Yozilish"}
             </Button>
           </Link>
         </CardFooter>
