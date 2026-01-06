@@ -3,7 +3,28 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, BookOpen, Users, Award, Star, Mail, Phone, MapPin, Send, ExternalLink, X, ZoomIn, Play, Lock, Clock, GraduationCap, TrendingUp, CheckCircle, ArrowLeft } from "lucide-react";
+import { Search, Filter, BookOpen, Users, Award, Star, Mail, Phone, MapPin, Send, ExternalLink, X, ZoomIn, Play, Lock, Clock, GraduationCap, TrendingUp, CheckCircle, ArrowLeft, PenTool, Headphones, Mic, BookText, Languages, type LucideIcon } from "lucide-react";
+
+const iconMap: Record<string, LucideIcon> = {
+  BookOpen,
+  PenTool,
+  Headphones,
+  Mic,
+  BookText,
+  Languages,
+  GraduationCap,
+  Play,
+  Star,
+  Award,
+  Users,
+  Clock,
+};
+
+const getIconComponent = (iconName: string | null | undefined) => {
+  if (!iconName) return null;
+  const Icon = iconMap[iconName];
+  return Icon ? <Icon className="w-4 h-4" /> : null;
+};
 import { motion } from "framer-motion";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -311,6 +332,7 @@ export default function HomePage() {
                         key={type.id}
                         variant={selectedResourceTypes.includes(type.id) ? "default" : "outline"}
                         size="sm"
+                        className="gap-1.5"
                         onClick={() => {
                           if (selectedResourceTypes.includes(type.id)) {
                             setSelectedResourceTypes(selectedResourceTypes.filter((id) => id !== type.id));
@@ -321,7 +343,7 @@ export default function HomePage() {
                         aria-pressed={selectedResourceTypes.includes(type.id)}
                         data-testid={`filter-resource-type-${type.id}`}
                       >
-                        {type.icon && <span className="mr-1">{type.icon}</span>}
+                        {getIconComponent(type.icon)}
                         {type.nameUz || type.name}
                       </Button>
                     ))}
