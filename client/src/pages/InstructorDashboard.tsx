@@ -929,9 +929,12 @@ export default function InstructorDashboard() {
                     )}
                     {course.thumbnailUrl ? (
                       <img
-                        src={course.thumbnailUrl}
+                        src={convertToDirectImageUrl(course.thumbnailUrl)}
                         alt={course.title}
                         className="w-full h-56 object-contain rounded-lg mb-4 bg-muted"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
                       />
                     ) : (
                       <div className="w-full h-56 bg-muted rounded-lg flex items-center justify-center mb-4">
