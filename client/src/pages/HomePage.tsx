@@ -269,24 +269,25 @@ export default function HomePage() {
                     <span className="text-sm font-medium">Til Darajasi (CEFR)</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <Badge
+                    <Button
                       variant={!selectedLevel ? "default" : "outline"}
-                      className="cursor-pointer px-3 py-1"
+                      size="sm"
                       onClick={() => setSelectedLevel("")}
                       data-testid="filter-level-all"
                     >
                       Barchasi
-                    </Badge>
+                    </Button>
                     {languageLevels.map((level) => (
-                      <Badge
+                      <Button
                         key={level.id}
                         variant={selectedLevel === level.id ? "default" : "outline"}
-                        className="cursor-pointer px-3 py-1"
+                        size="sm"
                         onClick={() => setSelectedLevel(selectedLevel === level.id ? "" : level.id)}
+                        aria-pressed={selectedLevel === level.id}
                         data-testid={`filter-level-${level.id}`}
                       >
                         {level.code} {level.name && `- ${level.name}`}
-                      </Badge>
+                      </Button>
                     ))}
                   </div>
                 </div>
@@ -306,10 +307,10 @@ export default function HomePage() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {resourceTypes.map((type) => (
-                      <Badge
+                      <Button
                         key={type.id}
                         variant={selectedResourceTypes.includes(type.id) ? "default" : "outline"}
-                        className="cursor-pointer px-3 py-1"
+                        size="sm"
                         onClick={() => {
                           if (selectedResourceTypes.includes(type.id)) {
                             setSelectedResourceTypes(selectedResourceTypes.filter((id) => id !== type.id));
@@ -317,11 +318,12 @@ export default function HomePage() {
                             setSelectedResourceTypes([...selectedResourceTypes, type.id]);
                           }
                         }}
+                        aria-pressed={selectedResourceTypes.includes(type.id)}
                         data-testid={`filter-resource-type-${type.id}`}
                       >
                         {type.icon && <span className="mr-1">{type.icon}</span>}
                         {type.nameUz || type.name}
-                      </Badge>
+                      </Button>
                     ))}
                   </div>
                 </div>
