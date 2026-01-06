@@ -154,15 +154,7 @@ export function ModernHeader() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Link href="/login">
-                  <Button size="sm" className="gradient-primary text-white border-0" data-testid="button-login">
-                    Kirish
-                  </Button>
-                </Link>
-              </div>
-            )}
+            ) : null}
 
             {/* Mobile Menu Button */}
             <Button 
