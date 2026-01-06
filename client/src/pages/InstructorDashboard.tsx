@@ -39,12 +39,18 @@ import { motion } from "framer-motion";
 function convertToDirectImageUrl(url: string): string {
   if (!url) return url;
   
-  // Convert Google Drive share links to direct image URLs
+  // Convert Google Drive share links to thumbnail API (better CORS support)
   // Format: https://drive.google.com/file/d/{FILE_ID}/view?usp=drive_link
-  // To: https://drive.google.com/uc?export=view&id={FILE_ID}
+  // To: https://lh3.googleusercontent.com/d/{FILE_ID}
   const googleDriveMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
   if (googleDriveMatch) {
-    return `https://drive.google.com/uc?export=view&id=${googleDriveMatch[1]}`;
+    return `https://lh3.googleusercontent.com/d/${googleDriveMatch[1]}`;
+  }
+  
+  // Also handle Google Drive uc links
+  const googleDriveUcMatch = url.match(/drive\.google\.com\/uc\?.*id=([a-zA-Z0-9_-]+)/);
+  if (googleDriveUcMatch) {
+    return `https://lh3.googleusercontent.com/d/${googleDriveUcMatch[1]}`;
   }
   
   // Convert Dropbox links
