@@ -519,7 +519,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     if (filters?.hasDiscount) {
-      conditions.push(sql`${courses.discountedPrice} IS NOT NULL`);
+      conditions.push(sql`${courses.discountPercentage} IS NOT NULL AND ${courses.discountPercentage} > 0`);
     }
 
     if (filters?.levelId) {

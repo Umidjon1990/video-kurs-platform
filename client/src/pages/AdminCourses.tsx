@@ -37,16 +37,9 @@ export default function AdminCourses() {
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
+      window.location.href = "/login";
     }
-  }, [isAuthenticated, authLoading, toast]);
+  }, [isAuthenticated, authLoading]);
 
   const { data: courses, isLoading } = useQuery<Course[]>({
     queryKey: ["/api/courses"],
@@ -62,7 +55,24 @@ export default function AdminCourses() {
         .includes(searchQuery.toLowerCase())
   );
 
-  if (authLoading || isLoading) {
+  // Show loading only when auth is loading or when authenticated and courses are loading
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Yuklanmoqda...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect happens via useEffect, show nothing while redirecting
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
