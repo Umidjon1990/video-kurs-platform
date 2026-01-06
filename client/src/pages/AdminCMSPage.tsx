@@ -25,8 +25,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, MessageSquare, Save, Trash2, Plus, Star, Edit, ArrowLeft, Upload, X, Link2, ExternalLink } from "lucide-react";
-import type { SiteSetting, Testimonial } from "@shared/schema";
+import { Settings, MessageSquare, Save, Trash2, Plus, Star, Edit, ArrowLeft, Upload, X, Link2, ExternalLink, Filter, BookOpen, Layers } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import type { SiteSetting, Testimonial, LanguageLevel, ResourceType } from "@shared/schema";
 import { useLocation } from "wouter";
 
 export default function AdminCMSPage() {
@@ -86,6 +87,29 @@ export default function AdminCMSPage() {
     order: 0,
     isPublished: true,
   });
+  
+  // Language Level dialog state
+  const [levelDialogOpen, setLevelDialogOpen] = useState(false);
+  const [editingLevel, setEditingLevel] = useState<LanguageLevel | null>(null);
+  const [levelForm, setLevelForm] = useState({
+    name: "",
+    displayName: "",
+    description: "",
+    order: 0,
+    isActive: true,
+  });
+  
+  // Resource Type dialog state
+  const [typeDialogOpen, setTypeDialogOpen] = useState(false);
+  const [editingType, setEditingType] = useState<ResourceType | null>(null);
+  const [typeForm, setTypeForm] = useState({
+    name: "",
+    displayName: "",
+    description: "",
+    icon: "",
+    order: 0,
+    isActive: true,
+  });
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -109,6 +133,18 @@ export default function AdminCMSPage() {
   // Fetch testimonials
   const { data: testimonials } = useQuery<Testimonial[]>({
     queryKey: ["/api/admin/testimonials"],
+    enabled: isAuthenticated,
+  });
+  
+  // Fetch language levels
+  const { data: languageLevels } = useQuery<LanguageLevel[]>({
+    queryKey: ["/api/admin/language-levels"],
+    enabled: isAuthenticated,
+  });
+  
+  // Fetch resource types
+  const { data: resourceTypes } = useQuery<ResourceType[]>({
+    queryKey: ["/api/admin/resource-types"],
     enabled: isAuthenticated,
   });
 
@@ -215,6 +251,102 @@ export default function AdminCMSPage() {
       toast({
         title: "Muvaffaqiyatli",
         description: "Fikr o'chirildi",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Xatolik",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Create/Update language level mutation
+  const saveLevelMutation = useMutation({
+    mutationFn: async (data: typeof levelForm) => {
+      if (editingLevel) {
+        await apiRequest("PUT", `/api/admin/language-levels/${editingLevel.id}`, data);
+      } else {
+        await apiRequest("POST", "/api/admin/language-levels", data);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/language-levels"] });
+      toast({
+        title: "Muvaffaqiyatli",
+        description: editingLevel ? "Til darajasi yangilandi" : "Til darajasi yaratildi",
+      });
+      setLevelDialogOpen(false);
+      resetLevelForm();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Xatolik",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Delete language level mutation
+  const deleteLevelMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/admin/language-levels/${id}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/language-levels"] });
+      toast({
+        title: "Muvaffaqiyatli",
+        description: "Til darajasi o'chirildi",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Xatolik",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Create/Update resource type mutation
+  const saveTypeMutation = useMutation({
+    mutationFn: async (data: typeof typeForm) => {
+      if (editingType) {
+        await apiRequest("PUT", `/api/admin/resource-types/${editingType.id}`, data);
+      } else {
+        await apiRequest("POST", "/api/admin/resource-types", data);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/resource-types"] });
+      toast({
+        title: "Muvaffaqiyatli",
+        description: editingType ? "Resurs turi yangilandi" : "Resurs turi yaratildi",
+      });
+      setTypeDialogOpen(false);
+      resetTypeForm();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Xatolik",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Delete resource type mutation
+  const deleteTypeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/admin/resource-types/${id}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/resource-types"] });
+      toast({
+        title: "Muvaffaqiyatli",
+        description: "Resurs turi o'chirildi",
       });
     },
     onError: (error: Error) => {
@@ -417,6 +549,64 @@ export default function AdminCMSPage() {
     });
     setTestimonialDialogOpen(true);
   };
+  
+  // Language Level helpers
+  const resetLevelForm = () => {
+    setLevelForm({
+      name: "",
+      displayName: "",
+      description: "",
+      order: 0,
+      isActive: true,
+    });
+    setEditingLevel(null);
+  };
+  
+  const handleEditLevel = (level: LanguageLevel) => {
+    setEditingLevel(level);
+    setLevelForm({
+      name: level.code,
+      displayName: level.name,
+      description: level.description || "",
+      order: level.order,
+      isActive: level.isActive ?? true,
+    });
+    setLevelDialogOpen(true);
+  };
+  
+  const handleSaveLevel = () => {
+    saveLevelMutation.mutate(levelForm);
+  };
+  
+  // Resource Type helpers
+  const resetTypeForm = () => {
+    setTypeForm({
+      name: "",
+      displayName: "",
+      description: "",
+      icon: "",
+      order: 0,
+      isActive: true,
+    });
+    setEditingType(null);
+  };
+  
+  const handleEditType = (type: ResourceType) => {
+    setEditingType(type);
+    setTypeForm({
+      name: type.name,
+      displayName: type.nameUz || "",
+      description: type.description || "",
+      icon: type.icon || "",
+      order: type.order,
+      isActive: type.isActive ?? true,
+    });
+    setTypeDialogOpen(true);
+  };
+  
+  const handleSaveType = () => {
+    saveTypeMutation.mutate(typeForm);
+  };
 
   if (authLoading) {
     return (
@@ -444,7 +634,7 @@ export default function AdminCMSPage() {
 
       <div className="container mx-auto p-6 max-w-6xl">
         <Tabs defaultValue="settings" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsList className="grid w-full grid-cols-4 mb-6">
             <TabsTrigger value="settings" data-testid="tab-settings">
               <Settings className="w-4 h-4 mr-2" />
               Sayt Sozlamalari
@@ -456,6 +646,10 @@ export default function AdminCMSPage() {
             <TabsTrigger value="testimonials" data-testid="tab-testimonials">
               <MessageSquare className="w-4 h-4 mr-2" />
               Talabalar Fikrlari
+            </TabsTrigger>
+            <TabsTrigger value="filters" data-testid="tab-filters">
+              <Filter className="w-4 h-4 mr-2" />
+              Filtrlar
             </TabsTrigger>
           </TabsList>
 
@@ -960,6 +1154,359 @@ export default function AdminCMSPage() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+          
+          {/* Filters Tab */}
+          <TabsContent value="filters">
+            <div className="space-y-6">
+              {/* Language Levels Section */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Layers className="w-5 h-5" />
+                        Til Darajalari (CEFR)
+                      </CardTitle>
+                      <CardDescription>
+                        Kurslarni til darajasi bo'yicha filtrlash uchun darajalarni boshqaring
+                      </CardDescription>
+                    </div>
+                    <Dialog open={levelDialogOpen} onOpenChange={(open) => {
+                      setLevelDialogOpen(open);
+                      if (!open) resetLevelForm();
+                    }}>
+                      <DialogTrigger asChild>
+                        <Button data-testid="button-add-level">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Yangi daraja
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>{editingLevel ? "Darajani tahrirlash" : "Yangi daraja qo'shish"}</DialogTitle>
+                          <DialogDescription>
+                            CEFR til darajasi ma'lumotlarini kiriting
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="level-name">Nomi (inglizcha)</Label>
+                            <Input
+                              id="level-name"
+                              data-testid="input-level-name"
+                              placeholder="A1"
+                              value={levelForm.name}
+                              onChange={(e) => setLevelForm({ ...levelForm, name: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="level-displayName">Ko'rsatiladigan nom</Label>
+                            <Input
+                              id="level-displayName"
+                              data-testid="input-level-displayName"
+                              placeholder="A1 - Boshlang'ich"
+                              value={levelForm.displayName}
+                              onChange={(e) => setLevelForm({ ...levelForm, displayName: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="level-description">Tavsif</Label>
+                            <Textarea
+                              id="level-description"
+                              data-testid="input-level-description"
+                              placeholder="Bu darajada talabalar..."
+                              value={levelForm.description}
+                              onChange={(e) => setLevelForm({ ...levelForm, description: e.target.value })}
+                              rows={3}
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="level-order">Tartib raqami</Label>
+                              <Input
+                                id="level-order"
+                                data-testid="input-level-order"
+                                type="number"
+                                value={levelForm.order}
+                                onChange={(e) => setLevelForm({ ...levelForm, order: parseInt(e.target.value) || 0 })}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="level-active">Holat</Label>
+                              <div className="flex items-center space-x-2 pt-2">
+                                <Switch
+                                  id="level-active"
+                                  data-testid="switch-level-active"
+                                  checked={levelForm.isActive}
+                                  onCheckedChange={(checked) => setLevelForm({ ...levelForm, isActive: checked })}
+                                />
+                                <Label htmlFor="level-active">{levelForm.isActive ? "Faol" : "Nofaol"}</Label>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={handleSaveLevel}
+                              disabled={saveLevelMutation.isPending}
+                              data-testid="button-save-level"
+                              className="flex-1"
+                            >
+                              <Save className="w-4 h-4 mr-2" />
+                              {saveLevelMutation.isPending ? "Saqlanmoqda..." : "Saqlash"}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => setLevelDialogOpen(false)}
+                              data-testid="button-cancel-level"
+                            >
+                              Bekor qilish
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {!languageLevels || languageLevels.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      Til darajalari mavjud emas
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tartib</TableHead>
+                          <TableHead>Nomi</TableHead>
+                          <TableHead>Ko'rsatiladigan nom</TableHead>
+                          <TableHead>Holat</TableHead>
+                          <TableHead className="text-right">Amallar</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {languageLevels.map((level) => (
+                          <TableRow key={level.id} data-testid={`row-level-${level.id}`}>
+                            <TableCell>{level.order}</TableCell>
+                            <TableCell className="font-medium">{level.code}</TableCell>
+                            <TableCell>{level.name}</TableCell>
+                            <TableCell>
+                              <span className={`px-2 py-1 rounded text-xs ${level.isActive ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}>
+                                {level.isActive ? 'Faol' : 'Nofaol'}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex gap-2 justify-end">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEditLevel(level)}
+                                  data-testid={`button-edit-level-${level.id}`}
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (confirm("Rostdan ham o'chirmoqchimisiz?")) {
+                                      deleteLevelMutation.mutate(level.id);
+                                    }
+                                  }}
+                                  data-testid={`button-delete-level-${level.id}`}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+              
+              {/* Resource Types Section */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <BookOpen className="w-5 h-5" />
+                        Resurs Turlari
+                      </CardTitle>
+                      <CardDescription>
+                        Kurslarni tur bo'yicha filtrlash uchun resurs turlarini boshqaring (Reading, Writing, etc.)
+                      </CardDescription>
+                    </div>
+                    <Dialog open={typeDialogOpen} onOpenChange={(open) => {
+                      setTypeDialogOpen(open);
+                      if (!open) resetTypeForm();
+                    }}>
+                      <DialogTrigger asChild>
+                        <Button data-testid="button-add-type">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Yangi tur
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>{editingType ? "Turni tahrirlash" : "Yangi tur qo'shish"}</DialogTitle>
+                          <DialogDescription>
+                            Resurs turi ma'lumotlarini kiriting
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="type-name">Nomi (inglizcha)</Label>
+                            <Input
+                              id="type-name"
+                              data-testid="input-type-name"
+                              placeholder="reading"
+                              value={typeForm.name}
+                              onChange={(e) => setTypeForm({ ...typeForm, name: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="type-displayName">Ko'rsatiladigan nom</Label>
+                            <Input
+                              id="type-displayName"
+                              data-testid="input-type-displayName"
+                              placeholder="O'qish (Reading)"
+                              value={typeForm.displayName}
+                              onChange={(e) => setTypeForm({ ...typeForm, displayName: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="type-description">Tavsif</Label>
+                            <Textarea
+                              id="type-description"
+                              data-testid="input-type-description"
+                              placeholder="Bu turdagi kurslar..."
+                              value={typeForm.description}
+                              onChange={(e) => setTypeForm({ ...typeForm, description: e.target.value })}
+                              rows={3}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="type-icon">Icon nomi (lucide-react)</Label>
+                            <Input
+                              id="type-icon"
+                              data-testid="input-type-icon"
+                              placeholder="BookOpen, Headphones, Pencil, etc."
+                              value={typeForm.icon}
+                              onChange={(e) => setTypeForm({ ...typeForm, icon: e.target.value })}
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="type-order">Tartib raqami</Label>
+                              <Input
+                                id="type-order"
+                                data-testid="input-type-order"
+                                type="number"
+                                value={typeForm.order}
+                                onChange={(e) => setTypeForm({ ...typeForm, order: parseInt(e.target.value) || 0 })}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="type-active">Holat</Label>
+                              <div className="flex items-center space-x-2 pt-2">
+                                <Switch
+                                  id="type-active"
+                                  data-testid="switch-type-active"
+                                  checked={typeForm.isActive}
+                                  onCheckedChange={(checked) => setTypeForm({ ...typeForm, isActive: checked })}
+                                />
+                                <Label htmlFor="type-active">{typeForm.isActive ? "Faol" : "Nofaol"}</Label>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={handleSaveType}
+                              disabled={saveTypeMutation.isPending}
+                              data-testid="button-save-type"
+                              className="flex-1"
+                            >
+                              <Save className="w-4 h-4 mr-2" />
+                              {saveTypeMutation.isPending ? "Saqlanmoqda..." : "Saqlash"}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => setTypeDialogOpen(false)}
+                              data-testid="button-cancel-type"
+                            >
+                              Bekor qilish
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {!resourceTypes || resourceTypes.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      Resurs turlari mavjud emas
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tartib</TableHead>
+                          <TableHead>Nomi</TableHead>
+                          <TableHead>Ko'rsatiladigan nom</TableHead>
+                          <TableHead>Icon</TableHead>
+                          <TableHead>Holat</TableHead>
+                          <TableHead className="text-right">Amallar</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {resourceTypes.map((type) => (
+                          <TableRow key={type.id} data-testid={`row-type-${type.id}`}>
+                            <TableCell>{type.order}</TableCell>
+                            <TableCell className="font-medium">{type.name}</TableCell>
+                            <TableCell>{type.nameUz || "-"}</TableCell>
+                            <TableCell>{type.icon || "-"}</TableCell>
+                            <TableCell>
+                              <span className={`px-2 py-1 rounded text-xs ${type.isActive ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}>
+                                {type.isActive ? 'Faol' : 'Nofaol'}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex gap-2 justify-end">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEditType(type)}
+                                  data-testid={`button-edit-type-${type.id}`}
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (confirm("Rostdan ham o'chirmoqchimisiz?")) {
+                                      deleteTypeMutation.mutate(type.id);
+                                    }
+                                  }}
+                                  data-testid={`button-delete-type-${type.id}`}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>

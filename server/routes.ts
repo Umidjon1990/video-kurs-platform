@@ -3594,8 +3594,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { name, displayName, description, order, isActive } = req.body;
       const level = await storage.createLanguageLevel({
-        name,
-        displayName,
+        code: name,
+        name: displayName,
         description,
         order: order ?? 0,
         isActive: isActive ?? true,
@@ -3612,8 +3612,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const { name, displayName, description, order, isActive } = req.body;
       const level = await storage.updateLanguageLevel(id, {
-        name,
-        displayName,
+        code: name,
+        name: displayName,
         description,
         order,
         isActive,
@@ -3662,7 +3662,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { name, displayName, description, icon, order, isActive } = req.body;
       const type = await storage.createResourceType({
         name,
-        displayName,
+        nameUz: displayName,
         description,
         icon,
         order: order ?? 0,
@@ -3681,7 +3681,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { name, displayName, description, icon, order, isActive } = req.body;
       const type = await storage.updateResourceType(id, {
         name,
-        displayName,
+        nameUz: displayName,
         description,
         icon,
         order,
