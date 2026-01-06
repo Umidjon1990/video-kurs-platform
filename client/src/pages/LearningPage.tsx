@@ -34,6 +34,7 @@ export default function LearningPage() {
   const [ratingDialog, setRatingDialog] = useState(false);
   const [selectedRating, setSelectedRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
+  const [youtubePlayClicked, setYoutubePlayClicked] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -259,6 +260,11 @@ export default function LearningPage() {
     }
   }, [lessons, currentLessonId]);
 
+  // Reset YouTube play state when lesson changes
+  useEffect(() => {
+    setYoutubePlayClicked(false);
+  }, [currentLessonId]);
+
   if (authLoading || courseLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -436,15 +442,47 @@ export default function LearningPage() {
                         
                         if (videoId) {
                           const youtubeWatchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+                          const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+                          
+                          // Click-to-play approach to bypass YouTube bot detection
+                          if (!youtubePlayClicked) {
+                            return (
+                              <div 
+                                className="relative w-full h-full cursor-pointer group"
+                                onClick={() => setYoutubePlayClicked(true)}
+                                data-testid="youtube-thumbnail"
+                              >
+                                <img 
+                                  src={thumbnailUrl}
+                                  alt={currentLesson.title}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    // Fallback to hqdefault if maxresdefault not available
+                                    e.currentTarget.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+                                  }}
+                                />
+                                {/* Play button overlay */}
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
+                                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-red-600 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                    <PlayCircle className="w-8 h-8 sm:w-10 sm:h-10 text-white ml-1" />
+                                  </div>
+                                </div>
+                                <p className="absolute bottom-3 left-3 text-white text-xs bg-black/60 px-2 py-1 rounded">
+                                  Bosing va videoni ko'ring
+                                </p>
+                              </div>
+                            );
+                          }
+                          
+                          // After click, load the iframe with autoplay
                           return (
                             <div className="relative w-full h-full">
                               <iframe
-                                src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&origin=${window.location.origin}`}
+                                src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&autoplay=1&origin=${window.location.origin}`}
                                 className="w-full h-full"
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                                 allowFullScreen
                                 referrerPolicy="strict-origin-when-cross-origin"
-                                loading="lazy"
                                 data-testid="video-player"
                               />
                               {/* Fallback overlay - shows if user has trouble */}
