@@ -416,8 +416,75 @@ export default function LearningPage() {
                         );
                       }
                       
-                      // Check if it's an iframe embed code
+                      // Check if it's an iframe embed code - extract YouTube ID if present
                       if (videoContent.startsWith('<iframe') || videoContent.startsWith('<embed')) {
+                        // Try to extract YouTube video ID from iframe src
+                        const srcMatch = videoContent.match(/src=["']([^"']+)["']/i);
+                        if (srcMatch && srcMatch[1]) {
+                          const iframeSrc = srcMatch[1];
+                          if (iframeSrc.includes('youtube.com/embed/')) {
+                            const ytId = iframeSrc.split('youtube.com/embed/')[1]?.split(/[?&]/)[0];
+                            if (ytId) {
+                              const youtubeWatchUrl = `https://www.youtube.com/watch?v=${ytId}`;
+                              const thumbnailUrl = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
+                              
+                              if (!youtubePlayClicked) {
+                                return (
+                                  <div 
+                                    className="relative w-full h-full cursor-pointer group"
+                                    onClick={() => setYoutubePlayClicked(true)}
+                                    data-testid="youtube-thumbnail"
+                                  >
+                                    <img 
+                                      src={thumbnailUrl}
+                                      alt={currentLesson.title}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        e.currentTarget.src = `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
+                                      }}
+                                    />
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
+                                      <div className="w-16 h-16 sm:w-20 sm:h-20 bg-red-600 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                        <PlayCircle className="w-8 h-8 sm:w-10 sm:h-10 text-white ml-1" />
+                                      </div>
+                                    </div>
+                                    <p className="absolute bottom-3 left-3 text-white text-xs bg-black/60 px-2 py-1 rounded">
+                                      Bosing va videoni ko'ring
+                                    </p>
+                                  </div>
+                                );
+                              }
+                              
+                              return (
+                                <div className="relative w-full h-full">
+                                  <iframe
+                                    src={`https://www.youtube-nocookie.com/embed/${ytId}?rel=0&modestbranding=1&playsinline=1&autoplay=1`}
+                                    className="w-full h-full"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                    allowFullScreen
+                                    data-testid="video-player"
+                                  />
+                                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4">
+                                    <div className="flex items-center justify-between">
+                                      <p className="text-white/80 text-xs">Video yuklanmayaptimi?</p>
+                                      <a
+                                        href={youtubeWatchUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 rounded flex items-center gap-1"
+                                      >
+                                        <PlayCircle className="w-3 h-3" />
+                                        YouTube'da ochish
+                                      </a>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            }
+                          }
+                        }
+                        
+                        // Non-YouTube iframe - render as-is
                         return (
                           <div 
                             className="w-full h-full"
