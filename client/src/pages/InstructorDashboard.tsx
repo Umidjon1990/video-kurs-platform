@@ -56,6 +56,8 @@ export default function InstructorDashboard() {
     thumbnailUrl: "",
     imageUrl: "",
     isFree: false,
+    levelId: "",
+    selectedResourceTypes: [] as string[],
   });
 
   const [lessonForm, setLessonForm] = useState({
@@ -194,6 +196,17 @@ export default function InstructorDashboard() {
     enabled: !!selectedCourse,
   });
 
+  // Language levels and resource types for course filtering
+  const { data: languageLevels } = useQuery<any[]>({
+    queryKey: ["/api/language-levels"],
+    enabled: isAuthenticated,
+  });
+
+  const { data: resourceTypes } = useQuery<any[]>({
+    queryKey: ["/api/resource-types"],
+    enabled: isAuthenticated,
+  });
+
   const createCourseMutation = useMutation({
     mutationFn: async () => {
       const method = editingCourse ? "PUT" : "POST";
@@ -222,6 +235,7 @@ export default function InstructorDashboard() {
         thumbnailUrl: courseForm.thumbnailUrl,
         imageUrl: courseForm.imageUrl,
         isFree: courseForm.isFree,
+        levelId: courseForm.levelId || null,
       };
       
       // Only include pricing data for paid courses
@@ -234,7 +248,15 @@ export default function InstructorDashboard() {
         };
       }
       
-      await apiRequest(method, url, payload);
+      const response = await apiRequest(method, url, payload);
+      const courseData = await response.json();
+      
+      // Set resource types for the course
+      if (courseForm.selectedResourceTypes.length > 0 && courseData?.id) {
+        await apiRequest("PUT", `/api/courses/${courseData.id}/resource-types`, {
+          resourceTypeIds: courseForm.selectedResourceTypes,
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/instructor/courses"] });
@@ -244,7 +266,7 @@ export default function InstructorDashboard() {
         description: editingCourse ? "Kurs yangilandi" : "Kurs yaratildi" 
       });
       setIsCreateCourseOpen(false);
-      setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "", isFree: false });
+      setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "", isFree: false, levelId: "", selectedResourceTypes: [] });
       setEditingCourse(null);
     },
     onError: (error: Error) => {
@@ -878,9 +900,20 @@ export default function InstructorDashboard() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => {
+                          onClick={async () => {
                             const existingPrice = course.price || (course as any).planPricing?.[0]?.price || "";
                             const existingDiscount = (course as any).discountPercentage || 0;
+                            // Fetch resource types for this course
+                            let courseResourceTypes: string[] = [];
+                            try {
+                              const response = await fetch(`/api/courses/${course.id}/resource-types`);
+                              if (response.ok) {
+                                const data = await response.json();
+                                courseResourceTypes = data.map((rt: any) => rt.id);
+                              }
+                            } catch (e) {
+                              console.error("Failed to fetch course resource types", e);
+                            }
                             setCourseForm({
                               title: course.title,
                               description: course.description || "",
@@ -891,6 +924,8 @@ export default function InstructorDashboard() {
                               thumbnailUrl: course.thumbnailUrl || "",
                               imageUrl: (course as any).imageUrl || "",
                               isFree: (course as any).isFree || false,
+                              levelId: (course as any).levelId || "",
+                              selectedResourceTypes: courseResourceTypes,
                             });
                             setEditingCourse(course);
                             setIsCreateCourseOpen(true);
@@ -1594,6 +1629,67 @@ export default function InstructorDashboard() {
                 </SelectContent>
               </Select>
             </div>
+            
+            {/* Language Level Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="levelId">Til Darajasi (CEFR)</Label>
+              <Select
+                value={courseForm.levelId}
+                onValueChange={(value) => setCourseForm({ ...courseForm, levelId: value })}
+              >
+                <SelectTrigger id="levelId" data-testid="select-course-level">
+                  <SelectValue placeholder="Daraja tanlang" />
+                </SelectTrigger>
+                <SelectContent>
+                  {languageLevels?.map((level) => (
+                    <SelectItem key={level.id} value={level.id}>
+                      {level.code} - {level.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Kurs qaysi til darajasi uchun mo'ljallanganligini tanlang
+              </p>
+            </div>
+            
+            {/* Resource Types Selection */}
+            <div className="space-y-2">
+              <Label>Resurs Turlari</Label>
+              <div className="flex flex-wrap gap-2 p-3 border rounded-lg">
+                {resourceTypes?.map((type) => (
+                  <div
+                    key={type.id}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer transition-colors ${
+                      courseForm.selectedResourceTypes.includes(type.id)
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background hover:bg-muted"
+                    }`}
+                    onClick={() => {
+                      const selected = courseForm.selectedResourceTypes;
+                      if (selected.includes(type.id)) {
+                        setCourseForm({
+                          ...courseForm,
+                          selectedResourceTypes: selected.filter((id) => id !== type.id),
+                        });
+                      } else {
+                        setCourseForm({
+                          ...courseForm,
+                          selectedResourceTypes: [...selected, type.id],
+                        });
+                      }
+                    }}
+                    data-testid={`toggle-resource-type-${type.id}`}
+                  >
+                    <span className="text-sm">{type.nameUz || type.name}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Kurs qaysi turdagi kontentni o'z ichiga olishini tanlang (bir nechta tanlash mumkin)
+              </p>
+            </div>
+            
             <div className="space-y-2">
               <Label htmlFor="price">Narxi (so'm) {courseForm.isFree && <span className="text-xs text-muted-foreground">(Bepul kurs uchun narx kiritish shart emas)</span>}</Label>
               <Input
@@ -1696,7 +1792,7 @@ export default function InstructorDashboard() {
               onClick={() => {
                 setIsCreateCourseOpen(false);
                 setEditingCourse(null);
-                setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "", isFree: false });
+                setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "", isFree: false, levelId: "", selectedResourceTypes: [] });
               }}
               data-testid="button-cancel-create-course"
             >
