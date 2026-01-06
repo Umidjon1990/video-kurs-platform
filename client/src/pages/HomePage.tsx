@@ -224,15 +224,11 @@ export default function HomePage() {
             <div className="flex flex-wrap gap-4 justify-center">
               <Button
                 size="lg"
-                onClick={() => setLocation("/login")}
-                data-testid="button-get-started"
-              >
-                Kirish
-              </Button>
-              <Button
-                size="lg"
                 variant="outline"
-                onClick={() => setSearchQuery("")}
+                onClick={() => {
+                  setSearchQuery("");
+                  document.getElementById('courses-section')?.scrollIntoView({ behavior: 'smooth' });
+                }}
                 data-testid="button-explore"
               >
                 Kurslarni Ko'rish
@@ -243,7 +239,7 @@ export default function HomePage() {
       </motion.div>
 
       {/* Courses Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <div id="courses-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         {/* Header with Filters */}
         <div className="mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
