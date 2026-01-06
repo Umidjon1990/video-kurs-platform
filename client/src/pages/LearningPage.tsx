@@ -435,16 +435,34 @@ export default function LearningPage() {
                         }
                         
                         if (videoId) {
+                          const youtubeWatchUrl = `https://www.youtube.com/watch?v=${videoId}`;
                           return (
-                            <iframe
-                              src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1`}
-                              className="w-full h-full"
-                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                              allowFullScreen
-                              referrerPolicy="strict-origin-when-cross-origin"
-                              loading="lazy"
-                              data-testid="video-player"
-                            />
+                            <div className="relative w-full h-full">
+                              <iframe
+                                src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&origin=${window.location.origin}`}
+                                className="w-full h-full"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                allowFullScreen
+                                referrerPolicy="strict-origin-when-cross-origin"
+                                loading="lazy"
+                                data-testid="video-player"
+                              />
+                              {/* Fallback overlay - shows if user has trouble */}
+                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4">
+                                <div className="flex items-center justify-between">
+                                  <p className="text-white/80 text-xs">Video yuklanmayaptimi?</p>
+                                  <a
+                                    href={youtubeWatchUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 rounded flex items-center gap-1"
+                                  >
+                                    <PlayCircle className="w-3 h-3" />
+                                    YouTube'da ochish
+                                  </a>
+                                </div>
+                              </div>
+                            </div>
                           );
                         }
                       }
