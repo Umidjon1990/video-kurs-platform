@@ -43,7 +43,6 @@ export default function HomePage() {
   const [priceRange, setPriceRange] = useState<string>("");
   const [selectedLevel, setSelectedLevel] = useState<string>("");
   const [selectedResourceTypes, setSelectedResourceTypes] = useState<string[]>([]);
-  const [showFilters, setShowFilters] = useState(false);
   const [selectedCertificate, setSelectedCertificate] = useState<{ url: string; index: number } | null>(null);
   const [selectedCourseForLessons, setSelectedCourseForLessons] = useState<PublicCourse | null>(null);
   const [selectedDemoLesson, setSelectedDemoLesson] = useState<Lesson | null>(null);
@@ -189,126 +188,16 @@ export default function HomePage() {
 
             {/* Search Bar */}
             <div className="max-w-2xl mx-auto">
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    placeholder="Kurs qidirish..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                    data-testid="input-search"
-                  />
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowFilters(!showFilters)}
-                  data-testid="button-toggle-filters"
-                >
-                  <Filter className="w-4 h-4 mr-2" />
-                  Filter
-                </Button>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  placeholder="Kurs qidirish..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                  data-testid="input-search"
+                />
               </div>
-
-              {/* Filters */}
-              {showFilters && (
-                <Card className="mt-4 p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Kategoriya</label>
-                      <select
-                        value={selectedCategory}
-                        onChange={(e) => setSelectedCategory(e.target.value)}
-                        className="w-full h-10 px-3 rounded-md border bg-background"
-                        data-testid="select-category"
-                      >
-                        {categories.map((cat) => (
-                          <option key={cat.value} value={cat.value}>
-                            {cat.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Til Darajasi (CEFR)</label>
-                      <select
-                        value={selectedLevel}
-                        onChange={(e) => setSelectedLevel(e.target.value)}
-                        className="w-full h-10 px-3 rounded-md border bg-background"
-                        data-testid="select-level"
-                      >
-                        <option value="">Barcha darajalar</option>
-                        {languageLevels?.map((level) => (
-                          <option key={level.id} value={level.id}>
-                            {level.code} - {level.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Narx</label>
-                      <select
-                        value={priceRange}
-                        onChange={(e) => setPriceRange(e.target.value)}
-                        className="w-full h-10 px-3 rounded-md border bg-background"
-                        data-testid="select-price"
-                      >
-                        {priceRanges.map((range) => (
-                          <option key={range.value} value={range.value}>
-                            {range.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  
-                  {/* Resource Types */}
-                  {resourceTypes && resourceTypes.length > 0 && (
-                    <div className="mt-4">
-                      <label className="text-sm font-medium mb-2 block">Resurs Turlari</label>
-                      <div className="flex flex-wrap gap-2">
-                        {resourceTypes.map((type) => (
-                          <Badge
-                            key={type.id}
-                            variant={selectedResourceTypes.includes(type.id) ? "default" : "outline"}
-                            className="cursor-pointer"
-                            onClick={() => {
-                              if (selectedResourceTypes.includes(type.id)) {
-                                setSelectedResourceTypes(selectedResourceTypes.filter((id) => id !== type.id));
-                              } else {
-                                setSelectedResourceTypes([...selectedResourceTypes, type.id]);
-                              }
-                            }}
-                            data-testid={`filter-resource-type-${type.id}`}
-                          >
-                            {type.nameUz || type.name}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Clear Filters */}
-                  {(selectedCategory || selectedLevel || priceRange || selectedResourceTypes.length > 0) && (
-                    <div className="mt-4 pt-4 border-t">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedCategory("");
-                          setSelectedLevel("");
-                          setPriceRange("");
-                          setSelectedResourceTypes([]);
-                        }}
-                        data-testid="button-clear-filters"
-                      >
-                        <X className="w-4 h-4 mr-2" />
-                        Filtrlarni tozalash
-                      </Button>
-                    </div>
-                  )}
-                </Card>
-              )}
             </div>
 
             <div className="flex flex-wrap gap-4 justify-center">
@@ -334,11 +223,145 @@ export default function HomePage() {
 
       {/* Courses Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        {/* Header with Filters */}
         <div className="mb-8">
-          <h2 className="text-3xl font-bold mb-2">Mavjud Kurslar</h2>
-          <p className="text-muted-foreground">
-            {courses?.length || 0} ta kurs topildi
-          </p>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-3xl font-bold mb-1">Mavjud Kurslar</h2>
+              <p className="text-muted-foreground">
+                {courses?.length || 0} ta kurs topildi
+              </p>
+            </div>
+            
+            {/* Active filters summary */}
+            {(selectedCategory || selectedLevel || priceRange || selectedResourceTypes.length > 0) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSelectedCategory("");
+                  setSelectedLevel("");
+                  setPriceRange("");
+                  setSelectedResourceTypes([]);
+                }}
+                className="gap-2"
+                data-testid="button-clear-all-filters"
+              >
+                <X className="w-4 h-4" />
+                Filtrlarni tozalash ({
+                  (selectedCategory ? 1 : 0) + 
+                  (selectedLevel ? 1 : 0) + 
+                  (priceRange ? 1 : 0) + 
+                  selectedResourceTypes.length
+                })
+              </Button>
+            )}
+          </div>
+
+          {/* Filter Bar - Always Visible */}
+          <Card className="p-4 bg-muted/30">
+            <div className="space-y-4">
+              {/* Row 1: CEFR Levels - Quick Access Chips */}
+              {languageLevels && languageLevels.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <GraduationCap className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-medium">Til Darajasi (CEFR)</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge
+                      variant={!selectedLevel ? "default" : "outline"}
+                      className="cursor-pointer px-3 py-1"
+                      onClick={() => setSelectedLevel("")}
+                      data-testid="filter-level-all"
+                    >
+                      Barchasi
+                    </Badge>
+                    {languageLevels.map((level) => (
+                      <Badge
+                        key={level.id}
+                        variant={selectedLevel === level.id ? "default" : "outline"}
+                        className="cursor-pointer px-3 py-1"
+                        onClick={() => setSelectedLevel(selectedLevel === level.id ? "" : level.id)}
+                        data-testid={`filter-level-${level.id}`}
+                      >
+                        {level.code} {level.name && `- ${level.name}`}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Row 2: Resource Types - Skill Focus Chips */}
+              {resourceTypes && resourceTypes.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <BookOpen className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-medium">Ko'nikmalar</span>
+                    {selectedResourceTypes.length > 0 && (
+                      <Badge variant="secondary" className="text-xs">
+                        {selectedResourceTypes.length} tanlangan
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {resourceTypes.map((type) => (
+                      <Badge
+                        key={type.id}
+                        variant={selectedResourceTypes.includes(type.id) ? "default" : "outline"}
+                        className="cursor-pointer px-3 py-1"
+                        onClick={() => {
+                          if (selectedResourceTypes.includes(type.id)) {
+                            setSelectedResourceTypes(selectedResourceTypes.filter((id) => id !== type.id));
+                          } else {
+                            setSelectedResourceTypes([...selectedResourceTypes, type.id]);
+                          }
+                        }}
+                        data-testid={`filter-resource-type-${type.id}`}
+                      >
+                        {type.icon && <span className="mr-1">{type.icon}</span>}
+                        {type.nameUz || type.name}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Row 3: Category and Price - Dropdowns */}
+              <div className="flex flex-wrap gap-4 pt-2 border-t">
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-muted-foreground" />
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="h-9 px-3 rounded-md border bg-background text-sm"
+                    data-testid="select-category"
+                  >
+                    {categories.map((cat) => (
+                      <option key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Narx:</span>
+                  <select
+                    value={priceRange}
+                    onChange={(e) => setPriceRange(e.target.value)}
+                    className="h-9 px-3 rounded-md border bg-background text-sm"
+                    data-testid="select-price"
+                  >
+                    {priceRanges.map((range) => (
+                      <option key={range.value} value={range.value}>
+                        {range.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          </Card>
         </div>
 
         {isLoading ? (
