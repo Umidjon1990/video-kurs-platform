@@ -111,7 +111,7 @@ export default function HomePage() {
   });
 
   // Fetch lessons for selected course
-  const { data: courseLessons } = useQuery<Lesson[]>({
+  const { data: courseLessons, isLoading: isCourseLessonsLoading } = useQuery<Lesson[]>({
     queryKey: selectedCourseForLessons 
       ? [`/api/courses/${selectedCourseForLessons.id}/lessons/public`]
       : [],
@@ -1219,7 +1219,11 @@ export default function HomePage() {
             </DialogHeader>
           </div>
           <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-0">
-            {courseLessons && courseLessons.length > 0 ? (
+            {isCourseLessonsLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+              </div>
+            ) : courseLessons && courseLessons.length > 0 ? (
               <div className="space-y-2">
                 {courseLessons.map((lesson, index) => {
                   const canViewDemo = lesson.isDemo && lesson.videoUrl && lesson.videoUrl.trim() !== '';
