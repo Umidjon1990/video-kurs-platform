@@ -263,7 +263,13 @@ export default function LearningPage() {
     }
   }, [lessons, currentLessonId]);
 
-  if (authLoading || courseLoading || isLessonsDataLoading) {
+  // Get current lesson - use first lesson if currentLessonId not set yet
+  const effectiveCurrentLesson = currentLessonId 
+    ? lessons?.find(l => l.id === currentLessonId)
+    : lessons?.[0];
+
+  // Show loading until we have lessons AND a current lesson selected
+  if (authLoading || courseLoading || isLessonsDataLoading || (lessons && lessons.length > 0 && !effectiveCurrentLesson)) {
     return (
       <div className="h-screen flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -279,7 +285,8 @@ export default function LearningPage() {
     );
   }
 
-  const currentLesson = lessons?.find(l => l.id === currentLessonId);
+  // Use effectiveCurrentLesson which is already calculated above
+  const currentLesson = effectiveCurrentLesson;
 
   return (
     <div className="min-h-screen bg-background">
