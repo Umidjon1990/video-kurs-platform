@@ -456,28 +456,14 @@ export default function LearningPage() {
                               }
                               
                               return (
-                                <div className="relative w-full h-full flex flex-col">
-                                  <div className="flex-1 relative">
-                                    <iframe
-                                      src={`https://www.youtube.com/embed/${ytId}?rel=0&modestbranding=1&playsinline=1&enablejsapi=1`}
-                                      className="w-full h-full"
-                                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                      allowFullScreen
-                                      data-testid="video-player"
-                                    />
-                                  </div>
-                                  <div className="bg-zinc-900 p-3 flex items-center justify-center gap-3">
-                                    <span className="text-white/70 text-sm">Video ko'rinmayaptimi?</span>
-                                    <a
-                                      href={youtubeWatchUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-2 shadow-lg"
-                                    >
-                                      <PlayCircle className="w-4 h-4" />
-                                      YouTube'da ko'rish
-                                    </a>
-                                  </div>
+                                <div className="relative w-full h-full">
+                                  <iframe
+                                    src={`https://www.youtube.com/embed/${ytId}?rel=0&modestbranding=1&playsinline=1&enablejsapi=1`}
+                                    className="w-full h-full"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                    allowFullScreen
+                                    data-testid="video-player"
+                                  />
                                 </div>
                               );
                             }
@@ -541,32 +527,16 @@ export default function LearningPage() {
                             );
                           }
                           
-                          // After click, show prominent YouTube button since embed often fails on mobile
                           return (
-                            <div className="relative w-full h-full flex flex-col">
-                              <div className="flex-1 relative">
-                                <iframe
-                                  src={`https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&enablejsapi=1`}
-                                  className="w-full h-full"
-                                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                  allowFullScreen
-                                  referrerPolicy="strict-origin-when-cross-origin"
-                                  data-testid="video-player"
-                                />
-                              </div>
-                              {/* Prominent YouTube button */}
-                              <div className="bg-zinc-900 p-3 flex items-center justify-center gap-3">
-                                <span className="text-white/70 text-sm">Video ko'rinmayaptimi?</span>
-                                <a
-                                  href={youtubeWatchUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-2 shadow-lg"
-                                >
-                                  <PlayCircle className="w-4 h-4" />
-                                  YouTube'da ko'rish
-                                </a>
-                              </div>
+                            <div className="relative w-full h-full">
+                              <iframe
+                                src={`https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&enablejsapi=1`}
+                                className="w-full h-full"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                allowFullScreen
+                                referrerPolicy="strict-origin-when-cross-origin"
+                                data-testid="video-player"
+                              />
                             </div>
                           );
                         }
