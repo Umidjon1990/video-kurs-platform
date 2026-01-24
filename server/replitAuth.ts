@@ -310,21 +310,13 @@ export const isAdmin: RequestHandler = async (req, res, next) => {
     return res.status(401).json({ message: "Unauthorized" });
   }
   
-  // Use role from session claims if available (local auth)
-  if (user.claims.role) {
-    if (user.claims.role !== 'admin') {
-      return res.status(403).json({ message: "Forbidden" });
-    }
-    return next();
-  }
-  
-  // Fallback to DB for OIDC sessions (no role in claims)
+  // Always check DB for current role (role may have been changed)
   const dbUser = await storage.getUser(user.claims.sub);
   if (!dbUser || dbUser.role !== 'admin') {
     return res.status(403).json({ message: "Forbidden" });
   }
   
-  // Cache role in session for next requests
+  // Update session with current role
   user.claims.role = dbUser.role;
   next();
 };
@@ -335,21 +327,13 @@ export const isInstructor: RequestHandler = async (req, res, next) => {
     return res.status(401).json({ message: "Unauthorized" });
   }
   
-  // Use role from session claims if available (local auth)
-  if (user.claims.role) {
-    if (user.claims.role !== 'instructor' && user.claims.role !== 'admin') {
-      return res.status(403).json({ message: "Forbidden" });
-    }
-    return next();
-  }
-  
-  // Fallback to DB for OIDC sessions (no role in claims)
+  // Always check DB for current role (role may have been changed by admin)
   const dbUser = await storage.getUser(user.claims.sub);
   if (!dbUser || (dbUser.role !== 'instructor' && dbUser.role !== 'admin')) {
     return res.status(403).json({ message: "Forbidden" });
   }
   
-  // Cache role in session for next requests
+  // Update session with current role
   user.claims.role = dbUser.role;
   next();
 };
