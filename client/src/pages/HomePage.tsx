@@ -63,7 +63,6 @@ export default function HomePage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [priceRange, setPriceRange] = useState<string>("");
   const [selectedLevel, setSelectedLevel] = useState<string>("");
-  const [selectedResourceTypes, setSelectedResourceTypes] = useState<string[]>([]);
   const [selectedCertificate, setSelectedCertificate] = useState<{ url: string; index: number } | null>(null);
   const [selectedCourseForLessons, setSelectedCourseForLessons] = useState<PublicCourse | null>(null);
   const [selectedDemoLesson, setSelectedDemoLesson] = useState<Lesson | null>(null);
@@ -74,9 +73,6 @@ export default function HomePage() {
     if (searchQuery) params.append("search", searchQuery);
     if (selectedCategory) params.append("category", selectedCategory);
     if (selectedLevel) params.append("levelId", selectedLevel);
-    if (selectedResourceTypes.length > 0) {
-      params.append("resourceTypeIds", selectedResourceTypes.join(","));
-    }
     
     if (priceRange === "free") {
       params.append("minPrice", "0");
@@ -112,11 +108,6 @@ export default function HomePage() {
   // Fetch language levels for filtering
   const { data: languageLevels } = useQuery<any[]>({
     queryKey: ["/api/language-levels"],
-  });
-
-  // Fetch resource types for filtering
-  const { data: resourceTypes } = useQuery<any[]>({
-    queryKey: ["/api/resource-types"],
   });
 
   // Fetch lessons for selected course
@@ -251,7 +242,7 @@ export default function HomePage() {
             </div>
             
             {/* Active filters summary */}
-            {(selectedCategory || selectedLevel || priceRange || selectedResourceTypes.length > 0) && (
+            {(selectedCategory || selectedLevel || priceRange) && (
               <Button
                 variant="outline"
                 size="sm"
@@ -259,7 +250,6 @@ export default function HomePage() {
                   setSelectedCategory("");
                   setSelectedLevel("");
                   setPriceRange("");
-                  setSelectedResourceTypes([]);
                 }}
                 className="gap-2"
                 data-testid="button-clear-all-filters"
@@ -268,8 +258,7 @@ export default function HomePage() {
                 Filtrlarni tozalash ({
                   (selectedCategory ? 1 : 0) + 
                   (selectedLevel ? 1 : 0) + 
-                  (priceRange ? 1 : 0) + 
-                  selectedResourceTypes.length
+                  (priceRange ? 1 : 0)
                 })
               </Button>
             )}
@@ -310,44 +299,7 @@ export default function HomePage() {
                 </div>
               )}
 
-              {/* Row 2: Resource Types - Skill Focus Chips */}
-              {resourceTypes && resourceTypes.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <BookOpen className="w-4 h-4 text-primary" />
-                    <span className="text-sm font-medium">Ko'nikmalar</span>
-                    {selectedResourceTypes.length > 0 && (
-                      <Badge variant="secondary" className="text-xs">
-                        {selectedResourceTypes.length} tanlangan
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {resourceTypes.map((type) => (
-                      <Button
-                        key={type.id}
-                        variant={selectedResourceTypes.includes(type.id) ? "default" : "outline"}
-                        size="sm"
-                        className="gap-1.5"
-                        onClick={() => {
-                          if (selectedResourceTypes.includes(type.id)) {
-                            setSelectedResourceTypes(selectedResourceTypes.filter((id) => id !== type.id));
-                          } else {
-                            setSelectedResourceTypes([...selectedResourceTypes, type.id]);
-                          }
-                        }}
-                        aria-pressed={selectedResourceTypes.includes(type.id)}
-                        data-testid={`filter-resource-type-${type.id}`}
-                      >
-                        {getIconComponent(type.icon)}
-                        {type.nameUz || type.name}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Row 3: Category and Price - Dropdowns */}
+              {/* Row 2: Category and Price - Dropdowns */}
               <div className="flex flex-wrap gap-4 pt-2 border-t">
                 <div className="flex items-center gap-2">
                   <Filter className="w-4 h-4 text-muted-foreground" />
