@@ -419,13 +419,15 @@ export default function LearningPage() {
                           if (iframeSrc.includes('youtube.com/embed/')) {
                             const ytId = iframeSrc.split('youtube.com/embed/')[1]?.split(/[?&]/)[0];
                             if (ytId) {
+                              const origin = window.location.origin;
                               return (
                                 <div className="relative w-full h-full">
                                   <iframe
-                                    src={`https://www.youtube.com/embed/${ytId}?rel=0&modestbranding=1&playsinline=1&enablejsapi=1`}
+                                    src={`https://www.youtube.com/embed/${ytId}?rel=0&modestbranding=1&playsinline=1&enablejsapi=1&origin=${encodeURIComponent(origin)}&widget_referrer=${encodeURIComponent(origin)}&fs=1`}
                                     className="w-full h-full"
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
                                     allowFullScreen
+                                    loading="lazy"
                                     data-testid="video-player"
                                   />
                                 </div>
@@ -458,14 +460,15 @@ export default function LearningPage() {
                         }
                         
                         if (videoId) {
+                          const origin = window.location.origin;
                           return (
                             <div className="relative w-full h-full">
                               <iframe
-                                src={`https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&enablejsapi=1`}
+                                src={`https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&enablejsapi=1&origin=${encodeURIComponent(origin)}&widget_referrer=${encodeURIComponent(origin)}&fs=1`}
                                 className="w-full h-full"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
                                 allowFullScreen
-                                referrerPolicy="strict-origin-when-cross-origin"
+                                loading="lazy"
                                 data-testid="video-player"
                               />
                             </div>
