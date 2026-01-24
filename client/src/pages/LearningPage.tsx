@@ -54,10 +54,13 @@ export default function LearningPage() {
     enabled: !!courseId && isAuthenticated,
   });
 
-  const { data: lessons, isLoading: lessonsLoading } = useQuery<Lesson[]>({
+  const { data: lessons, isLoading: lessonsLoading, isFetching: lessonsFetching } = useQuery<Lesson[]>({
     queryKey: ["/api/courses", courseId, "lessons"],
     enabled: !!courseId && isAuthenticated,
   });
+  
+  // Combined loading state - true if auth loading, query loading, or query hasn't started yet
+  const isLessonsDataLoading = authLoading || lessonsLoading || (!lessons && isAuthenticated);
 
   const { data: assignments } = useQuery<Assignment[]>({
     queryKey: ["/api/courses", courseId, "assignments"],
@@ -877,7 +880,7 @@ export default function LearningPage() {
             </div>
           );
         })()
-      ) : lessonsLoading ? (
+      ) : isLessonsDataLoading ? (
             <Card>
               <CardContent className="py-16 flex items-center justify-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -903,7 +906,7 @@ export default function LearningPage() {
             </p>
           </div>
           <div className="p-4 space-y-2">
-            {lessonsLoading ? (
+            {isLessonsDataLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
               </div>
