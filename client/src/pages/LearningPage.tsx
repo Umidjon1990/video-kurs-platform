@@ -54,7 +54,7 @@ export default function LearningPage() {
     enabled: !!courseId && isAuthenticated,
   });
 
-  const { data: lessons } = useQuery<Lesson[]>({
+  const { data: lessons, isLoading: lessonsLoading } = useQuery<Lesson[]>({
     queryKey: ["/api/courses", courseId, "lessons"],
     enabled: !!courseId && isAuthenticated,
   });
@@ -877,7 +877,13 @@ export default function LearningPage() {
             </div>
           );
         })()
-      ) : (
+      ) : lessonsLoading ? (
+            <Card>
+              <CardContent className="py-16 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </CardContent>
+            </Card>
+          ) : (
             <Card>
               <CardContent className="py-16">
                 <p className="text-center text-muted-foreground">
@@ -897,7 +903,11 @@ export default function LearningPage() {
             </p>
           </div>
           <div className="p-4 space-y-2">
-            {lessons && lessons.length === 0 ? (
+            {lessonsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              </div>
+            ) : lessons && lessons.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">Darslar hali qo'shilmagan</p>
             ) : (
               lessons?.map((lesson, index) => {
