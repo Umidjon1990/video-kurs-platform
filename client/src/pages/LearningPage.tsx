@@ -34,7 +34,6 @@ export default function LearningPage() {
   const [ratingDialog, setRatingDialog] = useState(false);
   const [selectedRating, setSelectedRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
-  const [youtubePlayClicked, setYoutubePlayClicked] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -260,11 +259,6 @@ export default function LearningPage() {
     }
   }, [lessons, currentLessonId]);
 
-  // Reset YouTube play state when lesson changes
-  useEffect(() => {
-    setYoutubePlayClicked(false);
-  }, [currentLessonId]);
-
   if (authLoading || courseLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -425,36 +419,6 @@ export default function LearningPage() {
                           if (iframeSrc.includes('youtube.com/embed/')) {
                             const ytId = iframeSrc.split('youtube.com/embed/')[1]?.split(/[?&]/)[0];
                             if (ytId) {
-                              const youtubeWatchUrl = `https://www.youtube.com/watch?v=${ytId}`;
-                              const thumbnailUrl = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
-                              
-                              if (!youtubePlayClicked) {
-                                return (
-                                  <div 
-                                    className="relative w-full h-full cursor-pointer group"
-                                    onClick={() => setYoutubePlayClicked(true)}
-                                    data-testid="youtube-thumbnail"
-                                  >
-                                    <img 
-                                      src={thumbnailUrl}
-                                      alt={currentLesson.title}
-                                      className="w-full h-full object-cover"
-                                      onError={(e) => {
-                                        e.currentTarget.src = `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
-                                      }}
-                                    />
-                                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
-                                      <div className="w-16 h-16 sm:w-20 sm:h-20 bg-red-600 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                                        <PlayCircle className="w-8 h-8 sm:w-10 sm:h-10 text-white ml-1" />
-                                      </div>
-                                    </div>
-                                    <p className="absolute bottom-3 left-3 text-white text-xs bg-black/60 px-2 py-1 rounded">
-                                      Bosing va videoni ko'ring
-                                    </p>
-                                  </div>
-                                );
-                              }
-                              
                               return (
                                 <div className="relative w-full h-full">
                                   <iframe
@@ -494,39 +458,6 @@ export default function LearningPage() {
                         }
                         
                         if (videoId) {
-                          const youtubeWatchUrl = `https://www.youtube.com/watch?v=${videoId}`;
-                          const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
-                          
-                          // Click-to-play approach to bypass YouTube bot detection
-                          if (!youtubePlayClicked) {
-                            return (
-                              <div 
-                                className="relative w-full h-full cursor-pointer group"
-                                onClick={() => setYoutubePlayClicked(true)}
-                                data-testid="youtube-thumbnail"
-                              >
-                                <img 
-                                  src={thumbnailUrl}
-                                  alt={currentLesson.title}
-                                  className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    // Fallback to hqdefault if maxresdefault not available
-                                    e.currentTarget.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-                                  }}
-                                />
-                                {/* Play button overlay */}
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
-                                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-red-600 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                                    <PlayCircle className="w-8 h-8 sm:w-10 sm:h-10 text-white ml-1" />
-                                  </div>
-                                </div>
-                                <p className="absolute bottom-3 left-3 text-white text-xs bg-black/60 px-2 py-1 rounded">
-                                  Bosing va videoni ko'ring
-                                </p>
-                              </div>
-                            );
-                          }
-                          
                           return (
                             <div className="relative w-full h-full">
                               <iframe
