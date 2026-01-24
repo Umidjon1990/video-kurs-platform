@@ -1384,6 +1384,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk create lessons - schema for validation
+  const bulkLessonItemSchema = z.object({
+    title: z.string().min(1, "Dars nomi kiritilishi shart"),
+    videoUrl: z.string().min(1, "Video linki kiritilishi shart"),
+    description: z.string().optional().default(''),
+    pdfUrl: z.string().optional().default(''),
+    duration: z.union([z.string(), z.number(), z.null()]).optional(),
+    isDemo: z.boolean().optional().default(false),
+  });
+  
+  const bulkLessonsSchema = z.object({
+    lessons: z.array(bulkLessonItemSchema).min(1, "Kamida bitta dars kiritilishi kerak"),
+  });
+
+  app.post('/api/instructor/courses/:courseId/lessons/bulk', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { courseId } = req.params;
+      const instructorId = req.user.claims.sub;
+      
+      // Validate request body
+      const validationResult = bulkLessonsSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        const errors = validationResult.error.errors.map(e => e.message).join(', ');
+        return res.status(400).json({ message: errors });
+      }
+      
+      const { lessons: lessonsData } = validationResult.data;
+      
+      // Verify course belongs to instructor
+      const course = await storage.getCourse(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Kurs topilmadi" });
+      }
+      if (course.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Ruxsat yo'q" });
+        }
+      }
+      
+      // Get current lesson count for ordering
+      const existingLessons = await storage.getLessonsByCourse(courseId);
+      let currentOrder = existingLessons.length;
+      
+      const createdLessons = [];
+      for (const lessonData of lessonsData) {
+        currentOrder++;
+        const parsedDuration = lessonData.duration 
+          ? (typeof lessonData.duration === 'string' ? parseInt(lessonData.duration) : lessonData.duration)
+          : null;
+          
+        const lesson = await storage.createLesson({
+          courseId,
+          title: lessonData.title,
+          videoUrl: lessonData.videoUrl,
+          description: lessonData.description || '',
+          pdfUrl: lessonData.pdfUrl || '',
+          duration: parsedDuration,
+          isDemo: lessonData.isDemo || false,
+          order: currentOrder,
+        });
+        createdLessons.push(lesson);
+      }
+      
+      res.json({ 
+        message: `${createdLessons.length} ta dars muvaffaqiyatli yaratildi`,
+        lessons: createdLessons 
+      });
+    } catch (error: any) {
+      console.error('Bulk lesson creation error:', error);
+      res.status(400).json({ message: error.message });
+    }
+  });
+
   app.patch('/api/instructor/lessons/:lessonId', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
       const { lessonId } = req.params;

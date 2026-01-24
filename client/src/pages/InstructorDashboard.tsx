@@ -73,6 +73,13 @@ export default function InstructorDashboard() {
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [deletingCourse, setDeletingCourse] = useState<Course | null>(null);
   const [isAddLessonOpen, setIsAddLessonOpen] = useState(false);
+  const [isBulkLessonOpen, setIsBulkLessonOpen] = useState(false);
+  const [bulkLessons, setBulkLessons] = useState<Array<{
+    title: string;
+    videoUrl: string;
+    duration: string;
+    isDemo: boolean;
+  }>>([{ title: "", videoUrl: "", duration: "", isDemo: false }]);
 
   const [courseForm, setCourseForm] = useState({
     title: "",
@@ -372,6 +379,32 @@ export default function InstructorDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/instructor/courses", selectedCourse?.id, "lessons"] });
       toast({ title: "Muvaffaqiyatli", description: "Dars o'chirildi" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Bulk lesson creation mutation
+  const bulkLessonMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedCourse) return;
+      const validLessons = bulkLessons.filter(l => l.title.trim() && l.videoUrl.trim());
+      if (validLessons.length === 0) {
+        throw new Error("Kamida bitta dars kiritilishi kerak");
+      }
+      await apiRequest("POST", `/api/instructor/courses/${selectedCourse.id}/lessons/bulk`, {
+        lessons: validLessons
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/instructor/courses", selectedCourse?.id, "lessons"] });
+      toast({ 
+        title: "Muvaffaqiyatli", 
+        description: `${bulkLessons.filter(l => l.title.trim() && l.videoUrl.trim()).length} ta dars qo'shildi` 
+      });
+      setIsBulkLessonOpen(false);
+      setBulkLessons([{ title: "", videoUrl: "", duration: "", isDemo: false }]);
     },
     onError: (error: Error) => {
       toast({ title: "Xatolik", description: error.message, variant: "destructive" });
@@ -1266,10 +1299,21 @@ export default function InstructorDashboard() {
                     ))
                   )}
                 </div>
-                <Button onClick={() => setIsAddLessonOpen(true)} data-testid="button-add-lesson" className="w-full">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Dars Qo'shish
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button onClick={() => setIsAddLessonOpen(true)} data-testid="button-add-lesson" className="flex-1">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Dars Qo'shish
+                  </Button>
+                  <Button 
+                    onClick={() => setIsBulkLessonOpen(true)} 
+                    variant="outline"
+                    data-testid="button-bulk-add-lessons" 
+                    className="flex-1"
+                  >
+                    <FileSpreadsheet className="w-4 h-4 mr-2" />
+                    Ko'p Dars Qo'shish
+                  </Button>
+                </div>
               </TabsContent>
 
               <TabsContent value="assignments" className="space-y-4">
@@ -1974,6 +2018,133 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
                 ? (editingLesson ? "Yangilanmoqda..." : "Qo'shilmoqda...") 
                 : (editingLesson ? "Yangilash" : "Qo'shish")}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Add Lessons Dialog */}
+      <Dialog open={isBulkLessonOpen} onOpenChange={(open) => {
+        setIsBulkLessonOpen(open);
+        if (!open) {
+          setBulkLessons([{ title: "", videoUrl: "", duration: "", isDemo: false }]);
+        }
+      }}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-bulk-add-lessons">
+          <DialogHeader>
+            <DialogTitle>Ko'p Dars Qo'shish</DialogTitle>
+            <DialogDescription>
+              Bir nechta darslarni birdan qo'shing. Har bir dars uchun nom va video linkini kiriting.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {bulkLessons.map((lesson, index) => (
+              <div key={index} className="p-4 border rounded-lg space-y-3 bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-sm">{index + 1}-dars</span>
+                  {bulkLessons.length > 1 && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setBulkLessons(bulkLessons.filter((_, i) => i !== index));
+                      }}
+                      data-testid={`button-remove-lesson-${index}`}
+                    >
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>Dars nomi *</Label>
+                    <Input
+                      value={lesson.title}
+                      onChange={(e) => {
+                        const updated = [...bulkLessons];
+                        updated[index].title = e.target.value;
+                        setBulkLessons(updated);
+                      }}
+                      placeholder="Masalan: 1-dars. Kirish"
+                      data-testid={`input-bulk-lesson-title-${index}`}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Davomiyligi (daqiqa)</Label>
+                    <Input
+                      type="number"
+                      value={lesson.duration}
+                      onChange={(e) => {
+                        const updated = [...bulkLessons];
+                        updated[index].duration = e.target.value;
+                        setBulkLessons(updated);
+                      }}
+                      placeholder="Masalan: 15"
+                      data-testid={`input-bulk-lesson-duration-${index}`}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>YouTube / Kinescope linki *</Label>
+                  <Input
+                    value={lesson.videoUrl}
+                    onChange={(e) => {
+                      const updated = [...bulkLessons];
+                      updated[index].videoUrl = e.target.value;
+                      setBulkLessons(updated);
+                    }}
+                    placeholder="https://www.youtube.com/watch?v=... yoki iframe kod"
+                    data-testid={`input-bulk-lesson-video-${index}`}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id={`bulk-demo-${index}`}
+                    checked={lesson.isDemo}
+                    onCheckedChange={(checked) => {
+                      const updated = [...bulkLessons];
+                      updated[index].isDemo = checked === true;
+                      setBulkLessons(updated);
+                    }}
+                    data-testid={`checkbox-bulk-lesson-demo-${index}`}
+                  />
+                  <Label htmlFor={`bulk-demo-${index}`} className="text-sm cursor-pointer">
+                    Demo dars (bepul ko'rish mumkin)
+                  </Label>
+                </div>
+              </div>
+            ))}
+            <Button
+              variant="outline"
+              onClick={() => {
+                setBulkLessons([...bulkLessons, { title: "", videoUrl: "", duration: "", isDemo: false }]);
+              }}
+              className="w-full"
+              data-testid="button-add-another-lesson"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Yana dars qo'shish
+            </Button>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <div className="text-sm text-muted-foreground">
+              {bulkLessons.filter(l => l.title.trim() && l.videoUrl.trim()).length} ta dars tayyor
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsBulkLessonOpen(false)}
+                data-testid="button-cancel-bulk-lessons"
+              >
+                Bekor qilish
+              </Button>
+              <Button
+                onClick={() => bulkLessonMutation.mutate()}
+                disabled={bulkLessons.filter(l => l.title.trim() && l.videoUrl.trim()).length === 0 || bulkLessonMutation.isPending}
+                data-testid="button-confirm-bulk-lessons"
+              >
+                {bulkLessonMutation.isPending ? "Saqlanmoqda..." : "Barchasini saqlash"}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
