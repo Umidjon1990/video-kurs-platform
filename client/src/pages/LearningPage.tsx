@@ -4,13 +4,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PlayCircle, CheckCircle, FileText, ClipboardCheck, Lock, Home, MessageCircle, Download, Star } from "lucide-react";
+import { PlayCircle, CheckCircle, FileText, ClipboardCheck, Lock, Home, MessageCircle, Download, Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { NotificationBell } from "@/components/NotificationBell";
 import { StarRating } from "@/components/StarRating";
@@ -386,13 +387,50 @@ export default function LearningPage() {
                 );
               }
               
+              // Navigation helpers
+              const currentIndex = lessons?.findIndex(l => l.id === currentLessonId) ?? -1;
+              const prevLesson = currentIndex > 0 ? lessons?.[currentIndex - 1] : null;
+              const nextLesson = currentIndex >= 0 && lessons && currentIndex < lessons.length - 1 ? lessons[currentIndex + 1] : null;
+              
               return (
-                <div className="space-y-4">
-                  <div>
-                    <h2 className="text-lg sm:text-xl font-bold mb-1" data-testid="text-lesson-title">{currentLesson.title}</h2>
-                    <p className="text-sm text-muted-foreground">
-                      {currentLesson.duration ? `Davomiyligi: ${currentLesson.duration} daqiqa` : ''}
-                    </p>
+                <div className="space-y-3">
+                  {/* Compact lesson header with navigation */}
+                  <div className="flex items-center justify-between gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => prevLesson && setCurrentLessonId(prevLesson.id)}
+                      disabled={!prevLesson}
+                      className="shrink-0"
+                      data-testid="button-prev-lesson"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      <span className="hidden sm:inline ml-1">Oldingi</span>
+                    </Button>
+                    
+                    <div className="flex-1 min-w-0 text-center">
+                      <Badge variant="secondary" className="mb-1">
+                        {currentIndex + 1}/{lessons?.length || 0}-dars
+                      </Badge>
+                      <h2 className="text-sm sm:text-base font-semibold truncate" data-testid="text-lesson-title">
+                        {currentLesson.title}
+                      </h2>
+                      {currentLesson.duration && (
+                        <p className="text-xs text-muted-foreground">{currentLesson.duration} daq</p>
+                      )}
+                    </div>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => nextLesson && setCurrentLessonId(nextLesson.id)}
+                      disabled={!nextLesson}
+                      className="shrink-0"
+                      data-testid="button-next-lesson"
+                    >
+                      <span className="hidden sm:inline mr-1">Keyingi</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
                   </div>
 
                   {/* Video Player */}
