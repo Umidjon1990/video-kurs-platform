@@ -65,8 +65,15 @@ export default function LearningPage() {
     enabled: !!courseId && isAuthenticated,
   });
   
+  // Fetch course modules
+  const { data: courseModules, isLoading: modulesLoading } = useQuery<any[]>({
+    queryKey: ["/api/courses", courseId, "modules"],
+    enabled: !!courseId && isAuthenticated,
+  });
+  
   // Combined loading state - true if auth loading, query loading, or query hasn't started yet
-  const isLessonsDataLoading = authLoading || lessonsLoading || (!lessons && isAuthenticated);
+  // Include modules loading to ensure proper grouping display
+  const isLessonsDataLoading = authLoading || lessonsLoading || modulesLoading || (!lessons && isAuthenticated);
 
   const { data: assignments } = useQuery<Assignment[]>({
     queryKey: ["/api/courses", courseId, "assignments"],
@@ -1026,7 +1033,75 @@ export default function LearningPage() {
             ) : lessons && lessons.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">Darslar hali qo'shilmagan</p>
             ) : (
-              lessons?.map((lesson, index) => {
+              (() => {
+                // Group lessons by module
+                const sortedModules = courseModules?.slice().sort((a, b) => (a.order || 0) - (b.order || 0)) || [];
+                const lessonsWithoutModule = lessons?.filter((l: any) => !l.moduleId) || [];
+                const lessonsWithOrphanedModule = lessons?.filter((l: any) => 
+                  l.moduleId && !sortedModules.some((m: any) => m.id === l.moduleId)
+                ) || [];
+                const lessonsByModule: Record<string, Lesson[]> = {};
+                
+                sortedModules.forEach((module: any) => {
+                  lessonsByModule[module.id] = lessons?.filter((l: any) => l.moduleId === module.id) || [];
+                });
+                
+                let globalIndex = 0;
+                
+                // Fallback: if no modules available, render all lessons flat
+                if (sortedModules.length === 0) {
+                  return (
+                    <>
+                      {lessons?.map((lesson, index) => renderLessonItem(lesson, index + 1))}
+                    </>
+                  );
+                }
+                
+                return (
+                  <>
+                    {/* Lessons without module first */}
+                    {lessonsWithoutModule.map((lesson) => {
+                      globalIndex++;
+                      return renderLessonItem(lesson, globalIndex);
+                    })}
+                    
+                    {/* Orphaned lessons (module deleted but lesson still has moduleId) */}
+                    {lessonsWithOrphanedModule.map((lesson) => {
+                      globalIndex++;
+                      return renderLessonItem(lesson, globalIndex);
+                    })}
+                    
+                    {/* Grouped by modules */}
+                    {sortedModules.map((module: any) => {
+                      const moduleLessons = lessonsByModule[module.id] || [];
+                      if (moduleLessons.length === 0) return null;
+                      
+                      const moduleLessonProgress = moduleLessons.map(l => 
+                        courseProgress?.find((p: any) => p.lessonId === l.id)?.completed || false
+                      );
+                      const completedCount = moduleLessonProgress.filter(Boolean).length;
+                      
+                      return (
+                        <div key={module.id} className="mb-4" data-testid={`module-group-${module.id}`}>
+                          <div className="flex items-center justify-between mb-2 px-2">
+                            <h4 className="text-sm font-semibold text-muted-foreground">{module.title}</h4>
+                            <Badge variant="secondary" className="text-xs">
+                              {completedCount}/{moduleLessons.length}
+                            </Badge>
+                          </div>
+                          <div className="space-y-2 pl-2 border-l-2 border-muted">
+                            {moduleLessons.map((lesson) => {
+                              globalIndex++;
+                              return renderLessonItem(lesson, globalIndex);
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
+                );
+                
+                function renderLessonItem(lesson: Lesson, index: number) {
                 const isEnrolled = enrollment?.paymentStatus === 'confirmed' || enrollment?.paymentStatus === 'approved';
                 
                 // Check if subscription is active for this course
@@ -1090,7 +1165,8 @@ export default function LearningPage() {
                     </div>
                   </div>
                 );
-              })
+                }
+              })()
             )}
           </div>
         </div>
