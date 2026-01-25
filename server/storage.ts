@@ -31,6 +31,8 @@ import {
   languageLevels,
   resourceTypes,
   courseResourceTypes,
+  courseModules,
+  lessonSections,
   type User,
   type UpsertUser,
   type Course,
@@ -97,6 +99,10 @@ import {
   type InsertLessonEssayQuestion,
   type EssaySubmission,
   type InsertEssaySubmission,
+  type CourseModule,
+  type InsertCourseModule,
+  type LessonSection,
+  type InsertLessonSection,
   lessonEssayQuestions,
   essaySubmissions,
 } from "@shared/schema";
@@ -2644,6 +2650,72 @@ export class DatabaseStorage implements IStorage {
       .where(eq(essaySubmissions.id, id))
       .returning();
     return result;
+  }
+  
+  // ============ COURSE MODULE OPERATIONS ============
+  async createCourseModule(module: InsertCourseModule): Promise<CourseModule> {
+    const [result] = await db.insert(courseModules).values(module).returning();
+    return result;
+  }
+  
+  async getCourseModules(courseId: string): Promise<CourseModule[]> {
+    return await db
+      .select()
+      .from(courseModules)
+      .where(and(eq(courseModules.courseId, courseId), eq(courseModules.isActive, true)))
+      .orderBy(courseModules.order);
+  }
+  
+  async getCourseModule(id: string): Promise<CourseModule | undefined> {
+    const [result] = await db.select().from(courseModules).where(eq(courseModules.id, id));
+    return result;
+  }
+  
+  async updateCourseModule(id: string, data: Partial<InsertCourseModule>): Promise<CourseModule> {
+    const [result] = await db
+      .update(courseModules)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(courseModules.id, id))
+      .returning();
+    return result;
+  }
+  
+  async deleteCourseModule(id: string): Promise<void> {
+    // Set all lessons in this module to have no module (moduleId = null)
+    await db.update(lessons).set({ moduleId: null }).where(eq(lessons.moduleId, id));
+    await db.delete(courseModules).where(eq(courseModules.id, id));
+  }
+  
+  // ============ LESSON SECTION OPERATIONS ============
+  async createLessonSection(section: InsertLessonSection): Promise<LessonSection> {
+    const [result] = await db.insert(lessonSections).values(section).returning();
+    return result;
+  }
+  
+  async getLessonSections(lessonId: string): Promise<LessonSection[]> {
+    return await db
+      .select()
+      .from(lessonSections)
+      .where(eq(lessonSections.lessonId, lessonId))
+      .orderBy(lessonSections.order);
+  }
+  
+  async getLessonSection(id: string): Promise<LessonSection | undefined> {
+    const [result] = await db.select().from(lessonSections).where(eq(lessonSections.id, id));
+    return result;
+  }
+  
+  async updateLessonSection(id: string, data: Partial<InsertLessonSection>): Promise<LessonSection> {
+    const [result] = await db
+      .update(lessonSections)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(lessonSections.id, id))
+      .returning();
+    return result;
+  }
+  
+  async deleteLessonSection(id: string): Promise<void> {
+    await db.delete(lessonSections).where(eq(lessonSections.id, id));
   }
 }
 
