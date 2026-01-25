@@ -57,6 +57,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   userSubscriptions: many(userSubscriptions),
   lessonProgress: many(lessonProgress),
   courseRatings: many(courseRatings),
+  essaySubmissions: many(essaySubmissions),
 }));
 
 // Language Levels table - CEFR standard (A0-C2)
@@ -219,6 +220,7 @@ export const lessonsRelations = relations(lessons, ({ one, many }) => ({
   assignments: many(assignments),
   tests: many(tests),
   progress: many(lessonProgress),
+  essayQuestions: many(lessonEssayQuestions),
 }));
 
 // Lesson Progress table - Video tracking
@@ -995,6 +997,78 @@ export type StudentCourseProgress = {
   nextLesson?: Lesson;
 };
 
+// Lesson Essay Questions table - Arabic essay prompts for each lesson
+export const lessonEssayQuestions = pgTable("lesson_essay_questions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  lessonId: varchar("lesson_id").notNull().references(() => lessons.id, { onDelete: 'cascade' }),
+  questionText: text("question_text").notNull(), // Arabic essay prompt
+  minWords: integer("min_words").notNull().default(50), // Minimal so'z soni
+  maxWords: integer("max_words").notNull().default(200), // Maksimal so'z soni
+  instructions: text("instructions"), // Additional instructions (optional)
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const lessonEssayQuestionsRelations = relations(lessonEssayQuestions, ({ one, many }) => ({
+  lesson: one(lessons, {
+    fields: [lessonEssayQuestions.lessonId],
+    references: [lessons.id],
+  }),
+  submissions: many(essaySubmissions),
+}));
+
+export const insertLessonEssayQuestionSchema = createInsertSchema(lessonEssayQuestions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Essay Submissions table - Student essays with AI feedback
+export const essaySubmissions = pgTable("essay_submissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  essayQuestionId: varchar("essay_question_id").notNull().references(() => lessonEssayQuestions.id, { onDelete: 'cascade' }),
+  studentId: varchar("student_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  essayText: text("essay_text").notNull(), // Student's Arabic essay
+  wordCount: integer("word_count").notNull().default(0), // Actual word count
+  // AI Feedback
+  aiChecked: boolean("ai_checked").default(false), // Faqat 1 marta tekshiriladi
+  aiFeedback: text("ai_feedback"), // OpenAI natijasi (o'zbekcha)
+  grammarErrors: text("grammar_errors"), // Grammatika xatolari
+  spellingErrors: text("spelling_errors"), // Imlo xatolari
+  styleNotes: text("style_notes"), // Uslub bo'yicha tavsiyalar
+  overallScore: integer("overall_score"), // 0-100 umumiy ball
+  checkedAt: timestamp("checked_at"), // AI tekshirgan vaqt
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("essay_student_question_idx").on(table.essayQuestionId, table.studentId),
+]);
+
+export const essaySubmissionsRelations = relations(essaySubmissions, ({ one }) => ({
+  essayQuestion: one(lessonEssayQuestions, {
+    fields: [essaySubmissions.essayQuestionId],
+    references: [lessonEssayQuestions.id],
+  }),
+  student: one(users, {
+    fields: [essaySubmissions.studentId],
+    references: [users.id],
+  }),
+}));
+
+export const insertEssaySubmissionSchema = createInsertSchema(essaySubmissions).omit({
+  id: true,
+  aiChecked: true,
+  aiFeedback: true,
+  grammarErrors: true,
+  spellingErrors: true,
+  styleNotes: true,
+  overallScore: true,
+  checkedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export type InsertLesson = z.infer<typeof insertLessonSchema>;
 export type Lesson = typeof lessons.$inferSelect;
 
@@ -1070,6 +1144,13 @@ export type SpeakingAnswer = typeof speakingAnswers.$inferSelect;
 
 export type InsertSpeakingEvaluation = z.infer<typeof insertSpeakingEvaluationSchema>;
 export type SpeakingEvaluation = typeof speakingEvaluations.$inferSelect;
+
+// Essay types
+export type InsertLessonEssayQuestion = z.infer<typeof insertLessonEssayQuestionSchema>;
+export type LessonEssayQuestion = typeof lessonEssayQuestions.$inferSelect;
+
+export type InsertEssaySubmission = z.infer<typeof insertEssaySubmissionSchema>;
+export type EssaySubmission = typeof essaySubmissions.$inferSelect;
 
 // Course Analytics type (for instructor dashboard)
 export type CourseAnalytics = {
