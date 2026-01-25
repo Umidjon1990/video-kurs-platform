@@ -514,26 +514,26 @@ export default function HomePage() {
                         </CardContent>
 
                         <CardFooter className="flex flex-col gap-3">
+                          {/* Darslarni Ko'rish - katta tugma */}
+                          <Button
+                            size="lg"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedCourseForLessons(course);
+                            }}
+                            className="w-full h-14 text-lg font-bold bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+                            data-testid={`button-view-lessons-${course.id}`}
+                          >
+                            Darslarni Ko'rish
+                          </Button>
                           {/* BEPUL narx ko'rsatish */}
                           <div className="w-full">
-                            <div className="flex items-center justify-center gap-2 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-4 rounded-lg border-2 border-green-300 dark:border-green-700">
-                              <span className="text-3xl font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                            <div className="flex items-center justify-center gap-2 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-3 rounded-lg border-2 border-green-300 dark:border-green-700">
+                              <span className="text-2xl font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
                                 BEPUL
                               </span>
-                              <span className="text-2xl">🎁</span>
+                              <span className="text-xl">🎁</span>
                             </div>
-                          </div>
-                          <div className="flex gap-2 w-full">
-                            <Button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedCourseForLessons(course);
-                              }}
-                              className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
-                              data-testid={`button-view-lessons-${course.id}`}
-                            >
-                              Darslarni Ko'rish
-                            </Button>
                           </div>
                         </CardFooter>
                       </Card>
