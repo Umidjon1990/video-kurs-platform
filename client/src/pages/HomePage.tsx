@@ -230,122 +230,161 @@ export default function HomePage() {
       </motion.div>
 
       {/* Courses Grid */}
-      <div id="courses-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        {/* Header with Filters */}
-        <div className="mb-8">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-            <div>
-              <h2 className="text-3xl font-bold mb-1">Mavjud Kurslar</h2>
-              <p className="text-muted-foreground">
-                {courses?.length || 0} ta kurs topildi
-              </p>
+      <div id="courses-section" className="relative">
+        {/* Background decoration */}
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent pointer-events-none" />
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          {/* Modern Section Header */}
+          <motion.div 
+            className="text-center mb-12"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4">
+              <BookOpen className="w-4 h-4" />
+              <span>Bizning Kurslar</span>
             </div>
-            
-            {/* Active filters summary */}
-            {(selectedCategory || selectedLevel || priceRange) && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSelectedCategory("");
-                  setSelectedLevel("");
-                  setPriceRange("");
-                }}
-                className="gap-2"
-                data-testid="button-clear-all-filters"
-              >
-                <X className="w-4 h-4" />
-                Filtrlarni tozalash ({
-                  (selectedCategory ? 1 : 0) + 
-                  (selectedLevel ? 1 : 0) + 
-                  (priceRange ? 1 : 0)
-                })
-              </Button>
-            )}
-          </div>
-
-          {/* Filter Bar - Always Visible */}
-          <Card className="p-4 bg-muted/30">
-            <div className="space-y-4">
-              {/* Row 1: CEFR Levels - Quick Access Chips */}
-              {languageLevels && languageLevels.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <GraduationCap className="w-4 h-4 text-primary" />
-                    <span className="text-sm font-medium">Til Darajasi (CEFR)</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant={!selectedLevel ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setSelectedLevel("")}
-                      data-testid="filter-level-all"
-                    >
-                      Barchasi
-                    </Button>
-                    {languageLevels.map((level) => (
-                      <Button
-                        key={level.id}
-                        variant={selectedLevel === level.id ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setSelectedLevel(selectedLevel === level.id ? "" : level.id)}
-                        aria-pressed={selectedLevel === level.id}
-                        data-testid={`filter-level-${level.id}`}
-                      >
-                        {level.code} {level.name && `- ${level.name}`}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
+            <h2 className="text-3xl md:text-4xl font-bold mb-3">Mavjud Kurslar</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              O'zingizga mos kursni tanlang va bugun bilim olishni boshlang
+            </p>
+            <div className="mt-4 flex items-center justify-center gap-2">
+              <Badge variant="secondary" className="text-sm px-4 py-1" data-testid="badge-course-count">
+                {courses?.length || 0} ta kurs
+              </Badge>
+              {(selectedCategory || selectedLevel || priceRange) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedCategory("");
+                    setSelectedLevel("");
+                    setPriceRange("");
+                  }}
+                  className="gap-1 text-muted-foreground"
+                  data-testid="button-clear-all-filters"
+                >
+                  <X className="w-3 h-3" />
+                  Tozalash
+                </Button>
               )}
+            </div>
+          </motion.div>
 
-              {/* Row 2: Category and Price - Dropdowns */}
-              <div className="flex flex-wrap gap-4 pt-2 border-t">
-                <div className="flex items-center gap-2">
-                  <Filter className="w-4 h-4 text-muted-foreground" />
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="h-9 px-3 rounded-md border bg-background text-sm"
-                    data-testid="select-category"
-                  >
-                    {categories.map((cat) => (
-                      <option key={cat.value} value={cat.value}>
-                        {cat.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Narx:</span>
-                  <select
-                    value={priceRange}
-                    onChange={(e) => setPriceRange(e.target.value)}
-                    className="h-9 px-3 rounded-md border bg-background text-sm"
-                    data-testid="select-price"
-                  >
-                    {priceRanges.map((range) => (
-                      <option key={range.value} value={range.value}>
-                        {range.label}
-                      </option>
-                    ))}
-                  </select>
+          {/* Modern Filter Bar */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="mb-10"
+          >
+            <Card className="border-0 shadow-xl bg-gradient-to-r from-background via-muted/30 to-background backdrop-blur-sm overflow-hidden">
+              <div className="p-6 space-y-6">
+                {/* CEFR Levels - Modern Chips */}
+                {languageLevels && languageLevels.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="p-1.5 rounded-lg bg-primary/10">
+                        <GraduationCap className="w-4 h-4 text-primary" />
+                      </div>
+                      <span className="text-sm font-semibold">Til Darajasi (CEFR)</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant={!selectedLevel ? "default" : "ghost"}
+                        size="sm"
+                        onClick={() => setSelectedLevel("")}
+                        className={!selectedLevel ? "shadow-md" : ""}
+                        data-testid="filter-level-all"
+                      >
+                        Barchasi
+                      </Button>
+                      {languageLevels.map((level) => (
+                        <Button
+                          key={level.id}
+                          variant={selectedLevel === level.id ? "default" : "ghost"}
+                          size="sm"
+                          onClick={() => setSelectedLevel(selectedLevel === level.id ? "" : level.id)}
+                          className={selectedLevel === level.id ? "shadow-md" : ""}
+                          aria-pressed={selectedLevel === level.id}
+                          data-testid={`filter-level-${level.id}`}
+                        >
+                          <span className="font-bold mr-1">{level.code}</span>
+                          {level.name && <span className="text-muted-foreground">{level.name}</span>}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Category and Price - Modern Selects */}
+                <div className="flex flex-wrap gap-4 pt-4 border-t border-border/50">
+                  <div className="flex items-center gap-3 bg-muted/50 rounded-xl px-4 py-2">
+                    <Filter className="w-4 h-4 text-primary" />
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="bg-transparent border-0 text-sm font-medium focus:outline-none cursor-pointer"
+                      data-testid="select-category"
+                    >
+                      {categories.map((cat) => (
+                        <option key={cat.value} value={cat.value}>
+                          {cat.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-3 bg-muted/50 rounded-xl px-4 py-2">
+                    <TrendingUp className="w-4 h-4 text-primary" />
+                    <select
+                      value={priceRange}
+                      onChange={(e) => setPriceRange(e.target.value)}
+                      className="bg-transparent border-0 text-sm font-medium focus:outline-none cursor-pointer"
+                      data-testid="select-price"
+                    >
+                      {priceRanges.map((range) => (
+                        <option key={range.value} value={range.value}>
+                          {range.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
-            </div>
-          </Card>
-        </div>
+            </Card>
+          </motion.div>
 
         {isLoading ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {[...Array(6)].map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <div className="aspect-[3/4] bg-muted" />
-                <CardHeader>
-                  <div className="h-6 bg-muted rounded w-3/4 mb-2" />
-                  <div className="h-4 bg-muted rounded w-1/2" />
-                </CardHeader>
-              </Card>
+              <motion.div
+                key={i}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: i * 0.1 }}
+              >
+                <Card className="overflow-hidden border-0 shadow-lg">
+                  <div className="aspect-[3/4] bg-gradient-to-br from-muted via-muted/80 to-muted animate-pulse" />
+                  <CardContent className="p-5 space-y-4">
+                    <div className="space-y-2">
+                      <div className="h-5 bg-muted rounded-lg w-4/5 animate-pulse" />
+                      <div className="h-4 bg-muted rounded-lg w-2/3 animate-pulse" />
+                    </div>
+                    <div className="flex gap-2">
+                      <div className="h-6 w-16 bg-muted rounded-full animate-pulse" />
+                      <div className="h-6 w-20 bg-muted rounded-full animate-pulse" />
+                    </div>
+                    <div className="flex justify-between items-center pt-2">
+                      <div className="h-7 w-24 bg-muted rounded-lg animate-pulse" />
+                      <div className="h-9 w-28 bg-primary/20 rounded-lg animate-pulse" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
             ))}
           </div>
         ) : courses && courses.length > 0 ? (
@@ -832,6 +871,7 @@ export default function HomePage() {
             </p>
           </div>
         )}
+        </div>
       </div>
 
       {/* Testimonials Section */}
