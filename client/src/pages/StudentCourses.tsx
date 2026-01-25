@@ -8,14 +8,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { StatsCard } from "@/components/StatsCard";
 import { CourseCard } from "@/components/CourseCard";
 import { ProgressCard } from "@/components/ProgressCard";
-import { NotificationBell } from "@/components/NotificationBell";
 import { useLocation } from "wouter";
-import { BookOpen, Trophy, GraduationCap, PlayCircle, CheckCircle, Star } from "lucide-react";
+import { BookOpen, Trophy, GraduationCap, PlayCircle, CheckCircle, Star, Sparkles, ArrowRight, Target, Zap } from "lucide-react";
+import { motion } from "framer-motion";
 import type { Course, StudentCourseProgress, SubscriptionPlan } from "@shared/schema";
 
 export default function StudentCourses() {
   const { toast } = useToast();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
@@ -54,7 +54,7 @@ export default function StudentCourses() {
   const { data: unreadCount } = useQuery<{ count: number }>({
     queryKey: ["/api/chat/unread-count"],
     enabled: isAuthenticated,
-    refetchInterval: 10000, // Poll every 10 seconds
+    refetchInterval: 10000,
   });
 
   const enrolledCourseIds = new Set(enrolledCourses?.map(c => c.id) || []);
@@ -82,7 +82,10 @@ export default function StudentCourses() {
   if (authLoading || allCoursesLoading || enrolledCoursesLoading || progressLoading || plansLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+        <div className="relative">
+          <div className="animate-spin w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full" />
+          <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 text-primary animate-pulse" />
+        </div>
       </div>
     );
   }
@@ -91,62 +94,195 @@ export default function StudentCourses() {
   const totalEnrolled = enrolledCourses?.length || 0;
   const completedCourses = progressData?.filter(p => p.progressPercentage === 100).length || 0;
   const inProgressCourses = progressData?.filter(p => p.progressPercentage > 0 && p.progressPercentage < 100).length || 0;
+  const totalProgress = progressData?.length 
+    ? Math.round(progressData.reduce((acc, p) => acc + p.progressPercentage, 0) / progressData.length)
+    : 0;
+
+  // Get time-based greeting
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Xayrli tong";
+    if (hour < 18) return "Xayrli kun";
+    return "Xayrli kech";
+  };
+
+  const firstName = user?.firstName || "Talaba";
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2" data-testid="text-student-title">
-          Mening Kurslarim
-        </h1>
-        <p className="text-muted-foreground">
-          O'quv jarayoningizni kuzatib boring va yangi bilimlarni egallang
-        </p>
+    <div className="min-h-screen">
+      {/* Hero Section with Gradient */}
+      <div className="relative overflow-hidden">
+        {/* Animated gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-primary/10 to-background" />
+        <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+        
+        <div className="relative px-6 py-8 md:py-12">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="max-w-4xl"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="w-5 h-5 text-primary animate-pulse" />
+              <span className="text-sm font-medium text-primary">{getGreeting()}</span>
+            </div>
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3" data-testid="text-student-title">
+              Salom, <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">{firstName}</span>!
+            </h1>
+            <p className="text-muted-foreground text-lg max-w-xl">
+              O'quv jarayoningizni davom ettiring va yangi bilimlar oling
+            </p>
+          </motion.div>
+
+          {/* Quick Stats Row */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8"
+          >
+            <StatsCard
+              title="Jami Kurslar"
+              value={totalEnrolled}
+              icon={BookOpen}
+              testId="stats-total-courses"
+              description="Yozilgan"
+              gradient="from-blue-500/20 via-blue-500/10 to-transparent"
+              iconBg="bg-blue-500/20"
+            />
+            <StatsCard
+              title="Tugallangan"
+              value={completedCourses}
+              icon={GraduationCap}
+              testId="stats-completed"
+              description="Muvaffaqiyatli"
+              gradient="from-green-500/20 via-green-500/10 to-transparent"
+              iconBg="bg-green-500/20"
+            />
+            <StatsCard
+              title="Jarayonda"
+              value={inProgressCourses}
+              icon={PlayCircle}
+              testId="stats-in-progress"
+              description="Davom etmoqda"
+              gradient="from-amber-500/20 via-amber-500/10 to-transparent"
+              iconBg="bg-amber-500/20"
+            />
+            <StatsCard
+              title="Sertifikatlar"
+              value={completedCourses}
+              icon={Trophy}
+              testId="stats-certificates"
+              description="Olingan"
+              gradient="from-purple-500/20 via-purple-500/10 to-transparent"
+              iconBg="bg-purple-500/20"
+            />
+          </motion.div>
+
+          {/* Progress Overview Card */}
+          {totalEnrolled > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="mt-6"
+            >
+              <Card className="border-0 shadow-xl bg-gradient-to-r from-primary/5 via-background to-primary/5 backdrop-blur">
+                <CardContent className="p-6">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="relative">
+                        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Target className="w-8 h-8 text-primary" />
+                        </div>
+                        <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                          <Zap className="w-3 h-3 text-primary-foreground" />
+                        </div>
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg">Umumiy Progress</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Barcha kurslardagi o'rtacha yutuq
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1 md:w-48">
+                        <div className="h-3 bg-muted rounded-full overflow-hidden">
+                          <motion.div
+                            className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${totalProgress}%` }}
+                            transition={{ duration: 1, delay: 0.5 }}
+                          />
+                        </div>
+                      </div>
+                      <span className="text-2xl font-bold text-primary">{totalProgress}%</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </div>
       </div>
 
-      {/* KPI Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-        <StatsCard
-          title="Jami Kurslar"
-          value={totalEnrolled}
-          icon={BookOpen}
-          testId="stats-total-courses"
-          description="Yozilgan kurslar"
-        />
-        <StatsCard
-          title="Tugallangan"
-          value={completedCourses}
-          icon={GraduationCap}
-          testId="stats-completed"
-          description="100% bajarilgan"
-        />
-        <StatsCard
-          title="Davom Etmoqda"
-          value={inProgressCourses}
-          icon={PlayCircle}
-          testId="stats-in-progress"
-          description="Jarayonda"
-        />
-        <StatsCard
-          title="Sertifikatlar"
-          value={completedCourses}
-          icon={Trophy}
-          testId="stats-certificates"
-          description="Olingan"
-        />
-      </div>
-
-      <div className="space-y-6">
+      {/* Main Content */}
+      <div className="px-6 py-8">
         <Tabs defaultValue="enrolled" className="space-y-8">
-          <TabsList>
-            <TabsTrigger value="enrolled" data-testid="tab-my-courses">Mening Kurslarim</TabsTrigger>
-            <TabsTrigger value="all" data-testid="tab-all-courses">Barcha Kurslar</TabsTrigger>
-            <TabsTrigger value="plans" data-testid="tab-subscription-plans">Tariflar</TabsTrigger>
+          <TabsList className="bg-muted/50 p-1 rounded-xl">
+            <TabsTrigger 
+              value="enrolled" 
+              data-testid="tab-my-courses"
+              className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-6"
+            >
+              <BookOpen className="w-4 h-4 mr-2" />
+              Mening Kurslarim
+            </TabsTrigger>
+            <TabsTrigger 
+              value="all" 
+              data-testid="tab-all-courses"
+              className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-6"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              Barcha Kurslar
+            </TabsTrigger>
+            <TabsTrigger 
+              value="plans" 
+              data-testid="tab-subscription-plans"
+              className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-6"
+            >
+              <Star className="w-4 h-4 mr-2" />
+              Tariflar
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="enrolled" className="space-y-4">
-            <h2 className="text-3xl font-bold">Mening Kurslarim</h2>
+          <TabsContent value="enrolled" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold">Mening Kurslarim</h2>
+                <p className="text-muted-foreground">Davom eting va maqsadlaringizga erishing</p>
+              </div>
+            </div>
+            
             {enrolledCourses && enrolledCourses.length === 0 ? (
-              <p className="text-center text-muted-foreground py-16">Hali hech qanday kursga yozilmagansiz</p>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="text-center py-16"
+              >
+                <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-muted/50 flex items-center justify-center">
+                  <BookOpen className="w-10 h-10 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Hali kurslaringiz yo'q</h3>
+                <p className="text-muted-foreground mb-4">Yangi kurslarni ko'rib chiqing va o'rganishni boshlang</p>
+                <Button onClick={() => setLocation('/explore')}>
+                  Kurslarni Ko'rish
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </motion.div>
             ) : (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {enrolledCourses?.map((course, index) => {
@@ -154,52 +290,75 @@ export default function StudentCourses() {
                   
                   if (progress) {
                     return (
-                      <ProgressCard 
+                      <motion.div
                         key={course.id}
-                        progress={progress}
-                        onContinue={handleContinue}
-                      />
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                      >
+                        <ProgressCard 
+                          progress={progress}
+                          onContinue={handleContinue}
+                        />
+                      </motion.div>
                     );
                   }
                   
                   return (
-                    <div key={course.id} onClick={() => handleViewCourse(course.id)} className="cursor-pointer">
+                    <motion.div 
+                      key={course.id} 
+                      onClick={() => handleViewCourse(course.id)} 
+                      className="cursor-pointer"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
                       <CourseCard 
                         course={course} 
                         onViewDemo={handleViewDemo}
                         isEnrolled={true}
                         index={index}
                       />
-                    </div>
+                    </motion.div>
                   );
                 })}
               </div>
             )}
           </TabsContent>
 
-          <TabsContent value="all" className="space-y-4">
-            <h2 className="text-3xl font-bold">Barcha Kurslar</h2>
+          <TabsContent value="all" className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold">Barcha Kurslar</h2>
+              <p className="text-muted-foreground">Sizga mos kursni tanlang</p>
+            </div>
+            
             {allCourses && allCourses.length === 0 ? (
               <p className="text-center text-muted-foreground py-16">Hozircha kurslar yo'q</p>
             ) : (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {allCourses?.map((course, index) => (
-                  <CourseCard
+                  <motion.div
                     key={course.id}
-                    course={course}
-                    onEnroll={handleEnroll}
-                    onViewDemo={handleViewDemo}
-                    isEnrolled={enrolledCourseIds.has(course.id)}
-                    index={index}
-                  />
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <CourseCard
+                      course={course}
+                      onEnroll={handleEnroll}
+                      onViewDemo={handleViewDemo}
+                      isEnrolled={enrolledCourseIds.has(course.id)}
+                      index={index}
+                    />
+                  </motion.div>
                 ))}
               </div>
             )}
           </TabsContent>
 
-          <TabsContent value="plans" className="space-y-4">
-            <div className="space-y-2">
-              <h2 className="text-3xl font-bold">Obuna Tariflari</h2>
+          <TabsContent value="plans" className="space-y-6">
+            <div className="text-center max-w-2xl mx-auto mb-8">
+              <h2 className="text-2xl md:text-3xl font-bold mb-2">Obuna Tariflari</h2>
               <p className="text-muted-foreground">
                 O'zingizga mos tarifni tanlang va kurs xarid qilishda chegirmalardan foydalaning
               </p>
@@ -209,112 +368,119 @@ export default function StudentCourses() {
               <p className="text-center text-muted-foreground py-16">Hozircha tariflar yo'q</p>
             ) : (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {subscriptionPlans?.map((plan) => (
-                  <Card key={plan.id} className="relative" data-testid={`card-plan-${plan.id}`}>
-                    {plan.isPopular && (
-                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                        <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-xs font-semibold">
-                          Mashhur
-                        </span>
-                      </div>
-                    )}
-                    <CardHeader>
-                      <CardTitle className="text-2xl" data-testid={`text-plan-name-${plan.id}`}>
-                        {plan.name}
-                      </CardTitle>
-                      {plan.description && (
-                        <CardDescription data-testid={`text-plan-description-${plan.id}`}>
-                          {plan.description}
-                        </CardDescription>
-                      )}
-                      {plan.price && (
-                        <div className="pt-4">
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-4xl font-bold" data-testid={`text-plan-price-${plan.id}`}>
-                              {plan.price.toLocaleString('uz-UZ')}
-                            </span>
-                            <span className="text-muted-foreground">so'm</span>
-                          </div>
-                          {plan.duration && (
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {plan.duration} {plan.durationType === 'month' ? 'oylik' : 'yillik'}
-                            </p>
-                          )}
+                {subscriptionPlans?.map((plan, index) => (
+                  <motion.div
+                    key={plan.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <Card 
+                      className={`relative h-full transition-all ${plan.isPopular ? 'border-primary shadow-xl shadow-primary/10 scale-105' : 'hover-elevate'}`}
+                      data-testid={`card-plan-${plan.id}`}
+                    >
+                      {plan.isPopular && (
+                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+                          <span className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground px-4 py-1.5 rounded-full text-xs font-bold shadow-lg">
+                            Mashhur
+                          </span>
                         </div>
                       )}
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-3">
-                        {/* Base Features */}
-                        {plan.features?.tests && (
-                          <div className="flex items-start gap-2">
-                            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500 mt-0.5 flex-shrink-0" />
-                            <span className="text-sm">
-                              {plan.features.testsLabel || 'Testlar'}: {plan.features.tests === -1 ? 'Cheksiz' : plan.features.tests}
-                            </span>
+                      <CardHeader className="pb-4">
+                        <CardTitle className="text-2xl" data-testid={`text-plan-name-${plan.id}`}>
+                          {plan.name}
+                        </CardTitle>
+                        {plan.description && (
+                          <CardDescription data-testid={`text-plan-description-${plan.id}`}>
+                            {plan.description}
+                          </CardDescription>
+                        )}
+                        {plan.price && (
+                          <div className="pt-4">
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent" data-testid={`text-plan-price-${plan.id}`}>
+                                {plan.price.toLocaleString('uz-UZ')}
+                              </span>
+                              <span className="text-muted-foreground">so'm</span>
+                            </div>
+                            {plan.duration && (
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {plan.duration} {plan.durationType === 'month' ? 'oylik' : 'yillik'}
+                              </p>
+                            )}
                           </div>
                         )}
-                        {plan.features?.assignments && (
-                          <div className="flex items-start gap-2">
-                            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500 mt-0.5 flex-shrink-0" />
-                            <span className="text-sm">
-                              {plan.features.assignmentsLabel || 'Topshiriqlar'}: {plan.features.assignments === -1 ? 'Cheksiz' : plan.features.assignments}
-                            </span>
-                          </div>
-                        )}
-                        {plan.features?.certificate && (
-                          <div className="flex items-start gap-2">
-                            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500 mt-0.5 flex-shrink-0" />
-                            <span className="text-sm">{plan.features.certificateLabel || 'Sertifikat'}</span>
-                          </div>
-                        )}
-                        {plan.features?.liveClassesPerWeek !== undefined && plan.features.liveClassesPerWeek > 0 && (
-                          <div className="flex items-start gap-2">
-                            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500 mt-0.5 flex-shrink-0" />
-                            <span className="text-sm">
-                              {plan.features.liveClassesLabel || 'Jonli darslar'}: {plan.features.liveClassesPerWeek}/hafta
-                            </span>
-                          </div>
-                        )}
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="space-y-3">
+                          {plan.features?.tests && (
+                            <div className="flex items-start gap-2">
+                              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500 mt-0.5 flex-shrink-0" />
+                              <span className="text-sm">
+                                {plan.features.testsLabel || 'Testlar'}: {plan.features.tests === -1 ? 'Cheksiz' : plan.features.tests}
+                              </span>
+                            </div>
+                          )}
+                          {plan.features?.assignments && (
+                            <div className="flex items-start gap-2">
+                              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500 mt-0.5 flex-shrink-0" />
+                              <span className="text-sm">
+                                {plan.features.assignmentsLabel || 'Topshiriqlar'}: {plan.features.assignments === -1 ? 'Cheksiz' : plan.features.assignments}
+                              </span>
+                            </div>
+                          )}
+                          {plan.features?.certificate && (
+                            <div className="flex items-start gap-2">
+                              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500 mt-0.5 flex-shrink-0" />
+                              <span className="text-sm">{plan.features.certificateLabel || 'Sertifikat'}</span>
+                            </div>
+                          )}
+                          {plan.features?.liveClassesPerWeek !== undefined && plan.features.liveClassesPerWeek > 0 && (
+                            <div className="flex items-start gap-2">
+                              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500 mt-0.5 flex-shrink-0" />
+                              <span className="text-sm">
+                                {plan.features.liveClassesLabel || 'Jonli darslar'}: {plan.features.liveClassesPerWeek}/hafta
+                              </span>
+                            </div>
+                          )}
 
-                        {/* Dynamic Features */}
-                        {plan.features?.dynamicFeatures?.map((feature: any, idx: number) => (
-                          <div key={idx} className="flex items-start gap-2">
-                            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500 mt-0.5 flex-shrink-0" />
-                            <span className="text-sm">{feature.label}</span>
-                          </div>
-                        ))}
+                          {plan.features?.dynamicFeatures?.map((feature: any, idx: number) => (
+                            <div key={idx} className="flex items-start gap-2">
+                              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500 mt-0.5 flex-shrink-0" />
+                              <span className="text-sm">{feature.label}</span>
+                            </div>
+                          ))}
 
-                        {/* Custom Features */}
-                        {plan.features?.customFeatures?.map((feature: any, idx: number) => (
-                          <div key={idx} className="flex items-start gap-2">
-                            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500 mt-0.5 flex-shrink-0" />
-                            <span className="text-sm">{feature}</span>
-                          </div>
-                        ))}
+                          {plan.features?.customFeatures?.map((feature: any, idx: number) => (
+                            <div key={idx} className="flex items-start gap-2">
+                              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500 mt-0.5 flex-shrink-0" />
+                              <span className="text-sm">{feature}</span>
+                            </div>
+                          ))}
 
-                        {/* Bonuses */}
-                        {plan.features?.bonuses && plan.features.bonuses.length > 0 && (
-                          <div className="pt-2 border-t">
-                            {plan.features.bonuses.map((bonus: any, idx: number) => (
-                              <div key={idx} className="flex items-start gap-2">
-                                <Star className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
-                                <span className="text-sm font-medium">{bonus}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                          {plan.features?.bonuses && plan.features.bonuses.length > 0 && (
+                            <div className="pt-2 border-t">
+                              {plan.features.bonuses.map((bonus: any, idx: number) => (
+                                <div key={idx} className="flex items-start gap-2">
+                                  <Star className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                                  <span className="text-sm font-medium">{bonus}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
 
-                      <Button 
-                        className="w-full"
-                        variant={plan.isPopular ? "default" : "outline"}
-                        data-testid={`button-select-plan-${plan.id}`}
-                      >
-                        Tanlash
-                      </Button>
-                    </CardContent>
-                  </Card>
+                        <Button 
+                          className={`w-full ${plan.isPopular ? 'bg-gradient-to-r from-primary to-primary/80 shadow-lg' : ''}`}
+                          variant={plan.isPopular ? "default" : "outline"}
+                          size="lg"
+                          data-testid={`button-select-plan-${plan.id}`}
+                        >
+                          Tanlash
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
                 ))}
               </div>
             )}
