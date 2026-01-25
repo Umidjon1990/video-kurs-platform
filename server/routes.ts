@@ -4799,6 +4799,235 @@ So'zlar soni: ${submission.wordCount}`;
     }
   });
 
+  // ============ COURSE MODULE ROUTES ============
+  
+  // Get all modules for a course
+  app.get('/api/courses/:courseId/modules', async (req, res) => {
+    try {
+      const { courseId } = req.params;
+      const modules = await storage.getCourseModules(courseId);
+      res.json(modules);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Create a new module for a course (instructor only)
+  app.post('/api/courses/:courseId/modules', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id || req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      if (!user || (user.role !== 'instructor' && user.role !== 'admin')) {
+        return res.status(403).json({ message: 'Faqat o\'qituvchilar modul qo\'sha oladi' });
+      }
+      
+      const { courseId } = req.params;
+      const course = await storage.getCourse(courseId);
+      if (!course) {
+        return res.status(404).json({ message: 'Kurs topilmadi' });
+      }
+      
+      // Verify instructor owns the course
+      if (user.role === 'instructor' && course.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu kursga modul qo\'shish huquqi yo\'q' });
+      }
+      
+      const { title, description, order } = req.body;
+      const module = await storage.createCourseModule({
+        courseId,
+        title,
+        description: description || null,
+        order: order || 0,
+        isActive: true,
+      });
+      
+      res.json(module);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Update a module
+  app.patch('/api/modules/:moduleId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id || req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      if (!user || (user.role !== 'instructor' && user.role !== 'admin')) {
+        return res.status(403).json({ message: 'Faqat o\'qituvchilar modul yangilay oladi' });
+      }
+      
+      const { moduleId } = req.params;
+      const existingModule = await storage.getCourseModule(moduleId);
+      if (!existingModule) {
+        return res.status(404).json({ message: 'Modul topilmadi' });
+      }
+      
+      // Verify instructor owns the course
+      const course = await storage.getCourse(existingModule.courseId);
+      if (user.role === 'instructor' && course?.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu modulni yangilash huquqi yo\'q' });
+      }
+      
+      const { title, description, order, isActive } = req.body;
+      const updated = await storage.updateCourseModule(moduleId, {
+        title,
+        description,
+        order,
+        isActive,
+      });
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Delete a module
+  app.delete('/api/modules/:moduleId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id || req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      if (!user || (user.role !== 'instructor' && user.role !== 'admin')) {
+        return res.status(403).json({ message: 'Faqat o\'qituvchilar modul o\'chira oladi' });
+      }
+      
+      const { moduleId } = req.params;
+      const existingModule = await storage.getCourseModule(moduleId);
+      if (!existingModule) {
+        return res.status(404).json({ message: 'Modul topilmadi' });
+      }
+      
+      // Verify instructor owns the course
+      const course = await storage.getCourse(existingModule.courseId);
+      if (user.role === 'instructor' && course?.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu modulni o\'chirish huquqi yo\'q' });
+      }
+      
+      await storage.deleteCourseModule(moduleId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // ============ LESSON SECTION ROUTES ============
+  
+  // Get all sections for a lesson
+  app.get('/api/lessons/:lessonId/sections', async (req, res) => {
+    try {
+      const { lessonId } = req.params;
+      const sections = await storage.getLessonSections(lessonId);
+      res.json(sections);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Create a new section for a lesson (instructor only)
+  app.post('/api/lessons/:lessonId/sections', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id || req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      if (!user || (user.role !== 'instructor' && user.role !== 'admin')) {
+        return res.status(403).json({ message: 'Faqat o\'qituvchilar section qo\'sha oladi' });
+      }
+      
+      const { lessonId } = req.params;
+      const lesson = await storage.getLesson(lessonId);
+      if (!lesson) {
+        return res.status(404).json({ message: 'Dars topilmadi' });
+      }
+      
+      // Verify instructor owns the course
+      const course = await storage.getCourse(lesson.courseId);
+      if (user.role === 'instructor' && course?.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu darsga section qo\'shish huquqi yo\'q' });
+      }
+      
+      const { title, description, videoUrl, videoPlatform, duration, order } = req.body;
+      const section = await storage.createLessonSection({
+        lessonId,
+        title,
+        description: description || null,
+        videoUrl,
+        videoPlatform: videoPlatform || 'youtube',
+        duration: duration || 0,
+        order: order || 0,
+      });
+      
+      res.json(section);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Update a section
+  app.patch('/api/sections/:sectionId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id || req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      if (!user || (user.role !== 'instructor' && user.role !== 'admin')) {
+        return res.status(403).json({ message: 'Faqat o\'qituvchilar section yangilay oladi' });
+      }
+      
+      const { sectionId } = req.params;
+      const existingSection = await storage.getLessonSection(sectionId);
+      if (!existingSection) {
+        return res.status(404).json({ message: 'Section topilmadi' });
+      }
+      
+      // Verify instructor owns the course
+      const lesson = await storage.getLesson(existingSection.lessonId);
+      const course = lesson ? await storage.getCourse(lesson.courseId) : null;
+      if (user.role === 'instructor' && course?.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu sectionni yangilash huquqi yo\'q' });
+      }
+      
+      const { title, description, videoUrl, videoPlatform, duration, order } = req.body;
+      const updated = await storage.updateLessonSection(sectionId, {
+        title,
+        description,
+        videoUrl,
+        videoPlatform,
+        duration,
+        order,
+      });
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Delete a section
+  app.delete('/api/sections/:sectionId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id || req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      if (!user || (user.role !== 'instructor' && user.role !== 'admin')) {
+        return res.status(403).json({ message: 'Faqat o\'qituvchilar section o\'chira oladi' });
+      }
+      
+      const { sectionId } = req.params;
+      const existingSection = await storage.getLessonSection(sectionId);
+      if (!existingSection) {
+        return res.status(404).json({ message: 'Section topilmadi' });
+      }
+      
+      // Verify instructor owns the course
+      const lesson = await storage.getLesson(existingSection.lessonId);
+      const course = lesson ? await storage.getCourse(lesson.courseId) : null;
+      if (user.role === 'instructor' && course?.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu sectionni o\'chirish huquqi yo\'q' });
+      }
+      
+      await storage.deleteLessonSection(sectionId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
