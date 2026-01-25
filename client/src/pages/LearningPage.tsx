@@ -36,6 +36,11 @@ export default function LearningPage() {
   const [ratingDialog, setRatingDialog] = useState(false);
   const [selectedRating, setSelectedRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
+  
+  // Essay state
+  const [essayText, setEssayText] = useState("");
+  const [essayWordCount, setEssayWordCount] = useState(0);
+  const [isCheckingEssay, setIsCheckingEssay] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -106,6 +111,17 @@ export default function LearningPage() {
     enabled: !!courseId && isAuthenticated,
   });
 
+  // Essay question and submission for current lesson
+  const { data: essayQuestion } = useQuery<any>({
+    queryKey: ["/api/lessons", currentLessonId, "essay-question"],
+    enabled: !!currentLessonId,
+  });
+
+  const { data: essaySubmission, refetch: refetchEssaySubmission } = useQuery<any>({
+    queryKey: ["/api/lessons", currentLessonId, "essay-submission"],
+    enabled: !!currentLessonId && isAuthenticated,
+  });
+
   // Fetch user's course rating
   const { data: userCourseRating } = useQuery<{ rating: number; review?: string } | null>({
     queryKey: ["/api/courses", courseId, "rating/user"],
@@ -119,6 +135,63 @@ export default function LearningPage() {
       setReviewText(userCourseRating.review || "");
     }
   }, [userCourseRating]);
+
+  // Essay submission mutation
+  const submitEssayMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentLessonId) return;
+      const response = await apiRequest("POST", `/api/lessons/${currentLessonId}/essay-submission`, {
+        essayText,
+        wordCount: essayWordCount,
+      });
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/lessons", currentLessonId, "essay-submission"] });
+      toast({
+        title: "Insho yuborildi",
+        description: "Inshongiz muvaffaqiyatli saqlandi. Endi AI tekshiruvini boshlashingiz mumkin.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Essay AI check mutation
+  const checkEssayMutation = useMutation({
+    mutationFn: async (submissionId: string) => {
+      setIsCheckingEssay(true);
+      const response = await apiRequest("POST", `/api/essay-submissions/${submissionId}/check`, {});
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/lessons", currentLessonId, "essay-submission"] });
+      setIsCheckingEssay(false);
+      toast({
+        title: "Tekshirish tugadi",
+        description: "AI tekshiruvi tugadi. Natijalarni ko'rishingiz mumkin.",
+      });
+    },
+    onError: (error: Error) => {
+      setIsCheckingEssay(false);
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Count Arabic words
+  const countArabicWords = (text: string) => {
+    if (!text.trim()) return 0;
+    // Split by whitespace and filter out empty strings
+    return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+  };
+
+  // Handle essay text change
+  const handleEssayChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value;
+    setEssayText(text);
+    setEssayWordCount(countArabicWords(text));
+  };
 
   const submitRatingMutation = useMutation({
     mutationFn: async () => {
@@ -587,10 +660,11 @@ export default function LearningPage() {
               </Card>
 
               <Tabs defaultValue="overview">
-                <TabsList>
+                <TabsList className="flex-wrap">
                   <TabsTrigger value="overview" data-testid="tab-overview">Umumiy Ma'lumot</TabsTrigger>
                   <TabsTrigger value="assignments" data-testid="tab-assignments">Vazifalar</TabsTrigger>
                   <TabsTrigger value="tests" data-testid="tab-tests">Testlar</TabsTrigger>
+                  <TabsTrigger value="essay" data-testid="tab-essay">Insho</TabsTrigger>
                   <TabsTrigger value="results" data-testid="tab-results">Natijalar</TabsTrigger>
                 </TabsList>
 
@@ -674,6 +748,154 @@ export default function LearningPage() {
                     <Card>
                       <CardContent className="py-8">
                         <p className="text-center text-muted-foreground">Bu darsda testlar yo'q</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="essay" className="space-y-4">
+                  {essayQuestion ? (
+                    <Card data-testid="essay-question-card">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <FileText className="w-5 h-5" />
+                          Arab Tili Inshosi
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                          So'zlar soni: {essayQuestion.minWords} - {essayQuestion.maxWords}
+                        </p>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {/* Essay Question */}
+                        <div className="p-4 bg-primary/5 border rounded-lg" dir="rtl">
+                          <p className="text-lg font-arabic leading-relaxed" style={{ fontFamily: "'Scheherazade New', serif" }}>
+                            {essayQuestion.questionText}
+                          </p>
+                        </div>
+
+                        {/* Instructions */}
+                        {essayQuestion.instructions && (
+                          <div className="text-sm text-muted-foreground">
+                            <strong>Ko'rsatmalar:</strong> {essayQuestion.instructions}
+                          </div>
+                        )}
+
+                        {/* Already submitted - show feedback if checked */}
+                        {essaySubmission ? (
+                          <div className="space-y-4">
+                            {/* Show submitted text */}
+                            <div className="p-4 border rounded-lg bg-muted/30" dir="rtl">
+                              <Label className="block mb-2 text-left" dir="ltr">Sizning javobingiz:</Label>
+                              <p className="font-arabic leading-relaxed whitespace-pre-wrap" style={{ fontFamily: "'Scheherazade New', serif" }}>
+                                {essaySubmission.essayText}
+                              </p>
+                              <p className="text-sm text-muted-foreground mt-2 text-left" dir="ltr">
+                                So'zlar soni: {essaySubmission.wordCount}
+                              </p>
+                            </div>
+
+                            {/* AI Feedback */}
+                            {essaySubmission.aiChecked ? (
+                              <Card className="border-primary/30 bg-primary/5">
+                                <CardHeader>
+                                  <CardTitle className="text-lg flex items-center gap-2">
+                                    <CheckCircle className="w-5 h-5 text-green-500" />
+                                    AI Tekshiruvi Natijalari
+                                  </CardTitle>
+                                  {essaySubmission.overallScore !== null && (
+                                    <Badge variant={essaySubmission.overallScore >= 70 ? "default" : "secondary"}>
+                                      Ball: {essaySubmission.overallScore}/100
+                                    </Badge>
+                                  )}
+                                </CardHeader>
+                                <CardContent>
+                                  <div className="prose prose-sm max-w-none">
+                                    <pre className="whitespace-pre-wrap text-sm bg-background p-4 rounded-lg border">
+                                      {essaySubmission.aiFeedback}
+                                    </pre>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ) : (
+                              <div className="flex flex-col gap-3">
+                                <p className="text-sm text-amber-600 dark:text-amber-400">
+                                  Inshongiz hali tekshirilmagan. AI tekshiruvini boshlang.
+                                </p>
+                                <Button
+                                  onClick={() => checkEssayMutation.mutate(essaySubmission.id)}
+                                  disabled={isCheckingEssay || checkEssayMutation.isPending}
+                                  data-testid="button-check-essay"
+                                >
+                                  {isCheckingEssay || checkEssayMutation.isPending ? (
+                                    <>
+                                      <span className="animate-spin mr-2">⏳</span>
+                                      Tekshirilmoqda...
+                                    </>
+                                  ) : (
+                                    "AI bilan Tekshirish (1 marta)"
+                                  )}
+                                </Button>
+                                <p className="text-xs text-muted-foreground">
+                                  Diqqat: Har bir insho faqat 1 marta tekshirilishi mumkin!
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          /* Essay input form */
+                          <div className="space-y-4">
+                            <div>
+                              <Label htmlFor="essay-input">Javobingizni yozing (Arab tilida):</Label>
+                              <Textarea
+                                id="essay-input"
+                                value={essayText}
+                                onChange={handleEssayChange}
+                                placeholder="...اكتب إجابتك هنا"
+                                className="min-h-[200px] text-lg"
+                                dir="rtl"
+                                style={{ fontFamily: "'Scheherazade New', serif" }}
+                                data-testid="input-essay-text"
+                              />
+                              <div className="flex justify-between mt-2 text-sm">
+                                <span className={essayWordCount < essayQuestion.minWords ? "text-red-500" : "text-muted-foreground"}>
+                                  So'zlar: {essayWordCount}
+                                </span>
+                                <span className="text-muted-foreground">
+                                  Min: {essayQuestion.minWords} | Max: {essayQuestion.maxWords}
+                                </span>
+                              </div>
+                            </div>
+
+                            <Button
+                              onClick={() => submitEssayMutation.mutate()}
+                              disabled={
+                                submitEssayMutation.isPending ||
+                                essayWordCount < essayQuestion.minWords ||
+                                essayWordCount > essayQuestion.maxWords
+                              }
+                              data-testid="button-submit-essay"
+                            >
+                              {submitEssayMutation.isPending ? "Yuklanmoqda..." : "Inshoni Yuborish"}
+                            </Button>
+
+                            {essayWordCount < essayQuestion.minWords && (
+                              <p className="text-sm text-amber-600">
+                                Kamida {essayQuestion.minWords} so'z yozing ({essayQuestion.minWords - essayWordCount} so'z qoldi)
+                              </p>
+                            )}
+                            {essayWordCount > essayQuestion.maxWords && (
+                              <p className="text-sm text-red-500">
+                                Maksimal {essayQuestion.maxWords} so'z yozishingiz mumkin ({essayWordCount - essayQuestion.maxWords} so'z ortiqcha)
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <Card>
+                      <CardContent className="py-8">
+                        <p className="text-center text-muted-foreground">Bu darsda insho topshirig'i yo'q</p>
                       </CardContent>
                     </Card>
                   )}

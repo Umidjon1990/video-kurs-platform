@@ -10,7 +10,7 @@ import { ObjectStorageService } from "./objectStorage";
 import { db } from "./db";
 import bcrypt from "bcryptjs";
 import passport from "passport";
-import { users, courses, lessons, assignments, tests, questions, questionOptions, enrollments, submissions, testAttempts, notifications, conversations, messages, siteSettings, testimonials, subscriptionPlans, coursePlanPricing, userSubscriptions, passwordResetRequests, speakingTests, speakingTestSections, speakingQuestions, speakingSubmissions, speakingAnswers, speakingEvaluations } from "@shared/schema";
+import { users, courses, lessons, assignments, tests, questions, questionOptions, enrollments, submissions, testAttempts, notifications, conversations, messages, siteSettings, testimonials, subscriptionPlans, coursePlanPricing, userSubscriptions, passwordResetRequests, speakingTests, speakingTestSections, speakingQuestions, speakingSubmissions, speakingAnswers, speakingEvaluations, essaySubmissions } from "@shared/schema";
 import { eq, and, or, desc, sql, count, avg, inArray } from "drizzle-orm";
 import {
   insertCourseSchema,
@@ -1373,11 +1373,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Extract essay fields before parsing lesson schema
+      const { essayQuestion, essayMinWords, essayMaxWords, essayInstructions, ...lessonFields } = req.body;
+      
       const lessonData = insertLessonSchema.parse({
-        ...req.body,
+        ...lessonFields,
         courseId,
       });
       const lesson = await storage.createLesson(lessonData);
+      
+      // If essay question is provided, create the essay question for this lesson
+      if (essayQuestion && essayQuestion.trim()) {
+        await storage.createLessonEssayQuestion({
+          lessonId: lesson.id,
+          questionText: essayQuestion.trim(),
+          minWords: essayMinWords ? parseInt(essayMinWords) : 50,
+          maxWords: essayMaxWords ? parseInt(essayMaxWords) : 200,
+          instructions: essayInstructions || null,
+        });
+      }
+      
       res.json(lesson);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1477,7 +1492,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      const updatedLesson = await storage.updateLesson(lessonId, req.body);
+      // Extract essay fields before updating lesson
+      const { essayQuestion, essayMinWords, essayMaxWords, essayInstructions, ...lessonFields } = req.body;
+      
+      const updatedLesson = await storage.updateLesson(lessonId, lessonFields);
+      
+      // Handle essay question update/create
+      if (essayQuestion !== undefined) {
+        const existingEssay = await storage.getLessonEssayQuestion(lessonId);
+        if (essayQuestion && essayQuestion.trim()) {
+          if (existingEssay) {
+            // Update existing essay question
+            await storage.updateLessonEssayQuestion(existingEssay.id, {
+              questionText: essayQuestion.trim(),
+              minWords: essayMinWords ? parseInt(essayMinWords) : 50,
+              maxWords: essayMaxWords ? parseInt(essayMaxWords) : 200,
+              instructions: essayInstructions || null,
+            });
+          } else {
+            // Create new essay question
+            await storage.createLessonEssayQuestion({
+              lessonId,
+              questionText: essayQuestion.trim(),
+              minWords: essayMinWords ? parseInt(essayMinWords) : 50,
+              maxWords: essayMaxWords ? parseInt(essayMaxWords) : 200,
+              instructions: essayInstructions || null,
+            });
+          }
+        } else if (existingEssay) {
+          // Remove essay question if cleared
+          await storage.deleteLessonEssayQuestion(existingEssay.id);
+        }
+      }
+      
       res.json(updatedLesson);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -2617,6 +2664,164 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const progress = await storage.getLessonProgressByCourse(courseId, userId);
       res.json(progress);
     } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ============ ESSAY QUESTION ROUTES ============
+  // Get essay question for a lesson (instructor/student)
+  app.get('/api/lessons/:lessonId/essay-question', async (req: any, res) => {
+    try {
+      const { lessonId } = req.params;
+      const essayQuestion = await storage.getLessonEssayQuestion(lessonId);
+      res.json(essayQuestion || null);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get student's essay submission for a lesson
+  app.get('/api/lessons/:lessonId/essay-submission', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { lessonId } = req.params;
+      
+      // First get the essay question for this lesson
+      const essayQuestion = await storage.getLessonEssayQuestion(lessonId);
+      if (!essayQuestion) {
+        return res.json(null);
+      }
+      
+      const submission = await storage.getEssaySubmission(essayQuestion.id, userId);
+      res.json(submission || null);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Submit essay for a lesson
+  app.post('/api/lessons/:lessonId/essay-submission', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { lessonId } = req.params;
+      const { essayText, wordCount } = req.body;
+      
+      // Get the essay question
+      const essayQuestion = await storage.getLessonEssayQuestion(lessonId);
+      if (!essayQuestion) {
+        return res.status(404).json({ message: "Bu dars uchun insho topshirig'i mavjud emas" });
+      }
+      
+      // Check if student already submitted
+      const existingSubmission = await storage.getEssaySubmission(essayQuestion.id, userId);
+      if (existingSubmission) {
+        return res.status(400).json({ message: "Siz allaqachon insho yuborgansiz" });
+      }
+      
+      // Validate word count
+      if (wordCount < essayQuestion.minWords) {
+        return res.status(400).json({ message: `Kamida ${essayQuestion.minWords} so'z yozing` });
+      }
+      if (wordCount > essayQuestion.maxWords) {
+        return res.status(400).json({ message: `Maksimal ${essayQuestion.maxWords} so'z yozishingiz mumkin` });
+      }
+      
+      const submission = await storage.createEssaySubmission({
+        essayQuestionId: essayQuestion.id,
+        studentId: userId,
+        essayText,
+        wordCount,
+      });
+      
+      res.json(submission);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Check essay with AI (one-time only)
+  app.post('/api/essay-submissions/:submissionId/check', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { submissionId } = req.params;
+      
+      // Get submission and verify ownership
+      const [submission] = await db
+        .select()
+        .from(essaySubmissions)
+        .where(eq(essaySubmissions.id, submissionId));
+      
+      if (!submission) {
+        return res.status(404).json({ message: "Insho topilmadi" });
+      }
+      
+      if (submission.studentId !== userId) {
+        return res.status(403).json({ message: "Ruxsat berilmagan" });
+      }
+      
+      if (submission.aiChecked) {
+        return res.status(400).json({ message: "Bu insho allaqachon tekshirilgan. Faqat bir marta tekshirish mumkin." });
+      }
+      
+      // Get the essay question for context
+      const essayQuestion = await storage.getLessonEssayQuestion(submission.essayQuestionId);
+      
+      // Call OpenAI API to check the essay
+      const OpenAI = (await import('openai')).default;
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      
+      const systemPrompt = `Siz arab tili o'qituvchisisiz. O'quvchining arab tilidagi inshosini tekshiring va o'zbek tilida batafsil javob bering.
+
+Quyidagilarni tekshiring:
+1. Grammatika xatolari - Arab tili grammatikasi bo'yicha xatolarni toping
+2. Imlo xatolari - Yozuv xatolarini aniqlang
+3. Uslub - Matn uslubi va ifoda to'g'riligini baholang
+4. Mazmun - Matnning mazmuni va mantiqiy bog'liqligini tekshiring
+
+Javobingizni quyidagi formatda bering:
+- Umumiy ball (0-100)
+- Grammatika xatolari ro'yxati (arabcha va to'g'ri varianti bilan)
+- Imlo xatolari ro'yxati
+- Uslub bo'yicha tavsiyalar
+- Umumiy sharh va tavsiyalar
+
+Javob faqat O'ZBEK tilida bo'lsin!`;
+
+      const userPrompt = `Insho savoli: ${essayQuestion?.questionText || "Mavzu berilmagan"}
+
+O'quvchi javodi:
+${submission.essayText}
+
+So'zlar soni: ${submission.wordCount}`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        max_tokens: 2000,
+        temperature: 0.7,
+      });
+
+      const aiResponse = response.choices[0]?.message?.content || "Xatolik yuz berdi";
+      
+      // Parse AI response to extract score (simplified)
+      let overallScore = 70; // Default score
+      const scoreMatch = aiResponse.match(/(\d{1,3})\s*(?:ball|%|\/100)/i);
+      if (scoreMatch) {
+        overallScore = Math.min(100, Math.max(0, parseInt(scoreMatch[1])));
+      }
+      
+      // Update submission with AI feedback
+      const updatedSubmission = await storage.updateEssaySubmissionAI(submissionId, {
+        aiFeedback: aiResponse,
+        overallScore,
+      });
+      
+      res.json(updatedSubmission);
+    } catch (error: any) {
+      console.error('[Essay Check] Error:', error);
       res.status(500).json({ message: error.message });
     }
   });

@@ -93,6 +93,12 @@ import {
   type InsertResourceType,
   type CourseResourceType,
   type InsertCourseResourceType,
+  type LessonEssayQuestion,
+  type InsertLessonEssayQuestion,
+  type EssaySubmission,
+  type InsertEssaySubmission,
+  lessonEssayQuestions,
+  essaySubmissions,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, sql, inArray } from "drizzle-orm";
@@ -320,6 +326,18 @@ export interface IStorage {
   // Course Resource Type operations
   getCourseResourceTypes(courseId: string): Promise<(CourseResourceType & { resourceType: ResourceType })[]>;
   setCourseResourceTypes(courseId: string, resourceTypeIds: string[]): Promise<void>;
+  
+  // ============ ESSAY QUESTION OPERATIONS ============
+  // Lesson Essay Question operations
+  createLessonEssayQuestion(question: InsertLessonEssayQuestion): Promise<LessonEssayQuestion>;
+  getLessonEssayQuestion(lessonId: string): Promise<LessonEssayQuestion | undefined>;
+  updateLessonEssayQuestion(id: string, data: Partial<InsertLessonEssayQuestion>): Promise<LessonEssayQuestion>;
+  deleteLessonEssayQuestion(id: string): Promise<void>;
+  
+  // Essay Submission operations
+  createEssaySubmission(submission: InsertEssaySubmission): Promise<EssaySubmission>;
+  getEssaySubmission(essayQuestionId: string, studentId: string): Promise<EssaySubmission | undefined>;
+  updateEssaySubmissionAI(id: string, feedback: { aiFeedback: string; grammarErrors?: string; spellingErrors?: string; styleNotes?: string; overallScore: number }): Promise<EssaySubmission>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2562,6 +2580,70 @@ export class DatabaseStorage implements IStorage {
       }));
       await db.insert(courseResourceTypes).values(values);
     }
+  }
+  
+  // ============ ESSAY QUESTION OPERATIONS ============
+  async createLessonEssayQuestion(question: InsertLessonEssayQuestion): Promise<LessonEssayQuestion> {
+    const [result] = await db.insert(lessonEssayQuestions).values(question).returning();
+    return result;
+  }
+  
+  async getLessonEssayQuestion(lessonId: string): Promise<LessonEssayQuestion | undefined> {
+    const [result] = await db
+      .select()
+      .from(lessonEssayQuestions)
+      .where(and(
+        eq(lessonEssayQuestions.lessonId, lessonId),
+        eq(lessonEssayQuestions.isActive, true)
+      ));
+    return result;
+  }
+  
+  async updateLessonEssayQuestion(id: string, data: Partial<InsertLessonEssayQuestion>): Promise<LessonEssayQuestion> {
+    const [result] = await db
+      .update(lessonEssayQuestions)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(lessonEssayQuestions.id, id))
+      .returning();
+    return result;
+  }
+  
+  async deleteLessonEssayQuestion(id: string): Promise<void> {
+    await db.delete(lessonEssayQuestions).where(eq(lessonEssayQuestions.id, id));
+  }
+  
+  async createEssaySubmission(submission: InsertEssaySubmission): Promise<EssaySubmission> {
+    const [result] = await db.insert(essaySubmissions).values(submission).returning();
+    return result;
+  }
+  
+  async getEssaySubmission(essayQuestionId: string, studentId: string): Promise<EssaySubmission | undefined> {
+    const [result] = await db
+      .select()
+      .from(essaySubmissions)
+      .where(and(
+        eq(essaySubmissions.essayQuestionId, essayQuestionId),
+        eq(essaySubmissions.studentId, studentId)
+      ));
+    return result;
+  }
+  
+  async updateEssaySubmissionAI(id: string, feedback: { aiFeedback: string; grammarErrors?: string; spellingErrors?: string; styleNotes?: string; overallScore: number }): Promise<EssaySubmission> {
+    const [result] = await db
+      .update(essaySubmissions)
+      .set({
+        aiChecked: true,
+        aiFeedback: feedback.aiFeedback,
+        grammarErrors: feedback.grammarErrors || null,
+        spellingErrors: feedback.spellingErrors || null,
+        styleNotes: feedback.styleNotes || null,
+        overallScore: feedback.overallScore,
+        checkedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(essaySubmissions.id, id))
+      .returning();
+    return result;
   }
 }
 

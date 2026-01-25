@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, EyeOff, Download, Megaphone, Users, User, MessageCircle, TrendingUp, Award, Activity, Settings, UserCheck, Upload, FileSpreadsheet, Mic } from "lucide-react";
+import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, EyeOff, Download, Megaphone, Users, User, MessageCircle, TrendingUp, Award, Activity, Settings, UserCheck, Upload, FileSpreadsheet, Mic, PenTool } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NotificationBell } from "@/components/NotificationBell";
 import { StarRating } from "@/components/StarRating";
@@ -102,6 +102,11 @@ export default function InstructorDashboard() {
     pdfUrl: "",
     duration: "",
     isDemo: false,
+    // Insho (essay) maydonlari
+    essayQuestion: "",
+    essayMinWords: "",
+    essayMaxWords: "",
+    essayInstructions: "",
   });
 
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
@@ -364,7 +369,7 @@ export default function InstructorDashboard() {
         description: editingLesson ? "Dars yangilandi" : "Dars qo'shildi" 
       });
       setIsAddLessonOpen(false);
-      setLessonForm({ title: "", videoUrl: "", description: "", pdfUrl: "", duration: "", isDemo: false });
+      setLessonForm({ title: "", videoUrl: "", description: "", pdfUrl: "", duration: "", isDemo: false, essayQuestion: "", essayMinWords: "", essayMaxWords: "", essayInstructions: "" });
       setEditingLesson(null);
     },
     onError: (error: Error) => {
@@ -1264,8 +1269,26 @@ export default function InstructorDashboard() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => {
+                                onClick={async () => {
                                   setEditingLesson(lesson);
+                                  // Fetch essay question if exists
+                                  let essayData = { essayQuestion: "", essayMinWords: "", essayMaxWords: "", essayInstructions: "" };
+                                  try {
+                                    const response = await fetch(`/api/lessons/${lesson.id}/essay-question`);
+                                    if (response.ok) {
+                                      const essayQuestion = await response.json();
+                                      if (essayQuestion) {
+                                        essayData = {
+                                          essayQuestion: essayQuestion.questionText || "",
+                                          essayMinWords: essayQuestion.minWords?.toString() || "",
+                                          essayMaxWords: essayQuestion.maxWords?.toString() || "",
+                                          essayInstructions: essayQuestion.instructions || "",
+                                        };
+                                      }
+                                    }
+                                  } catch (e) {
+                                    console.log("No essay question for this lesson");
+                                  }
                                   setLessonForm({
                                     title: lesson.title,
                                     videoUrl: lesson.videoUrl,
@@ -1273,6 +1296,7 @@ export default function InstructorDashboard() {
                                     pdfUrl: (lesson as any).pdfUrl || "",
                                     duration: lesson.duration?.toString() || "",
                                     isDemo: lesson.isDemo || false,
+                                    ...essayData,
                                   });
                                   setIsAddLessonOpen(true);
                                 }}
@@ -1917,7 +1941,7 @@ export default function InstructorDashboard() {
         setIsAddLessonOpen(open);
         if (!open) {
           setEditingLesson(null);
-          setLessonForm({ title: "", videoUrl: "", description: "", pdfUrl: "", duration: "", isDemo: false });
+          setLessonForm({ title: "", videoUrl: "", description: "", pdfUrl: "", duration: "", isDemo: false, essayQuestion: "", essayMinWords: "", essayMaxWords: "", essayInstructions: "" });
         }
       }}>
         <DialogContent data-testid="dialog-add-lesson">
@@ -2000,6 +2024,62 @@ Kinescope: https://kinescope.io/watch/...'
               <Label htmlFor="is-demo" className="cursor-pointer">
                 Bu sinov darsi (bepul ko'rish mumkin)
               </Label>
+            </div>
+            
+            {/* Insho (Essay) Bo'limi */}
+            <div className="border-t pt-4 mt-4">
+              <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
+                <PenTool className="w-4 h-4" />
+                Arab Tilida Insho Topshirig'i (ixtiyoriy)
+              </h4>
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="essay-question">Insho Savoli (Arabcha)</Label>
+                  <Textarea
+                    id="essay-question"
+                    value={lessonForm.essayQuestion}
+                    onChange={(e) => setLessonForm({ ...lessonForm, essayQuestion: e.target.value })}
+                    placeholder="اكتب موضوعًا عن..."
+                    className="text-right font-arabic"
+                    dir="rtl"
+                    data-testid="input-essay-question"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="essay-min-words">Minimal So'z Soni</Label>
+                    <Input
+                      id="essay-min-words"
+                      type="number"
+                      value={lessonForm.essayMinWords}
+                      onChange={(e) => setLessonForm({ ...lessonForm, essayMinWords: e.target.value })}
+                      placeholder="50"
+                      data-testid="input-essay-min-words"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="essay-max-words">Maksimal So'z Soni</Label>
+                    <Input
+                      id="essay-max-words"
+                      type="number"
+                      value={lessonForm.essayMaxWords}
+                      onChange={(e) => setLessonForm({ ...lessonForm, essayMaxWords: e.target.value })}
+                      placeholder="200"
+                      data-testid="input-essay-max-words"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="essay-instructions">Qo'shimcha Ko'rsatmalar (ixtiyoriy)</Label>
+                  <Input
+                    id="essay-instructions"
+                    value={lessonForm.essayInstructions}
+                    onChange={(e) => setLessonForm({ ...lessonForm, essayInstructions: e.target.value })}
+                    placeholder="Masalan: Kamida 3 ta dalil keltiring"
+                    data-testid="input-essay-instructions"
+                  />
+                </div>
+              </div>
             </div>
           </div>
           <DialogFooter>
