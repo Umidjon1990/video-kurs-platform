@@ -167,14 +167,21 @@ export default function HomePage() {
       <main className="flex-1">
       {/* Hero Section */}
       <motion.div 
-        className="relative gradient-hero border-b"
+        className="relative gradient-hero-enhanced border-b overflow-hidden"
         initial="hidden"
         animate="visible"
         variants={fadeInUp}
         transition={{ duration: 0.6 }}
       >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(0,0,0,0.1),transparent)]" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+        {/* Animated floating orbs */}
+        <div className="floating-orb w-[500px] h-[500px] bg-blue-500/30 dark:bg-blue-400/20 top-[-200px] left-[-100px]" style={{ animationDelay: '0s' }} />
+        <div className="floating-orb w-[400px] h-[400px] bg-purple-500/25 dark:bg-purple-400/15 top-[50%] right-[-150px]" style={{ animationDelay: '-5s' }} />
+        <div className="floating-orb w-[300px] h-[300px] bg-pink-500/20 dark:bg-pink-400/10 bottom-[-100px] left-[30%]" style={{ animationDelay: '-10s' }} />
+        
+        {/* Grid pattern overlay */}
+        <div className="absolute inset-0 grid-pattern opacity-50" />
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32">
           <div className="text-center space-y-6">
             <motion.h1 
               className="text-4xl md:text-6xl font-bold" 
@@ -230,11 +237,16 @@ export default function HomePage() {
       </motion.div>
 
       {/* Courses Grid */}
-      <div id="courses-section" className="relative">
-        {/* Background decoration */}
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent pointer-events-none" />
+      <div id="courses-section" className="relative overflow-hidden">
+        {/* Enhanced background decoration */}
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-accent/5 pointer-events-none" />
+        <div className="absolute inset-0 dot-pattern opacity-30 pointer-events-none" />
         
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        {/* Subtle floating accent shapes */}
+        <div className="absolute top-20 right-10 w-72 h-72 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-40 left-10 w-96 h-96 bg-accent/5 rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           {/* Modern Section Header */}
           <motion.div 
             className="text-center mb-12"
@@ -243,11 +255,11 @@ export default function HomePage() {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4">
+            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4" data-testid="badge-courses-label">
               <BookOpen className="w-4 h-4" />
               <span>Bizning Kurslar</span>
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-3">Mavjud Kurslar</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-3" data-testid="text-courses-header">Mavjud Kurslar</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
               O'zingizga mos kursni tanlang va bugun bilim olishni boshlang
             </p>
@@ -876,14 +888,32 @@ export default function HomePage() {
 
       {/* Testimonials Section */}
       {testimonials && testimonials.length > 0 && (
-        <div className="bg-muted/30 border-y">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold mb-2">Talabalarimiz Fikrlari</h2>
-              <p className="text-muted-foreground">
+        <div className="relative overflow-hidden border-y">
+          {/* Enhanced gradient background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-muted/50 via-background to-primary/5 pointer-events-none" />
+          <div className="absolute inset-0 grid-pattern opacity-30 pointer-events-none" />
+          
+          {/* Decorative elements */}
+          <div className="absolute top-10 left-[10%] w-64 h-64 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-10 right-[10%] w-80 h-80 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+            <motion.div 
+              className="text-center mb-12"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+            >
+              <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4" data-testid="badge-testimonials-label">
+                <Star className="w-4 h-4" />
+                <span>Talabalar Fikrlari</span>
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-3" data-testid="text-testimonials-header">Talabalarimiz Nima Deyishadi</h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto">
                 Minglab talabalar bizga ishonishdi va karyeralarini qurishdi
               </p>
-            </div>
+            </motion.div>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {testimonials.slice(0, 6).map((testimonial) => (
                 <Card key={testimonial.id} data-testid={`card-testimonial-${testimonial.id}`}>
@@ -943,13 +973,28 @@ export default function HomePage() {
         
         // Simple CSS-based auto-scroll - no measurement needed
         return (
-          <div className="w-full overflow-hidden py-16 bg-muted/30 border-y">
-            <div className="text-center mb-12 px-4">
-              <h2 className="text-3xl font-bold mb-2">Litsenziya va Guvohnomalar</h2>
-              <p className="text-muted-foreground">
-                Bizning professional sertifikatlarimiz
-              </p>
-            </div>
+          <div className="w-full overflow-hidden relative border-y">
+            {/* Enhanced background */}
+            <div className="absolute inset-0 bg-gradient-to-tr from-accent/5 via-background to-primary/5 pointer-events-none" />
+            <div className="absolute inset-0 dot-pattern opacity-20 pointer-events-none" />
+            
+            <div className="relative py-20">
+              <motion.div 
+                className="text-center mb-12 px-4"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
+              >
+                <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4" data-testid="badge-certificates-label">
+                  <Award className="w-4 h-4" />
+                  <span>Sertifikatlar</span>
+                </div>
+                <h2 className="text-3xl md:text-4xl font-bold mb-3" data-testid="text-certificates-header">Litsenziya va Guvohnomalar</h2>
+                <p className="text-muted-foreground max-w-2xl mx-auto">
+                  Bizning professional sertifikatlarimiz va litsenziyalarimiz
+                </p>
+              </motion.div>
             <div className="relative overflow-hidden">
               <div 
                 className="flex gap-6 animate-certificate-scroll pl-4"
@@ -987,32 +1032,66 @@ export default function HomePage() {
                 })}
               </div>
             </div>
+            </div>
           </div>
         );
       })()}
 
       {/* About Us Section */}
       {getSetting("about_us") && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl font-bold mb-6">Biz Haqimizda</h2>
-            <p className="text-lg text-muted-foreground whitespace-pre-line">
-              {getSetting("about_us")}
-            </p>
+        <div className="relative overflow-hidden">
+          {/* Background */}
+          <div className="absolute inset-0 bg-gradient-to-bl from-primary/5 via-transparent to-accent/5 pointer-events-none" />
+          
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+            <motion.div 
+              className="max-w-4xl mx-auto text-center"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+            >
+              <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4" data-testid="badge-about-label">
+                <Users className="w-4 h-4" />
+                <span>Biz Haqimizda</span>
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-6" data-testid="text-about-header">Zamonaviy-EDU</h2>
+              <p className="text-lg text-muted-foreground whitespace-pre-line leading-relaxed">
+                {getSetting("about_us")}
+              </p>
+            </motion.div>
           </div>
         </div>
       )}
 
       {/* Contact Section */}
       {(getSetting("contact_email") || getSetting("contact_phone") || getSetting("contact_address") || getSetting("contact_telegram")) && (
-        <div className="bg-muted/30 border-t">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold mb-2">Bog'lanish</h2>
-              <p className="text-muted-foreground">
-                Savollaringiz bormi? Biz bilan bog'laning!
+        <div className="relative overflow-hidden border-t">
+          {/* Enhanced gradient background */}
+          <div className="absolute inset-0 bg-gradient-to-tl from-primary/5 via-background to-accent/5 pointer-events-none" />
+          <div className="absolute inset-0 grid-pattern opacity-30 pointer-events-none" />
+          
+          {/* Decorative orbs */}
+          <div className="absolute bottom-0 left-[20%] w-80 h-80 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-0 right-[20%] w-64 h-64 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+            <motion.div 
+              className="text-center mb-12"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+            >
+              <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4" data-testid="badge-contact-label">
+                <Mail className="w-4 h-4" />
+                <span>Aloqa</span>
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-3" data-testid="text-contact-header">Biz bilan Bog'laning</h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto">
+                Savollaringiz bormi? Biz sizga yordam berishga tayyormiz!
               </p>
-            </div>
+            </motion.div>
             <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4 max-w-6xl mx-auto">
               {getSetting("contact_email") && (
                 <Card className="text-center hover-elevate">
