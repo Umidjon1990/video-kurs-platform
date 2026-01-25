@@ -289,6 +289,11 @@ export default function LearningPage() {
   // Use effectiveCurrentLesson which is already calculated above
   const currentLesson = effectiveCurrentLesson;
 
+  // Navigation helpers - calculated at top level for mobile fixed nav
+  const currentIndex = lessons?.findIndex(l => l.id === currentLessonId) ?? -1;
+  const prevLesson = currentIndex > 0 ? lessons?.[currentIndex - 1] : null;
+  const nextLesson = currentIndex >= 0 && lessons && currentIndex < lessons.length - 1 ? lessons[currentIndex + 1] : null;
+
   return (
     <div className="min-h-screen bg-background">
       {/* Compact header - hidden on mobile, shown on desktop */}
@@ -337,7 +342,7 @@ export default function LearningPage() {
 
       <div className="flex flex-col lg:flex-row h-[100dvh] sm:h-[calc(100vh-3rem)]">
         {/* Main Content - Video Player Area */}
-        <div className="flex-1 overflow-auto p-1 sm:p-4 lg:p-6">
+        <div className="flex-1 overflow-auto p-1 pb-16 sm:pb-4 sm:p-4 lg:p-6">
           {currentLesson ? (
             (() => {
               const isEnrolled = enrollment?.paymentStatus === 'confirmed' || enrollment?.paymentStatus === 'approved';
@@ -400,38 +405,36 @@ export default function LearningPage() {
                 );
               }
               
-              // Navigation helpers
-              const currentIndex = lessons?.findIndex(l => l.id === currentLessonId) ?? -1;
-              const prevLesson = currentIndex > 0 ? lessons?.[currentIndex - 1] : null;
-              const nextLesson = currentIndex >= 0 && lessons && currentIndex < lessons.length - 1 ? lessons[currentIndex + 1] : null;
-              
               return (
-                <div className="space-y-2">
-                  {/* Mobile-only back button row */}
-                  <div className="flex sm:hidden items-center gap-1 -mt-1">
+                <div className="space-y-1 sm:space-y-2">
+                  {/* Mobile-only compact header with back, title and lesson counter */}
+                  <div className="flex sm:hidden items-center gap-2 py-1">
                     <Button
                       variant="ghost"
-                      size="sm"
+                      size="icon"
                       onClick={() => setLocation('/')}
-                      className="h-7 px-1.5 text-xs"
                       data-testid="button-back-mobile"
                     >
-                      <ChevronLeft className="w-3 h-3" />
-                      Ortga
+                      <ChevronLeft className="w-4 h-4" />
                     </Button>
-                    <span className="text-[10px] text-muted-foreground truncate flex-1 line-clamp-1">{course.title}</span>
-                  </div>
-                  
-                  {/* Compact lesson title - mobile optimized */}
-                  <div className="flex items-center gap-1 sm:gap-2 py-1">
-                    <Badge variant="secondary" className="shrink-0 text-[10px] sm:text-xs px-1.5 sm:px-2">
+                    <Badge variant="secondary" className="shrink-0 text-[10px]">
                       {currentIndex + 1}/{lessons?.length || 0}
                     </Badge>
-                    <span className="text-xs sm:text-sm font-medium truncate flex-1" data-testid="text-lesson-title">
+                    <span className="text-xs font-medium truncate flex-1" data-testid="text-lesson-title-mobile">
+                      {currentLesson.title}
+                    </span>
+                  </div>
+                  
+                  {/* Desktop lesson title */}
+                  <div className="hidden sm:flex items-center gap-2 py-1">
+                    <Badge variant="secondary" className="shrink-0 text-xs px-2">
+                      {currentIndex + 1}/{lessons?.length || 0}
+                    </Badge>
+                    <span className="text-sm font-medium truncate flex-1" data-testid="text-lesson-title">
                       {currentLesson.title}
                     </span>
                     {currentLesson.duration && (
-                      <span className="text-[10px] sm:text-xs text-muted-foreground shrink-0 hidden sm:inline">
+                      <span className="text-xs text-muted-foreground shrink-0">
                         ({currentLesson.duration} daq)
                       </span>
                     )}
@@ -443,33 +446,31 @@ export default function LearningPage() {
                     title={currentLesson.title}
                   />
 
-                  {/* Bottom Navigation - Below Video */}
-                  <div className="flex items-center justify-between gap-2 py-3 px-1">
+                  {/* Desktop Navigation - Below Video */}
+                  <div className="hidden sm:flex items-center justify-between gap-2 py-2 px-1">
                     <Button
                       variant="outline"
-                      size="default"
                       onClick={() => prevLesson && setCurrentLessonId(prevLesson.id)}
                       disabled={!prevLesson}
-                      className="flex-1 max-w-[130px] sm:max-w-[150px]"
+                      className="flex-1 max-w-[150px]"
                       data-testid="button-prev-lesson-bottom"
                     >
                       <ChevronLeft className="w-4 h-4 mr-1 shrink-0" />
-                      <span className="text-xs sm:text-sm">Avvalgisi</span>
+                      Avvalgisi
                     </Button>
                     
-                    <Badge variant="secondary" className="text-[10px] sm:text-xs shrink-0">
+                    <Badge variant="secondary" className="text-xs shrink-0 px-2">
                       {currentIndex + 1} / {lessons?.length || 0}
                     </Badge>
                     
                     <Button
                       variant="default"
-                      size="default"
                       onClick={() => nextLesson && setCurrentLessonId(nextLesson.id)}
                       disabled={!nextLesson}
-                      className="flex-1 max-w-[130px] sm:max-w-[150px]"
+                      className="flex-1 max-w-[150px]"
                       data-testid="button-next-lesson-bottom"
                     >
-                      <span className="text-xs sm:text-sm">Keyingisi</span>
+                      Keyingisi
                       <ChevronRight className="w-4 h-4 ml-1 shrink-0" />
                     </Button>
                   </div>
@@ -764,9 +765,9 @@ export default function LearningPage() {
                   })()}
                 </TabsContent>
               </Tabs>
-            </div>
-          );
-        })()
+                </div>
+            )
+          })()
       ) : isLessonsDataLoading ? (
             <Card>
               <CardContent className="py-16 flex items-center justify-center">
@@ -869,6 +870,37 @@ export default function LearningPage() {
           </div>
         </div>
       </div>
+
+      {/* Mobile Fixed Bottom Navigation - Outside scrollable container */}
+      {currentLesson && (
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-background border-t p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] z-50 flex items-center justify-between gap-2">
+          <Button
+            variant="outline"
+            onClick={() => prevLesson && setCurrentLessonId(prevLesson.id)}
+            disabled={!prevLesson}
+            className="flex-1"
+            data-testid="button-prev-lesson-mobile"
+          >
+            <ChevronLeft className="w-4 h-4 mr-1" />
+            Avvalgisi
+          </Button>
+          
+          <Badge variant="secondary" className="text-xs shrink-0">
+            {currentIndex + 1}/{lessons?.length || 0}
+          </Badge>
+          
+          <Button
+            variant="default"
+            onClick={() => nextLesson && setCurrentLessonId(nextLesson.id)}
+            disabled={!nextLesson}
+            className="flex-1"
+            data-testid="button-next-lesson-mobile"
+          >
+            Keyingisi
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
+        </div>
+      )}
 
       {/* Submission Dialog */}
       <Dialog open={submissionDialog.open} onOpenChange={(open) => {
