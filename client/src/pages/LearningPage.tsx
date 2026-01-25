@@ -15,6 +15,7 @@ import { PlayCircle, CheckCircle, FileText, ClipboardCheck, Lock, Home, MessageC
 import { Checkbox } from "@/components/ui/checkbox";
 import { NotificationBell } from "@/components/NotificationBell";
 import { StarRating } from "@/components/StarRating";
+import { ModernVideoPlayer } from "@/components/ModernVideoPlayer";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Course, Lesson, Assignment, Test } from "@shared/schema";
 
@@ -461,138 +462,10 @@ export default function LearningPage() {
                   </div>
 
                   {/* Video Player */}
-                  <Card>
-                    <CardContent className="p-0">
-                  <div className="aspect-video bg-black rounded-lg overflow-hidden">
-                    {(() => {
-                      const videoContent = currentLesson.videoUrl?.trim() || '';
-                      
-                      if (!videoContent) {
-                        return (
-                          <div className="text-white p-8 text-center flex items-center justify-center h-full">
-                            <p>Video URL kiritilmagan</p>
-                          </div>
-                        );
-                      }
-                      
-                      // Check if it's an iframe embed code - extract YouTube ID if present
-                      if (videoContent.startsWith('<iframe') || videoContent.startsWith('<embed')) {
-                        // Try to extract YouTube video ID from iframe src
-                        const srcMatch = videoContent.match(/src=["']([^"']+)["']/i);
-                        if (srcMatch && srcMatch[1]) {
-                          const iframeSrc = srcMatch[1];
-                          if (iframeSrc.includes('youtube.com/embed/')) {
-                            const ytId = iframeSrc.split('youtube.com/embed/')[1]?.split(/[?&]/)[0];
-                            if (ytId) {
-                              const origin = window.location.origin;
-                              return (
-                                <div className="relative w-full h-full">
-                                  <iframe
-                                    src={`https://www.youtube.com/embed/${ytId}?rel=0&modestbranding=1&playsinline=1&enablejsapi=1&origin=${encodeURIComponent(origin)}&widget_referrer=${encodeURIComponent(origin)}&fs=1`}
-                                    className="w-full h-full"
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-                                    allowFullScreen
-                                    loading="lazy"
-                                    data-testid="video-player"
-                                  />
-                                </div>
-                              );
-                            }
-                          }
-                        }
-                        
-                        // Non-YouTube iframe - render as-is
-                        return (
-                          <div 
-                            className="w-full h-full"
-                            dangerouslySetInnerHTML={{ __html: videoContent }}
-                            data-testid="video-player"
-                          />
-                        );
-                      }
-                      
-                      // Parse YouTube URLs
-                      if (videoContent.includes('youtube.com') || videoContent.includes('youtu.be')) {
-                        let videoId = '';
-                        
-                        // Extract video ID from different YouTube URL formats
-                        if (videoContent.includes('youtube.com/watch?v=')) {
-                          videoId = videoContent.split('watch?v=')[1]?.split('&')[0];
-                        } else if (videoContent.includes('youtube.com/embed/')) {
-                          videoId = videoContent.split('embed/')[1]?.split('?')[0];
-                        } else if (videoContent.includes('youtu.be/')) {
-                          videoId = videoContent.split('youtu.be/')[1]?.split('?')[0];
-                        }
-                        
-                        if (videoId) {
-                          const origin = window.location.origin;
-                          return (
-                            <div className="relative w-full h-full">
-                              <iframe
-                                src={`https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&enablejsapi=1&origin=${encodeURIComponent(origin)}&widget_referrer=${encodeURIComponent(origin)}&fs=1`}
-                                className="w-full h-full"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-                                allowFullScreen
-                                loading="lazy"
-                                data-testid="video-player"
-                              />
-                            </div>
-                          );
-                        }
-                      }
-                      
-                      // Check for Kinescope, Vimeo and other video platforms
-                      if (videoContent.includes('kinescope.io') || 
-                          videoContent.includes('vimeo.com') ||
-                          videoContent.includes('player.vimeo.com') ||
-                          videoContent.includes('dailymotion.com') ||
-                          videoContent.includes('wistia.com')) {
-                        return (
-                          <iframe
-                            src={videoContent}
-                            className="w-full h-full"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                            data-testid="video-player"
-                          />
-                        );
-                      }
-                      
-                      // Try to treat as direct video URL or iframe src
-                      // Check if it looks like a valid URL
-                      if (videoContent.startsWith('http://') || videoContent.startsWith('https://')) {
-                        return (
-                          <iframe
-                            src={videoContent}
-                            className="w-full h-full"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                            data-testid="video-player"
-                          />
-                        );
-                      }
-                      
-                      // Default: show as link
-                      return (
-                        <div className="text-white p-8 text-center flex items-center justify-center h-full">
-                          <div>
-                            <p className="mb-4">Video format tanilmadi. Havola:</p>
-                            <a 
-                              href={currentLesson.videoUrl} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-primary underline break-all"
-                              data-testid="video-link"
-                            >
-                              {currentLesson.videoUrl}
-                            </a>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                </CardContent>
-              </Card>
+                  <ModernVideoPlayer 
+                    videoUrl={currentLesson.videoUrl || ''} 
+                    title={currentLesson.title}
+                  />
 
               {/* Lesson Description */}
               {(currentLesson as any).description && (

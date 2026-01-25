@@ -1141,6 +1141,34 @@ export default function HomePage() {
                     }
                   }
                   
+                  // Check for Google Drive URLs
+                  if (videoContent.includes('drive.google.com')) {
+                    let fileId = '';
+                    
+                    if (videoContent.includes('/file/d/')) {
+                      fileId = videoContent.split('/file/d/')[1]?.split('/')[0];
+                    } else if (videoContent.includes('id=')) {
+                      const idMatch = videoContent.match(/id=([a-zA-Z0-9_-]+)/);
+                      fileId = idMatch ? idMatch[1] : '';
+                    } else if (videoContent.includes('/d/')) {
+                      fileId = videoContent.split('/d/')[1]?.split('/')[0];
+                    }
+                    
+                    if (fileId) {
+                      const embedUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+                      return (
+                        <iframe
+                          src={embedUrl}
+                          className="w-full h-full"
+                          allow="autoplay; encrypted-media; fullscreen"
+                          allowFullScreen
+                          loading="lazy"
+                          data-testid="demo-video-player-gdrive"
+                        />
+                      );
+                    }
+                  }
+                  
                   // Check for Kinescope, Vimeo and other video platforms
                   if (videoContent.includes('kinescope.io') || 
                       videoContent.includes('vimeo.com') ||

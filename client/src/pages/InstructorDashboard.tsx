@@ -1946,13 +1946,14 @@ export default function InstructorDashboard() {
                 id="video-url"
                 value={lessonForm.videoUrl}
                 onChange={(e) => setLessonForm({ ...lessonForm, videoUrl: e.target.value })}
-                placeholder='URL: https://kinescope.io/watch/123
-yoki Embed kod: <iframe src="..." ... ></iframe>'
+                placeholder='Google Drive: https://drive.google.com/file/d/.../view
+YouTube: https://www.youtube.com/watch?v=...
+Kinescope: https://kinescope.io/watch/...'
                 data-testid="input-lesson-video"
                 className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               />
               <p className="text-xs text-muted-foreground">
-                Kinescope yoki YouTube'dan embed kodni yoki to'g'ridan-to'g'ri linkni kiriting
+                Google Drive, YouTube, Kinescope yoki boshqa video platformalardan linkni kiriting. Tizim avtomatik embed qiladi.
               </p>
             </div>
             <div className="space-y-2">
@@ -2084,7 +2085,7 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>YouTube / Kinescope linki *</Label>
+                  <Label>Video linki (Google Drive / YouTube / Kinescope) *</Label>
                   <Input
                     value={lesson.videoUrl}
                     onChange={(e) => {
@@ -2092,7 +2093,7 @@ yoki Embed kod: <iframe src="..." ... ></iframe>'
                       updated[index].videoUrl = e.target.value;
                       setBulkLessons(updated);
                     }}
-                    placeholder="https://www.youtube.com/watch?v=... yoki iframe kod"
+                    placeholder="https://drive.google.com/... yoki YouTube/Kinescope link"
                     data-testid={`input-bulk-lesson-video-${index}`}
                   />
                 </div>
