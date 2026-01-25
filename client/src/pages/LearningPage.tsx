@@ -337,7 +337,7 @@ export default function LearningPage() {
 
       <div className="flex flex-col lg:flex-row h-[100dvh] sm:h-[calc(100vh-3rem)]">
         {/* Main Content - Video Player Area */}
-        <div className="flex-1 overflow-auto p-2 sm:p-4 lg:p-6">
+        <div className="flex-1 overflow-auto p-1 sm:p-4 lg:p-6">
           {currentLesson ? (
             (() => {
               const isEnrolled = enrollment?.paymentStatus === 'confirmed' || enrollment?.paymentStatus === 'approved';
@@ -408,57 +408,33 @@ export default function LearningPage() {
               return (
                 <div className="space-y-2">
                   {/* Mobile-only back button row */}
-                  <div className="flex sm:hidden items-center gap-2 -mt-1">
+                  <div className="flex sm:hidden items-center gap-1 -mt-1">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => setLocation('/')}
-                      className="h-8 px-2"
+                      className="h-7 px-1.5 text-xs"
                       data-testid="button-back-mobile"
                     >
-                      <ChevronLeft className="w-4 h-4" />
+                      <ChevronLeft className="w-3 h-3" />
                       Ortga
                     </Button>
-                    <span className="text-xs text-muted-foreground truncate flex-1">{course.title}</span>
+                    <span className="text-[10px] text-muted-foreground truncate flex-1 line-clamp-1">{course.title}</span>
                   </div>
                   
-                  {/* Compact lesson navigation - single row */}
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => prevLesson && setCurrentLessonId(prevLesson.id)}
-                      disabled={!prevLesson}
-                      className="h-8 px-2 shrink-0"
-                      data-testid="button-prev-lesson"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </Button>
-                    
-                    <div className="flex-1 min-w-0 flex items-center justify-center gap-2">
-                      <Badge variant="secondary" className="shrink-0 text-xs">
-                        {currentIndex + 1}/{lessons?.length || 0}
-                      </Badge>
-                      <span className="text-sm font-medium truncate" data-testid="text-lesson-title">
-                        {currentLesson.title}
+                  {/* Compact lesson title - mobile optimized */}
+                  <div className="flex items-center gap-1 sm:gap-2 py-1">
+                    <Badge variant="secondary" className="shrink-0 text-[10px] sm:text-xs px-1.5 sm:px-2">
+                      {currentIndex + 1}/{lessons?.length || 0}
+                    </Badge>
+                    <span className="text-xs sm:text-sm font-medium truncate flex-1" data-testid="text-lesson-title">
+                      {currentLesson.title}
+                    </span>
+                    {currentLesson.duration && (
+                      <span className="text-[10px] sm:text-xs text-muted-foreground shrink-0 hidden sm:inline">
+                        ({currentLesson.duration} daq)
                       </span>
-                      {currentLesson.duration && (
-                        <span className="text-xs text-muted-foreground shrink-0 hidden sm:inline">
-                          ({currentLesson.duration} daq)
-                        </span>
-                      )}
-                    </div>
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => nextLesson && setCurrentLessonId(nextLesson.id)}
-                      disabled={!nextLesson}
-                      className="h-8 px-2 shrink-0"
-                      data-testid="button-next-lesson"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
+                    )}
                   </div>
 
                   {/* Video Player */}
@@ -466,6 +442,37 @@ export default function LearningPage() {
                     videoUrl={currentLesson.videoUrl || ''} 
                     title={currentLesson.title}
                   />
+
+                  {/* Bottom Navigation - Below Video */}
+                  <div className="flex items-center justify-between gap-2 py-3 px-1">
+                    <Button
+                      variant="outline"
+                      size="default"
+                      onClick={() => prevLesson && setCurrentLessonId(prevLesson.id)}
+                      disabled={!prevLesson}
+                      className="flex-1 max-w-[130px] sm:max-w-[150px]"
+                      data-testid="button-prev-lesson-bottom"
+                    >
+                      <ChevronLeft className="w-4 h-4 mr-1 shrink-0" />
+                      <span className="text-xs sm:text-sm">Avvalgisi</span>
+                    </Button>
+                    
+                    <Badge variant="secondary" className="text-[10px] sm:text-xs shrink-0">
+                      {currentIndex + 1} / {lessons?.length || 0}
+                    </Badge>
+                    
+                    <Button
+                      variant="default"
+                      size="default"
+                      onClick={() => nextLesson && setCurrentLessonId(nextLesson.id)}
+                      disabled={!nextLesson}
+                      className="flex-1 max-w-[130px] sm:max-w-[150px]"
+                      data-testid="button-next-lesson-bottom"
+                    >
+                      <span className="text-xs sm:text-sm">Keyingisi</span>
+                      <ChevronRight className="w-4 h-4 ml-1 shrink-0" />
+                    </Button>
+                  </div>
 
               {/* Lesson Description */}
               {(currentLesson as any).description && (
