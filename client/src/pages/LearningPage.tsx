@@ -407,22 +407,25 @@ export default function LearningPage() {
               
               return (
                 <div className="space-y-1 sm:space-y-2">
-                  {/* Mobile-only compact header with back, title and lesson counter */}
-                  <div className="flex sm:hidden items-center gap-2 py-1">
+                  {/* Mobile-only modern compact header */}
+                  <div className="flex sm:hidden items-center gap-2 py-2 px-1">
                     <Button
                       variant="ghost"
                       size="icon"
                       onClick={() => setLocation('/')}
+                      className="shrink-0 h-9 w-9 rounded-full bg-muted/50"
                       data-testid="button-back-mobile"
                     >
-                      <ChevronLeft className="w-4 h-4" />
+                      <ChevronLeft className="w-5 h-5" />
                     </Button>
-                    <Badge variant="secondary" className="shrink-0 text-[10px]">
-                      {currentIndex + 1}/{lessons?.length || 0}
-                    </Badge>
-                    <span className="text-xs font-medium truncate flex-1" data-testid="text-lesson-title-mobile">
-                      {currentLesson.title}
-                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate" data-testid="text-lesson-title-mobile">
+                        {currentLesson.title}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        Dars {currentIndex + 1} / {lessons?.length || 0}
+                      </p>
+                    </div>
                   </div>
                   
                   {/* Desktop lesson title */}
@@ -871,34 +874,55 @@ export default function LearningPage() {
         </div>
       </div>
 
-      {/* Mobile Fixed Bottom Navigation - Outside scrollable container */}
+      {/* Mobile Fixed Bottom Navigation - Modern Glass Design */}
       {currentLesson && (
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-background border-t p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] z-50 flex items-center justify-between gap-2">
-          <Button
-            variant="outline"
-            onClick={() => prevLesson && setCurrentLessonId(prevLesson.id)}
-            disabled={!prevLesson}
-            className="flex-1"
-            data-testid="button-prev-lesson-mobile"
-          >
-            <ChevronLeft className="w-4 h-4 mr-1" />
-            Avvalgisi
-          </Button>
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50">
+          {/* Gradient backdrop blur effect */}
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/95 to-background/80 backdrop-blur-xl" />
           
-          <Badge variant="secondary" className="text-xs shrink-0">
-            {currentIndex + 1}/{lessons?.length || 0}
-          </Badge>
-          
-          <Button
-            variant="default"
-            onClick={() => nextLesson && setCurrentLessonId(nextLesson.id)}
-            disabled={!nextLesson}
-            className="flex-1"
-            data-testid="button-next-lesson-mobile"
-          >
-            Keyingisi
-            <ChevronRight className="w-4 h-4 ml-1" />
-          </Button>
+          <div className="relative px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            {/* Progress bar */}
+            <div className="mb-3">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] text-muted-foreground">Dars</span>
+                <span className="text-[10px] font-medium text-primary">
+                  {currentIndex + 1} / {lessons?.length || 0}
+                </span>
+              </div>
+              <div className="h-1 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full transition-all duration-300"
+                  style={{ width: `${((currentIndex + 1) / (lessons?.length || 1)) * 100}%` }}
+                />
+              </div>
+            </div>
+            
+            {/* Navigation buttons */}
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => prevLesson && setCurrentLessonId(prevLesson.id)}
+                disabled={!prevLesson}
+                className="flex-1 h-12 rounded-xl border-2 shadow-sm"
+                data-testid="button-prev-lesson-mobile"
+              >
+                <ChevronLeft className="w-5 h-5 mr-1" />
+                <span className="font-medium">Oldingi</span>
+              </Button>
+              
+              <Button
+                size="lg"
+                onClick={() => nextLesson && setCurrentLessonId(nextLesson.id)}
+                disabled={!nextLesson}
+                className="flex-1 h-12 rounded-xl bg-gradient-to-r from-primary to-primary/90 shadow-lg shadow-primary/25"
+                data-testid="button-next-lesson-mobile"
+              >
+                <span className="font-medium">Keyingi</span>
+                <ChevronRight className="w-5 h-5 ml-1" />
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 
