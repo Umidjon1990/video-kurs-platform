@@ -265,6 +265,7 @@ export const lessonSections = pgTable("lesson_sections", {
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   videoUrl: text("video_url").notNull(),
+  videoPlatform: varchar("video_platform", { length: 50 }).default('youtube'),
   duration: integer("duration"), // in minutes
   order: integer("order").notNull().default(1),
   createdAt: timestamp("created_at").defaultNow(),

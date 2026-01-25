@@ -102,11 +102,20 @@ export default function InstructorDashboard() {
     pdfUrl: "",
     duration: "",
     isDemo: false,
+    moduleId: "", // Course module ID (optional)
     // Insho (essay) maydonlari
     essayQuestion: "",
     essayMinWords: "",
     essayMaxWords: "",
     essayInstructions: "",
+  });
+
+  // Module management states
+  const [isModuleDialogOpen, setIsModuleDialogOpen] = useState(false);
+  const [editingModule, setEditingModule] = useState<any | null>(null);
+  const [moduleForm, setModuleForm] = useState({
+    title: "",
+    description: "",
   });
 
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
@@ -208,6 +217,12 @@ export default function InstructorDashboard() {
 
   const { data: lessons } = useQuery<Lesson[]>({
     queryKey: ["/api/instructor/courses", selectedCourse?.id, "lessons"],
+    enabled: !!selectedCourse,
+  });
+
+  // Course Modules query
+  const { data: courseModules } = useQuery<any[]>({
+    queryKey: ["/api/courses", selectedCourse?.id, "modules"],
     enabled: !!selectedCourse,
   });
 
@@ -369,7 +384,7 @@ export default function InstructorDashboard() {
         description: editingLesson ? "Dars yangilandi" : "Dars qo'shildi" 
       });
       setIsAddLessonOpen(false);
-      setLessonForm({ title: "", videoUrl: "", description: "", pdfUrl: "", duration: "", isDemo: false, essayQuestion: "", essayMinWords: "", essayMaxWords: "", essayInstructions: "" });
+      setLessonForm({ title: "", videoUrl: "", description: "", pdfUrl: "", duration: "", isDemo: false, moduleId: "", essayQuestion: "", essayMinWords: "", essayMaxWords: "", essayInstructions: "" });
       setEditingLesson(null);
     },
     onError: (error: Error) => {
@@ -410,6 +425,60 @@ export default function InstructorDashboard() {
       });
       setIsBulkLessonOpen(false);
       setBulkLessons([{ title: "", videoUrl: "", duration: "", isDemo: false }]);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Module mutations
+  const addModuleMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedCourse) return;
+      await apiRequest("POST", `/api/courses/${selectedCourse.id}/modules`, {
+        title: moduleForm.title,
+        description: moduleForm.description || null,
+        order: (courseModules?.length || 0) + 1,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/courses", selectedCourse?.id, "modules"] });
+      toast({ title: "Muvaffaqiyatli", description: "Modul qo'shildi" });
+      setIsModuleDialogOpen(false);
+      setModuleForm({ title: "", description: "" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const updateModuleMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingModule) return;
+      await apiRequest("PATCH", `/api/modules/${editingModule.id}`, {
+        title: moduleForm.title,
+        description: moduleForm.description || null,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/courses", selectedCourse?.id, "modules"] });
+      toast({ title: "Muvaffaqiyatli", description: "Modul yangilandi" });
+      setIsModuleDialogOpen(false);
+      setEditingModule(null);
+      setModuleForm({ title: "", description: "" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteModuleMutation = useMutation({
+    mutationFn: async (moduleId: string) => {
+      await apiRequest("DELETE", `/api/modules/${moduleId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/courses", selectedCourse?.id, "modules"] });
+      toast({ title: "Muvaffaqiyatli", description: "Modul o'chirildi" });
     },
     onError: (error: Error) => {
       toast({ title: "Xatolik", description: error.message, variant: "destructive" });
@@ -1227,9 +1296,13 @@ export default function InstructorDashboard() {
             </DialogHeader>
             
             <Tabs defaultValue="lessons" className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="lessons" data-testid="tab-lessons">
+              <TabsList className="grid w-full grid-cols-6">
+                <TabsTrigger value="modules" data-testid="tab-modules">
                   <BookOpen className="w-4 h-4 mr-2" />
+                  Modullar
+                </TabsTrigger>
+                <TabsTrigger value="lessons" data-testid="tab-lessons">
+                  <Video className="w-4 h-4 mr-2" />
                   Darslar
                 </TabsTrigger>
                 <TabsTrigger value="assignments" data-testid="tab-assignments">
@@ -1245,25 +1318,104 @@ export default function InstructorDashboard() {
                   Yuborilganlar
                 </TabsTrigger>
                 <TabsTrigger value="students" data-testid="tab-students">
-                  <ClipboardCheck className="w-4 h-4 mr-2" />
+                  <Users className="w-4 h-4 mr-2" />
                   O'quvchilar
                 </TabsTrigger>
               </TabsList>
+
+              {/* Modules Tab */}
+              <TabsContent value="modules" className="space-y-4">
+                <div className="max-h-96 overflow-y-auto space-y-4">
+                  {courseModules && courseModules.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">Hali modullar yo'q</p>
+                  ) : (
+                    courseModules?.map((module: any, index: number) => (
+                      <Card key={module.id} data-testid={`module-${module.id}`}>
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <CardTitle className="text-base flex items-center gap-2">
+                                <Badge variant="outline">{index + 1}</Badge>
+                                {module.title}
+                              </CardTitle>
+                              {module.description && (
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  {module.description}
+                                </p>
+                              )}
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {lessons?.filter((l: any) => l.moduleId === module.id).length || 0} ta dars
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  setEditingModule(module);
+                                  setModuleForm({
+                                    title: module.title,
+                                    description: module.description || "",
+                                  });
+                                  setIsModuleDialogOpen(true);
+                                }}
+                                data-testid={`button-edit-module-${module.id}`}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  if (confirm("Modulni o'chirishga ishonchingiz komilmi? Ichidagi darslar modulsiz qoladi.")) {
+                                    deleteModuleMutation.mutate(module.id);
+                                  }
+                                }}
+                                data-testid={`button-delete-module-${module.id}`}
+                              >
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardHeader>
+                      </Card>
+                    ))
+                  )}
+                </div>
+                <Button onClick={() => setIsModuleDialogOpen(true)} data-testid="button-add-module">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Modul Qo'shish
+                </Button>
+              </TabsContent>
 
               <TabsContent value="lessons" className="space-y-4">
                 <div className="max-h-96 overflow-y-auto space-y-4">
                   {lessons && lessons.length === 0 ? (
                     <p className="text-center text-muted-foreground py-8">Hali darslar yo'q</p>
                   ) : (
-                    lessons?.map((lesson) => (
+                    lessons?.map((lesson) => {
+                      const lessonModule = courseModules?.find((m: any) => m.id === (lesson as any).moduleId);
+                      return (
                       <Card key={lesson.id} data-testid={`lesson-${lesson.id}`}>
                         <CardHeader className="pb-3">
                           <div className="flex items-center justify-between gap-4">
                             <div className="flex-1 min-w-0">
-                              <CardTitle className="text-base">{lesson.title}</CardTitle>
-                              <p className="text-sm text-muted-foreground">
-                                {lesson.duration ? `${lesson.duration} daqiqa` : 'Davomiylik ko\'rsatilmagan'}
-                              </p>
+                              <CardTitle className="text-base flex items-center gap-2">
+                                {lesson.title}
+                                {lesson.isDemo && (
+                                  <Badge variant="secondary" className="text-xs">Demo</Badge>
+                                )}
+                              </CardTitle>
+                              <div className="flex items-center gap-2 mt-1">
+                                {lessonModule && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {lessonModule.title}
+                                  </Badge>
+                                )}
+                                <span className="text-sm text-muted-foreground">
+                                  {lesson.duration ? `${lesson.duration} daqiqa` : 'Davomiylik ko\'rsatilmagan'}
+                                </span>
+                              </div>
                             </div>
                             <div className="flex items-center gap-2">
                               <Button
@@ -1296,6 +1448,7 @@ export default function InstructorDashboard() {
                                     pdfUrl: (lesson as any).pdfUrl || "",
                                     duration: lesson.duration?.toString() || "",
                                     isDemo: lesson.isDemo || false,
+                                    moduleId: (lesson as any).moduleId || "",
                                     ...essayData,
                                   });
                                   setIsAddLessonOpen(true);
@@ -1320,7 +1473,7 @@ export default function InstructorDashboard() {
                           </div>
                         </CardHeader>
                       </Card>
-                    ))
+                    )})
                   )}
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2">
@@ -1941,7 +2094,7 @@ export default function InstructorDashboard() {
         setIsAddLessonOpen(open);
         if (!open) {
           setEditingLesson(null);
-          setLessonForm({ title: "", videoUrl: "", description: "", pdfUrl: "", duration: "", isDemo: false, essayQuestion: "", essayMinWords: "", essayMaxWords: "", essayInstructions: "" });
+          setLessonForm({ title: "", videoUrl: "", description: "", pdfUrl: "", duration: "", isDemo: false, moduleId: "", essayQuestion: "", essayMinWords: "", essayMaxWords: "", essayInstructions: "" });
         }
       }}>
         <DialogContent data-testid="dialog-add-lesson">
@@ -1954,6 +2107,31 @@ export default function InstructorDashboard() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Module Selection (optional) */}
+            {courseModules && courseModules.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="lesson-module">Modul (ixtiyoriy)</Label>
+                <Select
+                  value={lessonForm.moduleId}
+                  onValueChange={(value) => setLessonForm({ ...lessonForm, moduleId: value === "none" ? "" : value })}
+                >
+                  <SelectTrigger data-testid="select-lesson-module">
+                    <SelectValue placeholder="Modul tanlash..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Modulsiz</SelectItem>
+                    {courseModules.map((module: any) => (
+                      <SelectItem key={module.id} value={module.id}>
+                        {module.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Darsni ma'lum bir modulga biriktirish uchun tanlang
+                </p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="lesson-title">Dars Nomi</Label>
               <Input
@@ -2098,6 +2276,69 @@ Kinescope: https://kinescope.io/watch/...'
               {addLessonMutation.isPending 
                 ? (editingLesson ? "Yangilanmoqda..." : "Qo'shilmoqda...") 
                 : (editingLesson ? "Yangilash" : "Qo'shish")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Module Management Dialog */}
+      <Dialog open={isModuleDialogOpen} onOpenChange={(open) => {
+        setIsModuleDialogOpen(open);
+        if (!open) {
+          setEditingModule(null);
+          setModuleForm({ title: "", description: "" });
+        }
+      }}>
+        <DialogContent data-testid="dialog-add-module">
+          <DialogHeader>
+            <DialogTitle>
+              {editingModule ? "Modulni Tahrirlash" : "Yangi Modul Qo'shish"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingModule ? "Modul ma'lumotlarini yangilang" : "Kurs modulini yarating"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="module-title">Modul Nomi</Label>
+              <Input
+                id="module-title"
+                value={moduleForm.title}
+                onChange={(e) => setModuleForm({ ...moduleForm, title: e.target.value })}
+                placeholder="Masalan: 1-Modul: Kirish"
+                data-testid="input-module-title"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="module-description">Tavsif (ixtiyoriy)</Label>
+              <Textarea
+                id="module-description"
+                value={moduleForm.description}
+                onChange={(e) => setModuleForm({ ...moduleForm, description: e.target.value })}
+                placeholder="Modul haqida qisqacha ma'lumot..."
+                data-testid="input-module-description"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsModuleDialogOpen(false);
+                setEditingModule(null);
+                setModuleForm({ title: "", description: "" });
+              }}
+            >
+              Bekor qilish
+            </Button>
+            <Button
+              onClick={() => editingModule ? updateModuleMutation.mutate() : addModuleMutation.mutate()}
+              disabled={!moduleForm.title.trim() || addModuleMutation.isPending || updateModuleMutation.isPending}
+              data-testid="button-save-module"
+            >
+              {addModuleMutation.isPending || updateModuleMutation.isPending
+                ? "Saqlanmoqda..."
+                : (editingModule ? "Yangilash" : "Qo'shish")}
             </Button>
           </DialogFooter>
         </DialogContent>
