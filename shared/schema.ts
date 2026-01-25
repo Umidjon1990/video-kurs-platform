@@ -198,10 +198,40 @@ export const courseLikesRelations = relations(courseLikes, ({ one }) => ({
   }),
 }));
 
+// Course Modules table - for grouping lessons into modules
+export const courseModules = pgTable("course_modules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: 'cascade' }),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  order: integer("order").notNull().default(1),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const courseModulesRelations = relations(courseModules, ({ one, many }) => ({
+  course: one(courses, {
+    fields: [courseModules.courseId],
+    references: [courses.id],
+  }),
+  lessons: many(lessons),
+}));
+
+export const insertCourseModuleSchema = createInsertSchema(courseModules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertCourseModule = z.infer<typeof insertCourseModuleSchema>;
+export type CourseModule = typeof courseModules.$inferSelect;
+
 // Lessons table
 export const lessons = pgTable("lessons", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: 'cascade' }),
+  moduleId: varchar("module_id").references(() => courseModules.id, { onDelete: 'set null' }), // Optional module grouping
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   videoUrl: text("video_url").notNull(),
@@ -217,11 +247,45 @@ export const lessonsRelations = relations(lessons, ({ one, many }) => ({
     fields: [lessons.courseId],
     references: [courses.id],
   }),
+  module: one(courseModules, {
+    fields: [lessons.moduleId],
+    references: [courseModules.id],
+  }),
   assignments: many(assignments),
   tests: many(tests),
   progress: many(lessonProgress),
   essayQuestions: many(lessonEssayQuestions),
+  sections: many(lessonSections),
 }));
+
+// Lesson Sections table - for subheadings within a lesson (multiple videos per lesson)
+export const lessonSections = pgTable("lesson_sections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  lessonId: varchar("lesson_id").notNull().references(() => lessons.id, { onDelete: 'cascade' }),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  videoUrl: text("video_url").notNull(),
+  duration: integer("duration"), // in minutes
+  order: integer("order").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const lessonSectionsRelations = relations(lessonSections, ({ one }) => ({
+  lesson: one(lessons, {
+    fields: [lessonSections.lessonId],
+    references: [lessons.id],
+  }),
+}));
+
+export const insertLessonSectionSchema = createInsertSchema(lessonSections).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertLessonSection = z.infer<typeof insertLessonSectionSchema>;
+export type LessonSection = typeof lessonSections.$inferSelect;
 
 // Lesson Progress table - Video tracking
 export const lessonProgress = pgTable("lesson_progress", {
