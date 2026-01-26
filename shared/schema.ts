@@ -234,7 +234,7 @@ export const lessons = pgTable("lessons", {
   moduleId: varchar("module_id").references(() => courseModules.id, { onDelete: 'set null' }), // Optional module grouping
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
-  videoUrl: text("video_url").notNull(),
+  videoUrl: text("video_url"), // Video URL ixtiyoriy - keyinroq qo'shish mumkin
   pdfUrl: text("pdf_url"), // PDF manba (Dropbox, Google Drive)
   order: integer("order").notNull(),
   duration: integer("duration"), // in minutes

@@ -1443,7 +1443,7 @@ export default function InstructorDashboard() {
                                   }
                                   setLessonForm({
                                     title: lesson.title,
-                                    videoUrl: lesson.videoUrl,
+                                    videoUrl: lesson.videoUrl || "",
                                     description: (lesson as any).description || "",
                                     pdfUrl: (lesson as any).pdfUrl || "",
                                     duration: lesson.duration?.toString() || "",
@@ -2270,7 +2270,7 @@ Kinescope: https://kinescope.io/watch/...'
             </Button>
             <Button
               onClick={() => addLessonMutation.mutate()}
-              disabled={!lessonForm.title || !lessonForm.videoUrl || addLessonMutation.isPending}
+              disabled={!lessonForm.title || addLessonMutation.isPending}
               data-testid="button-confirm-add-lesson"
             >
               {addLessonMutation.isPending 
