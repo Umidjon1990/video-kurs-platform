@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PlayCircle, CheckCircle, FileText, ClipboardCheck, Lock, Home, MessageCircle, Download, Star, ChevronLeft, ChevronRight } from "lucide-react";
+import { PlayCircle, CheckCircle, FileText, ClipboardCheck, Lock, Home, MessageCircle, Download, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Clock } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { NotificationBell } from "@/components/NotificationBell";
 import { StarRating } from "@/components/StarRating";
@@ -41,6 +41,29 @@ export default function LearningPage() {
   const [essayText, setEssayText] = useState("");
   const [essayWordCount, setEssayWordCount] = useState(0);
   const [isCheckingEssay, setIsCheckingEssay] = useState(false);
+  
+  // Module accordion state - all expanded by default
+  const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
+  
+  // Module gradient colors palette - works in both light and dark mode
+  const moduleColors = [
+    { bg: "from-blue-500/15 to-indigo-500/15 dark:from-blue-500/25 dark:to-indigo-500/25", border: "border-blue-500/40 dark:border-blue-400/50", ring: "ring-blue-500", text: "text-blue-600 dark:text-blue-400", badge: "bg-blue-500 dark:bg-blue-600" },
+    { bg: "from-emerald-500/15 to-teal-500/15 dark:from-emerald-500/25 dark:to-teal-500/25", border: "border-emerald-500/40 dark:border-emerald-400/50", ring: "ring-emerald-500", text: "text-emerald-600 dark:text-emerald-400", badge: "bg-emerald-500 dark:bg-emerald-600" },
+    { bg: "from-purple-500/15 to-pink-500/15 dark:from-purple-500/25 dark:to-pink-500/25", border: "border-purple-500/40 dark:border-purple-400/50", ring: "ring-purple-500", text: "text-purple-600 dark:text-purple-400", badge: "bg-purple-500 dark:bg-purple-600" },
+    { bg: "from-orange-500/15 to-amber-500/15 dark:from-orange-500/25 dark:to-amber-500/25", border: "border-orange-500/40 dark:border-orange-400/50", ring: "ring-orange-500", text: "text-orange-600 dark:text-orange-400", badge: "bg-orange-500 dark:bg-orange-600" },
+    { bg: "from-rose-500/15 to-red-500/15 dark:from-rose-500/25 dark:to-red-500/25", border: "border-rose-500/40 dark:border-rose-400/50", ring: "ring-rose-500", text: "text-rose-600 dark:text-rose-400", badge: "bg-rose-500 dark:bg-rose-600" },
+    { bg: "from-cyan-500/15 to-sky-500/15 dark:from-cyan-500/25 dark:to-sky-500/25", border: "border-cyan-500/40 dark:border-cyan-400/50", ring: "ring-cyan-500", text: "text-cyan-600 dark:text-cyan-400", badge: "bg-cyan-500 dark:bg-cyan-600" },
+  ];
+  
+  const toggleModule = (moduleId: string) => {
+    // Default to expanded (true) if not set, then toggle
+    setExpandedModules(prev => ({ ...prev, [moduleId]: !(prev[moduleId] ?? true) }));
+  };
+  
+  const isModuleExpanded = (moduleId: string) => {
+    // Default to expanded if not set
+    return expandedModules[moduleId] !== false;
+  };
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -1071,8 +1094,8 @@ export default function LearningPage() {
                       return renderLessonItem(lesson, globalIndex);
                     })}
                     
-                    {/* Grouped by modules */}
-                    {sortedModules.map((module: any) => {
+                    {/* Grouped by modules - Modern Design */}
+                    {sortedModules.map((module: any, moduleIndex: number) => {
                       const moduleLessons = lessonsByModule[module.id] || [];
                       if (moduleLessons.length === 0) return null;
                       
@@ -1080,20 +1103,97 @@ export default function LearningPage() {
                         courseProgress?.find((p: any) => p.lessonId === l.id)?.completed || false
                       );
                       const completedCount = moduleLessonProgress.filter(Boolean).length;
+                      const progressPercent = Math.round((completedCount / moduleLessons.length) * 100);
+                      const colors = moduleColors[moduleIndex % moduleColors.length];
+                      const isExpanded = isModuleExpanded(module.id);
                       
                       return (
                         <div key={module.id} className="mb-4" data-testid={`module-group-${module.id}`}>
-                          <div className="flex items-center justify-between mb-2 px-2">
-                            <h4 className="text-sm font-semibold text-muted-foreground">{module.title}</h4>
-                            <Badge variant="secondary" className="text-xs">
-                              {completedCount}/{moduleLessons.length}
-                            </Badge>
+                          {/* Modern Module Header */}
+                          <div 
+                            onClick={() => toggleModule(module.id)}
+                            className={`relative overflow-hidden rounded-xl cursor-pointer transition-all duration-300 hover:shadow-lg border ${colors.border} bg-gradient-to-r ${colors.bg} backdrop-blur-sm`}
+                            data-testid={`button-toggle-module-${module.id}`}
+                          >
+                            {/* Glassmorphism overlay */}
+                            <div className="absolute inset-0 bg-background/30 backdrop-blur-[2px]" />
+                            
+                            <div className="relative p-4">
+                              <div className="flex items-center justify-between gap-3">
+                                {/* Left side: Badge + Title */}
+                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                  {/* Module number badge */}
+                                  <div className={`flex-shrink-0 w-12 h-12 rounded-xl ${colors.badge} flex items-center justify-center shadow-lg`}>
+                                    <span className="text-white font-bold text-lg">{moduleIndex + 1}</span>
+                                  </div>
+                                  
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className={`text-[10px] font-bold uppercase tracking-wider ${colors.text}`}>
+                                        MODUL {moduleIndex + 1}
+                                      </span>
+                                    </div>
+                                    <h4 className="text-base font-bold truncate">{module.title}</h4>
+                                    {module.description && (
+                                      <p className="text-xs text-muted-foreground truncate mt-0.5">{module.description}</p>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                {/* Right side: Progress + Chevron */}
+                                <div className="flex items-center gap-3 flex-shrink-0">
+                                  {/* Circular Progress */}
+                                  <div className="relative w-12 h-12">
+                                    <svg className="w-12 h-12 transform -rotate-90">
+                                      <circle
+                                        cx="24"
+                                        cy="24"
+                                        r="20"
+                                        stroke="currentColor"
+                                        strokeWidth="4"
+                                        fill="none"
+                                        className="text-muted/30"
+                                      />
+                                      <circle
+                                        cx="24"
+                                        cy="24"
+                                        r="20"
+                                        stroke="currentColor"
+                                        strokeWidth="4"
+                                        fill="none"
+                                        strokeDasharray={`${progressPercent * 1.256} 126`}
+                                        strokeLinecap="round"
+                                        className={colors.text}
+                                      />
+                                    </svg>
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                      <span className="text-xs font-bold">{progressPercent}%</span>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Lesson count badge */}
+                                  <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground">
+                                    <BookOpen className="w-3.5 h-3.5" />
+                                    <span>{completedCount}/{moduleLessons.length}</span>
+                                  </div>
+                                  
+                                  {/* Chevron */}
+                                  <div className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+                                    <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          <div className="space-y-2 pl-2 border-l-2 border-muted">
-                            {moduleLessons.map((lesson) => {
-                              globalIndex++;
-                              return renderLessonItem(lesson, globalIndex);
-                            })}
+                          
+                          {/* Module Lessons - Accordion */}
+                          <div className={`overflow-hidden transition-all duration-300 ${isExpanded ? 'max-h-[2000px] opacity-100 mt-2' : 'max-h-0 opacity-0'}`}>
+                            <div className="space-y-1.5 pl-4 ml-6 border-l-2 border-dashed border-muted/50">
+                              {moduleLessons.map((lesson) => {
+                                globalIndex++;
+                                return renderLessonItem(lesson, globalIndex, colors);
+                              })}
+                            </div>
                           </div>
                         </div>
                       );
@@ -1101,7 +1201,7 @@ export default function LearningPage() {
                   </>
                 );
                 
-                function renderLessonItem(lesson: Lesson, index: number) {
+                function renderLessonItem(lesson: Lesson, index: number, colors?: typeof moduleColors[0]) {
                 const isEnrolled = enrollment?.paymentStatus === 'confirmed' || enrollment?.paymentStatus === 'approved';
                 
                 // Check if subscription is active for this course
@@ -1121,48 +1221,77 @@ export default function LearningPage() {
                 const lessonProgressData = courseProgress?.find((p: any) => p.lessonId === lesson.id);
                 const isCompleted = lessonProgressData?.completed || false;
                 
+                const isActive = currentLessonId === lesson.id;
+                
                 return (
                   <div
                     key={lesson.id}
                     onClick={() => !isLocked && setCurrentLessonId(lesson.id)}
-                    className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${
+                    className={`group relative flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ${
                       isLocked 
-                        ? 'opacity-60 cursor-not-allowed' 
+                        ? 'opacity-50 cursor-not-allowed bg-muted/30' 
                         : 'hover-elevate cursor-pointer'
                     } ${
-                      currentLessonId === lesson.id ? 'bg-primary/10 border-2 border-primary' : 'border-2 border-transparent'
+                      isActive 
+                        ? `bg-gradient-to-r ${colors?.bg || 'from-primary/10 to-primary/5'} ring-2 ${colors?.ring || 'ring-primary'} shadow-sm` 
+                        : ''
                     }`}
                     data-testid={`lesson-item-${lesson.id}`}
                   >
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mt-1">
+                    {/* Lesson number/status indicator */}
+                    <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                      isLocked 
+                        ? 'bg-muted' 
+                        : isCompleted 
+                          ? 'bg-green-500 dark:bg-green-600 shadow-md shadow-green-500/30' 
+                          : isActive 
+                            ? `${colors?.badge || 'bg-primary'} shadow-md` 
+                            : 'bg-muted/50'
+                    }`}>
                       {isLocked ? (
                         <Lock className="w-4 h-4 text-muted-foreground" />
                       ) : isCompleted ? (
-                        <CheckCircle className="w-4 h-4 text-success" data-testid={`icon-lesson-${lesson.id}-completed`} />
-                      ) : currentLessonId === lesson.id ? (
-                        <PlayCircle className="w-4 h-4 text-primary" />
+                        <CheckCircle className="w-5 h-5 text-white" data-testid={`icon-lesson-${lesson.id}-completed`} />
+                      ) : isActive ? (
+                        <PlayCircle className="w-5 h-5 text-white" />
                       ) : (
-                        <span className="text-sm font-semibold text-muted-foreground">{index + 1}</span>
+                        <span className="text-sm font-bold text-muted-foreground">{index}</span>
                       )}
                     </div>
+                    
+                    {/* Lesson info */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start gap-2 mb-1">
-                        <p className={`text-sm font-medium line-clamp-2 flex-1 ${
-                          currentLessonId === lesson.id ? 'text-primary' : ''
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <p className={`text-sm font-semibold line-clamp-1 ${
+                          isActive ? (colors?.text || 'text-primary') : ''
                         }`}>{lesson.title}</p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {lesson.duration && (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {lesson.duration} daq
+                          </span>
+                        )}
                         {lesson.isDemo && (
-                          <span className="text-xs bg-green-500/10 text-green-700 dark:text-green-400 px-2 py-0.5 rounded flex-shrink-0">
-                            Demo
+                          <span className="text-[10px] font-semibold uppercase bg-green-500/20 text-green-600 dark:text-green-400 px-1.5 py-0.5 rounded-md">
+                            Bepul
+                          </span>
+                        )}
+                        {isCompleted && (
+                          <span className="text-[10px] font-semibold uppercase bg-green-500/20 text-green-600 dark:text-green-400 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                            <CheckCircle className="w-2.5 h-2.5" /> Tugatildi
                           </span>
                         )}
                       </div>
-                      {lesson.duration && (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <PlayCircle className="w-3 h-3" />
-                          {lesson.duration} daqiqa
-                        </p>
-                      )}
                     </div>
+                    
+                    {/* Play indicator on hover */}
+                    {!isLocked && !isActive && (
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <PlayCircle className={`w-6 h-6 ${colors?.text || 'text-primary'}`} />
+                      </div>
+                    )}
                   </div>
                 );
                 }
