@@ -1374,11 +1374,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Extract essay fields before parsing lesson schema
-      const { essayQuestion, essayMinWords, essayMaxWords, essayInstructions, ...lessonFields } = req.body;
+      const { essayQuestion, essayMinWords, essayMaxWords, essayInstructions, moduleId, ...lessonFields } = req.body;
       
       const lessonData = insertLessonSchema.parse({
         ...lessonFields,
         courseId,
+        moduleId: moduleId && moduleId.trim() !== '' ? moduleId : null,
       });
       const lesson = await storage.createLesson(lessonData);
       
@@ -1493,9 +1494,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Extract essay fields before updating lesson
-      const { essayQuestion, essayMinWords, essayMaxWords, essayInstructions, ...lessonFields } = req.body;
+      const { essayQuestion, essayMinWords, essayMaxWords, essayInstructions, moduleId, ...lessonFields } = req.body;
       
-      const updatedLesson = await storage.updateLesson(lessonId, lessonFields);
+      // Handle moduleId - convert empty string to null
+      const updateData = {
+        ...lessonFields,
+        moduleId: moduleId !== undefined ? (moduleId && moduleId.trim() !== '' ? moduleId : null) : undefined,
+      };
+      
+      const updatedLesson = await storage.updateLesson(lessonId, updateData);
       
       // Handle essay question update/create
       if (essayQuestion !== undefined) {
