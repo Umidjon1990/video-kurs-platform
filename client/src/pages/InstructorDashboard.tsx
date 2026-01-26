@@ -2097,8 +2097,8 @@ export default function InstructorDashboard() {
           setLessonForm({ title: "", videoUrl: "", description: "", pdfUrl: "", duration: "", isDemo: false, moduleId: "", essayQuestion: "", essayMinWords: "", essayMaxWords: "", essayInstructions: "" });
         }
       }}>
-        <DialogContent data-testid="dialog-add-lesson">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col" data-testid="dialog-add-lesson">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>
               {editingLesson ? "Darsni Tahrirlash" : "Yangi Dars Qo'shish"}
             </DialogTitle>
@@ -2106,7 +2106,7 @@ export default function InstructorDashboard() {
               {editingLesson ? "Dars ma'lumotlarini yangilang" : "Dars ma'lumotlarini kiriting"}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 overflow-y-auto flex-1 pr-2">
             {/* Module Selection (optional) */}
             {courseModules && courseModules.length > 0 && (
               <div className="space-y-2">
@@ -2260,7 +2260,7 @@ Kinescope: https://kinescope.io/watch/...'
               </div>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-shrink-0 border-t pt-4 mt-4">
             <Button
               variant="outline"
               onClick={() => setIsAddLessonOpen(false)}
