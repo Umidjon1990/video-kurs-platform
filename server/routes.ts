@@ -2534,19 +2534,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For security: Return only safe fields for all lessons
       const publicLessons = sortedLessons.map(lesson => {
         if (lesson.isDemo) {
-          // Demo lessons - include video URL for viewing
+          // Demo lessons - include video URL and PDF for viewing
           return {
             id: lesson.id,
             title: lesson.title,
             description: lesson.description || '',
             videoUrl: lesson.videoUrl, // Include for demo lessons
+            pdfUrl: lesson.pdfUrl, // Include PDF resources for demo lessons
             duration: lesson.duration,
             order: lesson.order,
             isDemo: lesson.isDemo,
             courseId: lesson.courseId,
+            moduleId: lesson.moduleId, // Include for module grouping
           };
         } else {
-          // Premium lessons - return only safe fields (no video URL)
+          // Premium lessons - return only safe fields (no video URL or PDF)
           return {
             id: lesson.id,
             title: lesson.title,
@@ -2555,12 +2557,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
             order: lesson.order,
             isDemo: lesson.isDemo,
             courseId: lesson.courseId,
+            moduleId: lesson.moduleId, // Include for module grouping
             videoUrl: '', // Explicitly empty for security
+            pdfUrl: '', // Explicitly empty for security
           };
         }
       });
       
       res.json(publicLessons);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Public modules endpoint - returns course modules for public display
+  app.get('/api/courses/:courseId/modules/public', async (req, res) => {
+    try {
+      const { courseId } = req.params;
+      
+      // Check if course exists and is published
+      const course = await storage.getCourse(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      if (course.status !== 'published') {
+        return res.status(404).json({ message: "Course not available" });
+      }
+      
+      const modules = await storage.getCourseModules(courseId);
+      
+      // Return only public-safe fields
+      const publicModules = modules.map(m => ({
+        id: m.id,
+        courseId: m.courseId,
+        title: m.title,
+        description: m.description,
+        order: m.order,
+      }));
+      
+      res.json(publicModules);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

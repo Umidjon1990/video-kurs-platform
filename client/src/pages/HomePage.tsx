@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, BookOpen, Users, Award, Star, Mail, Phone, MapPin, Send, ExternalLink, X, ZoomIn, Play, Lock, Clock, GraduationCap, TrendingUp, CheckCircle, ArrowLeft, PenTool, Headphones, Mic, BookText, Languages, type LucideIcon } from "lucide-react";
+import { Search, Filter, BookOpen, Users, Award, Star, Mail, Phone, MapPin, Send, ExternalLink, X, ZoomIn, Play, Lock, Clock, GraduationCap, TrendingUp, CheckCircle, ArrowLeft, PenTool, Headphones, Mic, BookText, Languages, FileText, Download, ChevronDown, type LucideIcon } from "lucide-react";
 
 const iconMap: Record<string, LucideIcon> = {
   BookOpen,
@@ -52,8 +52,18 @@ type Lesson = {
   title: string;
   description?: string;
   videoUrl: string;
+  pdfUrl?: string;
   isDemo: boolean;
   duration?: number;
+  order: number;
+  moduleId?: string | null;
+};
+
+type CourseModule = {
+  id: string;
+  courseId: string;
+  title: string;
+  description?: string | null;
   order: number;
 };
 
@@ -117,6 +127,24 @@ export default function HomePage() {
       : [],
     enabled: !!selectedCourseForLessons,
   });
+
+  // Fetch modules for selected course
+  const { data: courseModules } = useQuery<CourseModule[]>({
+    queryKey: selectedCourseForLessons 
+      ? [`/api/courses/${selectedCourseForLessons.id}/modules/public`]
+      : [],
+    enabled: !!selectedCourseForLessons,
+  });
+
+  // Module gradient colors palette - same as LearningPage
+  const moduleColors = [
+    { bg: "from-blue-500/15 to-indigo-500/15 dark:from-blue-500/25 dark:to-indigo-500/25", border: "border-blue-500/40 dark:border-blue-400/50", ring: "ring-blue-500", text: "text-blue-600 dark:text-blue-400", badge: "bg-blue-500 dark:bg-blue-600" },
+    { bg: "from-emerald-500/15 to-teal-500/15 dark:from-emerald-500/25 dark:to-teal-500/25", border: "border-emerald-500/40 dark:border-emerald-400/50", ring: "ring-emerald-500", text: "text-emerald-600 dark:text-emerald-400", badge: "bg-emerald-500 dark:bg-emerald-600" },
+    { bg: "from-purple-500/15 to-pink-500/15 dark:from-purple-500/25 dark:to-pink-500/25", border: "border-purple-500/40 dark:border-purple-400/50", ring: "ring-purple-500", text: "text-purple-600 dark:text-purple-400", badge: "bg-purple-500 dark:bg-purple-600" },
+    { bg: "from-orange-500/15 to-amber-500/15 dark:from-orange-500/25 dark:to-amber-500/25", border: "border-orange-500/40 dark:border-orange-400/50", ring: "ring-orange-500", text: "text-orange-600 dark:text-orange-400", badge: "bg-orange-500 dark:bg-orange-600" },
+    { bg: "from-rose-500/15 to-red-500/15 dark:from-rose-500/25 dark:to-red-500/25", border: "border-rose-500/40 dark:border-rose-400/50", ring: "ring-rose-500", text: "text-rose-600 dark:text-rose-400", badge: "bg-rose-500 dark:bg-rose-600" },
+    { bg: "from-cyan-500/15 to-sky-500/15 dark:from-cyan-500/25 dark:to-sky-500/25", border: "border-cyan-500/40 dark:border-cyan-400/50", ring: "ring-cyan-500", text: "text-cyan-600 dark:text-cyan-400", badge: "bg-cyan-500 dark:bg-cyan-600" },
+  ];
 
   // Helper to get setting value
   const getSetting = (key: string) => {
@@ -1340,6 +1368,34 @@ export default function HomePage() {
                 Davomiyligi: {selectedDemoLesson.duration} daqiqa
               </p>
             )}
+            
+            {/* PDF Resources for demo lesson */}
+            {selectedDemoLesson?.pdfUrl && (
+              <div className="p-4 sm:p-0 border-t sm:border-t-0">
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover-elevate">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-red-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm">PDF Manba</p>
+                    <p className="text-xs text-muted-foreground truncate">Darsga oid qo'shimcha material</p>
+                  </div>
+                  <a
+                    href={selectedDemoLesson.pdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                    data-testid="link-demo-pdf-download"
+                  >
+                    <Button size="sm" variant="outline" className="gap-2">
+                      <Download className="w-4 h-4" />
+                      <span className="hidden sm:inline">Yuklab olish</span>
+                    </Button>
+                  </a>
+                </div>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -1371,82 +1427,194 @@ export default function HomePage() {
                 <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
               </div>
             ) : courseLessons && courseLessons.length > 0 ? (
-              <div className="space-y-2">
-                {courseLessons.map((lesson, index) => {
-                  const canViewDemo = lesson.isDemo && lesson.videoUrl && lesson.videoUrl.trim() !== '';
+              <div className="space-y-4">
+                {/* Render lessons grouped by modules if modules exist */}
+                {courseModules && courseModules.length > 0 && (() => {
+                  const sortedModules = [...courseModules].sort((a, b) => a.order - b.order);
+                  const moduleLessons = courseLessons.filter(l => l.moduleId);
+                  const standaloneLessons = courseLessons.filter(l => !l.moduleId);
                   
-                  return <Card 
-                    key={lesson.id}
-                    className={`
-                      ${canViewDemo 
-                        ? "bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 border-orange-200 dark:border-orange-800 hover-elevate cursor-pointer" 
-                        : "opacity-75"}
-                      transition-all duration-200
-                    `}
-                    onClick={() => {
-                      // SECURITY: Only allow demo lessons with valid video URLs
-                      if (canViewDemo) {
-                        setSelectedDemoLesson(lesson);
-                      }
-                    }}
-                    data-testid={`card-lesson-${lesson.id}`}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-3">
-                        <div className={`
-                          flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center mt-1
-                          ${lesson.isDemo 
-                            ? "bg-gradient-to-br from-orange-400 to-amber-500 text-white shadow-lg shadow-orange-200 dark:shadow-orange-900/50" 
-                            : "bg-muted"}
-                        `}>
-                          {lesson.isDemo ? (
-                            <Play className="w-5 h-5 fill-white" />
-                          ) : (
-                            <Lock className="w-5 h-5 text-muted-foreground" />
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-start justify-between gap-2 mb-1">
-                            <h4 className={`font-semibold ${lesson.isDemo ? 'text-orange-900 dark:text-orange-100' : ''}`}>
-                              {lesson.title}
-                            </h4>
-                            {lesson.isDemo ? (
-                              <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-sm">
-                                Bepul Demo
-                              </Badge>
-                            ) : (
-                              <Badge variant="secondary">
-                                Premium
-                              </Badge>
-                            )}
+                  return (
+                    <>
+                      {sortedModules.map((module, moduleIndex) => {
+                        const lessonsInModule = moduleLessons
+                          .filter(l => l.moduleId === module.id)
+                          .sort((a, b) => a.order - b.order);
+                        
+                        if (lessonsInModule.length === 0) return null;
+                        
+                        const colors = moduleColors[moduleIndex % moduleColors.length];
+                        const demoCount = lessonsInModule.filter(l => l.isDemo).length;
+                        
+                        return (
+                          <div key={module.id} className="mb-4" data-testid={`public-module-${module.id}`}>
+                            {/* Module Header with gradient effect */}
+                            <div 
+                              className={`relative overflow-hidden rounded-xl border ${colors.border} bg-gradient-to-r ${colors.bg} backdrop-blur-sm mb-2`}
+                            >
+                              <div className="absolute inset-0 bg-background/30 backdrop-blur-[2px]" />
+                              <div className="relative p-4">
+                                <div className="flex items-center gap-3">
+                                  <div className={`flex-shrink-0 w-10 h-10 rounded-xl ${colors.badge} flex items-center justify-center shadow-lg`}>
+                                    <span className="text-white font-bold">{moduleIndex + 1}</span>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className={`text-[10px] font-bold uppercase tracking-wider ${colors.text}`}>
+                                        MODUL {moduleIndex + 1}
+                                      </span>
+                                      {demoCount > 0 && (
+                                        <Badge className="bg-orange-500 text-white text-[10px] px-1.5 py-0 h-4">
+                                          {demoCount} demo
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <h3 className="font-semibold text-sm sm:text-base truncate">{module.title}</h3>
+                                    <p className="text-xs text-muted-foreground">{lessonsInModule.length} ta dars</p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Lessons in module */}
+                            <div className="space-y-2 pl-4">
+                              {lessonsInModule.map((lesson, lessonIndex) => {
+                                const canViewDemo = lesson.isDemo && lesson.videoUrl && lesson.videoUrl.trim() !== '';
+                                return (
+                                  <div
+                                    key={lesson.id}
+                                    className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ${
+                                      canViewDemo 
+                                        ? "bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 border border-orange-200 dark:border-orange-800 hover-elevate cursor-pointer" 
+                                        : "bg-muted/30 opacity-75"
+                                    }`}
+                                    onClick={() => canViewDemo && setSelectedDemoLesson(lesson)}
+                                    data-testid={`public-lesson-${lesson.id}`}
+                                  >
+                                    <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${
+                                      lesson.isDemo 
+                                        ? "bg-gradient-to-br from-orange-400 to-amber-500 text-white shadow-md" 
+                                        : "bg-muted"
+                                    }`}>
+                                      {lesson.isDemo ? (
+                                        <Play className="w-4 h-4 fill-white" />
+                                      ) : (
+                                        <Lock className="w-4 h-4 text-muted-foreground" />
+                                      )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <h4 className={`font-medium text-sm truncate ${lesson.isDemo ? 'text-orange-900 dark:text-orange-100' : ''}`}>
+                                        {lesson.title}
+                                      </h4>
+                                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                        {lesson.duration && <span>{lesson.duration} daqiqa</span>}
+                                        {lesson.pdfUrl && <span className="flex items-center gap-1"><FileText className="w-3 h-3" /> PDF</span>}
+                                      </div>
+                                    </div>
+                                    {lesson.isDemo ? (
+                                      <Badge className="bg-orange-500 text-white text-xs">Demo</Badge>
+                                    ) : (
+                                      <Badge variant="secondary" className="text-xs">Premium</Badge>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
-                          {lesson.description && (
-                            <p className={`text-sm mb-2 ${lesson.isDemo ? 'text-orange-700 dark:text-orange-300' : 'text-muted-foreground'}`}>
-                              {lesson.description}
-                            </p>
-                          )}
-                          {lesson.duration && (
-                            <p className={`text-sm flex items-center gap-1 ${lesson.isDemo ? 'text-orange-600 dark:text-orange-400' : 'text-muted-foreground'}`}>
-                              <Clock className="w-4 h-4" />
-                              {lesson.duration} daqiqa
-                            </p>
-                          )}
-                          {canViewDemo && (
-                            <p className="text-xs font-medium text-orange-600 dark:text-orange-400 mt-2 flex items-center gap-1">
-                              <Play className="w-3 h-3" />
-                              Bosib ko'ring
-                            </p>
-                          )}
-                          {!lesson.isDemo && (
-                            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-                              <Lock className="w-3 h-3" />
-                              Bu darsni ko'rish uchun kursga yoziling
-                            </p>
-                          )}
+                        );
+                      })}
+                      
+                      {/* Standalone lessons without modules */}
+                      {standaloneLessons.length > 0 && (
+                        <div className="space-y-2">
+                          {standaloneLessons.map((lesson) => {
+                            const canViewDemo = lesson.isDemo && lesson.videoUrl && lesson.videoUrl.trim() !== '';
+                            return (
+                              <div
+                                key={lesson.id}
+                                className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ${
+                                  canViewDemo 
+                                    ? "bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 border border-orange-200 dark:border-orange-800 hover-elevate cursor-pointer" 
+                                    : "bg-muted/30 opacity-75"
+                                }`}
+                                onClick={() => canViewDemo && setSelectedDemoLesson(lesson)}
+                                data-testid={`public-lesson-${lesson.id}`}
+                              >
+                                <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${
+                                  lesson.isDemo 
+                                    ? "bg-gradient-to-br from-orange-400 to-amber-500 text-white shadow-md" 
+                                    : "bg-muted"
+                                }`}>
+                                  {lesson.isDemo ? (
+                                    <Play className="w-4 h-4 fill-white" />
+                                  ) : (
+                                    <Lock className="w-4 h-4 text-muted-foreground" />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h4 className={`font-medium text-sm truncate ${lesson.isDemo ? 'text-orange-900 dark:text-orange-100' : ''}`}>
+                                    {lesson.title}
+                                  </h4>
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    {lesson.duration && <span>{lesson.duration} daqiqa</span>}
+                                    {lesson.pdfUrl && <span className="flex items-center gap-1"><FileText className="w-3 h-3" /> PDF</span>}
+                                  </div>
+                                </div>
+                                {lesson.isDemo ? (
+                                  <Badge className="bg-orange-500 text-white text-xs">Demo</Badge>
+                                ) : (
+                                  <Badge variant="secondary" className="text-xs">Premium</Badge>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+                
+                {/* Fallback: render all lessons without module grouping if no modules */}
+                {(!courseModules || courseModules.length === 0) && courseLessons.map((lesson) => {
+                  const canViewDemo = lesson.isDemo && lesson.videoUrl && lesson.videoUrl.trim() !== '';
+                  return (
+                    <div
+                      key={lesson.id}
+                      className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ${
+                        canViewDemo 
+                          ? "bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 border border-orange-200 dark:border-orange-800 hover-elevate cursor-pointer" 
+                          : "bg-muted/30 opacity-75"
+                      }`}
+                      onClick={() => canViewDemo && setSelectedDemoLesson(lesson)}
+                      data-testid={`public-lesson-${lesson.id}`}
+                    >
+                      <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${
+                        lesson.isDemo 
+                          ? "bg-gradient-to-br from-orange-400 to-amber-500 text-white shadow-md" 
+                          : "bg-muted"
+                      }`}>
+                        {lesson.isDemo ? (
+                          <Play className="w-4 h-4 fill-white" />
+                        ) : (
+                          <Lock className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className={`font-medium text-sm truncate ${lesson.isDemo ? 'text-orange-900 dark:text-orange-100' : ''}`}>
+                          {lesson.title}
+                        </h4>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          {lesson.duration && <span>{lesson.duration} daqiqa</span>}
+                          {lesson.pdfUrl && <span className="flex items-center gap-1"><FileText className="w-3 h-3" /> PDF</span>}
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>;
+                      {lesson.isDemo ? (
+                        <Badge className="bg-orange-500 text-white text-xs">Demo</Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-xs">Premium</Badge>
+                      )}
+                    </div>
+                  );
                 })}
               </div>
             ) : (
