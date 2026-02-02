@@ -607,21 +607,22 @@ export default function HomePage() {
                             >
                               Darslarni Ko'rish
                             </Button>
-                            {(course as any).promoVideoUrl && (
-                              <Button
-                                size="lg"
-                                variant="outline"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setPromoVideoCourse(course);
-                                }}
-                                className="h-14 px-4 border-2 border-red-500 text-red-500"
-                                data-testid={`button-promo-video-${course.id}`}
-                              >
-                                <Youtube className="w-6 h-6" />
-                              </Button>
-                            )}
-                          </div>
+                                                      </div>
+                          {/* Kurs haqida batafsil tugmasi */}
+                          {(course as any).promoVideoUrl && (
+                            <Button
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPromoVideoCourse(course);
+                              }}
+                              className="w-full h-12 border-2 border-red-500 text-red-600 dark:text-red-400 font-semibold"
+                              data-testid={`button-promo-video-${course.id}`}
+                            >
+                              <Youtube className="w-5 h-5 mr-2" />
+                              Kurs haqida batafsil
+                            </Button>
+                          )}
                           {/* BEPUL narx ko'rsatish */}
                           <div className="w-full">
                             <div className="flex items-center justify-center gap-2 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-3 rounded-lg border-2 border-green-300 dark:border-green-700">
@@ -767,20 +768,7 @@ export default function HomePage() {
                       >
                         Darslarni Ko'rish
                       </Button>
-                      {(course as any).promoVideoUrl && (
-                        <Button
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setPromoVideoCourse(course);
-                          }}
-                          className="border-2 border-red-500 text-red-500"
-                          data-testid={`button-promo-video-${course.id}`}
-                        >
-                          <Youtube className="w-5 h-5" />
-                        </Button>
-                      )}
-                      <Button
+                                            <Button
                         onClick={(e) => {
                           e.stopPropagation();
                           window.open("https://t.me/zamonaviytalimuz", "_blank", "noopener,noreferrer");
@@ -791,6 +779,21 @@ export default function HomePage() {
                         Yozilish
                       </Button>
                     </div>
+                    {/* Kurs haqida batafsil tugmasi */}
+                    {(course as any).promoVideoUrl && (
+                      <Button
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPromoVideoCourse(course);
+                        }}
+                        className="w-full border-2 border-red-500 text-red-600 dark:text-red-400 font-semibold"
+                        data-testid={`button-promo-video-${course.id}`}
+                      >
+                        <Youtube className="w-5 h-5 mr-2" />
+                        Kurs haqida batafsil
+                      </Button>
+                    )}
                   </CardFooter>
                 </Card>
               </div>
@@ -913,20 +916,7 @@ export default function HomePage() {
                     >
                       Darslarni Ko'rish
                     </Button>
-                    {(course as any).promoVideoUrl && (
-                      <Button
-                        variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setPromoVideoCourse(course);
-                        }}
-                        className="border-2 border-red-500 text-red-500"
-                        data-testid={`button-promo-video-${course.id}`}
-                      >
-                        <Youtube className="w-5 h-5" />
-                      </Button>
-                    )}
-                    <Button
+                                        <Button
                       onClick={(e) => {
                         e.stopPropagation();
                         window.open("https://t.me/zamonaviytalimuz", "_blank", "noopener,noreferrer");
@@ -937,6 +927,21 @@ export default function HomePage() {
                       Yozilish
                     </Button>
                   </div>
+                  {/* Kurs haqida batafsil tugmasi */}
+                  {(course as any).promoVideoUrl && (
+                    <Button
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPromoVideoCourse(course);
+                      }}
+                      className="w-full border-2 border-red-500 text-red-600 dark:text-red-400 font-semibold"
+                      data-testid={`button-promo-video-${course.id}`}
+                    >
+                      <Youtube className="w-5 h-5 mr-2" />
+                      Kurs haqida batafsil
+                    </Button>
+                  )}
                 </CardFooter>
               </Card>
               </>
