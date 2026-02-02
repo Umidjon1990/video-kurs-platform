@@ -1405,7 +1405,7 @@ export default function HomePage() {
         open={selectedCourseForLessons !== null} 
         onOpenChange={() => setSelectedCourseForLessons(null)}
       >
-        <DialogContent className="w-full max-w-3xl h-[100dvh] sm:h-auto sm:max-h-[90vh] p-0 sm:p-6 gap-0 border-0 sm:border rounded-none sm:rounded-lg">
+        <DialogContent className="w-full max-w-3xl h-[100dvh] sm:h-[85vh] p-0 sm:p-6 gap-0 border-0 sm:border rounded-none sm:rounded-lg flex flex-col">
           {/* Mobile-friendly header with back button */}
           <div className="flex items-center gap-3 p-4 sm:p-0 sm:pb-4 bg-background sticky top-0 z-10 border-b sm:border-0">
             <Button

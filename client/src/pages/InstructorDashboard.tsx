@@ -93,6 +93,7 @@ export default function InstructorDashboard() {
     isFree: false,
     levelId: "",
     selectedResourceTypes: [] as string[],
+    promoVideoUrl: "", // YouTube promo video URL (ixtiyoriy)
   });
 
   const [lessonForm, setLessonForm] = useState({
@@ -289,6 +290,7 @@ export default function InstructorDashboard() {
         category: courseForm.category,
         thumbnailUrl: courseForm.thumbnailUrl,
         imageUrl: courseForm.imageUrl,
+        promoVideoUrl: courseForm.promoVideoUrl || null,
         isFree: courseForm.isFree,
         levelId: courseForm.levelId || null,
       };
@@ -324,7 +326,7 @@ export default function InstructorDashboard() {
         description: editingCourse ? "Kurs yangilandi" : "Kurs yaratildi" 
       });
       setIsCreateCourseOpen(false);
-      setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "", isFree: false, levelId: "", selectedResourceTypes: [] });
+      setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "", promoVideoUrl: "", isFree: false, levelId: "", selectedResourceTypes: [] });
       setEditingCourse(null);
     },
     onError: (error: Error) => {
@@ -1077,6 +1079,7 @@ export default function InstructorDashboard() {
                               discountPercentage: existingDiscount.toString(),
                               thumbnailUrl: course.thumbnailUrl || "",
                               imageUrl: (course as any).imageUrl || "",
+                              promoVideoUrl: (course as any).promoVideoUrl || "",
                               isFree: (course as any).isFree || false,
                               levelId: (course as any).levelId || "",
                               selectedResourceTypes: courseResourceTypes,
@@ -2063,6 +2066,19 @@ export default function InstructorDashboard() {
                 Kurs sahifasi uchun katta rasm (Dropbox, Google Drive qo'llab-quvvatlaydi)
               </p>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="promoVideoUrl">Kurs Haqida Video URL (ixtiyoriy)</Label>
+              <Input
+                id="promoVideoUrl"
+                value={courseForm.promoVideoUrl}
+                onChange={(e) => setCourseForm({ ...courseForm, promoVideoUrl: e.target.value })}
+                placeholder="https://www.youtube.com/watch?v=..."
+                data-testid="input-course-promo-video"
+              />
+              <p className="text-xs text-muted-foreground">
+                YouTube havolasi - umumiy sahifada o'quvchilar ko'ra oladi
+              </p>
+            </div>
           </div>
           <DialogFooter className="flex-shrink-0">
             <Button
@@ -2070,7 +2086,7 @@ export default function InstructorDashboard() {
               onClick={() => {
                 setIsCreateCourseOpen(false);
                 setEditingCourse(null);
-                setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "", isFree: false, levelId: "", selectedResourceTypes: [] });
+                setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "", promoVideoUrl: "", isFree: false, levelId: "", selectedResourceTypes: [] });
               }}
               data-testid="button-cancel-create-course"
             >
