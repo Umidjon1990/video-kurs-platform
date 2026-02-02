@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, BookOpen, Users, Award, Star, Mail, Phone, MapPin, Send, ExternalLink, X, ZoomIn, Play, Lock, Clock, GraduationCap, TrendingUp, CheckCircle, ArrowLeft, PenTool, Headphones, Mic, BookText, Languages, FileText, Download, ChevronDown, type LucideIcon } from "lucide-react";
+import { Search, Filter, BookOpen, Users, Award, Star, Mail, Phone, MapPin, Send, ExternalLink, X, ZoomIn, Play, Lock, Clock, GraduationCap, TrendingUp, CheckCircle, ArrowLeft, PenTool, Headphones, Mic, BookText, Languages, FileText, Download, ChevronDown, Youtube, type LucideIcon } from "lucide-react";
 
 const iconMap: Record<string, LucideIcon> = {
   BookOpen,
@@ -76,6 +76,7 @@ export default function HomePage() {
   const [selectedCertificate, setSelectedCertificate] = useState<{ url: string; index: number } | null>(null);
   const [selectedCourseForLessons, setSelectedCourseForLessons] = useState<PublicCourse | null>(null);
   const [selectedDemoLesson, setSelectedDemoLesson] = useState<Lesson | null>(null);
+  const [promoVideoCourse, setPromoVideoCourse] = useState<PublicCourse | null>(null);
 
   // Build query params
   const buildQueryParams = () => {
@@ -594,17 +595,33 @@ export default function HomePage() {
 
                         <CardFooter className="flex flex-col gap-3">
                           {/* Darslarni Ko'rish - katta tugma */}
-                          <Button
-                            size="lg"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedCourseForLessons(course);
-                            }}
-                            className="w-full h-14 text-lg font-bold bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
-                            data-testid={`button-view-lessons-${course.id}`}
-                          >
-                            Darslarni Ko'rish
-                          </Button>
+                          <div className="w-full flex gap-2">
+                            <Button
+                              size="lg"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedCourseForLessons(course);
+                              }}
+                              className="flex-1 h-14 text-lg font-bold bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+                              data-testid={`button-view-lessons-${course.id}`}
+                            >
+                              Darslarni Ko'rish
+                            </Button>
+                            {(course as any).promoVideoUrl && (
+                              <Button
+                                size="lg"
+                                variant="outline"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPromoVideoCourse(course);
+                                }}
+                                className="h-14 px-4 border-2 border-red-500 text-red-500"
+                                data-testid={`button-promo-video-${course.id}`}
+                              >
+                                <Youtube className="w-6 h-6" />
+                              </Button>
+                            )}
+                          </div>
                           {/* BEPUL narx ko'rsatish */}
                           <div className="w-full">
                             <div className="flex items-center justify-center gap-2 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-3 rounded-lg border-2 border-green-300 dark:border-green-700">
@@ -750,6 +767,19 @@ export default function HomePage() {
                       >
                         Darslarni Ko'rish
                       </Button>
+                      {(course as any).promoVideoUrl && (
+                        <Button
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPromoVideoCourse(course);
+                          }}
+                          className="border-2 border-red-500 text-red-500"
+                          data-testid={`button-promo-video-${course.id}`}
+                        >
+                          <Youtube className="w-5 h-5" />
+                        </Button>
+                      )}
                       <Button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -883,6 +913,19 @@ export default function HomePage() {
                     >
                       Darslarni Ko'rish
                     </Button>
+                    {(course as any).promoVideoUrl && (
+                      <Button
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPromoVideoCourse(course);
+                        }}
+                        className="border-2 border-red-500 text-red-500"
+                        data-testid={`button-promo-video-${course.id}`}
+                      >
+                        <Youtube className="w-5 h-5" />
+                      </Button>
+                    )}
                     <Button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1623,6 +1666,107 @@ export default function HomePage() {
                 <p className="text-muted-foreground">Hali darslar qo'shilmagan</p>
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Promo Video Popup */}
+      <Dialog 
+        open={promoVideoCourse !== null} 
+        onOpenChange={() => setPromoVideoCourse(null)}
+      >
+        <DialogContent className="w-full max-w-4xl h-[100dvh] sm:h-auto sm:max-h-[90vh] p-0 gap-0 border-0 sm:border rounded-none sm:rounded-lg flex flex-col">
+          {/* Mobile-friendly header with back button */}
+          <div className="flex items-center gap-3 p-4 bg-background border-b">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setPromoVideoCourse(null)}
+              className="shrink-0"
+              data-testid="button-close-promo-video"
+            >
+              <X className="w-5 h-5" />
+            </Button>
+            <DialogHeader className="flex-1 space-y-0">
+              <DialogTitle className="text-base sm:text-lg line-clamp-1 flex items-center gap-2">
+                <Youtube className="w-5 h-5 text-red-500" />
+                {promoVideoCourse?.title} - Kurs Haqida
+              </DialogTitle>
+            </DialogHeader>
+          </div>
+          {/* Video Container */}
+          <div className="flex-1 overflow-hidden bg-black">
+            {promoVideoCourse && (promoVideoCourse as any).promoVideoUrl && (() => {
+              const url = (promoVideoCourse as any).promoVideoUrl;
+              // Extract YouTube video ID
+              let videoId = '';
+              try {
+                if (url.includes('youtube.com/watch')) {
+                  const urlObj = new URL(url);
+                  videoId = urlObj.searchParams.get('v') || '';
+                } else if (url.includes('youtu.be/')) {
+                  videoId = url.split('youtu.be/')[1]?.split('?')[0] || '';
+                } else if (url.includes('youtube.com/embed/')) {
+                  videoId = url.split('youtube.com/embed/')[1]?.split('?')[0] || '';
+                }
+              } catch (e) {
+                console.error('Invalid YouTube URL', e);
+              }
+              
+              if (videoId) {
+                return (
+                  <div className="relative w-full h-0 pb-[56.25%]">
+                    <iframe
+                      className="absolute top-0 left-0 w-full h-full"
+                      src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`}
+                      title={`${promoVideoCourse?.title} - Kurs Haqida Video`}
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                );
+              }
+              
+              return (
+                <div className="flex items-center justify-center h-64 text-muted-foreground">
+                  <p>Video yuklab bo'lmadi</p>
+                </div>
+              );
+            })()}
+          </div>
+          {/* Course Info Footer */}
+          <div className="p-4 border-t bg-background">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold truncate">{promoVideoCourse?.title}</h3>
+                <p className="text-sm text-muted-foreground line-clamp-1">
+                  {promoVideoCourse?.description}
+                </p>
+              </div>
+              <div className="flex gap-2 flex-shrink-0">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setPromoVideoCourse(null);
+                    if (promoVideoCourse) {
+                      setSelectedCourseForLessons(promoVideoCourse);
+                    }
+                  }}
+                  data-testid="button-view-lessons-from-promo"
+                >
+                  Darslarni Ko'rish
+                </Button>
+                <Button
+                  onClick={() => {
+                    window.open("https://t.me/zamonaviytalimuz", "_blank", "noopener,noreferrer");
+                  }}
+                  data-testid="button-enroll-from-promo"
+                >
+                  Yozilish
+                </Button>
+              </div>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
