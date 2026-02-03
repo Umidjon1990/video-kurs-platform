@@ -361,6 +361,7 @@ export interface IStorage {
   getLiveRoomsByInstructor(instructorId: string): Promise<LiveRoom[]>;
   getActiveLiveRooms(): Promise<LiveRoom[]>;
   getActiveLiveRoomsByCourse(courseId: string): Promise<LiveRoom[]>;
+  getActiveAndScheduledLiveRooms(): Promise<LiveRoom[]>;
   updateLiveRoom(id: string, data: Partial<InsertLiveRoom>): Promise<LiveRoom>;
   endLiveRoom(id: string): Promise<LiveRoom>;
 }
@@ -2775,6 +2776,14 @@ export class DatabaseStorage implements IStorage {
       .from(liveRooms)
       .where(and(eq(liveRooms.courseId, courseId), eq(liveRooms.status, 'active')))
       .orderBy(desc(liveRooms.createdAt));
+  }
+  
+  async getActiveAndScheduledLiveRooms(): Promise<LiveRoom[]> {
+    return await db
+      .select()
+      .from(liveRooms)
+      .where(or(eq(liveRooms.status, 'active'), eq(liveRooms.status, 'scheduled')))
+      .orderBy(desc(liveRooms.scheduledAt), desc(liveRooms.createdAt));
   }
   
   async updateLiveRoom(id: string, data: Partial<InsertLiveRoom>): Promise<LiveRoom> {

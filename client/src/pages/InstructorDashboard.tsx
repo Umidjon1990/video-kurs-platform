@@ -277,6 +277,8 @@ export default function InstructorDashboard() {
     description: "",
     courseId: "",
     platform: "jitsi" as "jitsi" | "zoom",
+    isScheduled: false,
+    scheduledAt: "",
   });
   
   const { data: zoomStatus } = useQuery<{ available: boolean }>({
@@ -288,33 +290,70 @@ export default function InstructorDashboard() {
       if (!liveRoomForm.title.trim()) {
         throw new Error("Jonli dars nomi kiritilishi shart");
       }
+      if (liveRoomForm.isScheduled && !liveRoomForm.scheduledAt) {
+        throw new Error("Rejalashtirilgan vaqtni tanlang");
+      }
       return await apiRequest("POST", "/api/instructor/live-rooms", {
         title: liveRoomForm.title,
         description: liveRoomForm.description || null,
         courseId: liveRoomForm.courseId || null,
         platform: liveRoomForm.platform,
+        scheduledAt: liveRoomForm.isScheduled ? liveRoomForm.scheduledAt : null,
       });
     },
     onSuccess: async (res) => {
       const room = await res.json();
       queryClient.invalidateQueries({ queryKey: ["/api/instructor/live-rooms"] });
       setIsLiveRoomDialogOpen(false);
-      setLiveRoomForm({ title: "", description: "", courseId: "", platform: "jitsi" });
-      toast({
-        title: "Jonli dars boshlandi!",
-        description: liveRoomForm.platform === 'zoom' 
-          ? "Zoom uchrashuvi yaratildi. Havolani ko'chirib olishingiz mumkin."
-          : "O'quvchilaringiz endi qo'shilishi mumkin.",
-      });
-      // Navigate to live room (only for Jitsi)
-      if (liveRoomForm.platform === 'jitsi') {
-        setLocation(`/live/${room.id}`);
+      setLiveRoomForm({ title: "", description: "", courseId: "", platform: "jitsi", isScheduled: false, scheduledAt: "" });
+      
+      if (liveRoomForm.isScheduled) {
+        toast({
+          title: "Jonli dars rejalashtirildi!",
+          description: "O'quvchilarga xabar yuborildi.",
+        });
+      } else {
+        toast({
+          title: "Jonli dars boshlandi!",
+          description: liveRoomForm.platform === 'zoom' 
+            ? "Zoom uchrashuvi yaratildi. Havolani ko'chirib olishingiz mumkin."
+            : "O'quvchilaringiz endi qo'shilishi mumkin.",
+        });
+        // Navigate to live room (only for Jitsi and if not scheduled)
+        if (liveRoomForm.platform === 'jitsi') {
+          setLocation(`/live/${room.id}`);
+        }
       }
     },
     onError: (error: any) => {
       toast({
         title: "Xatolik",
         description: error.message || "Jonli dars yaratishda xatolik yuz berdi",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const startLiveRoomMutation = useMutation({
+    mutationFn: async (roomId: string) => {
+      return await apiRequest("POST", `/api/instructor/live-rooms/${roomId}/start`);
+    },
+    onSuccess: async (res) => {
+      const room = await res.json();
+      queryClient.invalidateQueries({ queryKey: ["/api/instructor/live-rooms"] });
+      toast({
+        title: "Jonli dars boshlandi!",
+        description: "O'quvchilarga xabar yuborildi.",
+      });
+      // Navigate to live room for Jitsi
+      if (room.platform === 'jitsi') {
+        setLocation(`/live/${room.id}`);
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Xatolik",
+        description: error.message || "Jonli darsni boshlashda xatolik",
         variant: "destructive",
       });
     },
@@ -1156,6 +1195,74 @@ export default function InstructorDashboard() {
                 <p className="text-sm text-muted-foreground mt-1">Yangi jonli dars boshlash uchun yuqoridagi tugmani bosing</p>
               </CardContent>
             </Card>
+          )}
+          
+          {/* Scheduled Rooms Section */}
+          {liveRooms && liveRooms.filter((r: any) => r.status === 'scheduled').length > 0 && (
+            <div className="mt-6 space-y-3">
+              <h3 className="text-lg font-semibold flex items-center gap-2 text-muted-foreground">
+                <Activity className="w-5 h-5" />
+                Rejalashtirilgan Darslar
+              </h3>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {liveRooms
+                  .filter((room: any) => room.status === 'scheduled')
+                  .map((room: any) => (
+                    <Card key={room.id} className="border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-900" data-testid={`card-scheduled-room-${room.id}`}>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <CardTitle className="text-lg">{room.title}</CardTitle>
+                            {room.description && (
+                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{room.description}</p>
+                            )}
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            <Badge variant="secondary" className="shrink-0">Rejalashtirilgan</Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {room.platform === 'zoom' ? 'Zoom' : 'Jitsi'}
+                            </Badge>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-0 space-y-3">
+                        <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-md">
+                          <p className="text-sm font-medium">
+                            {new Date(room.scheduledAt).toLocaleString('uz-UZ', {
+                              weekday: 'long',
+                              day: 'numeric',
+                              month: 'long',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            size="sm" 
+                            onClick={() => startLiveRoomMutation.mutate(room.id)}
+                            disabled={startLiveRoomMutation.isPending}
+                            className="bg-green-500 hover:bg-green-600"
+                            data-testid={`button-start-scheduled-${room.id}`}
+                          >
+                            <Radio className="w-4 h-4 mr-1" />
+                            {startLiveRoomMutation.isPending ? "Boshlanmoqda..." : "Hozir Boshlash"}
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => endLiveRoomMutation.mutate(room.id)}
+                            disabled={endLiveRoomMutation.isPending}
+                            data-testid={`button-cancel-scheduled-${room.id}`}
+                          >
+                            Bekor qilish
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+              </div>
+            </div>
           )}
         </div>
         
@@ -3694,6 +3801,35 @@ Kinescope: https://kinescope.io/watch/...'
                 Kurs tanlasangiz, faqat shu kursga yozilgan o'quvchilar ko'ra oladi
               </p>
             </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="scheduleRoom"
+                checked={liveRoomForm.isScheduled}
+                onCheckedChange={(checked) => setLiveRoomForm({ ...liveRoomForm, isScheduled: !!checked, scheduledAt: "" })}
+                data-testid="checkbox-schedule-room"
+              />
+              <Label htmlFor="scheduleRoom" className="text-sm cursor-pointer">
+                Darsni avvaldan rejalashtirish
+              </Label>
+            </div>
+            
+            {liveRoomForm.isScheduled && (
+              <div className="space-y-2">
+                <Label htmlFor="scheduledAt">Rejalashtirilgan vaqt</Label>
+                <Input
+                  id="scheduledAt"
+                  type="datetime-local"
+                  value={liveRoomForm.scheduledAt}
+                  onChange={(e) => setLiveRoomForm({ ...liveRoomForm, scheduledAt: e.target.value })}
+                  min={new Date().toISOString().slice(0, 16)}
+                  data-testid="input-scheduled-at"
+                />
+                <p className="text-xs text-muted-foreground">
+                  O'quvchilarga xabar yuboriladi va ular dars vaqti kelganda qo'shilishlari mumkin
+                </p>
+              </div>
+            )}
           </div>
           
           <DialogFooter>
@@ -3706,12 +3842,14 @@ Kinescope: https://kinescope.io/watch/...'
             </Button>
             <Button
               onClick={() => createLiveRoomMutation.mutate()}
-              disabled={createLiveRoomMutation.isPending || !liveRoomForm.title.trim()}
-              className="bg-red-500 hover:bg-red-600"
+              disabled={createLiveRoomMutation.isPending || !liveRoomForm.title.trim() || (liveRoomForm.isScheduled && !liveRoomForm.scheduledAt)}
+              className={liveRoomForm.isScheduled ? "bg-blue-500 hover:bg-blue-600" : "bg-red-500 hover:bg-red-600"}
               data-testid="button-start-live-room"
             >
               <Radio className="w-4 h-4 mr-2" />
-              {createLiveRoomMutation.isPending ? "Boshlanmoqda..." : "Boshlash"}
+              {createLiveRoomMutation.isPending 
+                ? (liveRoomForm.isScheduled ? "Rejalashtirmoqda..." : "Boshlanmoqda...") 
+                : (liveRoomForm.isScheduled ? "Rejalashtirish" : "Boshlash")}
             </Button>
           </DialogFooter>
         </DialogContent>

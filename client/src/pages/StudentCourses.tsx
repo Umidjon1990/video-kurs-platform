@@ -9,7 +9,7 @@ import { StatsCard } from "@/components/StatsCard";
 import { CourseCard } from "@/components/CourseCard";
 import { ProgressCard } from "@/components/ProgressCard";
 import { useLocation } from "wouter";
-import { BookOpen, Trophy, GraduationCap, PlayCircle, CheckCircle, Star, Sparkles, ArrowRight, Target, Zap, Radio, Video, Users } from "lucide-react";
+import { BookOpen, Trophy, GraduationCap, PlayCircle, CheckCircle, Star, Sparkles, ArrowRight, Target, Zap, Radio, Video, Users, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import type { Course, StudentCourseProgress, SubscriptionPlan } from "@shared/schema";
 
@@ -234,7 +234,7 @@ export default function StudentCourses() {
           )}
 
           {/* Active Live Rooms Section */}
-          {activeLiveRooms && activeLiveRooms.length > 0 && (
+          {activeLiveRooms && activeLiveRooms.filter((r: any) => r.status === 'active').length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -258,7 +258,7 @@ export default function StudentCourses() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {activeLiveRooms.map((room: any) => (
+                  {activeLiveRooms.filter((r: any) => r.status === 'active').map((room: any) => (
                     <motion.div
                       key={room.id}
                       className="flex items-center justify-between p-4 rounded-lg bg-background/50 border border-red-500/20 hover-elevate cursor-pointer"
@@ -301,6 +301,75 @@ export default function StudentCourses() {
                         <Video className="w-4 h-4 mr-2" />
                         Qo'shilish
                       </Button>
+                    </motion.div>
+                  ))}
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+          
+          {/* Scheduled Live Rooms Section */}
+          {activeLiveRooms && activeLiveRooms.filter((r: any) => r.status === 'scheduled').length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+              className="mt-6"
+            >
+              <Card className="border-blue-500/30 shadow-xl bg-gradient-to-r from-blue-500/10 via-background to-blue-500/5 backdrop-blur overflow-hidden">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-blue-500" />
+                    <CardTitle className="text-lg">Kelgusi Darslar</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Rejalashtirilgan jonli darslar - vaqti kelganda qo'shilishingiz mumkin
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {activeLiveRooms.filter((r: any) => r.status === 'scheduled').map((room: any) => (
+                    <motion.div
+                      key={room.id}
+                      className="flex items-center justify-between p-4 rounded-lg bg-background/50 border border-blue-500/20"
+                      data-testid={`scheduled-room-${room.id}`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center ${room.platform === 'zoom' ? 'bg-blue-500/20' : 'bg-blue-400/20'}`}>
+                          <Video className="w-6 h-6 text-blue-500" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold">{room.title}</h4>
+                            <span className={`text-xs px-1.5 py-0.5 rounded ${room.platform === 'zoom' ? 'bg-blue-500/20 text-blue-600' : 'bg-primary/20 text-primary'}`}>
+                              {room.platform === 'zoom' ? 'Zoom' : 'Jitsi'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <span>{room.instructor?.firstName} {room.instructor?.lastName}</span>
+                            {room.course && (
+                              <>
+                                <span>•</span>
+                                <span>{room.course.title}</span>
+                              </>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 mt-1 text-sm text-blue-600 dark:text-blue-400">
+                            <Clock className="w-3 h-3" />
+                            <span>
+                              {new Date(room.scheduledAt).toLocaleString('uz-UZ', {
+                                weekday: 'short',
+                                day: 'numeric',
+                                month: 'short',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <Badge variant="secondary" className="text-blue-600 border-blue-300">
+                        Rejalashtirilgan
+                      </Badge>
                     </motion.div>
                   ))}
                 </CardContent>

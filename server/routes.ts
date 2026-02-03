@@ -5088,25 +5088,28 @@ So'zlar soni: ${submission.wordCount}`;
     res.json({ available: isZoomConfigured() });
   });
   
-  // Create a live room (Instructor only) - supports Jitsi and Zoom
+  // Create a live room (Instructor only) - supports Jitsi and Zoom, with optional scheduling
   app.post('/api/instructor/live-rooms', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
       const instructorId = req.user.claims.sub;
-      const { title, description, courseId, maxParticipants, platform = 'jitsi' } = req.body;
+      const { title, description, courseId, maxParticipants, platform = 'jitsi', scheduledAt } = req.body;
       
       if (!title) {
         return res.status(400).json({ message: 'Jonli dars nomi kiritilishi shart' });
       }
+      
+      const isScheduled = scheduledAt && new Date(scheduledAt) > new Date();
       
       let roomData: any = {
         courseId: courseId || null,
         instructorId,
         title,
         description: description || null,
-        status: 'active',
+        status: isScheduled ? 'scheduled' : 'active',
         maxParticipants: maxParticipants || 50,
         platform,
-        startedAt: new Date(),
+        scheduledAt: isScheduled ? new Date(scheduledAt) : null,
+        startedAt: isScheduled ? null : new Date(),
       };
       
       if (platform === 'zoom') {
@@ -5135,12 +5138,20 @@ So'zlar soni: ${submission.wordCount}`;
       // Send notification to students if courseId is provided
       if (courseId) {
         const enrolledStudents = await storage.getEnrollmentsByCourse(courseId);
+        const notificationTitle = isScheduled ? 'Jonli dars rejalashtirildi!' : 'Jonli dars boshlandi!';
+        const scheduledTime = isScheduled ? new Date(scheduledAt).toLocaleString('uz-UZ', { 
+          day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' 
+        }) : '';
+        const notificationMessage = isScheduled 
+          ? `"${title}" jonli darsi ${scheduledTime} da bo'lib o'tadi.`
+          : `"${title}" jonli darsi hozir boshlanmoqda. Darsga qo'shilish uchun bosing.`;
+        
         for (const enrollment of enrolledStudents) {
           if (enrollment.paymentStatus === 'approved' || enrollment.paymentStatus === 'confirmed') {
             await storage.createNotification({
               userId: enrollment.userId,
-              title: 'Jonli dars boshlandi!',
-              message: `"${title}" jonli darsi hozir boshlanmoqda. Darsga qo'shilish uchun bosing.`,
+              title: notificationTitle,
+              message: notificationMessage,
               type: 'live_class',
               relatedId: liveRoom.id,
             });
@@ -5151,6 +5162,53 @@ So'zlar soni: ${submission.wordCount}`;
       res.json(liveRoom);
     } catch (error: any) {
       console.error('Error creating live room:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Start a scheduled live room
+  app.post('/api/instructor/live-rooms/:roomId/start', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { roomId } = req.params;
+      const instructorId = req.user.claims.sub;
+      
+      const room = await storage.getLiveRoom(roomId);
+      if (!room) {
+        return res.status(404).json({ message: 'Jonli dars topilmadi' });
+      }
+      
+      if (room.instructorId !== instructorId) {
+        return res.status(403).json({ message: 'Faqat o\'z darslaringizni boshlashingiz mumkin' });
+      }
+      
+      if (room.status !== 'scheduled') {
+        return res.status(400).json({ message: 'Bu dars allaqachon boshlangan yoki tugagan' });
+      }
+      
+      const updatedRoom = await storage.updateLiveRoom(roomId, {
+        status: 'active',
+        startedAt: new Date(),
+      });
+      
+      // Notify students that the class has started
+      if (room.courseId) {
+        const enrolledStudents = await storage.getEnrollmentsByCourse(room.courseId);
+        for (const enrollment of enrolledStudents) {
+          if (enrollment.paymentStatus === 'approved' || enrollment.paymentStatus === 'confirmed') {
+            await storage.createNotification({
+              userId: enrollment.userId,
+              title: 'Jonli dars boshlandi!',
+              message: `"${room.title}" jonli darsi hozir boshlanmoqda. Darsga qo'shilish uchun bosing.`,
+              type: 'live_class',
+              relatedId: roomId,
+            });
+          }
+        }
+      }
+      
+      res.json(updatedRoom);
+    } catch (error: any) {
+      console.error('Error starting live room:', error);
       res.status(500).json({ message: error.message });
     }
   });
@@ -5259,7 +5317,7 @@ So'zlar soni: ${submission.wordCount}`;
     }
   });
   
-  // Get all active live rooms (for students)
+  // Get all active and scheduled live rooms (for students)
   app.get('/api/live-rooms/active', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
@@ -5269,8 +5327,8 @@ So'zlar soni: ${submission.wordCount}`;
         return res.status(401).json({ message: 'User not found' });
       }
       
-      // Get active rooms
-      const activeRooms = await storage.getActiveLiveRooms();
+      // Get active and scheduled rooms
+      const activeRooms = await storage.getActiveAndScheduledLiveRooms();
       
       // Filter based on user's enrollments if student
       if (user.role === 'student') {

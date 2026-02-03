@@ -1226,14 +1226,15 @@ export const liveRooms = pgTable("live_rooms", {
   instructorId: varchar("instructor_id").notNull().references(() => users.id),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
-  status: varchar("status", { length: 20 }).notNull().default('active'),
+  status: varchar("status", { length: 20 }).notNull().default('active'), // scheduled, active, ended
   maxParticipants: integer("max_participants").default(50),
   platform: varchar("platform", { length: 20 }).notNull().default('jitsi'), // jitsi, zoom
   zoomMeetingId: varchar("zoom_meeting_id", { length: 100 }),
   zoomJoinUrl: varchar("zoom_join_url", { length: 500 }),
   zoomStartUrl: text("zoom_start_url"),
   zoomPassword: varchar("zoom_password", { length: 50 }),
-  startedAt: timestamp("started_at").defaultNow(),
+  scheduledAt: timestamp("scheduled_at"), // Rejalashtirilgan vaqt
+  startedAt: timestamp("started_at"),
   endedAt: timestamp("ended_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
