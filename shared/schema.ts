@@ -1218,6 +1218,35 @@ export type LessonEssayQuestion = typeof lessonEssayQuestions.$inferSelect;
 export type InsertEssaySubmission = z.infer<typeof insertEssaySubmissionSchema>;
 export type EssaySubmission = typeof essaySubmissions.$inferSelect;
 
+// Live Rooms table - Jonli darslar uchun
+export const liveRooms = pgTable("live_rooms", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  dailyRoomName: varchar("daily_room_name", { length: 255 }).notNull(),
+  dailyRoomUrl: varchar("daily_room_url", { length: 500 }).notNull(),
+  courseId: varchar("course_id").references(() => courses.id),
+  instructorId: varchar("instructor_id").notNull().references(() => users.id),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  status: varchar("status", { length: 20 }).notNull().default('active'),
+  maxParticipants: integer("max_participants").default(50),
+  startedAt: timestamp("started_at").defaultNow(),
+  endedAt: timestamp("ended_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const liveRoomsRelations = relations(liveRooms, ({ one }) => ({
+  course: one(courses, { fields: [liveRooms.courseId], references: [courses.id] }),
+  instructor: one(users, { fields: [liveRooms.instructorId], references: [users.id] }),
+}));
+
+export const insertLiveRoomSchema = createInsertSchema(liveRooms).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertLiveRoom = z.infer<typeof insertLiveRoomSchema>;
+export type LiveRoom = typeof liveRooms.$inferSelect;
+
 // Course Analytics type (for instructor dashboard)
 export type CourseAnalytics = {
   enrollmentTrend: { date: string; count: number }[];
