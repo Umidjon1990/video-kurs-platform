@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, EyeOff, Download, Megaphone, Users, User, MessageCircle, TrendingUp, Award, Activity, Settings, UserCheck, Upload, FileSpreadsheet, Mic, PenTool } from "lucide-react";
+import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, EyeOff, Download, Megaphone, Users, User, MessageCircle, TrendingUp, Award, Activity, Settings, UserCheck, Upload, FileSpreadsheet, Mic, PenTool, Radio, PhoneOff, Monitor } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NotificationBell } from "@/components/NotificationBell";
 import { StarRating } from "@/components/StarRating";
@@ -261,6 +261,71 @@ export default function InstructorDashboard() {
   const { data: resourceTypes } = useQuery<any[]>({
     queryKey: ["/api/resource-types"],
     enabled: isAuthenticated,
+  });
+
+  // Live Rooms
+  const { data: liveRooms } = useQuery<any[]>({
+    queryKey: ["/api/instructor/live-rooms"],
+    enabled: isAuthenticated,
+    refetchInterval: 10000, // Poll every 10 seconds
+  });
+  
+  const [isLiveRoomDialogOpen, setIsLiveRoomDialogOpen] = useState(false);
+  const [liveRoomForm, setLiveRoomForm] = useState({
+    title: "",
+    description: "",
+    courseId: "",
+  });
+  
+  const createLiveRoomMutation = useMutation({
+    mutationFn: async () => {
+      if (!liveRoomForm.title.trim()) {
+        throw new Error("Jonli dars nomi kiritilishi shart");
+      }
+      return await apiRequest("POST", "/api/instructor/live-rooms", {
+        title: liveRoomForm.title,
+        description: liveRoomForm.description || null,
+        courseId: liveRoomForm.courseId || null,
+      });
+    },
+    onSuccess: async (res) => {
+      const room = await res.json();
+      queryClient.invalidateQueries({ queryKey: ["/api/instructor/live-rooms"] });
+      setIsLiveRoomDialogOpen(false);
+      setLiveRoomForm({ title: "", description: "", courseId: "" });
+      toast({
+        title: "Jonli dars boshlandi!",
+        description: "O'quvchilaringiz endi qo'shilishi mumkin.",
+      });
+      // Navigate to live room
+      setLocation(`/live/${room.id}`);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Xatolik",
+        description: error.message || "Jonli dars yaratishda xatolik yuz berdi",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const endLiveRoomMutation = useMutation({
+    mutationFn: async (roomId: string) => {
+      return await apiRequest("POST", `/api/instructor/live-rooms/${roomId}/end`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/instructor/live-rooms"] });
+      toast({
+        title: "Jonli dars tugatildi",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Xatolik",
+        description: error.message || "Jonli darsni tugatishda xatolik",
+        variant: "destructive",
+      });
+    },
   });
 
   const createCourseMutation = useMutation({
@@ -963,6 +1028,84 @@ export default function InstructorDashboard() {
       </div>
 
       <div className="p-8 space-y-8">
+        {/* Live Class Section */}
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <Radio className="w-6 h-6 text-red-500" />
+              Jonli Darslar
+            </h2>
+            <Button 
+              onClick={() => setIsLiveRoomDialogOpen(true)} 
+              className="bg-red-500 hover:bg-red-600"
+              data-testid="button-start-live-class"
+            >
+              <Radio className="w-4 h-4 mr-2" />
+              Jonli Dars Boshlash
+            </Button>
+          </div>
+          
+          {liveRooms && liveRooms.filter((r: any) => r.status === 'active').length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {liveRooms
+                .filter((room: any) => room.status === 'active')
+                .map((room: any) => (
+                  <Card key={room.id} className="border-red-200 bg-red-50/50 dark:bg-red-950/20 dark:border-red-900" data-testid={`card-live-room-${room.id}`}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <span className="relative flex h-3 w-3">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                            </span>
+                            {room.title}
+                          </CardTitle>
+                          {room.description && (
+                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{room.description}</p>
+                          )}
+                        </div>
+                        <Badge variant="destructive" className="shrink-0">Jonli</Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          size="sm" 
+                          onClick={() => setLocation(`/live/${room.id}`)}
+                          data-testid={`button-join-room-${room.id}`}
+                        >
+                          <Video className="w-4 h-4 mr-1" />
+                          Kirish
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => endLiveRoomMutation.mutate(room.id)}
+                          disabled={endLiveRoomMutation.isPending}
+                          data-testid={`button-end-room-${room.id}`}
+                        >
+                          <PhoneOff className="w-4 h-4 mr-1" />
+                          Tugatish
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+            </div>
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                <Radio className="w-10 h-10 text-muted-foreground mb-3" />
+                <p className="text-muted-foreground">Hozirda aktiv jonli darslar yo'q</p>
+                <p className="text-sm text-muted-foreground mt-1">Yangi jonli dars boshlash uchun yuqoridagi tugmani bosing</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+        
+        <div className="border-t pt-8" />
+        
         <div className="flex justify-between items-center">
           <h2 className="text-3xl font-bold">Mening Kurslarim</h2>
           <div className="flex gap-2">
@@ -3384,6 +3527,89 @@ Kinescope: https://kinescope.io/watch/...'
         onConfirm={() => deletingCourse && deleteCourseMutation.mutate(deletingCourse.id)}
         isPending={deleteCourseMutation.isPending}
       />
+      
+      {/* Live Room Dialog */}
+      <Dialog open={isLiveRoomDialogOpen} onOpenChange={setIsLiveRoomDialogOpen}>
+        <DialogContent data-testid="dialog-create-live-room">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Radio className="w-5 h-5 text-red-500" />
+              Jonli Dars Boshlash
+            </DialogTitle>
+            <DialogDescription>
+              O'quvchilaringiz bilan real vaqtda video dars o'tkazing
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="liveRoomTitle">Dars nomi *</Label>
+              <Input
+                id="liveRoomTitle"
+                value={liveRoomForm.title}
+                onChange={(e) => setLiveRoomForm({ ...liveRoomForm, title: e.target.value })}
+                placeholder="Masalan: 8-dars - Present Perfect"
+                data-testid="input-live-room-title"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="liveRoomDescription">Tavsif (ixtiyoriy)</Label>
+              <Textarea
+                id="liveRoomDescription"
+                value={liveRoomForm.description}
+                onChange={(e) => setLiveRoomForm({ ...liveRoomForm, description: e.target.value })}
+                placeholder="Bu darsda nimani o'rganamiz..."
+                className="resize-none"
+                rows={2}
+                data-testid="input-live-room-description"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="liveRoomCourse">Kurs bilan bog'lash (ixtiyoriy)</Label>
+              <Select
+                value={liveRoomForm.courseId}
+                onValueChange={(value) => setLiveRoomForm({ ...liveRoomForm, courseId: value })}
+              >
+                <SelectTrigger data-testid="select-live-room-course">
+                  <SelectValue placeholder="Kurs tanlang..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Bog'lamaslik</SelectItem>
+                  {courses?.map((course) => (
+                    <SelectItem key={course.id} value={course.id}>
+                      {course.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Kurs tanlasangiz, faqat shu kursga yozilgan o'quvchilar ko'ra oladi
+              </p>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsLiveRoomDialogOpen(false)}
+              data-testid="button-cancel-live-room"
+            >
+              Bekor qilish
+            </Button>
+            <Button
+              onClick={() => createLiveRoomMutation.mutate()}
+              disabled={createLiveRoomMutation.isPending || !liveRoomForm.title.trim()}
+              className="bg-red-500 hover:bg-red-600"
+              data-testid="button-start-live-room"
+            >
+              <Radio className="w-4 h-4 mr-2" />
+              {createLiveRoomMutation.isPending ? "Boshlanmoqda..." : "Boshlash"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
