@@ -16,6 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { NotificationBell } from "@/components/NotificationBell";
 import { StarRating } from "@/components/StarRating";
 import { ModernVideoPlayer } from "@/components/ModernVideoPlayer";
+import { CourseGroupChat, OnlineUsersList } from "@/components/CourseGroupChat";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Course, Lesson, Assignment, Test } from "@shared/schema";
 
@@ -696,6 +697,10 @@ export default function LearningPage() {
                   <TabsTrigger value="tests" data-testid="tab-tests">Testlar</TabsTrigger>
                   <TabsTrigger value="essay" data-testid="tab-essay">Insho</TabsTrigger>
                   <TabsTrigger value="results" data-testid="tab-results">Natijalar</TabsTrigger>
+                  <TabsTrigger value="group-chat" data-testid="tab-group-chat" className="flex items-center gap-1">
+                    <MessageCircle className="h-4 w-4" />
+                    Guruh Suhbati
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="overview" className="space-y-4">
@@ -1018,6 +1023,20 @@ export default function LearningPage() {
                       </Card>
                     );
                   })()}
+                </TabsContent>
+
+                <TabsContent value="group-chat" className="space-y-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                    <div className="lg:col-span-3">
+                      <CourseGroupChat 
+                        courseId={courseId!} 
+                        currentUserId={user?.id || ''} 
+                      />
+                    </div>
+                    <div className="lg:col-span-1">
+                      <OnlineUsersList courseId={courseId!} />
+                    </div>
+                  </div>
                 </TabsContent>
               </Tabs>
                 </div>

@@ -30,6 +30,7 @@ import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronD
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NotificationBell } from "@/components/NotificationBell";
 import { StarRating } from "@/components/StarRating";
+import { CourseGroupChat, OnlineUsersList } from "@/components/CourseGroupChat";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import type { Course, Lesson, Assignment, Test, InstructorCourseWithCounts, CourseAnalytics } from "@shared/schema";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -1496,7 +1497,7 @@ export default function InstructorDashboard() {
             </DialogHeader>
             
             <Tabs defaultValue="lessons" className="w-full">
-              <TabsList className="grid w-full grid-cols-6">
+              <TabsList className="grid w-full grid-cols-7">
                 <TabsTrigger value="modules" data-testid="tab-modules">
                   <BookOpen className="w-4 h-4 mr-2" />
                   Modullar
@@ -1520,6 +1521,10 @@ export default function InstructorDashboard() {
                 <TabsTrigger value="students" data-testid="tab-students">
                   <Users className="w-4 h-4 mr-2" />
                   O'quvchilar
+                </TabsTrigger>
+                <TabsTrigger value="group-chat" data-testid="tab-group-chat">
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Suhbat
                 </TabsTrigger>
               </TabsList>
 
@@ -2041,6 +2046,20 @@ export default function InstructorDashboard() {
                       )}
                     </div>
                   )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="group-chat" className="space-y-4">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                  <div className="lg:col-span-3">
+                    <CourseGroupChat 
+                      courseId={selectedCourse?.id || ''} 
+                      currentUserId={user?.id || ''} 
+                    />
+                  </div>
+                  <div className="lg:col-span-1">
+                    <OnlineUsersList courseId={selectedCourse?.id || ''} />
+                  </div>
                 </div>
               </TabsContent>
             </Tabs>
