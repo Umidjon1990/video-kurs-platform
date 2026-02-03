@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Mic, MicOff, PhoneOff, Users, Volume2, Loader2 } from "lucide-react";
+import { Mic, PhoneOff, Volume2, Loader2, ExternalLink } from "lucide-react";
 
 interface CourseVoiceChatProps {
   courseId: string;
@@ -14,132 +14,27 @@ interface CourseVoiceChatProps {
 export function CourseVoiceChat({ courseId, courseTitle, currentUserId, userName }: CourseVoiceChatProps) {
   const [isJoined, setIsJoined] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const jitsiContainerRef = useRef<HTMLDivElement>(null);
-  const jitsiApiRef = useRef<any>(null);
   
-  const roomName = `zamonaviy-edu-voice-${courseId.replace(/-/g, '')}`;
+  const roomName = `zamonaviy-edu-voice-${courseId.replace(/-/g, '').substring(0, 20)}`;
+  const displayName = encodeURIComponent(userName);
   
-  const loadJitsiScript = (): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      if ((window as any).JitsiMeetExternalAPI) {
-        resolve();
-        return;
-      }
-      
-      const existingScript = document.querySelector('script[src*="external_api.js"]');
-      if (existingScript) {
-        existingScript.addEventListener('load', () => resolve());
-        return;
-      }
-      
-      const script = document.createElement('script');
-      script.src = 'https://meet.jit.si/external_api.js';
-      script.async = true;
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error('Failed to load Jitsi API'));
-      document.head.appendChild(script);
-    });
-  };
+  const jitsiUrl = `https://meet.jit.si/${roomName}#userInfo.displayName="${displayName}"&config.startWithAudioMuted=false&config.startWithVideoMuted=true&config.prejoinPageEnabled=false&interfaceConfig.SHOW_JITSI_WATERMARK=false&interfaceConfig.SHOW_WATERMARK_FOR_GUESTS=false&interfaceConfig.TOOLBAR_BUTTONS=["microphone","hangup","participants-pane","settings"]`;
   
-  const joinVoiceChat = async () => {
+  const joinVoiceChat = () => {
     setIsLoading(true);
-    
-    try {
-      await loadJitsiScript();
-      
-      if (!jitsiContainerRef.current || !(window as any).JitsiMeetExternalAPI) {
-        throw new Error('Jitsi container or API not available');
-      }
-      
-      const api = new (window as any).JitsiMeetExternalAPI('meet.jit.si', {
-        roomName: roomName,
-        parentNode: jitsiContainerRef.current,
-        width: '100%',
-        height: 300,
-        configOverwrite: {
-          startWithAudioMuted: false,
-          startWithVideoMuted: true,
-          disableDeepLinking: true,
-          prejoinPageEnabled: false,
-          disableModeratorIndicator: true,
-          enableWelcomePage: false,
-          enableClosePage: false,
-          disableInviteFunctions: true,
-          toolbarButtons: [
-            'microphone',
-            'hangup',
-            'participants-pane',
-            'settings',
-          ],
-          notifications: [],
-          hideConferenceSubject: true,
-          hideConferenceTimer: true,
-          disableProfile: true,
-          enableNoAudioDetection: true,
-          enableNoisyMicDetection: true,
-        },
-        interfaceConfigOverwrite: {
-          SHOW_JITSI_WATERMARK: false,
-          SHOW_WATERMARK_FOR_GUESTS: false,
-          SHOW_BRAND_WATERMARK: false,
-          SHOW_POWERED_BY: false,
-          DEFAULT_BACKGROUND: '#1e1e2e',
-          TOOLBAR_ALWAYS_VISIBLE: true,
-          FILM_STRIP_MAX_HEIGHT: 0,
-          DISABLE_VIDEO_BACKGROUND: true,
-          DISABLE_FOCUS_INDICATOR: true,
-          VIDEO_QUALITY_LABEL_DISABLED: true,
-          CONNECTION_INDICATOR_DISABLED: true,
-          MOBILE_APP_PROMO: false,
-          HIDE_INVITE_MORE_HEADER: true,
-          GENERATE_ROOMNAMES_ON_WELCOME_PAGE: false,
-        },
-        userInfo: {
-          displayName: userName,
-        },
-      });
-      
-      jitsiApiRef.current = api;
-      
-      api.addListener('readyToClose', () => {
-        leaveVoiceChat();
-      });
-      
-      api.addListener('audioMuteStatusChanged', (event: any) => {
-        setIsMuted(event.muted);
-      });
-      
+    setTimeout(() => {
       setIsJoined(true);
-    } catch (error) {
-      console.error('Error joining voice chat:', error);
-    } finally {
       setIsLoading(false);
-    }
+    }, 500);
   };
   
   const leaveVoiceChat = () => {
-    if (jitsiApiRef.current) {
-      jitsiApiRef.current.dispose();
-      jitsiApiRef.current = null;
-    }
     setIsJoined(false);
-    setIsMuted(false);
   };
   
-  const toggleMute = () => {
-    if (jitsiApiRef.current) {
-      jitsiApiRef.current.executeCommand('toggleAudio');
-    }
+  const openInNewTab = () => {
+    window.open(jitsiUrl, '_blank', 'noopener,noreferrer');
   };
-  
-  useEffect(() => {
-    return () => {
-      if (jitsiApiRef.current) {
-        jitsiApiRef.current.dispose();
-      }
-    };
-  }, []);
   
   return (
     <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
@@ -169,49 +64,50 @@ export function CourseVoiceChat({ courseId, courseTitle, currentUserId, userName
             <p className="text-center text-muted-foreground max-w-xs">
               Guruh a'zolari bilan real vaqtda ovozli aloqa o'rnatish uchun qo'shiling
             </p>
-            <Button 
-              onClick={joinVoiceChat} 
-              disabled={isLoading}
-              size="lg"
-              className="min-w-[200px]"
-              data-testid="button-join-voice-chat"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Ulanmoqda...
-                </>
-              ) : (
-                <>
-                  <Mic className="h-4 w-4 mr-2" />
-                  Ovozli Suhbatga Qo'shilish
-                </>
-              )}
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button 
+                onClick={joinVoiceChat} 
+                disabled={isLoading}
+                size="lg"
+                className="min-w-[200px]"
+                data-testid="button-join-voice-chat"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Ulanmoqda...
+                  </>
+                ) : (
+                  <>
+                    <Mic className="h-4 w-4 mr-2" />
+                    Ovozli Suhbatga Qo'shilish
+                  </>
+                )}
+              </Button>
+              <Button 
+                onClick={openInNewTab} 
+                variant="outline"
+                size="lg"
+                data-testid="button-open-voice-new-tab"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Yangi Oynada Ochish
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="space-y-4">
-            <div 
-              ref={jitsiContainerRef} 
-              className="w-full rounded-lg overflow-hidden border border-border/50"
-              data-testid="voice-chat-container"
-            />
+            <div className="w-full rounded-lg overflow-hidden border border-border/50 bg-background">
+              <iframe
+                src={jitsiUrl}
+                allow="camera; microphone; fullscreen; display-capture; autoplay"
+                className="w-full h-[400px]"
+                style={{ border: 'none' }}
+                data-testid="voice-chat-iframe"
+              />
+            </div>
             
             <div className="flex items-center justify-center gap-3">
-              <Button
-                variant={isMuted ? "destructive" : "secondary"}
-                size="icon"
-                onClick={toggleMute}
-                className="h-12 w-12 rounded-full"
-                data-testid="button-toggle-mute"
-              >
-                {isMuted ? (
-                  <MicOff className="h-5 w-5" />
-                ) : (
-                  <Mic className="h-5 w-5" />
-                )}
-              </Button>
-              
               <Button
                 variant="destructive"
                 size="lg"
@@ -221,6 +117,16 @@ export function CourseVoiceChat({ courseId, courseTitle, currentUserId, userName
               >
                 <PhoneOff className="h-4 w-4" />
                 Chiqish
+              </Button>
+              
+              <Button 
+                onClick={openInNewTab} 
+                variant="outline"
+                size="lg"
+                data-testid="button-open-fullscreen"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Katta Ekranda
               </Button>
             </div>
           </div>
