@@ -1,7 +1,6 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRoute, useLocation } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import DailyIframe from '@daily-co/daily-js';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,17 +12,16 @@ import {
   Monitor, 
   PhoneOff, 
   Users, 
-  MessageCircle,
   Circle,
   ArrowLeft,
-  Loader2
+  Loader2,
+  Download
 } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 
 interface LiveRoomData {
   id: string;
-  dailyRoomName: string;
-  dailyRoomUrl: string;
+  jitsiRoomName: string;
   title: string;
   description: string | null;
   status: string;
@@ -39,13 +37,20 @@ interface LiveRoomData {
   } | null;
 }
 
+declare global {
+  interface Window {
+    JitsiMeetExternalAPI: any;
+  }
+}
+
 export default function LiveRoom() {
   const [, params] = useRoute('/live/:roomId');
   const [, setLocation] = useLocation();
   const roomId = params?.roomId;
   const queryClient = useQueryClient();
   
-  const [callFrame, setCallFrame] = useState<any>(null);
+  const jitsiContainerRef = useRef<HTMLDivElement>(null);
+  const jitsiApiRef = useRef<any>(null);
   const [isJoined, setIsJoined] = useState(false);
   const [isCameraOn, setIsCameraOn] = useState(true);
   const [isMicOn, setIsMicOn] = useState(true);
@@ -53,7 +58,7 @@ export default function LiveRoom() {
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
-  const [participantCount, setParticipantCount] = useState(0);
+  const [participantCount, setParticipantCount] = useState(1);
   
   const { data: user } = useQuery<any>({
     queryKey: ['/api/auth/user'],
@@ -75,87 +80,143 @@ export default function LiveRoom() {
   });
   
   const isInstructor = user?.role === 'instructor' && room?.instructorId === user?.id;
-  
+
   useEffect(() => {
-    if (!room || callFrame) return;
-    
-    const container = document.getElementById('daily-container');
-    if (!container) return;
-    
-    const frame = DailyIframe.createFrame(container, {
-      iframeStyle: {
-        width: '100%',
-        height: '100%',
-        border: '0',
-        borderRadius: '12px',
+    const script = document.createElement('script');
+    script.src = 'https://meet.jit.si/external_api.js';
+    script.async = true;
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!room || !jitsiContainerRef.current || !window.JitsiMeetExternalAPI) return;
+    if (jitsiApiRef.current) return;
+
+    const domain = 'meet.jit.si';
+    const options = {
+      roomName: room.jitsiRoomName || `zamonaviy-edu-${room.id}`,
+      width: '100%',
+      height: '100%',
+      parentNode: jitsiContainerRef.current,
+      userInfo: {
+        displayName: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Mehmon' : 'Mehmon',
       },
-      showLeaveButton: false,
-      showFullscreenButton: true,
-    });
-    
-    frame.on('joined-meeting', () => {
+      configOverwrite: {
+        startWithAudioMuted: false,
+        startWithVideoMuted: false,
+        prejoinPageEnabled: false,
+        disableDeepLinking: true,
+        disableInviteFunctions: true,
+        enableClosePage: false,
+        toolbarButtons: [
+          'camera',
+          'chat',
+          'closedcaptions',
+          'desktop',
+          'fullscreen',
+          'hangup',
+          'microphone',
+          'participants-pane',
+          'raisehand',
+          'settings',
+          'tileview',
+          'toggle-camera',
+          'videoquality',
+        ],
+      },
+      interfaceConfigOverwrite: {
+        SHOW_JITSI_WATERMARK: false,
+        SHOW_WATERMARK_FOR_GUESTS: false,
+        SHOW_BRAND_WATERMARK: false,
+        BRAND_WATERMARK_LINK: '',
+        SHOW_POWERED_BY: false,
+        SHOW_PROMOTIONAL_CLOSE_PAGE: false,
+        DISABLE_JOIN_LEAVE_NOTIFICATIONS: false,
+        MOBILE_APP_PROMO: false,
+        HIDE_INVITE_MORE_HEADER: true,
+        TOOLBAR_BUTTONS: [
+          'camera',
+          'chat',
+          'desktop',
+          'fullscreen',
+          'hangup',
+          'microphone',
+          'participants-pane',
+          'raisehand',
+          'settings',
+          'tileview',
+        ],
+      },
+    };
+
+    const api = new window.JitsiMeetExternalAPI(domain, options);
+    jitsiApiRef.current = api;
+
+    api.addListener('videoConferenceJoined', () => {
       setIsJoined(true);
     });
-    
-    frame.on('left-meeting', () => {
+
+    api.addListener('videoConferenceLeft', () => {
       setIsJoined(false);
-      setLocation(isInstructor ? '/instructor' : '/student');
+      setLocation(isInstructor ? '/instructor' : '/courses');
     });
-    
-    frame.on('participant-joined', () => {
-      const counts = frame.participantCounts();
-      setParticipantCount(counts.present || 0);
+
+    api.addListener('participantJoined', () => {
+      const count = api.getNumberOfParticipants();
+      setParticipantCount(count);
     });
-    
-    frame.on('participant-left', () => {
-      const counts = frame.participantCounts();
-      setParticipantCount(counts.present || 0);
+
+    api.addListener('participantLeft', () => {
+      const count = api.getNumberOfParticipants();
+      setParticipantCount(count);
     });
-    
-    frame.on('camera-error', () => {
-      setIsCameraOn(false);
+
+    api.addListener('audioMuteStatusChanged', (status: { muted: boolean }) => {
+      setIsMicOn(!status.muted);
     });
-    
-    setCallFrame(frame);
-    
-    frame.join({ url: room.dailyRoomUrl });
-    
+
+    api.addListener('videoMuteStatusChanged', (status: { muted: boolean }) => {
+      setIsCameraOn(!status.muted);
+    });
+
+    api.addListener('screenSharingStatusChanged', (status: { on: boolean }) => {
+      setIsScreenSharing(status.on);
+    });
+
     return () => {
-      if (frame) {
-        frame.destroy();
+      if (jitsiApiRef.current) {
+        jitsiApiRef.current.dispose();
+        jitsiApiRef.current = null;
       }
     };
-  }, [room]);
+  }, [room, user, isInstructor]);
   
   const toggleCamera = useCallback(() => {
-    if (callFrame) {
-      callFrame.setLocalVideo(!isCameraOn);
-      setIsCameraOn(!isCameraOn);
+    if (jitsiApiRef.current) {
+      jitsiApiRef.current.executeCommand('toggleVideo');
     }
-  }, [callFrame, isCameraOn]);
+  }, []);
   
   const toggleMic = useCallback(() => {
-    if (callFrame) {
-      callFrame.setLocalAudio(!isMicOn);
-      setIsMicOn(!isMicOn);
+    if (jitsiApiRef.current) {
+      jitsiApiRef.current.executeCommand('toggleAudio');
     }
-  }, [callFrame, isMicOn]);
+  }, []);
   
-  const toggleScreenShare = useCallback(async () => {
-    if (callFrame) {
-      if (isScreenSharing) {
-        await callFrame.stopScreenShare();
-      } else {
-        await callFrame.startScreenShare();
-      }
-      setIsScreenSharing(!isScreenSharing);
+  const toggleScreenShare = useCallback(() => {
+    if (jitsiApiRef.current) {
+      jitsiApiRef.current.executeCommand('toggleShareScreen');
     }
-  }, [callFrame, isScreenSharing]);
+  }, []);
   
-  const startLocalRecording = useCallback(async () => {
+  const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { displaySurface: 'browser' } as any,
+        video: true,
         audio: true,
       });
       
@@ -172,66 +233,76 @@ export default function LiveRoom() {
       };
       
       recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'video/webm' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `live-class-${new Date().toISOString()}.webm`;
-        a.click();
-        URL.revokeObjectURL(url);
-        setRecordedChunks([]);
+        setRecordedChunks(chunks);
+        stream.getTracks().forEach(track => track.stop());
       };
       
       recorder.start();
       setMediaRecorder(recorder);
-      setRecordedChunks(chunks);
       setIsRecording(true);
-    } catch (error) {
-      console.error('Failed to start recording:', error);
+    } catch (err) {
+      console.error('Recording error:', err);
     }
   }, []);
   
-  const stopLocalRecording = useCallback(() => {
-    if (mediaRecorder) {
+  const stopRecording = useCallback(() => {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
       mediaRecorder.stop();
-      mediaRecorder.stream.getTracks().forEach(track => track.stop());
-      setMediaRecorder(null);
       setIsRecording(false);
+      setMediaRecorder(null);
     }
   }, [mediaRecorder]);
   
+  const downloadRecording = useCallback(() => {
+    if (recordedChunks.length > 0) {
+      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `jonli-dars-${room?.title || roomId}-${new Date().toISOString().slice(0, 10)}.webm`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  }, [recordedChunks, room, roomId]);
+  
   const leaveRoom = useCallback(() => {
-    if (callFrame) {
-      callFrame.leave();
+    if (jitsiApiRef.current) {
+      jitsiApiRef.current.executeCommand('hangup');
     }
-  }, [callFrame]);
+    setLocation(isInstructor ? '/instructor' : '/courses');
+  }, [isInstructor, setLocation]);
   
-  const endRoom = useCallback(() => {
-    if (callFrame) {
-      callFrame.leave();
+  const handleEndRoom = useCallback(() => {
+    if (confirm("Jonli darsni tugatmoqchimisiz? Barcha ishtirokchilar chiqariladi.")) {
+      if (jitsiApiRef.current) {
+        jitsiApiRef.current.executeCommand('hangup');
+      }
+      endRoomMutation.mutate();
     }
-    endRoomMutation.mutate();
-  }, [callFrame, endRoomMutation]);
-  
+  }, [endRoomMutation]);
+
   if (roomLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin" />
+      <div className="h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
-  
+
   if (roomError || !room) {
     return (
-      <div className="container mx-auto py-8 px-4">
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">Jonli dars topilmadi yoki tugagan</p>
-            <Button 
-              variant="outline" 
-              className="mt-4"
-              onClick={() => setLocation(isInstructor ? '/instructor' : '/student')}
-            >
+      <div className="h-screen flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="text-destructive">Xatolik</CardTitle>
+            <CardDescription>
+              Bu jonli darsga kirishga ruxsatingiz yo'q yoki dars topilmadi.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => setLocation('/')} variant="outline">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Orqaga qaytish
             </Button>
@@ -240,18 +311,19 @@ export default function LiveRoom() {
       </div>
     );
   }
-  
+
   if (room.status === 'ended') {
     return (
-      <div className="container mx-auto py-8 px-4">
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">Bu jonli dars tugagan</p>
-            <Button 
-              variant="outline" 
-              className="mt-4"
-              onClick={() => setLocation(isInstructor ? '/instructor' : '/student')}
-            >
+      <div className="h-screen flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Jonli dars tugadi</CardTitle>
+            <CardDescription>
+              Bu jonli dars allaqachon tugatilgan.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => setLocation(isInstructor ? '/instructor' : '/courses')} variant="outline">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Orqaga qaytish
             </Button>
@@ -262,121 +334,130 @@ export default function LiveRoom() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background">
-      <header className="border-b px-4 py-3 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={() => setLocation(isInstructor ? '/instructor' : '/student')}
-            data-testid="button-back"
-          >
-            <ArrowLeft className="w-4 h-4" />
+    <div className="h-screen flex flex-col bg-background">
+      <div className="flex items-center justify-between p-4 border-b bg-card">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={leaveRoom} data-testid="button-leave-room">
+            <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="font-semibold text-lg">{room.title}</h1>
-            {room.instructor && (
-              <p className="text-sm text-muted-foreground">
-                O'qituvchi: {room.instructor.firstName} {room.instructor.lastName}
-              </p>
-            )}
+            <h1 className="font-semibold flex items-center gap-2">
+              {room.title}
+              <Badge variant="destructive" className="animate-pulse">
+                <Circle className="w-2 h-2 mr-1 fill-current" />
+                JONLI
+              </Badge>
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {room.instructor?.firstName} {room.instructor?.lastName}
+            </p>
           </div>
         </div>
         
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="gap-1">
+          <Badge variant="secondary" className="flex items-center gap-1">
             <Users className="w-3 h-3" />
             {participantCount}
           </Badge>
-          {isRecording && (
-            <Badge variant="destructive" className="gap-1 animate-pulse">
-              <Circle className="w-2 h-2 fill-current" />
-              Yozilmoqda
-            </Badge>
+          
+          {isInstructor && (
+            <Button 
+              variant="destructive" 
+              size="sm"
+              onClick={handleEndRoom}
+              disabled={endRoomMutation.isPending}
+              data-testid="button-end-room"
+            >
+              <PhoneOff className="w-4 h-4 mr-2" />
+              Darsni Tugatish
+            </Button>
           )}
-          <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
-            Jonli
-          </Badge>
         </div>
-      </header>
+      </div>
       
-      <main className="flex-1 p-4">
+      <div className="flex-1 p-4">
         <div 
-          id="daily-container" 
-          className="w-full h-full bg-black rounded-xl overflow-hidden"
-          style={{ minHeight: '400px' }}
+          ref={jitsiContainerRef}
+          id="jitsi-container" 
+          className="w-full h-full rounded-xl overflow-hidden bg-black"
+          data-testid="jitsi-video-container"
         />
-      </main>
+      </div>
       
-      <footer className="border-t px-4 py-3">
-        <div className="flex items-center justify-center gap-2">
-          <Button
-            variant={isCameraOn ? 'default' : 'destructive'}
+      <div className="p-4 border-t bg-card">
+        <div className="flex items-center justify-center gap-4">
+          <Button 
+            variant={isCameraOn ? "secondary" : "destructive"}
             size="icon"
             onClick={toggleCamera}
             data-testid="button-toggle-camera"
           >
-            {isCameraOn ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
+            {isCameraOn ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
           </Button>
           
-          <Button
-            variant={isMicOn ? 'default' : 'destructive'}
+          <Button 
+            variant={isMicOn ? "secondary" : "destructive"}
             size="icon"
             onClick={toggleMic}
             data-testid="button-toggle-mic"
           >
-            {isMicOn ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+            {isMicOn ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+          </Button>
+          
+          <Button 
+            variant={isScreenSharing ? "default" : "secondary"}
+            size="icon"
+            onClick={toggleScreenShare}
+            data-testid="button-toggle-screen"
+          >
+            <Monitor className="w-5 h-5" />
           </Button>
           
           {isInstructor && (
             <>
-              <Button
-                variant={isScreenSharing ? 'secondary' : 'outline'}
-                size="icon"
-                onClick={toggleScreenShare}
-                data-testid="button-toggle-screenshare"
-              >
-                <Monitor className="w-4 h-4" />
-              </Button>
+              {!isRecording ? (
+                <Button 
+                  variant="secondary"
+                  onClick={startRecording}
+                  data-testid="button-start-recording"
+                >
+                  <Circle className="w-4 h-4 mr-2 text-red-500" />
+                  Yozib olish
+                </Button>
+              ) : (
+                <Button 
+                  variant="destructive"
+                  onClick={stopRecording}
+                  data-testid="button-stop-recording"
+                >
+                  <Circle className="w-4 h-4 mr-2 fill-current animate-pulse" />
+                  To'xtatish
+                </Button>
+              )}
               
-              <Button
-                variant={isRecording ? 'destructive' : 'outline'}
-                onClick={isRecording ? stopLocalRecording : startLocalRecording}
-                className="gap-2"
-                data-testid="button-toggle-recording"
-              >
-                <Circle className={`w-3 h-3 ${isRecording ? 'fill-current animate-pulse' : ''}`} />
-                {isRecording ? 'To\'xtatish' : 'Yozish'}
-              </Button>
+              {recordedChunks.length > 0 && !isRecording && (
+                <Button 
+                  variant="outline"
+                  onClick={downloadRecording}
+                  data-testid="button-download-recording"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Yuklab olish
+                </Button>
+              )}
             </>
           )}
           
-          <div className="w-px h-8 bg-border mx-2" />
-          
-          {isInstructor ? (
-            <Button
-              variant="destructive"
-              onClick={endRoom}
-              disabled={endRoomMutation.isPending}
-              className="gap-2"
-              data-testid="button-end-room"
-            >
-              <PhoneOff className="w-4 h-4" />
-              Darsni tugatish
-            </Button>
-          ) : (
-            <Button
-              variant="destructive"
-              onClick={leaveRoom}
-              className="gap-2"
-              data-testid="button-leave-room"
-            >
-              <PhoneOff className="w-4 h-4" />
-              Chiqish
-            </Button>
-          )}
+          <Button 
+            variant="destructive"
+            onClick={leaveRoom}
+            data-testid="button-leave"
+          >
+            <PhoneOff className="w-5 h-5 mr-2" />
+            Chiqish
+          </Button>
         </div>
-      </footer>
+      </div>
     </div>
   );
 }

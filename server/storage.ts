@@ -351,7 +351,7 @@ export interface IStorage {
   // ============ LIVE ROOM OPERATIONS ============
   createLiveRoom(room: InsertLiveRoom): Promise<LiveRoom>;
   getLiveRoom(id: string): Promise<LiveRoom | undefined>;
-  getLiveRoomByDailyName(dailyRoomName: string): Promise<LiveRoom | undefined>;
+  getLiveRoomByJitsiName(jitsiRoomName: string): Promise<LiveRoom | undefined>;
   getLiveRoomsByInstructor(instructorId: string): Promise<LiveRoom[]>;
   getActiveLiveRooms(): Promise<LiveRoom[]>;
   getActiveLiveRoomsByCourse(courseId: string): Promise<LiveRoom[]>;
@@ -2742,8 +2742,8 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
   
-  async getLiveRoomByDailyName(dailyRoomName: string): Promise<LiveRoom | undefined> {
-    const [result] = await db.select().from(liveRooms).where(eq(liveRooms.dailyRoomName, dailyRoomName));
+  async getLiveRoomByJitsiName(jitsiRoomName: string): Promise<LiveRoom | undefined> {
+    const [result] = await db.select().from(liveRooms).where(eq(liveRooms.jitsiRoomName, jitsiRoomName));
     return result;
   }
   

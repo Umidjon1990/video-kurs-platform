@@ -1218,11 +1218,10 @@ export type LessonEssayQuestion = typeof lessonEssayQuestions.$inferSelect;
 export type InsertEssaySubmission = z.infer<typeof insertEssaySubmissionSchema>;
 export type EssaySubmission = typeof essaySubmissions.$inferSelect;
 
-// Live Rooms table - Jonli darslar uchun
+// Live Rooms table - Jonli darslar uchun (Jitsi Meet - 100% bepul)
 export const liveRooms = pgTable("live_rooms", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  dailyRoomName: varchar("daily_room_name", { length: 255 }).notNull(),
-  dailyRoomUrl: varchar("daily_room_url", { length: 500 }).notNull(),
+  jitsiRoomName: varchar("jitsi_room_name", { length: 255 }).notNull(),
   courseId: varchar("course_id").references(() => courses.id),
   instructorId: varchar("instructor_id").notNull().references(() => users.id),
   title: varchar("title", { length: 255 }).notNull(),

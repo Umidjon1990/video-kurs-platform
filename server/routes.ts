@@ -5074,63 +5074,11 @@ So'zlar soni: ${submission.wordCount}`;
 
   // ============ LIVE ROOM (VIDEO CONFERENCING) ROUTES ============
   
-  // Daily.co API helper functions
-  const DAILY_API_KEY = process.env.DAILY_API_KEY;
-  const DAILY_API_URL = 'https://api.daily.co/v1';
+  // Jitsi Meet - 100% bepul, API kalit talab qilmaydi
+  // Xona nomi generatsiya qilish kifoya, Jitsi avtomatik xona yaratadi
   
-  async function createDailyRoom(roomName: string, properties?: any) {
-    if (!DAILY_API_KEY) {
-      throw new Error('DAILY_API_KEY environment variable is not set');
-    }
-    
-    const response = await fetch(`${DAILY_API_URL}/rooms`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${DAILY_API_KEY}`,
-      },
-      body: JSON.stringify({
-        name: roomName,
-        privacy: 'public',
-        properties: {
-          enable_screenshare: true,
-          enable_chat: true,
-          enable_knocking: false,
-          start_video_off: false,
-          start_audio_off: false,
-          max_participants: properties?.maxParticipants || 50,
-          exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours from now
-          ...properties,
-        },
-      }),
-    });
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to create Daily room');
-    }
-    
-    return await response.json();
-  }
-  
-  async function deleteDailyRoom(roomName: string) {
-    if (!DAILY_API_KEY) {
-      throw new Error('DAILY_API_KEY environment variable is not set');
-    }
-    
-    const response = await fetch(`${DAILY_API_URL}/rooms/${roomName}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${DAILY_API_KEY}`,
-      },
-    });
-    
-    if (!response.ok && response.status !== 404) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to delete Daily room');
-    }
-    
-    return true;
+  function generateJitsiRoomName(): string {
+    return `zamonaviy-edu-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
   
   // Create a live room (Instructor only)
@@ -5143,16 +5091,12 @@ So'zlar soni: ${submission.wordCount}`;
         return res.status(400).json({ message: 'Jonli dars nomi kiritilishi shart' });
       }
       
-      // Generate unique room name
-      const roomName = `zamonaviy-edu-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
-      // Create room on Daily.co
-      const dailyRoom = await createDailyRoom(roomName, { maxParticipants });
+      // Generate unique room name for Jitsi
+      const jitsiRoomName = generateJitsiRoomName();
       
       // Save to database
       const liveRoom = await storage.createLiveRoom({
-        dailyRoomName: dailyRoom.name,
-        dailyRoomUrl: dailyRoom.url,
+        jitsiRoomName: jitsiRoomName,
         courseId: courseId || null,
         instructorId,
         title,
@@ -5172,7 +5116,7 @@ So'zlar soni: ${submission.wordCount}`;
               title: 'Jonli dars boshlandi!',
               message: `"${title}" jonli darsi hozir boshlanmoqda. Darsga qo'shilish uchun bosing.`,
               type: 'live_class',
-              link: `/live/${liveRoom.id}`,
+              relatedId: liveRoom.id,
             });
           }
         }
@@ -5266,12 +5210,7 @@ So'zlar soni: ${submission.wordCount}`;
         return res.status(403).json({ message: 'Ruxsat yo\'q' });
       }
       
-      // Delete room from Daily.co
-      try {
-        await deleteDailyRoom(room.dailyRoomName);
-      } catch (e) {
-        console.warn('Failed to delete Daily room:', e);
-      }
+      // Jitsi xonasi avtomatik o'chadi, API chaqirish shart emas
       
       // Update database
       const updatedRoom = await storage.endLiveRoom(roomId);
