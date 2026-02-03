@@ -26,11 +26,12 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, EyeOff, Download, Megaphone, Users, User, MessageCircle, TrendingUp, Award, Activity, Settings, UserCheck, Upload, FileSpreadsheet, Mic, PenTool, Radio, PhoneOff, Monitor, Copy } from "lucide-react";
+import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, EyeOff, Download, Megaphone, Users, User, MessageCircle, TrendingUp, Award, Activity, Settings, UserCheck, Upload, FileSpreadsheet, Mic, PenTool, Radio, PhoneOff, Monitor, Copy, Volume2 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NotificationBell } from "@/components/NotificationBell";
 import { StarRating } from "@/components/StarRating";
 import { CourseGroupChat, OnlineUsersList } from "@/components/CourseGroupChat";
+import { CourseVoiceChat } from "@/components/CourseVoiceChat";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import type { Course, Lesson, Assignment, Test, InstructorCourseWithCounts, CourseAnalytics } from "@shared/schema";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -1633,6 +1634,10 @@ export default function InstructorDashboard() {
                   <MessageCircle className="w-4 h-4 mr-2" />
                   Suhbat
                 </TabsTrigger>
+                <TabsTrigger value="voice-chat" data-testid="tab-voice-chat">
+                  <Volume2 className="w-4 h-4 mr-2" />
+                  Ovozli
+                </TabsTrigger>
               </TabsList>
 
               {/* Modules Tab */}
@@ -2168,6 +2173,15 @@ export default function InstructorDashboard() {
                     <OnlineUsersList courseId={selectedCourse?.id || ''} />
                   </div>
                 </div>
+              </TabsContent>
+              
+              <TabsContent value="voice-chat" className="space-y-4">
+                <CourseVoiceChat 
+                  courseId={selectedCourse?.id || ''} 
+                  courseTitle={selectedCourse?.title || ''}
+                  currentUserId={user?.id || ''} 
+                  userName={user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : (user?.email || 'O\'qituvchi')}
+                />
               </TabsContent>
             </Tabs>
           </DialogContent>

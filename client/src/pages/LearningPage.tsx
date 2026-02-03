@@ -11,12 +11,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PlayCircle, CheckCircle, FileText, ClipboardCheck, Lock, Home, MessageCircle, Download, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Clock } from "lucide-react";
+import { PlayCircle, CheckCircle, FileText, ClipboardCheck, Lock, Home, MessageCircle, Download, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Clock, Volume2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { NotificationBell } from "@/components/NotificationBell";
 import { StarRating } from "@/components/StarRating";
 import { ModernVideoPlayer } from "@/components/ModernVideoPlayer";
 import { CourseGroupChat, OnlineUsersList } from "@/components/CourseGroupChat";
+import { CourseVoiceChat } from "@/components/CourseVoiceChat";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Course, Lesson, Assignment, Test } from "@shared/schema";
 
@@ -701,6 +702,10 @@ export default function LearningPage() {
                     <MessageCircle className="h-4 w-4" />
                     Guruh Suhbati
                   </TabsTrigger>
+                  <TabsTrigger value="voice-chat" data-testid="tab-voice-chat" className="flex items-center gap-1">
+                    <Volume2 className="h-4 w-4" />
+                    Ovozli Suhbat
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="overview" className="space-y-4">
@@ -1037,6 +1042,15 @@ export default function LearningPage() {
                       <OnlineUsersList courseId={courseId!} />
                     </div>
                   </div>
+                </TabsContent>
+                
+                <TabsContent value="voice-chat" className="space-y-4">
+                  <CourseVoiceChat 
+                    courseId={courseId!} 
+                    courseTitle={course.title}
+                    currentUserId={user?.id || ''} 
+                    userName={user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : (user?.email || 'Foydalanuvchi')}
+                  />
                 </TabsContent>
               </Tabs>
                 </div>
