@@ -105,6 +105,9 @@ import {
   type InsertLessonSection,
   lessonEssayQuestions,
   essaySubmissions,
+  liveRooms,
+  type LiveRoom,
+  type InsertLiveRoom,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, sql, inArray } from "drizzle-orm";
@@ -344,6 +347,16 @@ export interface IStorage {
   createEssaySubmission(submission: InsertEssaySubmission): Promise<EssaySubmission>;
   getEssaySubmission(essayQuestionId: string, studentId: string): Promise<EssaySubmission | undefined>;
   updateEssaySubmissionAI(id: string, feedback: { aiFeedback: string; grammarErrors?: string; spellingErrors?: string; styleNotes?: string; overallScore: number }): Promise<EssaySubmission>;
+  
+  // ============ LIVE ROOM OPERATIONS ============
+  createLiveRoom(room: InsertLiveRoom): Promise<LiveRoom>;
+  getLiveRoom(id: string): Promise<LiveRoom | undefined>;
+  getLiveRoomByDailyName(dailyRoomName: string): Promise<LiveRoom | undefined>;
+  getLiveRoomsByInstructor(instructorId: string): Promise<LiveRoom[]>;
+  getActiveLiveRooms(): Promise<LiveRoom[]>;
+  getActiveLiveRoomsByCourse(courseId: string): Promise<LiveRoom[]>;
+  updateLiveRoom(id: string, data: Partial<InsertLiveRoom>): Promise<LiveRoom>;
+  endLiveRoom(id: string): Promise<LiveRoom>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2716,6 +2729,64 @@ export class DatabaseStorage implements IStorage {
   
   async deleteLessonSection(id: string): Promise<void> {
     await db.delete(lessonSections).where(eq(lessonSections.id, id));
+  }
+  
+  // ============ LIVE ROOM OPERATIONS ============
+  async createLiveRoom(room: InsertLiveRoom): Promise<LiveRoom> {
+    const [result] = await db.insert(liveRooms).values(room).returning();
+    return result;
+  }
+  
+  async getLiveRoom(id: string): Promise<LiveRoom | undefined> {
+    const [result] = await db.select().from(liveRooms).where(eq(liveRooms.id, id));
+    return result;
+  }
+  
+  async getLiveRoomByDailyName(dailyRoomName: string): Promise<LiveRoom | undefined> {
+    const [result] = await db.select().from(liveRooms).where(eq(liveRooms.dailyRoomName, dailyRoomName));
+    return result;
+  }
+  
+  async getLiveRoomsByInstructor(instructorId: string): Promise<LiveRoom[]> {
+    return await db
+      .select()
+      .from(liveRooms)
+      .where(eq(liveRooms.instructorId, instructorId))
+      .orderBy(desc(liveRooms.createdAt));
+  }
+  
+  async getActiveLiveRooms(): Promise<LiveRoom[]> {
+    return await db
+      .select()
+      .from(liveRooms)
+      .where(eq(liveRooms.status, 'active'))
+      .orderBy(desc(liveRooms.createdAt));
+  }
+  
+  async getActiveLiveRoomsByCourse(courseId: string): Promise<LiveRoom[]> {
+    return await db
+      .select()
+      .from(liveRooms)
+      .where(and(eq(liveRooms.courseId, courseId), eq(liveRooms.status, 'active')))
+      .orderBy(desc(liveRooms.createdAt));
+  }
+  
+  async updateLiveRoom(id: string, data: Partial<InsertLiveRoom>): Promise<LiveRoom> {
+    const [result] = await db
+      .update(liveRooms)
+      .set(data)
+      .where(eq(liveRooms.id, id))
+      .returning();
+    return result;
+  }
+  
+  async endLiveRoom(id: string): Promise<LiveRoom> {
+    const [result] = await db
+      .update(liveRooms)
+      .set({ status: 'ended', endedAt: new Date() })
+      .where(eq(liveRooms.id, id))
+      .returning();
+    return result;
   }
 }
 

@@ -5072,6 +5072,249 @@ So'zlar soni: ${submission.wordCount}`;
     }
   });
 
+  // ============ LIVE ROOM (VIDEO CONFERENCING) ROUTES ============
+  
+  // Daily.co API helper functions
+  const DAILY_API_KEY = process.env.DAILY_API_KEY;
+  const DAILY_API_URL = 'https://api.daily.co/v1';
+  
+  async function createDailyRoom(roomName: string, properties?: any) {
+    if (!DAILY_API_KEY) {
+      throw new Error('DAILY_API_KEY environment variable is not set');
+    }
+    
+    const response = await fetch(`${DAILY_API_URL}/rooms`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${DAILY_API_KEY}`,
+      },
+      body: JSON.stringify({
+        name: roomName,
+        privacy: 'public',
+        properties: {
+          enable_screenshare: true,
+          enable_chat: true,
+          enable_knocking: false,
+          start_video_off: false,
+          start_audio_off: false,
+          max_participants: properties?.maxParticipants || 50,
+          exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours from now
+          ...properties,
+        },
+      }),
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create Daily room');
+    }
+    
+    return await response.json();
+  }
+  
+  async function deleteDailyRoom(roomName: string) {
+    if (!DAILY_API_KEY) {
+      throw new Error('DAILY_API_KEY environment variable is not set');
+    }
+    
+    const response = await fetch(`${DAILY_API_URL}/rooms/${roomName}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${DAILY_API_KEY}`,
+      },
+    });
+    
+    if (!response.ok && response.status !== 404) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete Daily room');
+    }
+    
+    return true;
+  }
+  
+  // Create a live room (Instructor only)
+  app.post('/api/instructor/live-rooms', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const instructorId = req.user.claims.sub;
+      const { title, description, courseId, maxParticipants } = req.body;
+      
+      if (!title) {
+        return res.status(400).json({ message: 'Jonli dars nomi kiritilishi shart' });
+      }
+      
+      // Generate unique room name
+      const roomName = `zamonaviy-edu-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Create room on Daily.co
+      const dailyRoom = await createDailyRoom(roomName, { maxParticipants });
+      
+      // Save to database
+      const liveRoom = await storage.createLiveRoom({
+        dailyRoomName: dailyRoom.name,
+        dailyRoomUrl: dailyRoom.url,
+        courseId: courseId || null,
+        instructorId,
+        title,
+        description: description || null,
+        status: 'active',
+        maxParticipants: maxParticipants || 50,
+        startedAt: new Date(),
+      });
+      
+      // Send notification to students if courseId is provided
+      if (courseId) {
+        const enrolledStudents = await storage.getEnrollmentsByCourse(courseId);
+        for (const enrollment of enrolledStudents) {
+          if (enrollment.paymentStatus === 'approved' || enrollment.paymentStatus === 'confirmed') {
+            await storage.createNotification({
+              userId: enrollment.userId,
+              title: 'Jonli dars boshlandi!',
+              message: `"${title}" jonli darsi hozir boshlanmoqda. Darsga qo'shilish uchun bosing.`,
+              type: 'live_class',
+              link: `/live/${liveRoom.id}`,
+            });
+          }
+        }
+      }
+      
+      res.json(liveRoom);
+    } catch (error: any) {
+      console.error('Error creating live room:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get instructor's live rooms
+  app.get('/api/instructor/live-rooms', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const instructorId = req.user.claims.sub;
+      const rooms = await storage.getLiveRoomsByInstructor(instructorId);
+      res.json(rooms);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get specific live room
+  app.get('/api/live-rooms/:roomId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { roomId } = req.params;
+      const room = await storage.getLiveRoom(roomId);
+      
+      if (!room) {
+        return res.status(404).json({ message: 'Jonli dars topilmadi' });
+      }
+      
+      // Get instructor info
+      const instructor = await storage.getUser(room.instructorId);
+      
+      res.json({
+        ...room,
+        instructor: instructor ? {
+          id: instructor.id,
+          firstName: instructor.firstName,
+          lastName: instructor.lastName,
+          profileImageUrl: instructor.profileImageUrl,
+        } : null,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // End live room (Instructor only)
+  app.post('/api/instructor/live-rooms/:roomId/end', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const instructorId = req.user.claims.sub;
+      const { roomId } = req.params;
+      
+      const room = await storage.getLiveRoom(roomId);
+      if (!room) {
+        return res.status(404).json({ message: 'Jonli dars topilmadi' });
+      }
+      
+      if (room.instructorId !== instructorId) {
+        return res.status(403).json({ message: 'Ruxsat yo\'q' });
+      }
+      
+      // Delete room from Daily.co
+      try {
+        await deleteDailyRoom(room.dailyRoomName);
+      } catch (e) {
+        console.warn('Failed to delete Daily room:', e);
+      }
+      
+      // Update database
+      const updatedRoom = await storage.endLiveRoom(roomId);
+      
+      res.json(updatedRoom);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get all active live rooms (for students)
+  app.get('/api/live-rooms/active', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id || req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(401).json({ message: 'User not found' });
+      }
+      
+      // Get active rooms
+      const activeRooms = await storage.getActiveLiveRooms();
+      
+      // Filter based on user's enrollments if student
+      if (user.role === 'student') {
+        const enrollments = await storage.getEnrollmentsByUser(userId);
+        const enrolledCourseIds = enrollments
+          .filter(e => e.paymentStatus === 'approved' || e.paymentStatus === 'confirmed')
+          .map(e => e.courseId);
+        
+        const accessibleRooms = activeRooms.filter(room => 
+          !room.courseId || enrolledCourseIds.includes(room.courseId)
+        );
+        
+        // Add instructor info
+        const roomsWithInstructor = await Promise.all(accessibleRooms.map(async (room) => {
+          const instructor = await storage.getUser(room.instructorId);
+          return {
+            ...room,
+            instructor: instructor ? {
+              id: instructor.id,
+              firstName: instructor.firstName,
+              lastName: instructor.lastName,
+              profileImageUrl: instructor.profileImageUrl,
+            } : null,
+          };
+        }));
+        
+        return res.json(roomsWithInstructor);
+      }
+      
+      // For instructors and admins, return all active rooms
+      const roomsWithInstructor = await Promise.all(activeRooms.map(async (room) => {
+        const instructor = await storage.getUser(room.instructorId);
+        return {
+          ...room,
+          instructor: instructor ? {
+            id: instructor.id,
+            firstName: instructor.firstName,
+            lastName: instructor.lastName,
+            profileImageUrl: instructor.profileImageUrl,
+          } : null,
+        };
+      }));
+      
+      res.json(roomsWithInstructor);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
