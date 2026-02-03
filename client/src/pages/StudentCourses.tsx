@@ -9,7 +9,7 @@ import { StatsCard } from "@/components/StatsCard";
 import { CourseCard } from "@/components/CourseCard";
 import { ProgressCard } from "@/components/ProgressCard";
 import { useLocation } from "wouter";
-import { BookOpen, Trophy, GraduationCap, PlayCircle, CheckCircle, Star, Sparkles, ArrowRight, Target, Zap } from "lucide-react";
+import { BookOpen, Trophy, GraduationCap, PlayCircle, CheckCircle, Star, Sparkles, ArrowRight, Target, Zap, Radio, Video, Users } from "lucide-react";
 import { motion } from "framer-motion";
 import type { Course, StudentCourseProgress, SubscriptionPlan } from "@shared/schema";
 
@@ -55,6 +55,12 @@ export default function StudentCourses() {
     queryKey: ["/api/chat/unread-count"],
     enabled: isAuthenticated,
     refetchInterval: 10000,
+  });
+
+  const { data: activeLiveRooms } = useQuery<any[]>({
+    queryKey: ["/api/live-rooms/active"],
+    enabled: isAuthenticated,
+    refetchInterval: 15000,
   });
 
   const enrolledCourseIds = new Set(enrolledCourses?.map(c => c.id) || []);
@@ -222,6 +228,70 @@ export default function StudentCourses() {
                       <span className="text-2xl font-bold text-primary">{totalProgress}%</span>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* Active Live Rooms Section */}
+          {activeLiveRooms && activeLiveRooms.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              className="mt-6"
+            >
+              <Card className="border-red-500/30 shadow-xl bg-gradient-to-r from-red-500/10 via-background to-red-500/5 backdrop-blur overflow-hidden">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <Radio className="w-5 h-5 text-red-500" />
+                      <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full animate-ping" />
+                    </div>
+                    <CardTitle className="text-lg">Jonli Darslar</CardTitle>
+                    <span className="px-2 py-0.5 bg-red-500 text-white text-xs rounded-full animate-pulse">
+                      LIVE
+                    </span>
+                  </div>
+                  <CardDescription>
+                    Hozirda davom etayotgan darslar - qo'shilish uchun bosing
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {activeLiveRooms.map((room: any) => (
+                    <motion.div
+                      key={room.id}
+                      className="flex items-center justify-between p-4 rounded-lg bg-background/50 border border-red-500/20 hover-elevate cursor-pointer"
+                      whileHover={{ scale: 1.01 }}
+                      onClick={() => setLocation(`/live/${room.id}`)}
+                      data-testid={`live-room-${room.id}`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
+                          <Video className="w-6 h-6 text-red-500" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold">{room.title}</h4>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <span>{room.instructor?.firstName} {room.instructor?.lastName}</span>
+                            {room.course && (
+                              <>
+                                <span>•</span>
+                                <span>{room.course.title}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <Button 
+                        className="bg-red-500 hover:bg-red-600"
+                        data-testid={`button-join-live-${room.id}`}
+                      >
+                        <Video className="w-4 h-4 mr-2" />
+                        Qo'shilish
+                      </Button>
+                    </motion.div>
+                  ))}
                 </CardContent>
               </Card>
             </motion.div>

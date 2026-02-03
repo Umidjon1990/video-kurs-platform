@@ -5200,10 +5200,38 @@ So'zlar soni: ${submission.wordCount}`;
   app.get('/api/live-rooms/:roomId', isAuthenticated, async (req: any, res) => {
     try {
       const { roomId } = req.params;
+      const userId = req.user?.id || req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(401).json({ message: 'User not found' });
+      }
+      
       const room = await storage.getLiveRoom(roomId);
       
       if (!room) {
         return res.status(404).json({ message: 'Jonli dars topilmadi' });
+      }
+      
+      // Access control: Students can only access rooms for courses they're enrolled in
+      if (user.role === 'student') {
+        // If room is linked to a course, verify enrollment
+        if (room.courseId) {
+          const enrollments = await storage.getEnrollmentsByUser(userId);
+          const enrolledCourseIds = enrollments
+            .filter(e => e.paymentStatus === 'approved' || e.paymentStatus === 'confirmed')
+            .map(e => e.courseId);
+          
+          if (!enrolledCourseIds.includes(room.courseId)) {
+            return res.status(403).json({ message: 'Bu jonli darsga kirishga ruxsatingiz yo\'q' });
+          }
+        }
+        // If room has no course, it's open to all authenticated users
+      }
+      
+      // Instructors can only access their own rooms (or any room if admin)
+      if (user.role === 'instructor' && room.instructorId !== userId) {
+        return res.status(403).json({ message: 'Bu jonli darsga kirishga ruxsatingiz yo\'q' });
       }
       
       // Get instructor info
