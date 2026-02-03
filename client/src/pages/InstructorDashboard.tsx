@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, EyeOff, Download, Megaphone, Users, User, MessageCircle, TrendingUp, Award, Activity, Settings, UserCheck, Upload, FileSpreadsheet, Mic, PenTool, Radio, PhoneOff, Monitor } from "lucide-react";
+import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, EyeOff, Download, Megaphone, Users, User, MessageCircle, TrendingUp, Award, Activity, Settings, UserCheck, Upload, FileSpreadsheet, Mic, PenTool, Radio, PhoneOff, Monitor, Copy } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NotificationBell } from "@/components/NotificationBell";
 import { StarRating } from "@/components/StarRating";
@@ -275,6 +275,11 @@ export default function InstructorDashboard() {
     title: "",
     description: "",
     courseId: "",
+    platform: "jitsi" as "jitsi" | "zoom",
+  });
+  
+  const { data: zoomStatus } = useQuery<{ available: boolean }>({
+    queryKey: ["/api/zoom/status"],
   });
   
   const createLiveRoomMutation = useMutation({
@@ -286,19 +291,24 @@ export default function InstructorDashboard() {
         title: liveRoomForm.title,
         description: liveRoomForm.description || null,
         courseId: liveRoomForm.courseId || null,
+        platform: liveRoomForm.platform,
       });
     },
     onSuccess: async (res) => {
       const room = await res.json();
       queryClient.invalidateQueries({ queryKey: ["/api/instructor/live-rooms"] });
       setIsLiveRoomDialogOpen(false);
-      setLiveRoomForm({ title: "", description: "", courseId: "" });
+      setLiveRoomForm({ title: "", description: "", courseId: "", platform: "jitsi" });
       toast({
         title: "Jonli dars boshlandi!",
-        description: "O'quvchilaringiz endi qo'shilishi mumkin.",
+        description: liveRoomForm.platform === 'zoom' 
+          ? "Zoom uchrashuvi yaratildi. Havolani ko'chirib olishingiz mumkin."
+          : "O'quvchilaringiz endi qo'shilishi mumkin.",
       });
-      // Navigate to live room
-      setLocation(`/live/${room.id}`);
+      // Navigate to live room (only for Jitsi)
+      if (liveRoomForm.platform === 'jitsi') {
+        setLocation(`/live/${room.id}`);
+      }
     },
     onError: (error: any) => {
       toast({
@@ -1065,19 +1075,63 @@ export default function InstructorDashboard() {
                             <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{room.description}</p>
                           )}
                         </div>
-                        <Badge variant="destructive" className="shrink-0">Jonli</Badge>
+                        <div className="flex flex-col items-end gap-1">
+                          <Badge variant="destructive" className="shrink-0">Jonli</Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {room.platform === 'zoom' ? 'Zoom' : 'Jitsi'}
+                          </Badge>
+                        </div>
                       </div>
                     </CardHeader>
-                    <CardContent className="pt-0">
+                    <CardContent className="pt-0 space-y-3">
+                      {room.platform === 'zoom' && room.zoomJoinUrl && (
+                        <div className="p-2 bg-blue-50 dark:bg-blue-950/30 rounded-md space-y-2">
+                          <p className="text-xs text-muted-foreground">O'quvchilar uchun havola:</p>
+                          <div className="flex items-center gap-2">
+                            <Input 
+                              value={room.zoomJoinUrl} 
+                              readOnly 
+                              className="text-xs h-8"
+                              data-testid={`input-zoom-link-${room.id}`}
+                            />
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => {
+                                navigator.clipboard.writeText(room.zoomJoinUrl);
+                                toast({ title: "Havola nusxalandi!" });
+                              }}
+                              data-testid={`button-copy-zoom-link-${room.id}`}
+                            >
+                              <Copy className="w-3 h-3" />
+                            </Button>
+                          </div>
+                          {room.zoomPassword && (
+                            <p className="text-xs">Parol: <code className="bg-muted px-1 rounded">{room.zoomPassword}</code></p>
+                          )}
+                        </div>
+                      )}
                       <div className="flex items-center gap-2">
-                        <Button 
-                          size="sm" 
-                          onClick={() => setLocation(`/live/${room.id}`)}
-                          data-testid={`button-join-room-${room.id}`}
-                        >
-                          <Video className="w-4 h-4 mr-1" />
-                          Kirish
-                        </Button>
+                        {room.platform === 'zoom' ? (
+                          <Button 
+                            size="sm" 
+                            onClick={() => window.open(room.zoomStartUrl || room.zoomJoinUrl, '_blank')}
+                            className="bg-blue-500 hover:bg-blue-600"
+                            data-testid={`button-start-zoom-${room.id}`}
+                          >
+                            <Video className="w-4 h-4 mr-1" />
+                            Zoom'ni ochish
+                          </Button>
+                        ) : (
+                          <Button 
+                            size="sm" 
+                            onClick={() => setLocation(`/live/${room.id}`)}
+                            data-testid={`button-join-room-${room.id}`}
+                          >
+                            <Video className="w-4 h-4 mr-1" />
+                            Kirish
+                          </Button>
+                        )}
                         <Button 
                           size="sm" 
                           variant="outline"
@@ -3542,6 +3596,39 @@ Kinescope: https://kinescope.io/watch/...'
           </DialogHeader>
           
           <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Platforma tanlang</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={liveRoomForm.platform === 'jitsi' ? 'default' : 'outline'}
+                  className={`flex-1 ${liveRoomForm.platform === 'jitsi' ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
+                  onClick={() => setLiveRoomForm({ ...liveRoomForm, platform: 'jitsi' })}
+                  data-testid="button-platform-jitsi"
+                >
+                  <Video className="w-4 h-4 mr-2" />
+                  Jitsi Meet
+                </Button>
+                <Button
+                  type="button"
+                  variant={liveRoomForm.platform === 'zoom' ? 'default' : 'outline'}
+                  className={`flex-1 ${liveRoomForm.platform === 'zoom' ? 'bg-blue-500 hover:bg-blue-600' : ''}`}
+                  onClick={() => setLiveRoomForm({ ...liveRoomForm, platform: 'zoom' })}
+                  disabled={!zoomStatus?.available}
+                  data-testid="button-platform-zoom"
+                >
+                  <Video className="w-4 h-4 mr-2" />
+                  Zoom
+                  {!zoomStatus?.available && <span className="ml-1 text-xs">(sozlanmagan)</span>}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {liveRoomForm.platform === 'jitsi' 
+                  ? "Jitsi Meet - bepul, cheksiz vaqt, o'rnatish shart emas"
+                  : "Zoom - yuqori sifatli video, barcha qurilmalarda ishlaydi"}
+              </p>
+            </div>
+            
             <div className="space-y-2">
               <Label htmlFor="liveRoomTitle">Dars nomi *</Label>
               <Input

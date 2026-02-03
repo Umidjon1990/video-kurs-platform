@@ -43,6 +43,7 @@ The frontend utilizes Wouter for routing and TanStack Query for state management
 *   **Arabic Essay Assignments**: Instructors can add essay questions in Arabic to lessons with configurable word count limits (min/max). Students submit essays through an RTL-enabled textarea with live word counter. Each submission can be checked once by OpenAI GPT-4o, which provides detailed feedback on grammar, spelling, style, and content in Uzbek language. Database uses `lessonEssayQuestions` table (linked to lessons) and `essaySubmissions` table (linked to students) with one-time AI check enforcement via `aiChecked` boolean flag.
 *   **Course Module System**: Optional modular course structure allowing instructors to organize lessons into modules (Bo'limlar). Database uses `courseModules` table with `courseId`, `title`, `description`, and `order` fields. Lessons can optionally be assigned to modules via nullable `moduleId` field. Instructor Dashboard provides dedicated "Modullar" tab with full CRUD operations and module selector in lesson form. Student LearningPage displays lessons grouped by module with progress indicators (completed/total) for each module. Fallback rendering ensures lessons display correctly when modules are unavailable.
 *   **Lesson Sections (Multi-Video Support)**: Lessons can contain multiple video sections via `lessonSections` table with `lessonId`, `title`, `order`, `videoUrl`, and `videoPlatform` fields. Supports multiple video platforms (youtube, kinescope, vimeo, dailymotion, wistia, direct_link) for flexible content delivery.
+*   **Live Video Conferencing (Jitsi Meet + Zoom)**: Instructors can start live video classes with platform selection between Jitsi Meet (free, unlimited) or Zoom (premium). Database uses `liveRooms` table with `platform` field ('jitsi' or 'zoom'), `jitsiRoomName` for Jitsi rooms, and `zoomMeetingId`, `zoomJoinUrl`, `zoomStartUrl`, `zoomPassword` for Zoom meetings. Zoom integration uses Server-to-Server OAuth with `ZOOM_ACCOUNT_ID`, `ZOOM_CLIENT_ID`, and `ZOOM_CLIENT_SECRET` environment variables. Students see active live rooms on their dashboard with platform-specific join buttons. Access control ensures students can only join rooms for courses they're enrolled in.
 
 ### System Design Choices
 The backend is an Express.js application in TypeScript, providing a RESTful API with role-based route protection. It uses session-based `express-session` with a PostgreSQL store for authentication, integrated with Passport.js. The database uses Drizzle ORM with PostgreSQL (Neon Serverless) for type-safe operations, including models for Users, Courses, Lessons, Assignments, Tests, Enrollments, Submissions, Notifications, Conversations, Messages, Site Settings, Testimonials, Subscription Plans, Course Plan Pricing, and User Subscriptions. The schema utilizes UUID primary keys and timestamp tracking for a comprehensive relational design.
@@ -55,8 +56,10 @@ The backend is an Express.js application in TypeScript, providing a RESTful API 
 *   **Replit Authentication**: OpenID Connect provider (for OIDC authentication).
 *   **Neon Serverless PostgreSQL**: PostgreSQL database hosting.
 *   **Object Storage (Replit)**: Cloud storage for multimedia files.
+*   **Jitsi Meet**: Free video conferencing (no API key required).
+*   **Zoom**: Premium video conferencing with Server-to-Server OAuth integration.
 
 ### Key NPM Packages
 *   **Frontend**: `@tanstack/react-query`, `wouter`, `@radix-ui/*`, `react-hook-form`, `zod`, `date-fns`, `lucide-react`, `framer-motion`, `recharts`.
-*   **Backend**: `express`, `drizzle-orm`, `passport`, `openid-client`, `express-session`, `connect-pg-simple`, `@google-cloud/storage`, `multer`.
+*   **Backend**: `express`, `drizzle-orm`, `passport`, `openid-client`, `express-session`, `connect-pg-simple`, `@google-cloud/storage`, `multer`, `axios`.
 *   **Development**: `typescript`, `vite`, `tailwindcss`, `drizzle-kit`, `tsx`.

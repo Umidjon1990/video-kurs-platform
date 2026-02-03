@@ -1218,16 +1218,21 @@ export type LessonEssayQuestion = typeof lessonEssayQuestions.$inferSelect;
 export type InsertEssaySubmission = z.infer<typeof insertEssaySubmissionSchema>;
 export type EssaySubmission = typeof essaySubmissions.$inferSelect;
 
-// Live Rooms table - Jonli darslar uchun (Jitsi Meet - 100% bepul)
+// Live Rooms table - Jonli darslar uchun (Jitsi Meet + Zoom)
 export const liveRooms = pgTable("live_rooms", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  jitsiRoomName: varchar("jitsi_room_name", { length: 255 }).notNull(),
+  jitsiRoomName: varchar("jitsi_room_name", { length: 255 }),
   courseId: varchar("course_id").references(() => courses.id),
   instructorId: varchar("instructor_id").notNull().references(() => users.id),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   status: varchar("status", { length: 20 }).notNull().default('active'),
   maxParticipants: integer("max_participants").default(50),
+  platform: varchar("platform", { length: 20 }).notNull().default('jitsi'), // jitsi, zoom
+  zoomMeetingId: varchar("zoom_meeting_id", { length: 100 }),
+  zoomJoinUrl: varchar("zoom_join_url", { length: 500 }),
+  zoomStartUrl: text("zoom_start_url"),
+  zoomPassword: varchar("zoom_password", { length: 50 }),
   startedAt: timestamp("started_at").defaultNow(),
   endedAt: timestamp("ended_at"),
   createdAt: timestamp("created_at").defaultNow(),

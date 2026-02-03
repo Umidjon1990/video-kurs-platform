@@ -263,15 +263,26 @@ export default function StudentCourses() {
                       key={room.id}
                       className="flex items-center justify-between p-4 rounded-lg bg-background/50 border border-red-500/20 hover-elevate cursor-pointer"
                       whileHover={{ scale: 1.01 }}
-                      onClick={() => setLocation(`/live/${room.id}`)}
+                      onClick={() => {
+                        if (room.platform === 'zoom' && room.zoomJoinUrl) {
+                          window.open(room.zoomJoinUrl, '_blank');
+                        } else {
+                          setLocation(`/live/${room.id}`);
+                        }
+                      }}
                       data-testid={`live-room-${room.id}`}
                     >
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
-                          <Video className="w-6 h-6 text-red-500" />
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center ${room.platform === 'zoom' ? 'bg-blue-500/20' : 'bg-red-500/20'}`}>
+                          <Video className={`w-6 h-6 ${room.platform === 'zoom' ? 'text-blue-500' : 'text-red-500'}`} />
                         </div>
                         <div>
-                          <h4 className="font-semibold">{room.title}</h4>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold">{room.title}</h4>
+                            <span className={`text-xs px-1.5 py-0.5 rounded ${room.platform === 'zoom' ? 'bg-blue-500/20 text-blue-600' : 'bg-primary/20 text-primary'}`}>
+                              {room.platform === 'zoom' ? 'Zoom' : 'Jitsi'}
+                            </span>
+                          </div>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <span>{room.instructor?.firstName} {room.instructor?.lastName}</span>
                             {room.course && (
@@ -284,7 +295,7 @@ export default function StudentCourses() {
                         </div>
                       </div>
                       <Button 
-                        className="bg-red-500 hover:bg-red-600"
+                        className={room.platform === 'zoom' ? 'bg-blue-500 hover:bg-blue-600' : 'bg-red-500 hover:bg-red-600'}
                         data-testid={`button-join-live-${room.id}`}
                       >
                         <Video className="w-4 h-4 mr-2" />

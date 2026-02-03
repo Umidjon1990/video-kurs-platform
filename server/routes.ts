@@ -36,6 +36,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import * as XLSX from "xlsx";
+import { createZoomMeeting, endZoomMeeting, isZoomConfigured } from "./zoom";
 
 // Grading schema
 const gradingSchema = z.object({
@@ -5081,30 +5082,55 @@ So'zlar soni: ${submission.wordCount}`;
     return `zamonaviy-edu-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
   
-  // Create a live room (Instructor only)
+  
+  // Check if Zoom is available
+  app.get('/api/zoom/status', isAuthenticated, async (req: any, res) => {
+    res.json({ available: isZoomConfigured() });
+  });
+  
+  // Create a live room (Instructor only) - supports Jitsi and Zoom
   app.post('/api/instructor/live-rooms', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
       const instructorId = req.user.claims.sub;
-      const { title, description, courseId, maxParticipants } = req.body;
+      const { title, description, courseId, maxParticipants, platform = 'jitsi' } = req.body;
       
       if (!title) {
         return res.status(400).json({ message: 'Jonli dars nomi kiritilishi shart' });
       }
       
-      // Generate unique room name for Jitsi
-      const jitsiRoomName = generateJitsiRoomName();
-      
-      // Save to database
-      const liveRoom = await storage.createLiveRoom({
-        jitsiRoomName: jitsiRoomName,
+      let roomData: any = {
         courseId: courseId || null,
         instructorId,
         title,
         description: description || null,
         status: 'active',
         maxParticipants: maxParticipants || 50,
+        platform,
         startedAt: new Date(),
-      });
+      };
+      
+      if (platform === 'zoom') {
+        if (!isZoomConfigured()) {
+          return res.status(400).json({ message: 'Zoom sozlanmagan. Administrator bilan bog\'laning.' });
+        }
+        
+        try {
+          const zoomMeeting = await createZoomMeeting(title, 120);
+          roomData.zoomMeetingId = zoomMeeting.meetingId;
+          roomData.zoomJoinUrl = zoomMeeting.joinUrl;
+          roomData.zoomStartUrl = zoomMeeting.startUrl;
+          roomData.zoomPassword = zoomMeeting.password;
+          roomData.jitsiRoomName = null;
+        } catch (zoomError: any) {
+          console.error('Zoom meeting creation error:', zoomError);
+          return res.status(500).json({ message: 'Zoom uchrashuv yaratishda xato: ' + zoomError.message });
+        }
+      } else {
+        roomData.jitsiRoomName = generateJitsiRoomName();
+      }
+      
+      // Save to database
+      const liveRoom = await storage.createLiveRoom(roomData);
       
       // Send notification to students if courseId is provided
       if (courseId) {
@@ -5181,8 +5207,13 @@ So'zlar soni: ${submission.wordCount}`;
       // Get instructor info
       const instructor = await storage.getUser(room.instructorId);
       
+      // For students, remove the host-only zoomStartUrl
+      const responseRoom = user.role === 'student' 
+        ? { ...room, zoomStartUrl: undefined }
+        : room;
+      
       res.json({
-        ...room,
+        ...responseRoom,
         instructor: instructor ? {
           id: instructor.id,
           firstName: instructor.firstName,
@@ -5210,7 +5241,14 @@ So'zlar soni: ${submission.wordCount}`;
         return res.status(403).json({ message: 'Ruxsat yo\'q' });
       }
       
-      // Jitsi xonasi avtomatik o'chadi, API chaqirish shart emas
+      // Zoom uchrashuvini tugatish
+      if (room.platform === 'zoom' && room.zoomMeetingId) {
+        try {
+          await endZoomMeeting(room.zoomMeetingId);
+        } catch (zoomError) {
+          console.error('Zoom meeting end error:', zoomError);
+        }
+      }
       
       // Update database
       const updatedRoom = await storage.endLiveRoom(roomId);
@@ -5245,11 +5283,13 @@ So'zlar soni: ${submission.wordCount}`;
           !room.courseId || enrolledCourseIds.includes(room.courseId)
         );
         
-        // Add instructor info
+        // Add instructor info and remove sensitive fields for students
         const roomsWithInstructor = await Promise.all(accessibleRooms.map(async (room) => {
           const instructor = await storage.getUser(room.instructorId);
+          // Remove zoomStartUrl from student response (it's a host-only URL)
+          const { zoomStartUrl, ...safeRoom } = room;
           return {
-            ...room,
+            ...safeRoom,
             instructor: instructor ? {
               id: instructor.id,
               firstName: instructor.firstName,
