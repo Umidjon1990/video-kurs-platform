@@ -27,6 +27,7 @@ import StudentSpeakingTest from "@/pages/StudentSpeakingTest";
 import LearningPage from "@/pages/LearningPage";
 import Checkout from "@/pages/Checkout";
 import ChatPage from "@/pages/ChatPage";
+import LiveRoom from "@/pages/LiveRoom";
 import NotFound from "@/pages/not-found";
 
 // Public routes that don't require auth
@@ -109,6 +110,7 @@ function Router() {
                   <Route path="/learn/:courseId" component={LearningPage} />
                   <Route path="/chat" component={ChatPage} />
                   <Route path="/chat/:conversationId" component={ChatPage} />
+                  <Route path="/live/:roomId" component={LiveRoom} />
                 </>
               )}
               
@@ -122,6 +124,7 @@ function Router() {
                   <Route path="/learn/:courseId" component={LearningPage} />
                   <Route path="/chat" component={ChatPage} />
                   <Route path="/chat/:conversationId" component={ChatPage} />
+                  <Route path="/live/:roomId" component={LiveRoom} />
                 </>
               )}
               <Route component={NotFound} />
