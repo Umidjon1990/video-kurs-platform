@@ -3569,14 +3569,14 @@ Kinescope: https://kinescope.io/watch/...'
             <div className="space-y-2">
               <Label htmlFor="liveRoomCourse">Kurs bilan bog'lash (ixtiyoriy)</Label>
               <Select
-                value={liveRoomForm.courseId}
-                onValueChange={(value) => setLiveRoomForm({ ...liveRoomForm, courseId: value })}
+                value={liveRoomForm.courseId || "none"}
+                onValueChange={(value) => setLiveRoomForm({ ...liveRoomForm, courseId: value === "none" ? "" : value })}
               >
                 <SelectTrigger data-testid="select-live-room-course">
                   <SelectValue placeholder="Kurs tanlang..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Bog'lamaslik</SelectItem>
+                  <SelectItem value="none">Bog'lamaslik</SelectItem>
                   {courses?.map((course) => (
                     <SelectItem key={course.id} value={course.id}>
                       {course.title}
