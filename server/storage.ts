@@ -108,6 +108,12 @@ import {
   liveRooms,
   type LiveRoom,
   type InsertLiveRoom,
+  courseGroupChats,
+  type CourseGroupChat,
+  type InsertCourseGroupChat,
+  userPresence,
+  type UserPresence,
+  type InsertUserPresence,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, sql, inArray } from "drizzle-orm";
@@ -2787,6 +2793,113 @@ export class DatabaseStorage implements IStorage {
       .where(eq(liveRooms.id, id))
       .returning();
     return result;
+  }
+  
+  // ============ COURSE GROUP CHAT OPERATIONS ============
+  async createCourseGroupChat(chat: InsertCourseGroupChat): Promise<CourseGroupChat> {
+    const [result] = await db.insert(courseGroupChats).values(chat).returning();
+    return result;
+  }
+  
+  async getCourseGroupChats(courseId: string, limit: number = 50, offset: number = 0): Promise<CourseGroupChat[]> {
+    return await db
+      .select()
+      .from(courseGroupChats)
+      .where(and(
+        eq(courseGroupChats.courseId, courseId),
+        eq(courseGroupChats.isDeleted, false)
+      ))
+      .orderBy(desc(courseGroupChats.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+  
+  async getCourseGroupChatsSince(courseId: string, sinceTime: Date): Promise<CourseGroupChat[]> {
+    return await db
+      .select()
+      .from(courseGroupChats)
+      .where(and(
+        eq(courseGroupChats.courseId, courseId),
+        eq(courseGroupChats.isDeleted, false),
+        sql`${courseGroupChats.createdAt} > ${sinceTime}`
+      ))
+      .orderBy(courseGroupChats.createdAt);
+  }
+  
+  async deleteCourseGroupChat(id: string, senderId: string): Promise<void> {
+    await db
+      .update(courseGroupChats)
+      .set({ isDeleted: true })
+      .where(and(
+        eq(courseGroupChats.id, id),
+        eq(courseGroupChats.senderId, senderId)
+      ));
+  }
+  
+  // ============ USER PRESENCE OPERATIONS ============
+  async updateUserPresence(userId: string, courseId?: string): Promise<UserPresence> {
+    const existing = await db
+      .select()
+      .from(userPresence)
+      .where(eq(userPresence.userId, userId));
+    
+    if (existing.length > 0) {
+      const [result] = await db
+        .update(userPresence)
+        .set({
+          lastActiveAt: new Date(),
+          isOnline: true,
+          currentCourseId: courseId || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(userPresence.userId, userId))
+        .returning();
+      return result;
+    } else {
+      const [result] = await db
+        .insert(userPresence)
+        .values({
+          userId,
+          lastActiveAt: new Date(),
+          isOnline: true,
+          currentCourseId: courseId || null,
+        })
+        .returning();
+      return result;
+    }
+  }
+  
+  async setUserOffline(userId: string): Promise<void> {
+    await db
+      .update(userPresence)
+      .set({
+        isOnline: false,
+        currentCourseId: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(userPresence.userId, userId));
+  }
+  
+  async getOnlineUsersInCourse(courseId: string): Promise<UserPresence[]> {
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    return await db
+      .select()
+      .from(userPresence)
+      .where(and(
+        eq(userPresence.currentCourseId, courseId),
+        sql`${userPresence.lastActiveAt} > ${fiveMinutesAgo}`
+      ));
+  }
+  
+  async getCourseOnlineStatus(courseId: string): Promise<{ userId: string; isOnline: boolean; lastActiveAt: Date }[]> {
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const presences = await db.select().from(userPresence);
+    
+    return presences.map(p => ({
+      userId: p.userId,
+      isOnline: p.lastActiveAt ? new Date(p.lastActiveAt) > fiveMinutesAgo : false,
+      lastActiveAt: p.lastActiveAt || new Date(),
+    }));
   }
 }
 

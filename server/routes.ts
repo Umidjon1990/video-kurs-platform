@@ -5322,6 +5322,219 @@ So'zlar soni: ${submission.wordCount}`;
     }
   });
 
+  // ============ COURSE GROUP CHAT ROUTES ============
+  
+  // Get chat messages for a course
+  app.get('/api/courses/:courseId/group-chat', isAuthenticated, async (req: any, res) => {
+    try {
+      const { courseId } = req.params;
+      const { limit = 50, offset = 0 } = req.query;
+      const userId = req.user?.id || req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(401).json({ message: 'Foydalanuvchi topilmadi' });
+      }
+      
+      // Check if user has access to this course
+      if (user.role === 'student') {
+        const enrollments = await storage.getEnrollmentsByUser(userId);
+        const hasAccess = enrollments.some(e => 
+          e.courseId === courseId && 
+          (e.paymentStatus === 'approved' || e.paymentStatus === 'confirmed')
+        );
+        if (!hasAccess) {
+          return res.status(403).json({ message: 'Bu kursga kirishga ruxsatingiz yo\'q' });
+        }
+      } else if (user.role === 'instructor') {
+        const course = await storage.getCourse(courseId);
+        if (!course || course.instructorId !== userId) {
+          return res.status(403).json({ message: 'Bu kursga kirishga ruxsatingiz yo\'q' });
+        }
+      }
+      
+      // Update user presence
+      await storage.updateUserPresence(userId, courseId);
+      
+      // Get messages
+      const messages = await storage.getCourseGroupChats(courseId, Number(limit), Number(offset));
+      
+      // Add sender info
+      const messagesWithSender = await Promise.all(messages.map(async (msg) => {
+        const sender = await storage.getUser(msg.senderId);
+        return {
+          ...msg,
+          sender: sender ? {
+            id: sender.id,
+            firstName: sender.firstName,
+            lastName: sender.lastName,
+            profileImageUrl: sender.profileImageUrl,
+            role: sender.role,
+          } : null,
+        };
+      }));
+      
+      res.json(messagesWithSender.reverse()); // Oldest first
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Send a message
+  app.post('/api/courses/:courseId/group-chat', isAuthenticated, async (req: any, res) => {
+    try {
+      const { courseId } = req.params;
+      const { message, messageType = 'text', fileUrl } = req.body;
+      const userId = req.user?.id || req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(401).json({ message: 'Foydalanuvchi topilmadi' });
+      }
+      
+      if (!message || message.trim().length === 0) {
+        return res.status(400).json({ message: 'Xabar bo\'sh bo\'lmasligi kerak' });
+      }
+      
+      // Check access
+      if (user.role === 'student') {
+        const enrollments = await storage.getEnrollmentsByUser(userId);
+        const hasAccess = enrollments.some(e => 
+          e.courseId === courseId && 
+          (e.paymentStatus === 'approved' || e.paymentStatus === 'confirmed')
+        );
+        if (!hasAccess) {
+          return res.status(403).json({ message: 'Bu kursga kirishga ruxsatingiz yo\'q' });
+        }
+      } else if (user.role === 'instructor') {
+        const course = await storage.getCourse(courseId);
+        if (!course || course.instructorId !== userId) {
+          return res.status(403).json({ message: 'Bu kursga kirishga ruxsatingiz yo\'q' });
+        }
+      }
+      
+      // Create message
+      const newMessage = await storage.createCourseGroupChat({
+        courseId,
+        senderId: userId,
+        message: message.trim(),
+        messageType,
+        fileUrl,
+      });
+      
+      // Update presence
+      await storage.updateUserPresence(userId, courseId);
+      
+      res.status(201).json({
+        ...newMessage,
+        sender: {
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          profileImageUrl: user.profileImageUrl,
+          role: user.role,
+        },
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Poll for new messages
+  app.get('/api/courses/:courseId/group-chat/poll', isAuthenticated, async (req: any, res) => {
+    try {
+      const { courseId } = req.params;
+      const { since } = req.query;
+      const userId = req.user?.id || req.user?.claims?.sub;
+      
+      // Update presence
+      await storage.updateUserPresence(userId, courseId);
+      
+      if (!since) {
+        return res.json([]);
+      }
+      
+      const sinceTime = new Date(since);
+      const messages = await storage.getCourseGroupChatsSince(courseId, sinceTime);
+      
+      // Add sender info
+      const messagesWithSender = await Promise.all(messages.map(async (msg) => {
+        const sender = await storage.getUser(msg.senderId);
+        return {
+          ...msg,
+          sender: sender ? {
+            id: sender.id,
+            firstName: sender.firstName,
+            lastName: sender.lastName,
+            profileImageUrl: sender.profileImageUrl,
+            role: sender.role,
+          } : null,
+        };
+      }));
+      
+      res.json(messagesWithSender);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Delete a message (only sender can delete)
+  app.delete('/api/courses/:courseId/group-chat/:messageId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { courseId, messageId } = req.params;
+      const userId = req.user?.id || req.user?.claims?.sub;
+      
+      await storage.deleteCourseGroupChat(messageId, userId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get online users in course
+  app.get('/api/courses/:courseId/online-users', isAuthenticated, async (req: any, res) => {
+    try {
+      const { courseId } = req.params;
+      const userId = req.user?.id || req.user?.claims?.sub;
+      
+      // Update own presence
+      await storage.updateUserPresence(userId, courseId);
+      
+      // Get online users
+      const onlinePresences = await storage.getOnlineUsersInCourse(courseId);
+      
+      // Get user details
+      const onlineUsers = await Promise.all(onlinePresences.map(async (p) => {
+        const user = await storage.getUser(p.userId);
+        return user ? {
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          profileImageUrl: user.profileImageUrl,
+          role: user.role,
+          lastActiveAt: p.lastActiveAt,
+        } : null;
+      }));
+      
+      res.json(onlineUsers.filter(Boolean));
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Update presence (heartbeat)
+  app.post('/api/presence/heartbeat', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id || req.user?.claims?.sub;
+      const { courseId } = req.body;
+      
+      await storage.updateUserPresence(userId, courseId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

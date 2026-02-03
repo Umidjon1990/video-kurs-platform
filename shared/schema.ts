@@ -1260,3 +1260,53 @@ export type CourseAnalytics = {
   totalStudents: number;
   activeStudents: number; // students with recent activity (last 7 days)
 };
+
+// Course Group Chat - Kurs ichidagi guruh suhbati
+export const courseGroupChats = pgTable("course_group_chats", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: 'cascade' }),
+  senderId: varchar("sender_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  message: text("message").notNull(),
+  messageType: varchar("message_type", { length: 20 }).notNull().default('text'), // text, image, file
+  fileUrl: text("file_url"), // Fayl yoki rasm URL
+  isDeleted: boolean("is_deleted").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const courseGroupChatsRelations = relations(courseGroupChats, ({ one }) => ({
+  course: one(courses, { fields: [courseGroupChats.courseId], references: [courses.id] }),
+  sender: one(users, { fields: [courseGroupChats.senderId], references: [users.id] }),
+}));
+
+export const insertCourseGroupChatSchema = createInsertSchema(courseGroupChats).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertCourseGroupChat = z.infer<typeof insertCourseGroupChatSchema>;
+export type CourseGroupChat = typeof courseGroupChats.$inferSelect;
+
+// User Presence - Foydalanuvchi online/offline holati
+export const userPresence = pgTable("user_presence", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
+  lastActiveAt: timestamp("last_active_at").defaultNow(),
+  isOnline: boolean("is_online").default(false),
+  currentCourseId: varchar("current_course_id").references(() => courses.id), // Hozir qaysi kurs chatida
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const userPresenceRelations = relations(userPresence, ({ one }) => ({
+  user: one(users, { fields: [userPresence.userId], references: [users.id] }),
+  currentCourse: one(courses, { fields: [userPresence.currentCourseId], references: [courses.id] }),
+}));
+
+export const insertUserPresenceSchema = createInsertSchema(userPresence).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertUserPresence = z.infer<typeof insertUserPresenceSchema>;
+export type UserPresence = typeof userPresence.$inferSelect;
