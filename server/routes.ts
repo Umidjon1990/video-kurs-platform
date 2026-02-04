@@ -2714,6 +2714,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============ ESSAY QUESTION ROUTES ============
+  // Get all essay questions for a course (to show indicators in lesson list)
+  app.get('/api/courses/:courseId/essay-questions', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { courseId } = req.params;
+      
+      // Check if user has access to this course (enrolled student, instructor, or admin)
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      
+      // Admins and instructors can see essay questions for any course
+      if (user.role !== 'admin' && user.role !== 'instructor') {
+        // For students, check enrollment
+        const enrollment = await storage.getEnrollmentByCourseAndUser(courseId, userId);
+        if (!enrollment || (enrollment.paymentStatus !== 'confirmed' && enrollment.paymentStatus !== 'approved')) {
+          return res.status(403).json({ message: "Not enrolled in this course" });
+        }
+      }
+      
+      const essayQuestions = await storage.getEssayQuestionsByCourse(courseId);
+      res.json(essayQuestions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
   // Get essay question for a lesson (instructor/student)
   app.get('/api/lessons/:lessonId/essay-question', async (req: any, res) => {
     try {

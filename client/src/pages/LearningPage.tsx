@@ -153,6 +153,15 @@ export default function LearningPage() {
     queryKey: ["/api/lessons", currentLessonId, "essay-submission"],
     enabled: !!currentLessonId && isAuthenticated,
   });
+  
+  // Fetch all essay questions for the course (to show indicators in lesson list)
+  const { data: courseEssayQuestions } = useQuery<any[]>({
+    queryKey: ["/api/courses", courseId, "essay-questions"],
+    enabled: !!courseId && isAuthenticated,
+  });
+  
+  // Create a set of lesson IDs that have essay questions
+  const lessonsWithEssay = new Set(courseEssayQuestions?.map((eq: any) => eq.lessonId) || []);
 
   // Fetch user's course rating
   const { data: userCourseRating } = useQuery<{ rating: number; review?: string } | null>({
@@ -836,23 +845,27 @@ export default function LearningPage() {
 
                             {/* AI Feedback */}
                             {essaySubmission.aiChecked ? (
-                              <Card className="border-primary/30 bg-primary/5">
-                                <CardHeader>
-                                  <CardTitle className="text-lg flex items-center gap-2">
-                                    <CheckCircle className="w-5 h-5 text-green-500" />
-                                    AI Tekshiruvi Natijalari
-                                  </CardTitle>
-                                  {essaySubmission.overallScore !== null && (
-                                    <Badge variant={essaySubmission.overallScore >= 70 ? "default" : "secondary"}>
-                                      Ball: {essaySubmission.overallScore}/100
-                                    </Badge>
-                                  )}
+                              <Card className="border-green-500/50 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30">
+                                <CardHeader className="pb-3">
+                                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                                    <CardTitle className="text-lg flex items-center gap-2 text-green-700 dark:text-green-400">
+                                      <CheckCircle className="w-5 h-5" />
+                                      AI Tekshiruvi Natijalari
+                                    </CardTitle>
+                                    {essaySubmission.overallScore !== null && (
+                                      <div className="flex items-center gap-2">
+                                        <Badge variant={essaySubmission.overallScore >= 70 ? "default" : "secondary"} className="text-base px-3 py-1">
+                                          Ball: {essaySubmission.overallScore}/100
+                                        </Badge>
+                                      </div>
+                                    )}
+                                  </div>
                                 </CardHeader>
                                 <CardContent>
-                                  <div className="prose prose-sm max-w-none">
-                                    <pre className="whitespace-pre-wrap text-sm bg-background p-4 rounded-lg border">
+                                  <div className="bg-white dark:bg-gray-900 p-4 rounded-lg border border-green-200 dark:border-green-800 shadow-sm">
+                                    <div className="text-sm leading-relaxed text-foreground whitespace-pre-wrap" style={{ fontFamily: 'inherit' }}>
                                       {essaySubmission.aiFeedback}
-                                    </pre>
+                                    </div>
                                   </div>
                                 </CardContent>
                               </Card>
@@ -1309,6 +1322,11 @@ export default function LearningPage() {
                         {lesson.isDemo && (
                           <span className="text-[10px] font-semibold uppercase bg-green-500/20 text-green-600 dark:text-green-400 px-1.5 py-0.5 rounded-md">
                             Bepul
+                          </span>
+                        )}
+                        {lessonsWithEssay.has(lesson.id) && (
+                          <span className="text-[10px] font-semibold uppercase bg-amber-500/20 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                            <FileText className="w-2.5 h-2.5" /> Insho
                           </span>
                         )}
                         {isCompleted && (

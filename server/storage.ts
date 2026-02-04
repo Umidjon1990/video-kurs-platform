@@ -346,6 +346,7 @@ export interface IStorage {
   // Lesson Essay Question operations
   createLessonEssayQuestion(question: InsertLessonEssayQuestion): Promise<LessonEssayQuestion>;
   getLessonEssayQuestion(lessonId: string): Promise<LessonEssayQuestion | undefined>;
+  getEssayQuestionsByCourse(courseId: string): Promise<LessonEssayQuestion[]>;
   updateLessonEssayQuestion(id: string, data: Partial<InsertLessonEssayQuestion>): Promise<LessonEssayQuestion>;
   deleteLessonEssayQuestion(id: string): Promise<void>;
   
@@ -2623,6 +2624,27 @@ export class DatabaseStorage implements IStorage {
         eq(lessonEssayQuestions.isActive, true)
       ));
     return result;
+  }
+  
+  async getEssayQuestionsByCourse(courseId: string): Promise<LessonEssayQuestion[]> {
+    return await db
+      .select({
+        id: lessonEssayQuestions.id,
+        lessonId: lessonEssayQuestions.lessonId,
+        questionText: lessonEssayQuestions.questionText,
+        instructions: lessonEssayQuestions.instructions,
+        minWords: lessonEssayQuestions.minWords,
+        maxWords: lessonEssayQuestions.maxWords,
+        isActive: lessonEssayQuestions.isActive,
+        createdAt: lessonEssayQuestions.createdAt,
+        updatedAt: lessonEssayQuestions.updatedAt,
+      })
+      .from(lessonEssayQuestions)
+      .innerJoin(lessons, eq(lessonEssayQuestions.lessonId, lessons.id))
+      .where(and(
+        eq(lessons.courseId, courseId),
+        eq(lessonEssayQuestions.isActive, true)
+      ));
   }
   
   async updateLessonEssayQuestion(id: string, data: Partial<InsertLessonEssayQuestion>): Promise<LessonEssayQuestion> {
