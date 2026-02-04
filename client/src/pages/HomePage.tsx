@@ -266,7 +266,7 @@ export default function HomePage() {
       </motion.div>
 
       {/* Courses Grid */}
-      <div id="courses-section" className="relative overflow-hidden">
+      <div id="courses-section" className="relative overflow-x-clip">
         {/* Enhanced background decoration */}
         <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-accent/5 pointer-events-none" />
         <div className="absolute inset-0 dot-pattern opacity-30 pointer-events-none" />
@@ -506,40 +506,33 @@ export default function HomePage() {
                   {/* BEPUL KURSLAR - maxsus dizayn */}
                   {isFree ? (
                     <div className="relative">
-                      {/* Animated Stars */}
-                      <div className="free-course-star">⭐</div>
-                      <div className="free-course-star">✨</div>
-                      <div className="free-course-star">⭐</div>
-                      <div className="free-course-star">✨</div>
-                      
                       <Card
-                        className="modern-card glow-border rainbow-glow hover-elevate transition-all cursor-pointer overflow-hidden h-full border-4 border-amber-400 shadow-lg"
+                        className="modern-card hover-elevate transition-all cursor-pointer rounded-xl h-full border-2 border-amber-400 shadow-lg"
                         data-testid={`card-course-${course.id}`}
                         onClick={() => setLocation(`/checkout/${course.id}`)}
                       >
                         {/* Thumbnail with BEPUL Badge */}
-                        <div className="relative aspect-[3/4] bg-gradient-to-br from-amber-100 to-yellow-100 dark:from-amber-900 dark:to-yellow-900 flex items-center justify-center border-b overflow-hidden">
+                        <div className="relative aspect-[4/3] bg-gradient-to-br from-amber-100 to-yellow-100 dark:from-amber-900/50 dark:to-yellow-900/50 flex items-center justify-center rounded-t-xl overflow-hidden">
                           {/* "Yangi" ribbon */}
                           {isNew && (
-                            <div className="absolute top-0 left-0 z-20 overflow-hidden w-32 h-32">
-                              <div className="absolute transform -rotate-45 bg-green-500 text-white text-center font-bold py-1 left-[-35px] top-[25px] w-[170px] shadow-md">
-                                <div className="text-xs">
+                            <div className="absolute top-0 left-0 z-20 w-24 h-24 overflow-hidden">
+                              <div className="absolute transform -rotate-45 bg-green-500 text-white text-center font-bold py-1 left-[-28px] top-[18px] w-[130px] shadow-md">
+                                <div className="text-[10px]">
                                   YANGI
-                                  {daysAgo === 0 ? " (Bugun)" : ` (${daysAgo} kun)`}
+                                  {daysAgo === 0 ? "" : ` (${daysAgo}k)`}
                                 </div>
                               </div>
                             </div>
                           )}
                           {/* BEPUL Badge - katta va ko'zga tashlanadigan */}
-                          <div className="absolute top-3 right-3 z-10 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-lg shadow-xl transform rotate-3">
-                            <div className="text-2xl font-black">BEPUL</div>
-                            <div className="text-xs text-center">100% Tekin</div>
+                          <div className="absolute top-2 right-2 z-10 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 py-1.5 rounded-lg shadow-xl">
+                            <div className="text-sm font-black">BEPUL</div>
                           </div>
                           {thumbnailUrl ? (
                             <img
                               src={thumbnailUrl}
                               alt={course.title}
-                              className="w-full h-full object-contain"
+                              className="w-full h-full object-cover"
                               loading="lazy"
                               onError={(e) => {
                                 e.currentTarget.style.display = 'none';
@@ -636,33 +629,33 @@ export default function HomePage() {
                       </Card>
                     </div>
                   ) : discountPercent > 0 ? (
-                    <div className={`p-1 bg-gradient-to-br ${gradient} rounded-lg glow-border`}>
+                    <div className={`p-[2px] bg-gradient-to-br ${gradient} rounded-xl`}>
                       <Card
-                        className="modern-card glow-card hover-elevate transition-all cursor-pointer border-0 overflow-hidden h-full"
+                        className="modern-card hover-elevate transition-all cursor-pointer border-0 rounded-xl h-full bg-background"
                         data-testid={`card-course-${course.id}`}
                         onClick={() => setLocation(`/checkout/${course.id}`)}
                       >
                         {/* Thumbnail with Sale Badge & New Ribbon */}
-                        <div className="relative aspect-[3/4] bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-b overflow-hidden">
+                        <div className="relative aspect-[4/3] bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center rounded-t-xl overflow-hidden">
                           {/* "Yangi" ribbon - chap yuqori burchak */}
                           {isNew && (
-                            <div className="absolute top-0 left-0 z-20 overflow-hidden w-32 h-32">
-                              <div className="absolute transform -rotate-45 bg-green-500 text-white text-center font-bold py-1 left-[-35px] top-[25px] w-[170px] shadow-md">
-                                <div className="text-xs">
+                            <div className="absolute top-0 left-0 z-20 w-24 h-24 overflow-hidden">
+                              <div className="absolute transform -rotate-45 bg-green-500 text-white text-center font-bold py-1 left-[-28px] top-[18px] w-[130px] shadow-md">
+                                <div className="text-[10px]">
                                   YANGI
-                                  {daysAgo === 0 ? " (Bugun)" : ` (${daysAgo} kun)`}
+                                  {daysAgo === 0 ? "" : ` (${daysAgo}k)`}
                                 </div>
                               </div>
                             </div>
                           )}
-                          <Badge variant="destructive" className="absolute top-3 right-3 z-10 text-sm font-bold px-3 py-1">
-                            -{discountPercent}% CHEGIRMA
+                          <Badge variant="destructive" className="absolute top-2 right-2 z-10 text-xs font-bold px-2 py-1 shadow-lg">
+                            -{discountPercent}%
                           </Badge>
                           {thumbnailUrl ? (
                             <img
                               src={thumbnailUrl}
                               alt={course.title}
-                              className="w-full h-full object-contain"
+                              className="w-full h-full object-cover"
                               loading="lazy"
                               onError={(e) => {
                                 console.error('Course thumbnail failed to load:', course.thumbnailUrl);
@@ -801,19 +794,19 @@ export default function HomePage() {
               <>
                 {/* Oddiy karta (chegirmasiz) */}
                 <Card
-                  className="modern-card glow-border hover-elevate transition-all cursor-pointer overflow-hidden h-full"
+                  className="modern-card hover-elevate transition-all cursor-pointer rounded-xl h-full"
                   data-testid={`card-course-${course.id}`}
                   onClick={() => setLocation(`/checkout/${course.id}`)}
                 >
                 {/* Thumbnail with New Ribbon only */}
-                <div className="relative aspect-[3/4] bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-b overflow-hidden">
+                <div className="relative aspect-[4/3] bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center rounded-t-xl overflow-hidden">
                   {/* "Yangi" ribbon - chap yuqori burchak */}
                   {isNew && (
-                    <div className="absolute top-0 left-0 z-20 overflow-hidden w-32 h-32">
-                      <div className="absolute transform -rotate-45 bg-green-500 text-white text-center font-bold py-1 left-[-35px] top-[25px] w-[170px] shadow-md">
-                        <div className="text-xs">
+                    <div className="absolute top-0 left-0 z-20 w-24 h-24 overflow-hidden">
+                      <div className="absolute transform -rotate-45 bg-green-500 text-white text-center font-bold py-1 left-[-28px] top-[18px] w-[130px] shadow-md">
+                        <div className="text-[10px]">
                           YANGI
-                          {daysAgo === 0 ? " (Bugun)" : ` (${daysAgo} kun)`}
+                          {daysAgo === 0 ? "" : ` (${daysAgo}k)`}
                         </div>
                       </div>
                     </div>
@@ -822,7 +815,7 @@ export default function HomePage() {
                     <img
                       src={thumbnailUrl}
                       alt={course.title}
-                      className="w-full h-full object-contain"
+                      className="w-full h-full object-cover"
                       loading="lazy"
                       onError={(e) => {
                         console.error('Course thumbnail failed to load:', course.thumbnailUrl);
