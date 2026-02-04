@@ -705,7 +705,6 @@ export default function LearningPage() {
                   <TabsTrigger value="overview" data-testid="tab-overview">Umumiy Ma'lumot</TabsTrigger>
                   <TabsTrigger value="assignments" data-testid="tab-assignments">Vazifalar</TabsTrigger>
                   <TabsTrigger value="tests" data-testid="tab-tests">Testlar</TabsTrigger>
-                  <TabsTrigger value="essay" data-testid="tab-essay">Insho</TabsTrigger>
                   <TabsTrigger value="results" data-testid="tab-results">Natijalar</TabsTrigger>
                   <TabsTrigger value="group-chat" data-testid="tab-group-chat" className="flex items-center gap-1">
                     <MessageCircle className="h-4 w-4" />
@@ -729,7 +728,8 @@ export default function LearningPage() {
                 </TabsContent>
 
                 <TabsContent value="assignments" className="space-y-4">
-                  {assignments && assignments.filter(a => a.lessonId === currentLessonId).length > 0 ? (
+                  {/* Regular Assignments */}
+                  {assignments && assignments.filter(a => a.lessonId === currentLessonId).length > 0 && (
                     assignments.filter(a => a.lessonId === currentLessonId).map((assignment) => (
                       <Card key={assignment.id} data-testid={`assignment-card-${assignment.id}`}>
                         <CardHeader>
@@ -758,56 +758,19 @@ export default function LearningPage() {
                         </CardContent>
                       </Card>
                     ))
-                  ) : (
-                    <Card>
-                      <CardContent className="py-8">
-                        <p className="text-center text-muted-foreground">Bu darsda vazifalar yo'q</p>
-                      </CardContent>
-                    </Card>
                   )}
-                </TabsContent>
-
-                <TabsContent value="tests" className="space-y-4">
-                  {tests && tests.filter(t => t.lessonId === currentLessonId).length > 0 ? (
-                    tests.filter(t => t.lessonId === currentLessonId).map((test) => (
-                      <Card key={test.id} data-testid={`test-card-${test.id}`}>
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2">
-                            <ClipboardCheck className="w-5 h-5" />
-                            {test.title}
-                          </CardTitle>
-                          {test.passingScore && (
-                            <p className="text-sm text-muted-foreground">O'tish bali: {test.passingScore}</p>
-                          )}
-                        </CardHeader>
-                        <CardContent>
-                          <Button 
-                            onClick={() => {
-                              setTestDialog({ open: true, testId: test.id });
-                              setTestAnswers({});
-                            }}
-                            data-testid={`button-start-test-${test.id}`}
-                          >
-                            Testni Boshlash
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    ))
-                  ) : (
-                    <Card>
-                      <CardContent className="py-8">
-                        <p className="text-center text-muted-foreground">Bu darsda testlar yo'q</p>
-                      </CardContent>
-                    </Card>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="essay" className="space-y-4">
-                  {essayQuestion ? (
-                    <Card data-testid="essay-question-card">
+                  
+                  {/* Essay Question - shown in Assignments section */}
+                  {essayQuestion && (
+                    <Card data-testid="essay-question-card" className="border-amber-500/30 bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-950/20 dark:to-orange-950/20">
                       <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <FileText className="w-5 h-5" />
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30">
+                            Insho
+                          </Badge>
+                        </div>
+                        <CardTitle className="flex items-center gap-2 mt-2">
+                          <FileText className="w-5 h-5 text-amber-600" />
                           Arab Tili Inshosi
                         </CardTitle>
                         <p className="text-sm text-muted-foreground">
@@ -945,10 +908,48 @@ export default function LearningPage() {
                         )}
                       </CardContent>
                     </Card>
+                  )}
+                  
+                  {/* Show message if no assignments and no essay */}
+                  {(!assignments || assignments.filter(a => a.lessonId === currentLessonId).length === 0) && !essayQuestion && (
+                    <Card>
+                      <CardContent className="py-8">
+                        <p className="text-center text-muted-foreground">Bu darsda vazifalar yo'q</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="tests" className="space-y-4">
+                  {tests && tests.filter(t => t.lessonId === currentLessonId).length > 0 ? (
+                    tests.filter(t => t.lessonId === currentLessonId).map((test) => (
+                      <Card key={test.id} data-testid={`test-card-${test.id}`}>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <ClipboardCheck className="w-5 h-5" />
+                            {test.title}
+                          </CardTitle>
+                          {test.passingScore && (
+                            <p className="text-sm text-muted-foreground">O'tish bali: {test.passingScore}</p>
+                          )}
+                        </CardHeader>
+                        <CardContent>
+                          <Button 
+                            onClick={() => {
+                              setTestDialog({ open: true, testId: test.id });
+                              setTestAnswers({});
+                            }}
+                            data-testid={`button-start-test-${test.id}`}
+                          >
+                            Testni Boshlash
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    ))
                   ) : (
                     <Card>
                       <CardContent className="py-8">
-                        <p className="text-center text-muted-foreground">Bu darsda insho topshirig'i yo'q</p>
+                        <p className="text-center text-muted-foreground">Bu darsda testlar yo'q</p>
                       </CardContent>
                     </Card>
                   )}
