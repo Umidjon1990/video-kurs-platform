@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -162,6 +162,52 @@ export default function LearningPage() {
   
   // Create a set of lesson IDs that have essay questions
   const lessonsWithEssay = new Set(courseEssayQuestions?.map((eq: any) => eq.lessonId) || []);
+
+  // Centralized sorted lesson list - considers module order and lesson order within modules
+  // This ensures consistent ordering for progress-based locking across sidebar and main content
+  const allSortedLessons = useMemo(() => {
+    if (!lessons) return [];
+    
+    const sortedModules = courseModules?.slice().sort((a, b) => (a.order || 0) - (b.order || 0)) || [];
+    const lessonsWithoutModule = lessons.filter((l: any) => !l.moduleId).sort((a, b) => (a.order || 0) - (b.order || 0));
+    const lessonsWithOrphanedModule = lessons.filter((l: any) => 
+      l.moduleId && !sortedModules.some((m: any) => m.id === l.moduleId)
+    ).sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+    const result: Lesson[] = [
+      ...lessonsWithoutModule,
+      ...lessonsWithOrphanedModule,
+    ];
+    
+    sortedModules.forEach((module: any) => {
+      const moduleLessons = lessons.filter((l: any) => l.moduleId === module.id).sort((a, b) => (a.order || 0) - (b.order || 0));
+      result.push(...moduleLessons);
+    });
+    
+    return result;
+  }, [lessons, courseModules]);
+
+  // Helper function: Check if previous lesson is completed (for sequential access)
+  const isPreviousLessonCompleted = (lessonId: string): boolean => {
+    const lessonIndex = allSortedLessons.findIndex(l => l.id === lessonId);
+    if (lessonIndex <= 0) return true; // First lesson is always accessible
+    
+    const prevLesson = allSortedLessons[lessonIndex - 1];
+    if (!prevLesson) return true;
+    
+    // Demo lessons don't block next lessons
+    if (prevLesson.isDemo) return true;
+    
+    const prevProgress = courseProgress?.find((p: any) => p.lessonId === prevLesson.id);
+    return prevProgress?.completed === true;
+  };
+
+  // Get previous lesson for a given lesson ID
+  const getPreviousLesson = (lessonId: string): Lesson | null => {
+    const lessonIndex = allSortedLessons.findIndex(l => l.id === lessonId);
+    if (lessonIndex <= 0) return null;
+    return allSortedLessons[lessonIndex - 1] || null;
+  };
 
   // Fetch user's course rating
   const { data: userCourseRating } = useQuery<{ rating: number; review?: string } | null>({
@@ -371,17 +417,17 @@ export default function LearningPage() {
     setLocation('/chat');
   };
 
-  // Set first lesson as current when lessons load
+  // Set first lesson as current when lessons load - use centralized ordering
   useEffect(() => {
-    if (lessons && lessons.length > 0 && !currentLessonId) {
-      setCurrentLessonId(lessons[0].id);
+    if (allSortedLessons.length > 0 && !currentLessonId) {
+      setCurrentLessonId(allSortedLessons[0].id);
     }
-  }, [lessons, currentLessonId]);
+  }, [allSortedLessons, currentLessonId]);
 
-  // Get current lesson - use first lesson if currentLessonId not set yet
+  // Get current lesson - use centralized ordered list for consistency
   const effectiveCurrentLesson = currentLessonId 
-    ? lessons?.find(l => l.id === currentLessonId)
-    : lessons?.[0];
+    ? allSortedLessons.find(l => l.id === currentLessonId)
+    : allSortedLessons[0];
 
   // Show loading until we have lessons AND a current lesson selected
   if (authLoading || courseLoading || isLessonsDataLoading || (lessons && lessons.length > 0 && !effectiveCurrentLesson)) {
@@ -403,10 +449,10 @@ export default function LearningPage() {
   // Use effectiveCurrentLesson which is already calculated above
   const currentLesson = effectiveCurrentLesson;
 
-  // Navigation helpers - calculated at top level for mobile fixed nav
-  const currentIndex = lessons?.findIndex(l => l.id === currentLessonId) ?? -1;
-  const prevLesson = currentIndex > 0 ? lessons?.[currentIndex - 1] : null;
-  const nextLesson = currentIndex >= 0 && lessons && currentIndex < lessons.length - 1 ? lessons[currentIndex + 1] : null;
+  // Navigation helpers - use centralized allSortedLessons for consistent ordering
+  const currentIndex = allSortedLessons.findIndex(l => l.id === currentLessonId);
+  const navPrevLesson = currentIndex > 0 ? allSortedLessons[currentIndex - 1] : null;
+  const navNextLesson = currentIndex >= 0 && currentIndex < allSortedLessons.length - 1 ? allSortedLessons[currentIndex + 1] : null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -472,7 +518,14 @@ export default function LearningPage() {
                                             endDate && endDate > now;
               
               // Lock lesson if not demo AND (not enrolled OR subscription expired) AND not in preview mode
-              const isLocked = !isPreviewMode && !currentLesson.isDemo && (!isEnrolled || !hasActiveSubscription);
+              const isEnrollmentLocked = !isPreviewMode && !currentLesson.isDemo && (!isEnrolled || !hasActiveSubscription);
+              
+              // Progress-based locking: use centralized helper for consistent ordering
+              const prevLessonCompleted = isPreviousLessonCompleted(currentLesson.id);
+              const prevLesson = getPreviousLesson(currentLesson.id);
+              
+              const isProgressLocked = !isPreviewMode && !currentLesson.isDemo && !prevLessonCompleted && (isEnrolled && hasActiveSubscription);
+              const isLocked = isEnrollmentLocked || isProgressLocked;
               
               if (isLocked) {
                 // Check if subscription expired
@@ -482,7 +535,31 @@ export default function LearningPage() {
                   <Card>
                     <CardContent className="p-12 text-center">
                       <Lock className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-                      {subscriptionExpired ? (
+                      {isProgressLocked ? (
+                        <>
+                          <h3 className="text-xl font-semibold mb-2">Avval oldingi darsni tugating</h3>
+                          <p className="text-muted-foreground mb-4">
+                            Bu darsni ochish uchun avvalgi darsni to'liq ko'rib, "Darsni tugalladim" tugmasini bosing.
+                          </p>
+                          {prevLesson && (
+                            <div className="bg-muted p-4 rounded-lg mb-4 inline-block">
+                              <p className="text-sm font-medium">Tugallanmagan dars:</p>
+                              <p className="text-primary font-semibold">{prevLesson.title}</p>
+                            </div>
+                          )}
+                          <div className="flex gap-2 justify-center flex-wrap">
+                            {prevLesson && (
+                              <Button onClick={() => setCurrentLessonId(prevLesson.id)} variant="default">
+                                <PlayCircle className="w-4 h-4 mr-2" />
+                                Oldingi darsga o'tish
+                              </Button>
+                            )}
+                            <Button onClick={() => window.history.back()} variant="outline">
+                              Orqaga
+                            </Button>
+                          </div>
+                        </>
+                      ) : subscriptionExpired ? (
                         <>
                           <h3 className="text-xl font-semibold mb-2">Obuna muddati tugagan</h3>
                           <p className="text-muted-foreground mb-4">
@@ -537,7 +614,7 @@ export default function LearningPage() {
                         {currentLesson.title}
                       </p>
                       <p className="text-[10px] text-muted-foreground">
-                        Dars {currentIndex + 1} / {lessons?.length || 0}
+                        Dars {currentIndex + 1} / {allSortedLessons.length || 0}
                       </p>
                     </div>
                   </div>
@@ -545,7 +622,7 @@ export default function LearningPage() {
                   {/* Desktop lesson title */}
                   <div className="hidden sm:flex items-center gap-2 py-1">
                     <Badge variant="secondary" className="shrink-0 text-xs px-2">
-                      {currentIndex + 1}/{lessons?.length || 0}
+                      {currentIndex + 1}/{allSortedLessons.length || 0}
                     </Badge>
                     <span className="text-sm font-medium truncate flex-1" data-testid="text-lesson-title">
                       {currentLesson.title}
@@ -567,8 +644,8 @@ export default function LearningPage() {
                   <div className="hidden sm:flex items-center justify-between gap-2 py-2 px-1">
                     <Button
                       variant="outline"
-                      onClick={() => prevLesson && setCurrentLessonId(prevLesson.id)}
-                      disabled={!prevLesson}
+                      onClick={() => navPrevLesson && setCurrentLessonId(navPrevLesson.id)}
+                      disabled={!navPrevLesson}
                       className="flex-1 max-w-[150px]"
                       data-testid="button-prev-lesson-bottom"
                     >
@@ -577,13 +654,13 @@ export default function LearningPage() {
                     </Button>
                     
                     <Badge variant="secondary" className="text-xs shrink-0 px-2">
-                      {currentIndex + 1} / {lessons?.length || 0}
+                      {currentIndex + 1} / {allSortedLessons.length || 0}
                     </Badge>
                     
                     <Button
                       variant="default"
-                      onClick={() => nextLesson && setCurrentLessonId(nextLesson.id)}
-                      disabled={!nextLesson}
+                      onClick={() => navNextLesson && setCurrentLessonId(navNextLesson.id)}
+                      disabled={!navNextLesson}
                       className="flex-1 max-w-[150px]"
                       data-testid="button-next-lesson-bottom"
                     >
@@ -1104,16 +1181,18 @@ export default function LearningPage() {
               <p className="text-sm text-muted-foreground text-center py-8">Darslar hali qo'shilmagan</p>
             ) : (
               (() => {
-                // Group lessons by module
+                // Create a sorted lesson order list for progress-based locking
+                // Use centralized lesson ordering (allSortedLessons and isPreviousLessonCompleted are defined above)
                 const sortedModules = courseModules?.slice().sort((a, b) => (a.order || 0) - (b.order || 0)) || [];
-                const lessonsWithoutModule = lessons?.filter((l: any) => !l.moduleId) || [];
+                const lessonsWithoutModule = lessons?.filter((l: any) => !l.moduleId).sort((a, b) => (a.order || 0) - (b.order || 0)) || [];
                 const lessonsWithOrphanedModule = lessons?.filter((l: any) => 
                   l.moduleId && !sortedModules.some((m: any) => m.id === l.moduleId)
-                ) || [];
+                ).sort((a, b) => (a.order || 0) - (b.order || 0)) || [];
                 const lessonsByModule: Record<string, Lesson[]> = {};
                 
                 sortedModules.forEach((module: any) => {
-                  lessonsByModule[module.id] = lessons?.filter((l: any) => l.moduleId === module.id) || [];
+                  const moduleLessons = lessons?.filter((l: any) => l.moduleId === module.id).sort((a, b) => (a.order || 0) - (b.order || 0)) || [];
+                  lessonsByModule[module.id] = moduleLessons;
                 });
                 
                 let globalIndex = 0;
@@ -1261,12 +1340,19 @@ export default function LearningPage() {
                 const hasActiveSubscription = courseSubscription?.subscription.status === 'active' && 
                                               endDate && endDate > now;
                 
-                // Lock lesson if not demo AND (not enrolled OR subscription expired) AND not in preview mode
-                const isLocked = !isPreviewMode && !lesson.isDemo && (!isEnrolled || !hasActiveSubscription);
-                
                 // Check if lesson is completed
                 const lessonProgressData = courseProgress?.find((p: any) => p.lessonId === lesson.id);
                 const isCompleted = lessonProgressData?.completed || false;
+                
+                // Progress-based locking: check if previous lesson is completed
+                const prevLessonCompleted = isPreviousLessonCompleted(lesson.id);
+                const isProgressLocked = !isPreviewMode && !lesson.isDemo && !prevLessonCompleted && (isEnrolled && hasActiveSubscription);
+                
+                // Lock lesson if:
+                // 1. Not enrolled OR subscription expired (enrollment lock)
+                // 2. OR previous lesson not completed (progress lock) - only applies to enrolled users
+                const isEnrollmentLocked = !isPreviewMode && !lesson.isDemo && (!isEnrolled || !hasActiveSubscription);
+                const isLocked = isEnrollmentLocked || isProgressLocked;
                 
                 const isActive = currentLessonId === lesson.id;
                 
@@ -1330,6 +1416,11 @@ export default function LearningPage() {
                             <FileText className="w-2.5 h-2.5" /> Insho
                           </span>
                         )}
+                        {isProgressLocked && (
+                          <span className="text-[10px] font-semibold uppercase bg-orange-500/20 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                            <Lock className="w-2.5 h-2.5" /> Avval tugat
+                          </span>
+                        )}
                         {isCompleted && (
                           <span className="text-[10px] font-semibold uppercase bg-green-500/20 text-green-600 dark:text-green-400 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
                             <CheckCircle className="w-2.5 h-2.5" /> Tugatildi
@@ -1365,13 +1456,13 @@ export default function LearningPage() {
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[10px] text-muted-foreground">Dars</span>
                 <span className="text-[10px] font-medium text-primary">
-                  {currentIndex + 1} / {lessons?.length || 0}
+                  {currentIndex + 1} / {allSortedLessons.length || 0}
                 </span>
               </div>
               <div className="h-1 bg-muted rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full transition-all duration-300"
-                  style={{ width: `${((currentIndex + 1) / (lessons?.length || 1)) * 100}%` }}
+                  style={{ width: `${((currentIndex + 1) / (allSortedLessons.length || 1)) * 100}%` }}
                 />
               </div>
             </div>
@@ -1381,8 +1472,8 @@ export default function LearningPage() {
               <Button
                 variant="outline"
                 size="lg"
-                onClick={() => prevLesson && setCurrentLessonId(prevLesson.id)}
-                disabled={!prevLesson}
+                onClick={() => navPrevLesson && setCurrentLessonId(navPrevLesson.id)}
+                disabled={!navPrevLesson}
                 className="flex-1 h-12 rounded-xl border-2 shadow-sm"
                 data-testid="button-prev-lesson-mobile"
               >
@@ -1392,8 +1483,8 @@ export default function LearningPage() {
               
               <Button
                 size="lg"
-                onClick={() => nextLesson && setCurrentLessonId(nextLesson.id)}
-                disabled={!nextLesson}
+                onClick={() => navNextLesson && setCurrentLessonId(navNextLesson.id)}
+                disabled={!navNextLesson}
                 className="flex-1 h-12 rounded-xl bg-gradient-to-r from-primary to-primary/90 shadow-lg shadow-primary/25"
                 data-testid="button-next-lesson-mobile"
               >
