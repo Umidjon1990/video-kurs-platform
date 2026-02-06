@@ -34,8 +34,9 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Users, BookOpen, CreditCard, DollarSign, UserCheck, TrendingUp, Settings, UserPlus, Check, X, Copy, CheckCircle, Key, Trash2 } from "lucide-react";
+import { Users, BookOpen, CreditCard, DollarSign, UserCheck, TrendingUp, Settings, UserPlus, Check, X, Copy, CheckCircle, Key, Trash2, LayoutDashboard } from "lucide-react";
 import { useLocation } from "wouter";
+import { motion } from "framer-motion";
 import type { User } from "@shared/schema";
 import {
   LineChart,
@@ -377,79 +378,122 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold" data-testid="text-admin-title">
-          Admin Dashboard
-        </h1>
-        <div className="flex gap-2">
-          <Button
-            onClick={() => setIsAssignCoursesOpen(true)}
-            data-testid="button-assign-courses"
-            variant="outline"
-            className="flex items-center gap-2"
+    <div className="min-h-screen">
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-primary/5 to-background" />
+        <div className="absolute top-0 right-0 w-80 h-80 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
+        <div className="absolute bottom-0 left-0 w-52 h-52 bg-primary/8 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4" />
+        
+        <div className="relative px-6 py-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8"
           >
-            <BookOpen className="w-4 h-4" />
-            Kurs Biriktirish
-          </Button>
-          <Button
-            onClick={() => {
-              setCreatedCredentials(null);
-              setIsCreateStudentOpen(true);
-            }}
-            data-testid="button-create-student"
-            className="flex items-center gap-2"
-          >
-            <UserPlus className="w-4 h-4" />
-            Yangi O'quvchi
-          </Button>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <LayoutDashboard className="w-5 h-5 text-primary" />
+                <span className="text-sm font-medium text-primary">Boshqaruv Paneli</span>
+              </div>
+              <h1 className="text-3xl md:text-4xl font-bold" data-testid="text-admin-title">
+                Admin Dashboard
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Platformani boshqaring va statistikani kuzating
+              </p>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                onClick={() => setIsAssignCoursesOpen(true)}
+                data-testid="button-assign-courses"
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <BookOpen className="w-4 h-4" />
+                Kurs Biriktirish
+              </Button>
+              <Button
+                onClick={() => {
+                  setCreatedCredentials(null);
+                  setIsCreateStudentOpen(true);
+                }}
+                data-testid="button-create-student"
+                className="flex items-center gap-2"
+              >
+                <UserPlus className="w-4 h-4" />
+                Yangi O'quvchi
+              </Button>
+            </div>
+          </motion.div>
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <StatsCard
+              title="Jami Daromad"
+              value={`${(stats?.totalRevenue || 0).toLocaleString('uz-UZ')} so'm`}
+              icon={DollarSign}
+              testId="stats-revenue"
+              description="Tasdiqlangan to'lovlar"
+              gradient="from-emerald-500/15 via-emerald-500/5 to-transparent"
+              iconBg="bg-emerald-500/15"
+              iconColor="text-emerald-600 dark:text-emerald-400"
+              delay={0}
+            />
+            <StatsCard
+              title="Ro'yxatdan O'tganlar"
+              value={stats?.totalEnrollments || 0}
+              icon={UserCheck}
+              testId="stats-enrollments"
+              trend={{
+                value: stats?.enrollmentGrowth || 0,
+                isPositive: (stats?.enrollmentGrowth || 0) > 0
+              }}
+              description={`Oxirgi 7 kun: ${stats?.recentEnrollments || 0}`}
+              gradient="from-blue-500/15 via-blue-500/5 to-transparent"
+              iconBg="bg-blue-500/15"
+              iconColor="text-blue-600 dark:text-blue-400"
+              delay={0.05}
+            />
+            <StatsCard
+              title="Jami Kurslar"
+              value={stats?.courseCount || 0}
+              icon={BookOpen}
+              testId="stats-courses"
+              description="Faol kurslar"
+              gradient="from-purple-500/15 via-purple-500/5 to-transparent"
+              iconBg="bg-purple-500/15"
+              iconColor="text-purple-600 dark:text-purple-400"
+              delay={0.1}
+            />
+            <StatsCard
+              title="Jami Foydalanuvchilar"
+              value={(stats?.instructorCount || 0) + (stats?.studentCount || 0)}
+              icon={Users}
+              testId="stats-users"
+              description={`${stats?.instructorCount || 0} o'qituvchi, ${stats?.studentCount || 0} o'quvchi`}
+              gradient="from-amber-500/15 via-amber-500/5 to-transparent"
+              iconBg="bg-amber-500/15"
+              iconColor="text-amber-600 dark:text-amber-400"
+              delay={0.15}
+            />
+          </div>
         </div>
       </div>
 
-      <div className="space-y-6">
-        {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <StatsCard
-            title="Jami Daromad"
-            value={`${(stats?.totalRevenue || 0).toLocaleString('uz-UZ')} so'm`}
-            icon={DollarSign}
-            testId="stats-revenue"
-            description="Tasdiqlangan to'lovlar"
-          />
-          <StatsCard
-            title="Ro'yxatdan O'tganlar"
-            value={stats?.totalEnrollments || 0}
-            icon={UserCheck}
-            testId="stats-enrollments"
-            trend={{
-              value: stats?.enrollmentGrowth || 0,
-              isPositive: (stats?.enrollmentGrowth || 0) > 0
-            }}
-            description={`Oxirgi 7 kun: ${stats?.recentEnrollments || 0}`}
-          />
-          <StatsCard
-            title="Jami Kurslar"
-            value={stats?.courseCount || 0}
-            icon={BookOpen}
-            testId="stats-courses"
-            description="Faol kurslar"
-          />
-          <StatsCard
-            title="Jami Foydalanuvchilar"
-            value={(stats?.instructorCount || 0) + (stats?.studentCount || 0)}
-            icon={Users}
-            testId="stats-users"
-            description={`${stats?.instructorCount || 0} o'qituvchi, ${stats?.studentCount || 0} o'quvchi`}
-          />
-        </div>
+      <div className="px-6 py-6 space-y-6">
 
         {/* Charts */}
         <div className="grid gap-4 md:grid-cols-2">
           {/* Enrollment Trend */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+          >
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5" />
+                <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 Ro'yxatdan O'tishlar Trendi
               </CardTitle>
             </CardHeader>
@@ -499,12 +543,18 @@ export default function AdminDashboard() {
               )}
             </CardContent>
           </Card>
+          </motion.div>
 
           {/* Revenue Trend */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.3 }}
+          >
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <DollarSign className="w-5 h-5" />
+                <DollarSign className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 Daromad Trendi
               </CardTitle>
             </CardHeader>
@@ -553,6 +603,7 @@ export default function AdminDashboard() {
               )}
             </CardContent>
           </Card>
+          </motion.div>
         </div>
 
         {/* Pending Students */}

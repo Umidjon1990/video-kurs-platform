@@ -157,7 +157,9 @@ export default function StudentCourses() {
               testId="stats-total-courses"
               description="Yozilgan"
               gradient="from-blue-500/20 via-blue-500/10 to-transparent"
-              iconBg="bg-blue-500/20"
+              iconBg="bg-blue-500/15"
+              iconColor="text-blue-600 dark:text-blue-400"
+              delay={0}
             />
             <StatsCard
               title="Tugallangan"
@@ -166,7 +168,9 @@ export default function StudentCourses() {
               testId="stats-completed"
               description="Muvaffaqiyatli"
               gradient="from-green-500/20 via-green-500/10 to-transparent"
-              iconBg="bg-green-500/20"
+              iconBg="bg-green-500/15"
+              iconColor="text-green-600 dark:text-green-400"
+              delay={0.05}
             />
             <StatsCard
               title="Jarayonda"
@@ -175,7 +179,9 @@ export default function StudentCourses() {
               testId="stats-in-progress"
               description="Davom etmoqda"
               gradient="from-amber-500/20 via-amber-500/10 to-transparent"
-              iconBg="bg-amber-500/20"
+              iconBg="bg-amber-500/15"
+              iconColor="text-amber-600 dark:text-amber-400"
+              delay={0.1}
             />
             <StatsCard
               title="Sertifikatlar"
@@ -184,7 +190,9 @@ export default function StudentCourses() {
               testId="stats-certificates"
               description="Olingan"
               gradient="from-purple-500/20 via-purple-500/10 to-transparent"
-              iconBg="bg-purple-500/20"
+              iconBg="bg-purple-500/15"
+              iconColor="text-purple-600 dark:text-purple-400"
+              delay={0.15}
             />
           </motion.div>
 
