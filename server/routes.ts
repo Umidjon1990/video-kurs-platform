@@ -10,7 +10,7 @@ import { ObjectStorageService } from "./objectStorage";
 import { db } from "./db";
 import bcrypt from "bcryptjs";
 import passport from "passport";
-import { users, courses, lessons, assignments, tests, questions, questionOptions, enrollments, submissions, testAttempts, notifications, conversations, messages, siteSettings, testimonials, subscriptionPlans, coursePlanPricing, userSubscriptions, passwordResetRequests, speakingTests, speakingTestSections, speakingQuestions, speakingSubmissions, speakingAnswers, speakingEvaluations, essaySubmissions } from "@shared/schema";
+import { users, courses, lessons, assignments, tests, questions, questionOptions, enrollments, submissions, testAttempts, notifications, conversations, messages, siteSettings, testimonials, subscriptionPlans, coursePlanPricing, userSubscriptions, passwordResetRequests, speakingTests, speakingTestSections, speakingQuestions, speakingSubmissions, speakingAnswers, speakingEvaluations, essaySubmissions, courseRatings, courseLikes, lessonProgress, announcements, liveRooms, courseGroupChats, userPresence, courseModules, lessonSections, courseResourceTypes, lessonEssayQuestions } from "@shared/schema";
 import { eq, and, or, desc, sql, count, avg, inArray } from "drizzle-orm";
 import {
   insertCourseSchema,
@@ -469,12 +469,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { userId } = req.params;
       const adminId = req.user.claims.sub;
       
-      // Prevent admin from deleting themselves
       if (userId === adminId) {
         return res.status(400).json({ message: 'O\'zingizni o\'chira olmaysiz' });
       }
       
-      // Get user info before deletion for logging
       const [userToDelete] = await db
         .select()
         .from(users)
@@ -485,40 +483,234 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Foydalanuvchi topilmadi' });
       }
       
-      // Delete all related records in transaction
       await db.transaction(async (tx: any) => {
-        // 1. Delete test attempts
+        // If instructor, delete all course-related data first
+        if (userToDelete.role === 'instructor') {
+          const instructorCourses = await tx
+            .select({ id: courses.id })
+            .from(courses)
+            .where(eq(courses.instructorId, userId));
+          
+          const courseIds = instructorCourses.map((c: any) => c.id);
+          
+          if (courseIds.length > 0) {
+            // Delete deep course children first
+            for (const cId of courseIds) {
+              // Get lesson IDs for this course
+              const courseLessons = await tx
+                .select({ id: lessons.id })
+                .from(lessons)
+                .where(eq(lessons.courseId, cId));
+              const lessonIds = courseLessons.map((l: any) => l.id);
+              
+              if (lessonIds.length > 0) {
+                // Delete essay submissions via essay questions
+                const essayQs = await tx
+                  .select({ id: lessonEssayQuestions.id })
+                  .from(lessonEssayQuestions)
+                  .where(inArray(lessonEssayQuestions.lessonId, lessonIds));
+                const essayQIds = essayQs.map((q: any) => q.id);
+                if (essayQIds.length > 0) {
+                  await tx.delete(essaySubmissions).where(inArray(essaySubmissions.essayQuestionId, essayQIds));
+                  await tx.delete(lessonEssayQuestions).where(inArray(lessonEssayQuestions.id, essayQIds));
+                }
+                
+                // Delete lesson sections
+                await tx.delete(lessonSections).where(inArray(lessonSections.lessonId, lessonIds));
+                
+                // Delete lesson progress for these lessons
+                await tx.delete(lessonProgress).where(inArray(lessonProgress.lessonId, lessonIds));
+                
+                // Delete submissions for assignments in these lessons
+                const lessonAssignments = await tx
+                  .select({ id: assignments.id })
+                  .from(assignments)
+                  .where(inArray(assignments.lessonId, lessonIds));
+                const assignmentIds = lessonAssignments.map((a: any) => a.id);
+                if (assignmentIds.length > 0) {
+                  await tx.delete(submissions).where(inArray(submissions.assignmentId, assignmentIds));
+                }
+                
+                // Delete assignments for these lessons
+                await tx.delete(assignments).where(inArray(assignments.lessonId, lessonIds));
+              }
+              
+              // Delete speaking test data for this course
+              const sCourseTests = await tx
+                .select({ id: speakingTests.id })
+                .from(speakingTests)
+                .where(eq(speakingTests.courseId, cId));
+              const sTestIds = sCourseTests.map((t: any) => t.id);
+              if (sTestIds.length > 0) {
+                // Delete speaking submissions + answers + evaluations first (deepest children)
+                const sSubmissions = await tx
+                  .select({ id: speakingSubmissions.id })
+                  .from(speakingSubmissions)
+                  .where(inArray(speakingSubmissions.speakingTestId, sTestIds));
+                const sSubIds = sSubmissions.map((s: any) => s.id);
+                if (sSubIds.length > 0) {
+                  const sAnswersList = await tx
+                    .select({ id: speakingAnswers.id })
+                    .from(speakingAnswers)
+                    .where(inArray(speakingAnswers.submissionId, sSubIds));
+                  const sAnswerIds = sAnswersList.map((a: any) => a.id);
+                  if (sAnswerIds.length > 0) {
+                    await tx.delete(speakingEvaluations).where(inArray(speakingEvaluations.answerId, sAnswerIds));
+                    await tx.delete(speakingAnswers).where(inArray(speakingAnswers.id, sAnswerIds));
+                  }
+                  await tx.delete(speakingSubmissions).where(inArray(speakingSubmissions.id, sSubIds));
+                }
+                
+                // Now delete questions, sections, then tests
+                const sSections = await tx
+                  .select({ id: speakingTestSections.id })
+                  .from(speakingTestSections)
+                  .where(inArray(speakingTestSections.speakingTestId, sTestIds));
+                const sSectionIds = sSections.map((s: any) => s.id);
+                if (sSectionIds.length > 0) {
+                  await tx.delete(speakingQuestions).where(inArray(speakingQuestions.sectionId, sSectionIds));
+                  await tx.delete(speakingTestSections).where(inArray(speakingTestSections.id, sSectionIds));
+                }
+                await tx.delete(speakingTests).where(inArray(speakingTests.id, sTestIds));
+              }
+              
+              // Delete tests and their children for this course
+              const courseTests = await tx
+                .select({ id: tests.id })
+                .from(tests)
+                .where(eq(tests.courseId, cId));
+              const testIds = courseTests.map((t: any) => t.id);
+              if (testIds.length > 0) {
+                const testQuestions = await tx
+                  .select({ id: questions.id })
+                  .from(questions)
+                  .where(inArray(questions.testId, testIds));
+                const qIds = testQuestions.map((q: any) => q.id);
+                if (qIds.length > 0) {
+                  await tx.delete(questionOptions).where(inArray(questionOptions.questionId, qIds));
+                  await tx.delete(questions).where(inArray(questions.id, qIds));
+                }
+                await tx.delete(testAttempts).where(inArray(testAttempts.testId, testIds));
+                await tx.delete(tests).where(inArray(tests.id, testIds));
+              }
+              
+              // Delete course group chats
+              await tx.delete(courseGroupChats).where(eq(courseGroupChats.courseId, cId));
+              
+              // Delete lessons
+              if (lessonIds.length > 0) {
+                await tx.delete(lessons).where(inArray(lessons.id, lessonIds));
+              }
+              
+              // Delete course modules
+              await tx.delete(courseModules).where(eq(courseModules.courseId, cId));
+              
+              // Delete course resource types
+              await tx.delete(courseResourceTypes).where(eq(courseResourceTypes.courseId, cId));
+              
+              // Delete course plan pricing
+              await tx.delete(coursePlanPricing).where(eq(coursePlanPricing.courseId, cId));
+              
+              // Delete course ratings and likes
+              await tx.delete(courseRatings).where(eq(courseRatings.courseId, cId));
+              await tx.delete(courseLikes).where(eq(courseLikes.courseId, cId));
+              
+              // Delete enrollments for this course
+              await tx.delete(enrollments).where(eq(enrollments.courseId, cId));
+              
+              // Delete user subscriptions for this course
+              await tx.delete(userSubscriptions).where(eq(userSubscriptions.courseId, cId));
+              
+              // Submissions are deleted via cascade when assignments are deleted
+            }
+            
+            // Delete live rooms created by this instructor
+            await tx.delete(liveRooms).where(eq(liveRooms.instructorId, userId));
+            
+            // Delete announcements by instructor
+            await tx.delete(announcements).where(eq(announcements.instructorId, userId));
+            
+            // Delete all courses
+            await tx.delete(courses).where(eq(courses.instructorId, userId));
+          }
+        }
+        
+        // --- Common cleanup for all user roles ---
+        
+        // Delete speaking evaluations where user is evaluator (set evaluatorId to null via raw SQL)
+        await tx.execute(sql`UPDATE speaking_evaluations SET evaluator_id = NULL WHERE evaluator_id = ${userId}`);
+        
+        // Delete speaking submissions by user
+        const userSpeakingSubs = await tx
+          .select({ id: speakingSubmissions.id })
+          .from(speakingSubmissions)
+          .where(eq(speakingSubmissions.userId, userId));
+        const usSIds = userSpeakingSubs.map((s: any) => s.id);
+        if (usSIds.length > 0) {
+          const usAnswers = await tx
+            .select({ id: speakingAnswers.id })
+            .from(speakingAnswers)
+            .where(inArray(speakingAnswers.submissionId, usSIds));
+          const usAIds = usAnswers.map((a: any) => a.id);
+          if (usAIds.length > 0) {
+            await tx.delete(speakingEvaluations).where(inArray(speakingEvaluations.answerId, usAIds));
+            await tx.delete(speakingAnswers).where(inArray(speakingAnswers.id, usAIds));
+          }
+          await tx.delete(speakingSubmissions).where(inArray(speakingSubmissions.id, usSIds));
+        }
+        
+        // Delete essay submissions by user
+        await tx.delete(essaySubmissions).where(eq(essaySubmissions.studentId, userId));
+        
+        // Delete test attempts
         await tx.delete(testAttempts).where(eq(testAttempts.userId, userId));
         
-        // 2. Delete assignment submissions
+        // Delete assignment submissions
         await tx.delete(submissions).where(eq(submissions.userId, userId));
         
-        // 3. Delete enrollments
+        // Delete lesson progress
+        await tx.delete(lessonProgress).where(eq(lessonProgress.userId, userId));
+        
+        // Delete enrollments
         await tx.delete(enrollments).where(eq(enrollments.userId, userId));
         
-        // 4. Delete user subscriptions
+        // Delete user subscriptions
         await tx.delete(userSubscriptions).where(eq(userSubscriptions.userId, userId));
         
-        // 5. Delete notifications (both received and sent)
+        // Delete course ratings and likes
+        await tx.delete(courseRatings).where(eq(courseRatings.userId, userId));
+        await tx.delete(courseLikes).where(eq(courseLikes.userId, userId));
+        
+        // Delete notifications
         await tx.delete(notifications).where(eq(notifications.userId, userId));
         
-        // 6. Delete password reset requests
-        await tx.delete(passwordResetRequests).where(eq(passwordResetRequests.userId, userId));
-        await tx.delete(passwordResetRequests).where(eq(passwordResetRequests.processedBy, userId));
+        // Delete announcements (if instructor role wasn't handled above)
+        await tx.delete(announcements).where(eq(announcements.instructorId, userId));
         
-        // 7. Delete messages sent by user
+        // Delete password reset requests
+        await tx.execute(sql`UPDATE password_reset_requests SET processed_by = NULL WHERE processed_by = ${userId}`);
+        await tx.delete(passwordResetRequests).where(eq(passwordResetRequests.userId, userId));
+        
+        // Delete messages sent by user
         await tx.delete(messages).where(eq(messages.senderId, userId));
         
-        // 8. Delete conversations where user is a participant
+        // Delete conversations where user is a participant
         await tx.delete(conversations).where(eq(conversations.studentId, userId));
         await tx.delete(conversations).where(eq(conversations.instructorId, userId));
         
-        // 9. Delete courses created by instructor (if instructor)
-        if (userToDelete.role === 'instructor') {
-          await tx.delete(courses).where(eq(courses.instructorId, userId));
-        }
+        // Delete course group chats sent by user
+        await tx.delete(courseGroupChats).where(eq(courseGroupChats.senderId, userId));
         
-        // 10. Finally, delete the user
+        // Delete user presence
+        await tx.delete(userPresence).where(eq(userPresence.userId, userId));
+        
+        // Delete live rooms (if any remaining)
+        await tx.delete(liveRooms).where(eq(liveRooms.instructorId, userId));
+        
+        // Delete user sessions
+        await tx.execute(sql`DELETE FROM sessions WHERE sess::text LIKE ${'%' + userId + '%'}`);
+        
+        // Finally, delete the user
         await tx.delete(users).where(eq(users.id, userId));
       });
       
