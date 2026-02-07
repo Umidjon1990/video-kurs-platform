@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PlayCircle, CheckCircle, FileText, ClipboardCheck, Lock, Home, MessageCircle, Download, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Clock, Volume2 } from "lucide-react";
+import { PlayCircle, CheckCircle, FileText, ClipboardCheck, Lock, Home, MessageCircle, Download, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Clock, Volume2, List, X } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { NotificationBell } from "@/components/NotificationBell";
 import { StarRating } from "@/components/StarRating";
@@ -43,6 +43,9 @@ export default function LearningPage() {
   const [essayText, setEssayText] = useState("");
   const [essayWordCount, setEssayWordCount] = useState(0);
   const [isCheckingEssay, setIsCheckingEssay] = useState(false);
+  
+  // Mobile lesson list toggle
+  const [showMobileLessons, setShowMobileLessons] = useState(false);
   
   // Module accordion state - all expanded by default
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
@@ -403,6 +406,18 @@ export default function LearningPage() {
     }
   }, [allSortedLessons, currentLessonId]);
 
+  // Auto-scroll to top when lesson changes on mobile & close mobile lessons drawer
+  const mainContentRef = useMemo(() => ({ current: null as HTMLDivElement | null }), []);
+  useEffect(() => {
+    if (currentLessonId) {
+      setShowMobileLessons(false);
+      if (mainContentRef.current) {
+        mainContentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [currentLessonId]);
+
   // Get current lesson - use centralized ordered list for consistency
   const effectiveCurrentLesson = currentLessonId 
     ? allSortedLessons.find(l => l.id === currentLessonId)
@@ -481,7 +496,7 @@ export default function LearningPage() {
 
       <div className="flex flex-col lg:flex-row h-[100dvh] sm:h-[calc(100vh-3rem)]">
         {/* Main Content - Video Player Area */}
-        <div className="flex-1 overflow-auto p-1 pb-16 sm:pb-4 sm:p-4 lg:p-6">
+        <div className="flex-1 overflow-auto p-1 pb-20 sm:pb-4 sm:p-4 lg:p-6" ref={(el) => { mainContentRef.current = el; }}>
           {currentLesson ? (
             (() => {
               const isEnrolled = enrollment?.paymentStatus === 'confirmed' || enrollment?.paymentStatus === 'approved';
@@ -1114,8 +1129,88 @@ export default function LearningPage() {
           )}
         </div>
 
-        {/* Lessons Sidebar - Right Side */}
-        <div className="lg:w-96 border-l bg-muted/30 overflow-y-auto">
+        {/* Mobile Lessons Overlay */}
+        {showMobileLessons && (
+          <div className="lg:hidden fixed inset-0 z-[60] flex flex-col bg-background" data-testid="mobile-lessons-overlay">
+            <div className="flex items-center justify-between p-4 border-b bg-background sticky top-0 z-10">
+              <div>
+                <h3 className="font-semibold">Kurs Dasturi</h3>
+                <p className="text-sm text-muted-foreground">{lessons?.length || 0} ta dars</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowMobileLessons(false)}
+                data-testid="button-close-mobile-lessons"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-2 pb-20">
+              {allSortedLessons.map((lesson, index) => {
+                const isEnrolled = enrollment?.paymentStatus === 'confirmed' || enrollment?.paymentStatus === 'approved';
+                const courseSubscription = userSubscriptions?.find((sub: any) => sub.course.id === courseId);
+                const now = new Date();
+                const endDate = courseSubscription ? new Date(courseSubscription.subscription.endDate) : null;
+                const hasActiveSubscription = courseSubscription?.subscription.status === 'active' && endDate && endDate > now;
+                const lessonProgressData = courseProgress?.find((p: any) => p.lessonId === lesson.id);
+                const isCompleted = lessonProgressData?.completed || false;
+                const isEnrollmentLocked = !isPreviewMode && !lesson.isDemo && (!isEnrolled || !hasActiveSubscription);
+                const isLocked = isEnrollmentLocked;
+                const isActive = currentLessonId === lesson.id;
+
+                return (
+                  <div
+                    key={lesson.id}
+                    onClick={() => !isLocked && setCurrentLessonId(lesson.id)}
+                    className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
+                      isLocked ? 'opacity-50 cursor-not-allowed bg-muted/30' : 'active-elevate-2 cursor-pointer'
+                    } ${isActive ? 'bg-primary/10 ring-2 ring-primary shadow-sm' : ''}`}
+                    data-testid={`mobile-lesson-item-${lesson.id}`}
+                  >
+                    <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${
+                      isLocked ? 'bg-muted' : isCompleted ? 'bg-green-500 dark:bg-green-600' : isActive ? 'bg-primary' : 'bg-muted/50'
+                    }`}>
+                      {isLocked ? (
+                        <Lock className="w-4 h-4 text-muted-foreground" />
+                      ) : isCompleted ? (
+                        <CheckCircle className="w-5 h-5 text-white" />
+                      ) : isActive ? (
+                        <PlayCircle className="w-5 h-5 text-white" />
+                      ) : (
+                        <span className="text-sm font-bold text-muted-foreground">{index + 1}</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-semibold line-clamp-1 ${isActive ? 'text-primary' : ''}`}>{lesson.title}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {lesson.duration && (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Clock className="w-3 h-3" /> {lesson.duration} daq
+                          </span>
+                        )}
+                        {lesson.isDemo && (
+                          <span className="text-[10px] font-semibold uppercase bg-green-500/20 text-green-600 dark:text-green-400 px-1.5 py-0.5 rounded-md">Bepul</span>
+                        )}
+                        {isCompleted && (
+                          <span className="text-[10px] font-semibold uppercase bg-green-500/20 text-green-600 dark:text-green-400 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                            <CheckCircle className="w-2.5 h-2.5" /> Tugatildi
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {!isLocked && isActive && (
+                      <PlayCircle className="w-5 h-5 text-primary shrink-0" />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Lessons Sidebar - Hidden on mobile, shown on desktop */}
+        <div className="hidden lg:block lg:w-96 border-l bg-muted/30 overflow-y-auto">
           <div className="p-4 sticky top-0 bg-muted/30 border-b z-10">
             <h3 className="font-semibold">Kurs Dasturi</h3>
             <p className="text-sm text-muted-foreground mt-1">
@@ -1406,28 +1501,35 @@ export default function LearningPage() {
             </div>
             
             {/* Navigation buttons */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
-                size="lg"
                 onClick={() => navPrevLesson && setCurrentLessonId(navPrevLesson.id)}
                 disabled={!navPrevLesson}
-                className="flex-1 h-12 rounded-xl border-2 shadow-sm"
+                className="flex-1 h-11 rounded-xl border-2 shadow-sm"
                 data-testid="button-prev-lesson-mobile"
               >
-                <ChevronLeft className="w-5 h-5 mr-1" />
-                <span className="font-medium">Oldingi</span>
+                <ChevronLeft className="w-4 h-4 mr-1" />
+                <span className="text-sm font-medium">Oldingi</span>
               </Button>
               
               <Button
-                size="lg"
+                variant="outline"
+                onClick={() => setShowMobileLessons(true)}
+                className="h-11 rounded-xl border-2 px-3"
+                data-testid="button-show-lessons-mobile"
+              >
+                <List className="w-4 h-4" />
+              </Button>
+              
+              <Button
                 onClick={() => navNextLesson && setCurrentLessonId(navNextLesson.id)}
                 disabled={!navNextLesson}
-                className="flex-1 h-12 rounded-xl bg-gradient-to-r from-primary to-primary/90 shadow-lg shadow-primary/25"
+                className="flex-1 h-11 rounded-xl bg-gradient-to-r from-primary to-primary/90 shadow-lg shadow-primary/25"
                 data-testid="button-next-lesson-mobile"
               >
-                <span className="font-medium">Keyingi</span>
-                <ChevronRight className="w-5 h-5 ml-1" />
+                <span className="text-sm font-medium">Keyingi</span>
+                <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
             </div>
           </div>

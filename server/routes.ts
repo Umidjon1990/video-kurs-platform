@@ -211,21 +211,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         try {
-          // SECURITY: Delete all other sessions for this user (enforce single device login)
           const userId = user.claims.sub;
           const currentSessionId = req.sessionID;
-          
-          // Find and destroy all sessions for this user except the current one
-          await db.execute(sql`
-            DELETE FROM sessions 
-            WHERE sess::jsonb->'passport'->'user'->'claims'->>'sub' = ${userId}
-            AND sid != ${currentSessionId}
-          `);
-          
-          console.log(`[Session Management] Destroyed old sessions for user ${userId}, keeping session ${currentSessionId}`);
+          console.log(`[Session Management] User ${userId} logged in with session ${currentSessionId}`);
         } catch (sessionError: any) {
-          // Log error but don't fail the login
-          console.error('[Session Management] Error destroying old sessions:', sessionError);
+          console.error('[Session Management] Error:', sessionError);
         }
         
         // Fetch full user data from database
