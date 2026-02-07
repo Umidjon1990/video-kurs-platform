@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Filter, BookOpen, Users, Award, Star, Mail, Phone, MapPin, Send, ExternalLink, X, ZoomIn, Play, Lock, Clock, GraduationCap, TrendingUp, CheckCircle, ArrowLeft, PenTool, Headphones, Mic, BookText, Languages, FileText, Download, ChevronDown, ChevronLeft, ChevronRight, Youtube, List, PlayCircle, type LucideIcon } from "lucide-react";
+import { ModernVideoPlayer } from "@/components/ModernVideoPlayer";
 
 const iconMap: Record<string, LucideIcon> = {
   BookOpen,
@@ -1366,109 +1367,12 @@ export default function HomePage() {
           <div className="flex-1 overflow-y-auto pb-24 sm:pb-20" ref={demoVideoTopRef}>
             {/* Video Player */}
             {selectedDemoLesson?.videoUrl && (
-              <div className="w-full relative bg-black" style={{ paddingBottom: '56.25%' }}>
-                {(() => {
-                  const videoContent = selectedDemoLesson.videoUrl.trim();
-                  
-                  const iframeClass = "absolute inset-0 w-full h-full border-0";
-                  
-                  if (videoContent.startsWith('<iframe') || videoContent.startsWith('<embed')) {
-                    const styledHtml = videoContent
-                      .replace(/width="[^"]*"/gi, 'width="100%"')
-                      .replace(/height="[^"]*"/gi, 'height="100%"')
-                      .replace(/<iframe/gi, '<iframe style="position:absolute;inset:0;width:100%;height:100%;border:0"');
-                    return (
-                      <div 
-                        className="absolute inset-0 w-full h-full"
-                        dangerouslySetInnerHTML={{ __html: styledHtml }}
-                        data-testid="demo-video-player"
-                      />
-                    );
-                  }
-                  
-                  if (videoContent.includes('youtube.com') || videoContent.includes('youtu.be')) {
-                    let videoId = '';
-                    if (videoContent.includes('youtube.com/watch?v=')) {
-                      videoId = videoContent.split('watch?v=')[1]?.split('&')[0];
-                    } else if (videoContent.includes('youtube.com/embed/')) {
-                      videoId = videoContent.split('embed/')[1]?.split('?')[0];
-                    } else if (videoContent.includes('youtu.be/')) {
-                      videoId = videoContent.split('youtu.be/')[1]?.split('?')[0];
-                    }
-                    if (videoId) {
-                      return (
-                        <iframe
-                          src={`https://www.youtube.com/embed/${videoId}?playsinline=1`}
-                          className={iframeClass}
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                          allowFullScreen
-                          data-testid="demo-video-player"
-                        />
-                      );
-                    }
-                  }
-                  
-                  if (videoContent.includes('drive.google.com')) {
-                    let fileId = '';
-                    if (videoContent.includes('/file/d/')) {
-                      fileId = videoContent.split('/file/d/')[1]?.split('/')[0];
-                    } else if (videoContent.includes('id=')) {
-                      const idMatch = videoContent.match(/id=([a-zA-Z0-9_-]+)/);
-                      fileId = idMatch ? idMatch[1] : '';
-                    } else if (videoContent.includes('/d/')) {
-                      fileId = videoContent.split('/d/')[1]?.split('/')[0];
-                    }
-                    if (fileId) {
-                      return (
-                        <iframe
-                          src={`https://drive.google.com/file/d/${fileId}/preview`}
-                          className={iframeClass}
-                          allow="autoplay; encrypted-media; fullscreen"
-                          allowFullScreen
-                          loading="lazy"
-                          data-testid="demo-video-player-gdrive"
-                        />
-                      );
-                    }
-                  }
-                  
-                  if (videoContent.includes('kinescope.io') || 
-                      videoContent.includes('vimeo.com') ||
-                      videoContent.includes('player.vimeo.com') ||
-                      videoContent.includes('dailymotion.com') ||
-                      videoContent.includes('wistia.com')) {
-                    return (
-                      <iframe
-                        src={videoContent}
-                        className={iframeClass}
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                        data-testid="demo-video-player"
-                      />
-                    );
-                  }
-                  
-                  if (videoContent.startsWith('http://') || videoContent.startsWith('https://')) {
-                    return (
-                      <iframe
-                        src={videoContent}
-                        className={iframeClass}
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                        data-testid="demo-video-player"
-                      />
-                    );
-                  }
-                  
-                  return (
-                    <div className="absolute inset-0 text-white p-8 text-center flex flex-col items-center justify-center">
-                      <p className="mb-4">Video formatini aniqlab bo'lmadi</p>
-                      <a href={videoContent} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                        Video havolasini ochish
-                      </a>
-                    </div>
-                  );
-                })()}
+              <div className="w-full" data-testid="demo-video-player">
+                <ModernVideoPlayer
+                  key={selectedDemoLesson.id}
+                  videoUrl={selectedDemoLesson.videoUrl}
+                  title={selectedDemoLesson.title}
+                />
               </div>
             )}
 
