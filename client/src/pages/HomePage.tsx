@@ -4,7 +4,6 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Filter, BookOpen, Users, Award, Star, Mail, Phone, MapPin, Send, ExternalLink, X, ZoomIn, Play, Lock, Clock, GraduationCap, TrendingUp, CheckCircle, ArrowLeft, PenTool, Headphones, Mic, BookText, Languages, FileText, Download, ChevronDown, ChevronLeft, ChevronRight, Youtube, List, PlayCircle, type LucideIcon } from "lucide-react";
-import { ModernVideoPlayer } from "@/components/ModernVideoPlayer";
 
 const iconMap: Record<string, LucideIcon> = {
   BookOpen,
@@ -1338,9 +1337,9 @@ export default function HomePage() {
 
       {/* Demo Video Player - Full Screen Mobile Experience */}
       {selectedDemoLesson && (
-        <div className="fixed inset-0 z-[100] flex flex-col bg-background" data-testid="demo-video-fullscreen">
+        <div className="fixed inset-0 z-[100] bg-background" style={{ display: 'flex', flexDirection: 'column' }} data-testid="demo-video-fullscreen">
           {/* Header */}
-          <div className="flex items-center gap-3 p-3 sm:p-4 bg-background border-b sticky top-0 z-10">
+          <div className="flex items-center gap-3 p-3 sm:p-4 bg-background border-b" style={{ flexShrink: 0, zIndex: 10 }}>
             <Button
               variant="ghost"
               size="icon"
@@ -1363,18 +1362,66 @@ export default function HomePage() {
             )}
           </div>
 
-          {/* Main Content - scrollable */}
-          <div className="flex-1 overflow-y-auto pb-24 sm:pb-20" ref={demoVideoTopRef} style={{ WebkitOverflowScrolling: 'touch' }}>
-            {/* Video Player */}
-            {selectedDemoLesson?.videoUrl && (
-              <div className="w-full relative z-[1]" data-testid="demo-video-player">
-                <ModernVideoPlayer
+          {/* Video Player - Non-scrollable, flex-shrink-0 */}
+          {selectedDemoLesson?.videoUrl && (() => {
+            const vc = selectedDemoLesson.videoUrl.trim();
+            let embedUrl = '';
+
+            if (vc.startsWith('<iframe') || vc.startsWith('<embed')) {
+              const srcMatch = vc.match(/src=["']([^"']+)["']/i);
+              if (srcMatch?.[1]) {
+                embedUrl = srcMatch[1];
+                if (embedUrl.includes('youtube.com/embed/')) {
+                  const ytId = embedUrl.split('youtube.com/embed/')[1]?.split(/[?&]/)[0];
+                  if (ytId) embedUrl = `https://www.youtube.com/embed/${ytId}?rel=0&playsinline=1&fs=1`;
+                }
+              }
+            } else if (vc.includes('youtube.com') || vc.includes('youtu.be')) {
+              let videoId = '';
+              if (vc.includes('youtube.com/watch?v=')) videoId = vc.split('watch?v=')[1]?.split('&')[0];
+              else if (vc.includes('youtube.com/embed/')) videoId = vc.split('embed/')[1]?.split('?')[0];
+              else if (vc.includes('youtu.be/')) videoId = vc.split('youtu.be/')[1]?.split('?')[0];
+              if (videoId) embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0&playsinline=1&fs=1`;
+            } else if (vc.includes('drive.google.com')) {
+              let fileId = '';
+              if (vc.includes('/file/d/')) fileId = vc.split('/file/d/')[1]?.split('/')[0];
+              else if (vc.includes('id=')) { const m = vc.match(/id=([a-zA-Z0-9_-]+)/); fileId = m ? m[1] : ''; }
+              else if (vc.includes('/d/')) fileId = vc.split('/d/')[1]?.split('/')[0];
+              if (fileId) embedUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+            } else if (vc.includes('kinescope.io') || vc.includes('vimeo.com') || vc.includes('dailymotion.com') || vc.includes('wistia.com')) {
+              embedUrl = vc;
+            } else if (vc.startsWith('http://') || vc.startsWith('https://')) {
+              embedUrl = vc;
+            }
+
+            if (!embedUrl && (vc.startsWith('<iframe') || vc.startsWith('<embed'))) {
+              return (
+                <div style={{ flexShrink: 0, width: '100%', position: 'relative', paddingBottom: '56.25%', background: '#000' }} data-testid="demo-video-player">
+                  <div
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                    dangerouslySetInnerHTML={{ __html: vc.replace(/width="[^"]*"/gi, 'width="100%"').replace(/height="[^"]*"/gi, 'height="100%"') }}
+                  />
+                </div>
+              );
+            }
+
+            if (!embedUrl) return null;
+
+            return (
+              <div style={{ flexShrink: 0, width: '100%', position: 'relative', paddingBottom: '56.25%', background: '#000' }} data-testid="demo-video-player">
+                <iframe
                   key={selectedDemoLesson.id}
-                  videoUrl={selectedDemoLesson.videoUrl}
-                  title={selectedDemoLesson.title}
+                  src={embedUrl}
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none', zIndex: 2 }}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+                  allowFullScreen
                 />
               </div>
-            )}
+            );
+          })()}
+
+          {/* Scrollable content below video */}
+          <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '6rem', WebkitOverflowScrolling: 'touch' }} ref={demoVideoTopRef}>
 
             {/* Lesson Info */}
             <div className="p-4 space-y-4">
