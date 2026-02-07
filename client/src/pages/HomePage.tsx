@@ -1366,15 +1366,21 @@ export default function HomePage() {
           <div className="flex-1 overflow-y-auto pb-24 sm:pb-20" ref={demoVideoTopRef}>
             {/* Video Player */}
             {selectedDemoLesson?.videoUrl && (
-              <div className="w-full aspect-video bg-black">
+              <div className="w-full relative bg-black" style={{ paddingBottom: '56.25%' }}>
                 {(() => {
                   const videoContent = selectedDemoLesson.videoUrl.trim();
                   
+                  const iframeClass = "absolute inset-0 w-full h-full border-0";
+                  
                   if (videoContent.startsWith('<iframe') || videoContent.startsWith('<embed')) {
+                    const styledHtml = videoContent
+                      .replace(/width="[^"]*"/gi, 'width="100%"')
+                      .replace(/height="[^"]*"/gi, 'height="100%"')
+                      .replace(/<iframe/gi, '<iframe style="position:absolute;inset:0;width:100%;height:100%;border:0"');
                     return (
                       <div 
-                        className="w-full h-full"
-                        dangerouslySetInnerHTML={{ __html: videoContent }}
+                        className="absolute inset-0 w-full h-full"
+                        dangerouslySetInnerHTML={{ __html: styledHtml }}
                         data-testid="demo-video-player"
                       />
                     );
@@ -1392,9 +1398,9 @@ export default function HomePage() {
                     if (videoId) {
                       return (
                         <iframe
-                          src={`https://www.youtube.com/embed/${videoId}`}
-                          className="w-full h-full"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          src={`https://www.youtube.com/embed/${videoId}?playsinline=1`}
+                          className={iframeClass}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                           allowFullScreen
                           data-testid="demo-video-player"
                         />
@@ -1416,7 +1422,7 @@ export default function HomePage() {
                       return (
                         <iframe
                           src={`https://drive.google.com/file/d/${fileId}/preview`}
-                          className="w-full h-full"
+                          className={iframeClass}
                           allow="autoplay; encrypted-media; fullscreen"
                           allowFullScreen
                           loading="lazy"
@@ -1434,7 +1440,7 @@ export default function HomePage() {
                     return (
                       <iframe
                         src={videoContent}
-                        className="w-full h-full"
+                        className={iframeClass}
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
                         data-testid="demo-video-player"
@@ -1446,7 +1452,7 @@ export default function HomePage() {
                     return (
                       <iframe
                         src={videoContent}
-                        className="w-full h-full"
+                        className={iframeClass}
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
                         data-testid="demo-video-player"
@@ -1455,7 +1461,7 @@ export default function HomePage() {
                   }
                   
                   return (
-                    <div className="text-white p-8 text-center flex flex-col items-center justify-center h-full">
+                    <div className="absolute inset-0 text-white p-8 text-center flex flex-col items-center justify-center">
                       <p className="mb-4">Video formatini aniqlab bo'lmadi</p>
                       <a href={videoContent} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                         Video havolasini ochish
