@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, BookOpen, Users, Award, Star, Mail, Phone, MapPin, Send, ExternalLink, X, ZoomIn, Play, Lock, Clock, GraduationCap, TrendingUp, CheckCircle, ArrowLeft, PenTool, Headphones, Mic, BookText, Languages, FileText, Download, ChevronDown, Youtube, type LucideIcon } from "lucide-react";
+import { Search, Filter, BookOpen, Users, Award, Star, Mail, Phone, MapPin, Send, ExternalLink, X, ZoomIn, Play, Lock, Clock, GraduationCap, TrendingUp, CheckCircle, ArrowLeft, PenTool, Headphones, Mic, BookText, Languages, FileText, Download, ChevronDown, ChevronLeft, ChevronRight, Youtube, List, PlayCircle, type LucideIcon } from "lucide-react";
 
 const iconMap: Record<string, LucideIcon> = {
   BookOpen,
@@ -76,7 +76,10 @@ export default function HomePage() {
   const [selectedCertificate, setSelectedCertificate] = useState<{ url: string; index: number } | null>(null);
   const [selectedCourseForLessons, setSelectedCourseForLessons] = useState<PublicCourse | null>(null);
   const [selectedDemoLesson, setSelectedDemoLesson] = useState<Lesson | null>(null);
+  const [demoCourseContext, setDemoCourseContext] = useState<PublicCourse | null>(null);
+  const [showDemoLessonsList, setShowDemoLessonsList] = useState(false);
   const [promoVideoCourse, setPromoVideoCourse] = useState<PublicCourse | null>(null);
+  const demoVideoTopRef = useRef<HTMLDivElement>(null);
 
   // Build query params
   const buildQueryParams = () => {
@@ -136,6 +139,72 @@ export default function HomePage() {
       : [],
     enabled: !!selectedCourseForLessons,
   });
+
+  // Fetch lessons for demo course context (for navigation between demo lessons)
+  const { data: demoCourseLessons } = useQuery<Lesson[]>({
+    queryKey: demoCourseContext
+      ? [`/api/courses/${demoCourseContext.id}/lessons/public`]
+      : [],
+    enabled: !!demoCourseContext,
+  });
+
+  // Fetch modules for demo course context
+  const { data: demoCourseModules } = useQuery<CourseModule[]>({
+    queryKey: demoCourseContext
+      ? [`/api/courses/${demoCourseContext.id}/modules/public`]
+      : [],
+    enabled: !!demoCourseContext,
+  });
+
+  // Sorted demo lessons list - only demo lessons with video
+  const sortedDemoLessons = useMemo(() => {
+    if (!demoCourseLessons) return [];
+    const sortedModules = demoCourseModules?.slice().sort((a, b) => (a.order || 0) - (b.order || 0)) || [];
+    const lessonsWithoutModule = demoCourseLessons.filter((l) => !l.moduleId).sort((a, b) => (a.order || 0) - (b.order || 0));
+    const result: Lesson[] = [...lessonsWithoutModule];
+    sortedModules.forEach((module) => {
+      const moduleLessons = demoCourseLessons.filter((l) => l.moduleId === module.id).sort((a, b) => (a.order || 0) - (b.order || 0));
+      result.push(...moduleLessons);
+    });
+    return result;
+  }, [demoCourseLessons, demoCourseModules]);
+
+  // All demo lessons (with video) for navigation
+  const demoOnlyLessons = useMemo(() => {
+    return sortedDemoLessons.filter(l => l.isDemo && l.videoUrl && l.videoUrl.trim() !== '');
+  }, [sortedDemoLessons]);
+
+  // Current demo lesson index for navigation
+  const currentDemoIndex = useMemo(() => {
+    if (!selectedDemoLesson) return -1;
+    return demoOnlyLessons.findIndex(l => l.id === selectedDemoLesson.id);
+  }, [selectedDemoLesson, demoOnlyLessons]);
+
+  const prevDemoLesson = currentDemoIndex > 0 ? demoOnlyLessons[currentDemoIndex - 1] : null;
+  const nextDemoLesson = currentDemoIndex < demoOnlyLessons.length - 1 ? demoOnlyLessons[currentDemoIndex + 1] : null;
+
+  // Auto scroll to top when demo lesson changes
+  useEffect(() => {
+    if (selectedDemoLesson && demoVideoTopRef.current) {
+      demoVideoTopRef.current.scrollTo(0, 0);
+    }
+  }, [selectedDemoLesson]);
+
+  // Helper to open demo lesson with course context
+  const openDemoLesson = (lesson: Lesson, course: PublicCourse | null) => {
+    setSelectedDemoLesson(lesson);
+    if (course) {
+      setDemoCourseContext(course);
+    }
+    setShowDemoLessonsList(false);
+  };
+
+  // Close demo lesson player
+  const closeDemoPlayer = () => {
+    setSelectedDemoLesson(null);
+    setDemoCourseContext(null);
+    setShowDemoLessonsList(false);
+  };
 
   // Module gradient colors palette - same as LearningPage
   const moduleColors = [
@@ -1266,34 +1335,41 @@ export default function HomePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Demo Video Player Modal - Mobile Optimized */}
-      <Dialog 
-        open={selectedDemoLesson !== null} 
-        onOpenChange={() => setSelectedDemoLesson(null)}
-      >
-        <DialogContent className="w-full max-w-5xl h-[100dvh] sm:h-auto sm:max-h-[90vh] p-0 sm:p-6 gap-0 border-0 sm:border rounded-none sm:rounded-lg">
-          {/* Mobile-friendly header with back button */}
-          <div className="flex items-center gap-3 p-4 sm:p-0 sm:pb-4 bg-background sticky top-0 z-10 border-b sm:border-0">
+      {/* Demo Video Player - Full Screen Mobile Experience */}
+      {selectedDemoLesson && (
+        <div className="fixed inset-0 z-[100] flex flex-col bg-background" data-testid="demo-video-fullscreen">
+          {/* Header */}
+          <div className="flex items-center gap-3 p-3 sm:p-4 bg-background border-b sticky top-0 z-10">
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setSelectedDemoLesson(null)}
+              onClick={closeDemoPlayer}
               className="shrink-0"
               data-testid="button-back-from-video"
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <DialogHeader className="flex-1 space-y-0">
-              <DialogTitle className="text-base sm:text-lg line-clamp-1">{selectedDemoLesson?.title}</DialogTitle>
-            </DialogHeader>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm sm:text-base font-semibold line-clamp-1">{selectedDemoLesson?.title}</h3>
+              {demoCourseContext && (
+                <p className="text-xs text-muted-foreground line-clamp-1">{demoCourseContext.title}</p>
+              )}
+            </div>
+            {demoOnlyLessons.length > 1 && (
+              <Badge variant="secondary" className="shrink-0 text-xs">
+                {currentDemoIndex + 1}/{demoOnlyLessons.length}
+              </Badge>
+            )}
           </div>
-          <div className="flex-1 flex flex-col sm:space-y-4 overflow-hidden">
+
+          {/* Main Content - scrollable */}
+          <div className="flex-1 overflow-y-auto pb-24 sm:pb-20" ref={demoVideoTopRef}>
+            {/* Video Player */}
             {selectedDemoLesson?.videoUrl && (
-              <div className="w-full flex-1 sm:flex-none sm:aspect-video bg-black sm:rounded-lg overflow-hidden">
+              <div className="w-full aspect-video bg-black">
                 {(() => {
                   const videoContent = selectedDemoLesson.videoUrl.trim();
                   
-                  // Check if it's an iframe embed code
                   if (videoContent.startsWith('<iframe') || videoContent.startsWith('<embed')) {
                     return (
                       <div 
@@ -1304,10 +1380,8 @@ export default function HomePage() {
                     );
                   }
                   
-                  // Parse YouTube URLs
                   if (videoContent.includes('youtube.com') || videoContent.includes('youtu.be')) {
                     let videoId = '';
-                    
                     if (videoContent.includes('youtube.com/watch?v=')) {
                       videoId = videoContent.split('watch?v=')[1]?.split('&')[0];
                     } else if (videoContent.includes('youtube.com/embed/')) {
@@ -1315,7 +1389,6 @@ export default function HomePage() {
                     } else if (videoContent.includes('youtu.be/')) {
                       videoId = videoContent.split('youtu.be/')[1]?.split('?')[0];
                     }
-                    
                     if (videoId) {
                       return (
                         <iframe
@@ -1329,10 +1402,8 @@ export default function HomePage() {
                     }
                   }
                   
-                  // Check for Google Drive URLs
                   if (videoContent.includes('drive.google.com')) {
                     let fileId = '';
-                    
                     if (videoContent.includes('/file/d/')) {
                       fileId = videoContent.split('/file/d/')[1]?.split('/')[0];
                     } else if (videoContent.includes('id=')) {
@@ -1341,12 +1412,10 @@ export default function HomePage() {
                     } else if (videoContent.includes('/d/')) {
                       fileId = videoContent.split('/d/')[1]?.split('/')[0];
                     }
-                    
                     if (fileId) {
-                      const embedUrl = `https://drive.google.com/file/d/${fileId}/preview`;
                       return (
                         <iframe
-                          src={embedUrl}
+                          src={`https://drive.google.com/file/d/${fileId}/preview`}
                           className="w-full h-full"
                           allow="autoplay; encrypted-media; fullscreen"
                           allowFullScreen
@@ -1357,7 +1426,6 @@ export default function HomePage() {
                     }
                   }
                   
-                  // Check for Kinescope, Vimeo and other video platforms
                   if (videoContent.includes('kinescope.io') || 
                       videoContent.includes('vimeo.com') ||
                       videoContent.includes('player.vimeo.com') ||
@@ -1374,7 +1442,6 @@ export default function HomePage() {
                     );
                   }
                   
-                  // Try to treat as direct video URL or iframe src
                   if (videoContent.startsWith('http://') || videoContent.startsWith('https://')) {
                     return (
                       <iframe
@@ -1387,16 +1454,10 @@ export default function HomePage() {
                     );
                   }
                   
-                  // Default: show as link
                   return (
                     <div className="text-white p-8 text-center flex flex-col items-center justify-center h-full">
                       <p className="mb-4">Video formatini aniqlab bo'lmadi</p>
-                      <a 
-                        href={videoContent} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline"
-                      >
+                      <a href={videoContent} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                         Video havolasini ochish
                       </a>
                     </div>
@@ -1404,15 +1465,24 @@ export default function HomePage() {
                 })()}
               </div>
             )}
-            {selectedDemoLesson?.duration && (
-              <p className="text-sm text-muted-foreground p-4 sm:p-0">
-                Davomiyligi: {selectedDemoLesson.duration} daqiqa
-              </p>
-            )}
-            
-            {/* PDF Resources for demo lesson */}
-            {selectedDemoLesson?.pdfUrl && (
-              <div className="p-4 sm:p-0 border-t sm:border-t-0">
+
+            {/* Lesson Info */}
+            <div className="p-4 space-y-4">
+              {/* Lesson Title & Description */}
+              <div>
+                <h2 className="text-lg font-bold mb-1">{selectedDemoLesson.title}</h2>
+                {selectedDemoLesson?.duration && (
+                  <p className="text-sm text-muted-foreground flex items-center gap-1">
+                    <Clock className="w-4 h-4" /> {selectedDemoLesson.duration} daqiqa
+                  </p>
+                )}
+                {selectedDemoLesson?.description && (
+                  <p className="text-sm text-muted-foreground mt-2">{selectedDemoLesson.description}</p>
+                )}
+              </div>
+
+              {/* PDF Resources */}
+              {selectedDemoLesson?.pdfUrl && (
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover-elevate">
                   <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center">
                     <FileText className="w-5 h-5 text-red-500" />
@@ -1435,11 +1505,209 @@ export default function HomePage() {
                     </Button>
                   </a>
                 </div>
-              </div>
-            )}
+              )}
+
+              {/* CTA to enroll */}
+              {demoCourseContext && (
+                <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <p className="font-semibold text-sm">To'liq kursga yoziling</p>
+                        <p className="text-xs text-muted-foreground">Barcha darslarga kirish uchun</p>
+                      </div>
+                      <Button 
+                        size="sm"
+                        onClick={() => { closeDemoPlayer(); setLocation(`/checkout/${demoCourseContext.id}`); }}
+                        data-testid="button-enroll-from-demo"
+                      >
+                        Yozilish
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Desktop: Other demo lessons list */}
+              {demoOnlyLessons.length > 1 && (
+                <div className="hidden sm:block">
+                  <h3 className="font-semibold text-sm mb-3">Bepul demo darslar</h3>
+                  <div className="space-y-2">
+                    {demoOnlyLessons.map((lesson, index) => {
+                      const isActive = selectedDemoLesson?.id === lesson.id;
+                      return (
+                        <div
+                          key={lesson.id}
+                          onClick={() => setSelectedDemoLesson(lesson)}
+                          className={`flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer active-elevate-2 ${
+                            isActive ? 'bg-primary/10 ring-2 ring-primary shadow-sm' : 'bg-muted/30'
+                          }`}
+                          data-testid={`demo-lesson-nav-${lesson.id}`}
+                        >
+                          <div className={`flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${
+                            isActive ? 'bg-primary' : 'bg-orange-500/20'
+                          }`}>
+                            {isActive ? (
+                              <PlayCircle className="w-4 h-4 text-white" />
+                            ) : (
+                              <span className="text-sm font-bold text-orange-600 dark:text-orange-400">{index + 1}</span>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-medium line-clamp-1 ${isActive ? 'text-primary' : ''}`}>{lesson.title}</p>
+                            {lesson.duration && (
+                              <span className="text-xs text-muted-foreground">{lesson.duration} daq</span>
+                            )}
+                          </div>
+                          {isActive && <PlayCircle className="w-4 h-4 text-primary shrink-0" />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+
+          {/* Mobile Lessons List Overlay */}
+          {showDemoLessonsList && (
+            <div className="sm:hidden fixed inset-0 z-[110] flex flex-col bg-background" data-testid="demo-lessons-overlay">
+              <div className="flex items-center justify-between p-4 border-b bg-background sticky top-0 z-10">
+                <div>
+                  <h3 className="font-semibold">Demo Darslar</h3>
+                  <p className="text-sm text-muted-foreground">{demoOnlyLessons.length} ta bepul dars</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowDemoLessonsList(false)}
+                  data-testid="button-close-demo-lessons"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 space-y-2 pb-20">
+                {sortedDemoLessons.map((lesson, index) => {
+                  const canViewDemo = lesson.isDemo && lesson.videoUrl && lesson.videoUrl.trim() !== '';
+                  const isActive = selectedDemoLesson?.id === lesson.id;
+                  return (
+                    <div
+                      key={lesson.id}
+                      onClick={() => {
+                        if (canViewDemo) {
+                          setSelectedDemoLesson(lesson);
+                          setShowDemoLessonsList(false);
+                        }
+                      }}
+                      className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
+                        !canViewDemo ? 'opacity-50 cursor-not-allowed bg-muted/30' : 'active-elevate-2 cursor-pointer'
+                      } ${isActive ? 'bg-primary/10 ring-2 ring-primary shadow-sm' : ''}`}
+                      data-testid={`demo-mobile-lesson-${lesson.id}`}
+                    >
+                      <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${
+                        !canViewDemo ? 'bg-muted' : isActive ? 'bg-primary' : lesson.isDemo ? 'bg-orange-500/20' : 'bg-muted/50'
+                      }`}>
+                        {!canViewDemo ? (
+                          <Lock className="w-4 h-4 text-muted-foreground" />
+                        ) : isActive ? (
+                          <PlayCircle className="w-5 h-5 text-white" />
+                        ) : lesson.isDemo ? (
+                          <Play className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                        ) : (
+                          <span className="text-sm font-bold text-muted-foreground">{index + 1}</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-semibold line-clamp-1 ${isActive ? 'text-primary' : ''}`}>{lesson.title}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {lesson.duration && (
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Clock className="w-3 h-3" /> {lesson.duration} daq
+                            </span>
+                          )}
+                          {lesson.isDemo ? (
+                            <span className="text-[10px] font-semibold uppercase bg-orange-500/20 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded-md">Demo</span>
+                          ) : (
+                            <span className="text-[10px] font-semibold uppercase bg-muted text-muted-foreground px-1.5 py-0.5 rounded-md">Premium</span>
+                          )}
+                        </div>
+                      </div>
+                      {canViewDemo && isActive && (
+                        <PlayCircle className="w-5 h-5 text-primary shrink-0" />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Bottom Navigation - Mobile */}
+          <div className="sm:hidden fixed bottom-0 left-0 right-0 z-[105] bg-background/95 backdrop-blur-md border-t p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]" data-testid="demo-bottom-nav">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => prevDemoLesson && setSelectedDemoLesson(prevDemoLesson)}
+                disabled={!prevDemoLesson}
+                className="flex-1 h-11 rounded-xl border-2 shadow-sm"
+                data-testid="button-prev-demo-lesson"
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" />
+                <span className="text-sm font-medium">Oldingi</span>
+              </Button>
+              
+              <Button
+                variant="outline"
+                onClick={() => setShowDemoLessonsList(true)}
+                className="h-11 rounded-xl border-2 px-3"
+                data-testid="button-show-demo-lessons"
+              >
+                <List className="w-4 h-4" />
+              </Button>
+              
+              <Button
+                onClick={() => nextDemoLesson && setSelectedDemoLesson(nextDemoLesson)}
+                disabled={!nextDemoLesson}
+                className="flex-1 h-11 rounded-xl bg-gradient-to-r from-primary to-primary/90 shadow-lg shadow-primary/25"
+                data-testid="button-next-demo-lesson"
+              >
+                <span className="text-sm font-medium">Keyingi</span>
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Desktop Bottom Navigation */}
+          {demoOnlyLessons.length > 1 && (
+            <div className="hidden sm:block border-t bg-background/95 backdrop-blur-md p-3">
+              <div className="flex items-center justify-center gap-3 max-w-2xl mx-auto">
+                <Button
+                  variant="outline"
+                  onClick={() => prevDemoLesson && setSelectedDemoLesson(prevDemoLesson)}
+                  disabled={!prevDemoLesson}
+                  className="gap-1"
+                  data-testid="button-prev-demo-desktop"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Oldingi dars
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  {currentDemoIndex + 1} / {demoOnlyLessons.length}
+                </span>
+                <Button
+                  onClick={() => nextDemoLesson && setSelectedDemoLesson(nextDemoLesson)}
+                  disabled={!nextDemoLesson}
+                  className="gap-1"
+                  data-testid="button-next-demo-desktop"
+                >
+                  Keyingi dars
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Course Lessons Modal - Mobile Optimized */}
       <Dialog 
@@ -1529,7 +1797,7 @@ export default function HomePage() {
                                         ? "bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 border border-orange-200 dark:border-orange-800 hover-elevate cursor-pointer" 
                                         : "bg-muted/30 opacity-75"
                                     }`}
-                                    onClick={() => canViewDemo && setSelectedDemoLesson(lesson)}
+                                    onClick={() => canViewDemo && openDemoLesson(lesson, selectedCourseForLessons)}
                                     data-testid={`public-lesson-${lesson.id}`}
                                   >
                                     <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${
@@ -1578,7 +1846,7 @@ export default function HomePage() {
                                     ? "bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 border border-orange-200 dark:border-orange-800 hover-elevate cursor-pointer" 
                                     : "bg-muted/30 opacity-75"
                                 }`}
-                                onClick={() => canViewDemo && setSelectedDemoLesson(lesson)}
+                                onClick={() => canViewDemo && openDemoLesson(lesson, selectedCourseForLessons)}
                                 data-testid={`public-lesson-${lesson.id}`}
                               >
                                 <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${
@@ -1626,7 +1894,7 @@ export default function HomePage() {
                           ? "bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 border border-orange-200 dark:border-orange-800 hover-elevate cursor-pointer" 
                           : "bg-muted/30 opacity-75"
                       }`}
-                      onClick={() => canViewDemo && setSelectedDemoLesson(lesson)}
+                      onClick={() => canViewDemo && openDemoLesson(lesson, selectedCourseForLessons)}
                       data-testid={`public-lesson-${lesson.id}`}
                     >
                       <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${
