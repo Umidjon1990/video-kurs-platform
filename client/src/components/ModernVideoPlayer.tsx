@@ -12,15 +12,21 @@ export function ModernVideoPlayer({ videoUrl, title, onError }: ModernVideoPlaye
   const [hasError, setHasError] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // Fallback timeout to hide loading after 5 seconds (for platforms that don't fire onLoad reliably)
+  // Reset loading state when videoUrl changes
+  useEffect(() => {
+    setIsLoading(true);
+    setHasError(false);
+  }, [videoUrl]);
+
+  // Fallback timeout to hide loading after 3 seconds (for platforms that don't fire onLoad reliably)
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (isLoading) {
         setIsLoading(false);
       }
-    }, 5000);
+    }, 3000);
     return () => clearTimeout(timeout);
-  }, [isLoading]);
+  }, [isLoading, videoUrl]);
 
   const videoContent = videoUrl?.trim() || '';
 
@@ -161,9 +167,9 @@ export function ModernVideoPlayer({ videoUrl, title, onError }: ModernVideoPlaye
 
   return (
     <div className="relative aspect-video bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-xl overflow-hidden shadow-2xl group">
-      {/* Loading overlay */}
+      {/* Loading overlay - pointer-events-none so iframe is always clickable */}
       {isLoading && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 pointer-events-none">
           <div className="text-center">
             <div className="relative">
               <div className="w-20 h-20 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
@@ -196,11 +202,11 @@ export function ModernVideoPlayer({ videoUrl, title, onError }: ModernVideoPlaye
         ref={iframeRef}
         src={parsedVideo.embedUrl}
         className="w-full h-full"
+        style={{ position: 'relative', zIndex: 1 }}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
         allowFullScreen
         playsInline
         {...{ 'webkit-playsinline': '' } as any}
-        loading="lazy"
         onLoad={handleIframeLoad}
         onError={handleIframeError}
         data-testid="modern-video-player"

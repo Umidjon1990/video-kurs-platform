@@ -1364,10 +1364,10 @@ export default function HomePage() {
           </div>
 
           {/* Main Content - scrollable */}
-          <div className="flex-1 overflow-y-auto pb-24 sm:pb-20" ref={demoVideoTopRef}>
+          <div className="flex-1 overflow-y-auto pb-24 sm:pb-20" ref={demoVideoTopRef} style={{ WebkitOverflowScrolling: 'touch' }}>
             {/* Video Player */}
             {selectedDemoLesson?.videoUrl && (
-              <div className="w-full" data-testid="demo-video-player">
+              <div className="w-full relative z-[1]" data-testid="demo-video-player">
                 <ModernVideoPlayer
                   key={selectedDemoLesson.id}
                   videoUrl={selectedDemoLesson.videoUrl}
