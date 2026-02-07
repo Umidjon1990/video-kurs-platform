@@ -133,13 +133,21 @@ export function ModernVideoPlayer({ videoUrl, title, onError }: ModernVideoPlaye
     );
   }
 
-  // Raw iframe content
+  // Raw iframe content - inject mobile-friendly attributes
   if (parsedVideo.type === 'raw-iframe') {
+    const mobileFixedHtml = parsedVideo.embedUrl
+      .replace(/<iframe/gi, '<iframe playsinline webkit-playsinline')
+      .replace(/(<iframe[^>]*?)(?:\s*\/?>)/gi, (match, p1) => {
+        if (!match.includes('allow=')) {
+          return p1 + ' allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"' + (match.endsWith('/>') ? ' />' : '>');
+        }
+        return match;
+      });
     return (
       <div className="relative aspect-video bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-xl overflow-hidden shadow-2xl group">
         <div 
           className="w-full h-full"
-          dangerouslySetInnerHTML={{ __html: parsedVideo.embedUrl }}
+          dangerouslySetInnerHTML={{ __html: mobileFixedHtml }}
           data-testid="video-player-raw-iframe"
         />
         {/* Gradient overlays for style */}
@@ -190,6 +198,8 @@ export function ModernVideoPlayer({ videoUrl, title, onError }: ModernVideoPlaye
         className="w-full h-full"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
         allowFullScreen
+        playsInline
+        {...{ 'webkit-playsinline': '' } as any}
         loading="lazy"
         onLoad={handleIframeLoad}
         onError={handleIframeError}

@@ -187,27 +187,6 @@ export default function LearningPage() {
     return result;
   }, [lessons, courseModules]);
 
-  // Helper function: Check if previous lesson is completed (for sequential access)
-  const isPreviousLessonCompleted = (lessonId: string): boolean => {
-    const lessonIndex = allSortedLessons.findIndex(l => l.id === lessonId);
-    if (lessonIndex <= 0) return true; // First lesson is always accessible
-    
-    const prevLesson = allSortedLessons[lessonIndex - 1];
-    if (!prevLesson) return true;
-    
-    // Demo lessons don't block next lessons
-    if (prevLesson.isDemo) return true;
-    
-    const prevProgress = courseProgress?.find((p: any) => p.lessonId === prevLesson.id);
-    return prevProgress?.completed === true;
-  };
-
-  // Get previous lesson for a given lesson ID
-  const getPreviousLesson = (lessonId: string): Lesson | null => {
-    const lessonIndex = allSortedLessons.findIndex(l => l.id === lessonId);
-    if (lessonIndex <= 0) return null;
-    return allSortedLessons[lessonIndex - 1] || null;
-  };
 
   // Fetch user's course rating
   const { data: userCourseRating } = useQuery<{ rating: number; review?: string } | null>({
@@ -520,12 +499,7 @@ export default function LearningPage() {
               // Lock lesson if not demo AND (not enrolled OR subscription expired) AND not in preview mode
               const isEnrollmentLocked = !isPreviewMode && !currentLesson.isDemo && (!isEnrolled || !hasActiveSubscription);
               
-              // Progress-based locking: use centralized helper for consistent ordering
-              const prevLessonCompleted = isPreviousLessonCompleted(currentLesson.id);
-              const prevLesson = getPreviousLesson(currentLesson.id);
-              
-              const isProgressLocked = !isPreviewMode && !currentLesson.isDemo && !prevLessonCompleted && (isEnrolled && hasActiveSubscription);
-              const isLocked = isEnrollmentLocked || isProgressLocked;
+              const isLocked = isEnrollmentLocked;
               
               if (isLocked) {
                 // Check if subscription expired
@@ -535,31 +509,7 @@ export default function LearningPage() {
                   <Card>
                     <CardContent className="p-12 text-center">
                       <Lock className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-                      {isProgressLocked ? (
-                        <>
-                          <h3 className="text-xl font-semibold mb-2">Avval oldingi darsni tugating</h3>
-                          <p className="text-muted-foreground mb-4">
-                            Bu darsni ochish uchun avvalgi darsni to'liq ko'rib, "Darsni tugalladim" tugmasini bosing.
-                          </p>
-                          {prevLesson && (
-                            <div className="bg-muted p-4 rounded-lg mb-4 inline-block">
-                              <p className="text-sm font-medium">Tugallanmagan dars:</p>
-                              <p className="text-primary font-semibold">{prevLesson.title}</p>
-                            </div>
-                          )}
-                          <div className="flex gap-2 justify-center flex-wrap">
-                            {prevLesson && (
-                              <Button onClick={() => setCurrentLessonId(prevLesson.id)} variant="default">
-                                <PlayCircle className="w-4 h-4 mr-2" />
-                                Oldingi darsga o'tish
-                              </Button>
-                            )}
-                            <Button onClick={() => window.history.back()} variant="outline">
-                              Orqaga
-                            </Button>
-                          </div>
-                        </>
-                      ) : subscriptionExpired ? (
+                      {subscriptionExpired ? (
                         <>
                           <h3 className="text-xl font-semibold mb-2">Obuna muddati tugagan</h3>
                           <p className="text-muted-foreground mb-4">
@@ -1182,7 +1132,7 @@ export default function LearningPage() {
             ) : (
               (() => {
                 // Create a sorted lesson order list for progress-based locking
-                // Use centralized lesson ordering (allSortedLessons and isPreviousLessonCompleted are defined above)
+                // Use centralized lesson ordering (allSortedLessons is defined above)
                 const sortedModules = courseModules?.slice().sort((a, b) => (a.order || 0) - (b.order || 0)) || [];
                 const lessonsWithoutModule = lessons?.filter((l: any) => !l.moduleId).sort((a, b) => (a.order || 0) - (b.order || 0)) || [];
                 const lessonsWithOrphanedModule = lessons?.filter((l: any) => 
@@ -1344,15 +1294,8 @@ export default function LearningPage() {
                 const lessonProgressData = courseProgress?.find((p: any) => p.lessonId === lesson.id);
                 const isCompleted = lessonProgressData?.completed || false;
                 
-                // Progress-based locking: check if previous lesson is completed
-                const prevLessonCompleted = isPreviousLessonCompleted(lesson.id);
-                const isProgressLocked = !isPreviewMode && !lesson.isDemo && !prevLessonCompleted && (isEnrolled && hasActiveSubscription);
-                
-                // Lock lesson if:
-                // 1. Not enrolled OR subscription expired (enrollment lock)
-                // 2. OR previous lesson not completed (progress lock) - only applies to enrolled users
                 const isEnrollmentLocked = !isPreviewMode && !lesson.isDemo && (!isEnrolled || !hasActiveSubscription);
-                const isLocked = isEnrollmentLocked || isProgressLocked;
+                const isLocked = isEnrollmentLocked;
                 
                 const isActive = currentLessonId === lesson.id;
                 
@@ -1414,11 +1357,6 @@ export default function LearningPage() {
                         {lessonsWithEssay.has(lesson.id) && (
                           <span className="text-[10px] font-semibold uppercase bg-amber-500/20 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
                             <FileText className="w-2.5 h-2.5" /> Insho
-                          </span>
-                        )}
-                        {isProgressLocked && (
-                          <span className="text-[10px] font-semibold uppercase bg-orange-500/20 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
-                            <Lock className="w-2.5 h-2.5" /> Avval tugat
                           </span>
                         )}
                         {isCompleted && (
