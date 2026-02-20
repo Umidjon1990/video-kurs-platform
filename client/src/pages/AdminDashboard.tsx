@@ -60,6 +60,7 @@ export default function AdminDashboard() {
     email: "",
     firstName: "",
     lastName: "",
+    password: "",
     courseIds: [] as string[],
     subscriptionDays: "30",
     groupId: "",
@@ -189,7 +190,7 @@ export default function AdminDashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/student-groups"] });
       setCreatedCredentials(data.credentials);
-      setNewStudent({ phone: "", email: "", firstName: "", lastName: "", courseIds: [], subscriptionDays: "30", groupId: "" });
+      setNewStudent({ phone: "", email: "", firstName: "", lastName: "", password: "", courseIds: [], subscriptionDays: "30", groupId: "" });
       toast({
         title: "Muvaffaqiyatli",
         description: "O'quvchi yaratildi",
@@ -858,7 +859,7 @@ export default function AdminDashboard() {
           setIsCreateStudentOpen(open);
           if (!open) {
             setCreatedCredentials(null);
-            setNewStudent({ phone: "", email: "", firstName: "", lastName: "", courseIds: [], subscriptionDays: "30", groupId: "" });
+            setNewStudent({ phone: "", email: "", firstName: "", lastName: "", password: "", courseIds: [], subscriptionDays: "30", groupId: "" });
           }
         }}
       >
@@ -978,6 +979,20 @@ export default function AdminDashboard() {
                   onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
                   data-testid="input-email"
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Parol</Label>
+                <Input
+                  id="password"
+                  type="text"
+                  placeholder="Parolni kiriting"
+                  value={newStudent.password}
+                  onChange={(e) => setNewStudent({ ...newStudent, password: e.target.value })}
+                  data-testid="input-password"
+                />
+                <p className="text-xs text-muted-foreground">
+                  O'quvchi uchun parol kiriting
+                </p>
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">

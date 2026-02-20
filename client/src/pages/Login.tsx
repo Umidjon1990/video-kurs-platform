@@ -9,9 +9,11 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Telefon yoki email kiriting"),
@@ -29,6 +31,7 @@ export default function Login() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -37,6 +40,14 @@ export default function Login() {
       password: "",
     },
   });
+
+  useEffect(() => {
+    const savedUsername = localStorage.getItem("rememberedUsername");
+    if (savedUsername) {
+      form.setValue("username", savedUsername);
+      setRememberMe(true);
+    }
+  }, []);
 
   const forgotPasswordForm = useForm<ForgotPasswordFormData>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -53,6 +64,12 @@ export default function Login() {
       });
       
       const response = await res.json();
+
+      if (rememberMe) {
+        localStorage.setItem("rememberedUsername", data.username);
+      } else {
+        localStorage.removeItem("rememberedUsername");
+      }
 
       // Set user data in query cache
       queryClient.setQueryData(["/api/auth/user"], response.user);
@@ -182,6 +199,18 @@ export default function Login() {
                   </FormItem>
                 )}
               />
+
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="rememberMe"
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(checked === true)}
+                  data-testid="checkbox-remember-me"
+                />
+                <Label htmlFor="rememberMe" className="text-sm font-normal cursor-pointer">
+                  Meni eslab qol
+                </Label>
+              </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
               <Button

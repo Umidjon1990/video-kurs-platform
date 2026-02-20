@@ -727,7 +727,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Student Management APIs
   app.post('/api/admin/create-student', isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const { phone, email, firstName, lastName, courseIds, subscriptionDays, groupId } = req.body;
+      const { phone, email, firstName, lastName, password, courseIds, subscriptionDays, groupId } = req.body;
       
       console.log('[Create Student] Request body:', { phone, email, firstName, lastName, courseIds, subscriptionDays, groupId });
       
@@ -740,6 +740,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ),
         firstName: z.string().min(1, 'Ism kiritish shart'),
         lastName: z.string().min(1, 'Familiya kiritish shart'),
+        password: z.string().min(1, 'Parol kiritish shart'),
         courseIds: z.preprocess(
           (val) => (val === '' || val === undefined || val === null || (Array.isArray(val) && val.length === 0)) ? undefined : val,
           z.array(z.string()).optional()
@@ -754,7 +755,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ),
       });
       
-      const validatedData = createStudentSchema.parse({ phone, email, firstName, lastName, courseIds, subscriptionDays, groupId });
+      const validatedData = createStudentSchema.parse({ phone, email, firstName, lastName, password, courseIds, subscriptionDays, groupId });
       
       // Check if phone already exists
       const existingUser = await storage.getUserByPhoneOrEmail(validatedData.phone);
@@ -770,20 +771,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Generate secure random password using crypto (12 characters)
-      const crypto = await import('crypto');
-      // Generate 16 bytes to ensure we have enough characters after base64url encoding
-      const randomBytes = crypto.randomBytes(16);
-      // Use base64url encoding: replace + with -, / with _, and remove = padding
-      const generatedPassword = randomBytes
-        .toString('base64')
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=/g, '')
-        .slice(0, 12);
+      const finalPassword = validatedData.password;
       
       // Hash password
-      const passwordHash = await bcrypt.hash(generatedPassword, 10);
+      const passwordHash = await bcrypt.hash(finalPassword, 10);
       
       // Execute all operations in a transaction to ensure data consistency
       const newUser = await db.transaction(async (tx: any) => {
@@ -886,7 +877,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         enrollmentsCreated: newUser.enrollmentsCreated,
         credentials: {
           login: validatedData.phone,
-          password: generatedPassword
+          password: finalPassword
         }
       });
     } catch (error: any) {
