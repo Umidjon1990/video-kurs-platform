@@ -114,6 +114,12 @@ import {
   userPresence,
   type UserPresence,
   type InsertUserPresence,
+  studentGroups,
+  studentGroupMembers,
+  type StudentGroup,
+  type InsertStudentGroup,
+  type StudentGroupMember,
+  type InsertStudentGroupMember,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, sql, inArray } from "drizzle-orm";
@@ -365,6 +371,17 @@ export interface IStorage {
   getActiveAndScheduledLiveRooms(): Promise<LiveRoom[]>;
   updateLiveRoom(id: string, data: Partial<InsertLiveRoom>): Promise<LiveRoom>;
   endLiveRoom(id: string): Promise<LiveRoom>;
+
+  // ============ STUDENT GROUP OPERATIONS ============
+  createStudentGroup(group: InsertStudentGroup): Promise<StudentGroup>;
+  getStudentGroups(): Promise<StudentGroup[]>;
+  getStudentGroup(id: string): Promise<StudentGroup | undefined>;
+  updateStudentGroup(id: string, data: Partial<InsertStudentGroup>): Promise<StudentGroup>;
+  deleteStudentGroup(id: string): Promise<void>;
+  addStudentToGroup(groupId: string, userId: string): Promise<StudentGroupMember>;
+  removeStudentFromGroup(groupId: string, userId: string): Promise<void>;
+  getGroupMembers(groupId: string): Promise<any[]>;
+  getStudentGroups_byUser(userId: string): Promise<StudentGroup[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2931,6 +2948,73 @@ export class DatabaseStorage implements IStorage {
       isOnline: p.lastActiveAt ? new Date(p.lastActiveAt) > fiveMinutesAgo : false,
       lastActiveAt: p.lastActiveAt || new Date(),
     }));
+  }
+
+  // ============ STUDENT GROUP OPERATIONS ============
+  async createStudentGroup(group: InsertStudentGroup): Promise<StudentGroup> {
+    const [created] = await db.insert(studentGroups).values(group).returning();
+    return created;
+  }
+
+  async getStudentGroups(): Promise<StudentGroup[]> {
+    return await db.select().from(studentGroups).orderBy(desc(studentGroups.createdAt));
+  }
+
+  async getStudentGroup(id: string): Promise<StudentGroup | undefined> {
+    const [group] = await db.select().from(studentGroups).where(eq(studentGroups.id, id));
+    return group;
+  }
+
+  async updateStudentGroup(id: string, data: Partial<InsertStudentGroup>): Promise<StudentGroup> {
+    const [updated] = await db.update(studentGroups).set(data).where(eq(studentGroups.id, id)).returning();
+    return updated;
+  }
+
+  async deleteStudentGroup(id: string): Promise<void> {
+    await db.delete(studentGroups).where(eq(studentGroups.id, id));
+  }
+
+  async addStudentToGroup(groupId: string, userId: string): Promise<StudentGroupMember> {
+    const existing = await db.select().from(studentGroupMembers)
+      .where(and(eq(studentGroupMembers.groupId, groupId), eq(studentGroupMembers.userId, userId)));
+    if (existing.length > 0) return existing[0];
+    const [created] = await db.insert(studentGroupMembers).values({ groupId, userId }).returning();
+    return created;
+  }
+
+  async removeStudentFromGroup(groupId: string, userId: string): Promise<void> {
+    await db.delete(studentGroupMembers)
+      .where(and(eq(studentGroupMembers.groupId, groupId), eq(studentGroupMembers.userId, userId)));
+  }
+
+  async getGroupMembers(groupId: string): Promise<any[]> {
+    const members = await db.select({
+      id: studentGroupMembers.id,
+      groupId: studentGroupMembers.groupId,
+      userId: studentGroupMembers.userId,
+      addedAt: studentGroupMembers.addedAt,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      phone: users.phone,
+      email: users.email,
+    })
+    .from(studentGroupMembers)
+    .innerJoin(users, eq(studentGroupMembers.userId, users.id))
+    .where(eq(studentGroupMembers.groupId, groupId));
+    return members;
+  }
+
+  async getStudentGroups_byUser(userId: string): Promise<StudentGroup[]> {
+    const memberships = await db.select({
+      id: studentGroups.id,
+      name: studentGroups.name,
+      description: studentGroups.description,
+      createdAt: studentGroups.createdAt,
+    })
+    .from(studentGroupMembers)
+    .innerJoin(studentGroups, eq(studentGroupMembers.groupId, studentGroups.id))
+    .where(eq(studentGroupMembers.userId, userId));
+    return memberships;
   }
 }
 

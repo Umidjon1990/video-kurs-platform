@@ -434,10 +434,11 @@ export const enrollments = pgTable("enrollments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
   courseId: varchar("course_id").notNull().references(() => courses.id),
-  planId: varchar("plan_id").references(() => subscriptionPlans.id), // Tanlangan tarif
-  paymentMethod: varchar("payment_method", { length: 20 }), // karta, payme
-  paymentProofUrl: text("payment_proof_url"), // Chek rasmi URL
-  paymentStatus: varchar("payment_status", { length: 20 }).notNull().default('pending'), // pending, approved, rejected
+  planId: varchar("plan_id").references(() => subscriptionPlans.id),
+  groupId: varchar("group_id").references(() => studentGroups.id),
+  paymentMethod: varchar("payment_method", { length: 20 }),
+  paymentProofUrl: text("payment_proof_url"),
+  paymentStatus: varchar("payment_status", { length: 20 }).notNull().default('pending'),
   enrolledAt: timestamp("enrolled_at").defaultNow(),
 });
 
@@ -1311,3 +1312,44 @@ export const insertUserPresenceSchema = createInsertSchema(userPresence).omit({
 
 export type InsertUserPresence = z.infer<typeof insertUserPresenceSchema>;
 export type UserPresence = typeof userPresence.$inferSelect;
+
+// Student Groups - O'quvchi guruhlari
+export const studentGroups = pgTable("student_groups", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const studentGroupsRelations = relations(studentGroups, ({ many }) => ({
+  members: many(studentGroupMembers),
+}));
+
+export const insertStudentGroupSchema = createInsertSchema(studentGroups).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertStudentGroup = z.infer<typeof insertStudentGroupSchema>;
+export type StudentGroup = typeof studentGroups.$inferSelect;
+
+// Student Group Members - Guruh a'zolari
+export const studentGroupMembers = pgTable("student_group_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  groupId: varchar("group_id").notNull().references(() => studentGroups.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  addedAt: timestamp("added_at").defaultNow(),
+});
+
+export const studentGroupMembersRelations = relations(studentGroupMembers, ({ one }) => ({
+  group: one(studentGroups, { fields: [studentGroupMembers.groupId], references: [studentGroups.id] }),
+  user: one(users, { fields: [studentGroupMembers.userId], references: [users.id] }),
+}));
+
+export const insertStudentGroupMemberSchema = createInsertSchema(studentGroupMembers).omit({
+  id: true,
+  addedAt: true,
+});
+
+export type InsertStudentGroupMember = z.infer<typeof insertStudentGroupMemberSchema>;
+export type StudentGroupMember = typeof studentGroupMembers.$inferSelect;

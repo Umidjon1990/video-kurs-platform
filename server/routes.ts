@@ -10,7 +10,7 @@ import { ObjectStorageService } from "./objectStorage";
 import { db } from "./db";
 import bcrypt from "bcryptjs";
 import passport from "passport";
-import { users, courses, lessons, assignments, tests, questions, questionOptions, enrollments, submissions, testAttempts, notifications, conversations, messages, siteSettings, testimonials, subscriptionPlans, coursePlanPricing, userSubscriptions, passwordResetRequests, speakingTests, speakingTestSections, speakingQuestions, speakingSubmissions, speakingAnswers, speakingEvaluations, essaySubmissions, courseRatings, courseLikes, lessonProgress, announcements, liveRooms, courseGroupChats, userPresence, courseModules, lessonSections, courseResourceTypes, lessonEssayQuestions } from "@shared/schema";
+import { users, courses, lessons, assignments, tests, questions, questionOptions, enrollments, submissions, testAttempts, notifications, conversations, messages, siteSettings, testimonials, subscriptionPlans, coursePlanPricing, userSubscriptions, passwordResetRequests, speakingTests, speakingTestSections, speakingQuestions, speakingSubmissions, speakingAnswers, speakingEvaluations, essaySubmissions, courseRatings, courseLikes, lessonProgress, announcements, liveRooms, courseGroupChats, userPresence, courseModules, lessonSections, courseResourceTypes, lessonEssayQuestions, studentGroups, studentGroupMembers } from "@shared/schema";
 import { eq, and, or, desc, sql, count, avg, inArray } from "drizzle-orm";
 import {
   insertCourseSchema,
@@ -727,9 +727,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Student Management APIs
   app.post('/api/admin/create-student', isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const { phone, email, firstName, lastName, courseIds, subscriptionDays } = req.body;
+      const { phone, email, firstName, lastName, courseIds, subscriptionDays, groupId } = req.body;
       
-      console.log('[Create Student] Request body:', { phone, email, firstName, lastName, courseIds, subscriptionDays });
+      console.log('[Create Student] Request body:', { phone, email, firstName, lastName, courseIds, subscriptionDays, groupId });
       
       // Server-side validation
       const createStudentSchema = z.object({
@@ -748,9 +748,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           (val) => (val === '' || val === undefined || val === null) ? '30' : val,
           z.string().transform((val) => parseInt(val, 10)).pipe(z.number().min(1, 'Obuna muddati kamida 1 kun bo\'lishi kerak'))
         ),
+        groupId: z.preprocess(
+          (val) => (val === '' || val === undefined || val === null || val === 'none') ? undefined : val,
+          z.string().optional()
+        ),
       });
       
-      const validatedData = createStudentSchema.parse({ phone, email, firstName, lastName, courseIds, subscriptionDays });
+      const validatedData = createStudentSchema.parse({ phone, email, firstName, lastName, courseIds, subscriptionDays, groupId });
       
       // Check if phone already exists
       const existingUser = await storage.getUserByPhoneOrEmail(validatedData.phone);
@@ -855,6 +859,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         console.log(`[Create Student] Final result: ${enrollmentsCreated} enrollments created for user ${createdUser.id}`);
+        
+        // Add to group if groupId specified
+        if (validatedData.groupId) {
+          await tx.insert(studentGroupMembers).values({
+            groupId: validatedData.groupId,
+            userId: createdUser.id,
+          });
+          console.log(`[Create Student] ✓ Added to group ${validatedData.groupId}`);
+        }
         
         return { user: createdUser, enrollmentsCreated };
       });
@@ -5797,6 +5810,99 @@ So'zlar soni: ${submission.wordCount}`;
       const { courseId } = req.body;
       
       await storage.updateUserPresence(userId, courseId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ============ STUDENT GROUP ROUTES ============
+
+  // Get all student groups
+  app.get('/api/admin/student-groups', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const groups = await storage.getStudentGroups();
+      const groupsWithCounts = await Promise.all(groups.map(async (group) => {
+        const members = await storage.getGroupMembers(group.id);
+        return { ...group, memberCount: members.length };
+      }));
+      res.json(groupsWithCounts);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Create student group
+  app.post('/api/admin/student-groups', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { name, description } = req.body;
+      if (!name) return res.status(400).json({ message: "Guruh nomi kiritilishi shart" });
+      const group = await storage.createStudentGroup({ name, description });
+      res.json(group);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Update student group
+  app.patch('/api/admin/student-groups/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { name, description } = req.body;
+      const group = await storage.updateStudentGroup(req.params.id, { name, description });
+      res.json(group);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Delete student group
+  app.delete('/api/admin/student-groups/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      await storage.deleteStudentGroup(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get group members
+  app.get('/api/admin/student-groups/:id/members', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const members = await storage.getGroupMembers(req.params.id);
+      res.json(members);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Add student to group
+  app.post('/api/admin/student-groups/:id/members', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) return res.status(400).json({ message: "O'quvchi tanlanishi shart" });
+      const member = await storage.addStudentToGroup(req.params.id, userId);
+      res.json(member);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Add multiple students to group
+  app.post('/api/admin/student-groups/:id/members/bulk', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { userIds } = req.body;
+      if (!userIds || !Array.isArray(userIds)) return res.status(400).json({ message: "O'quvchilar ro'yxati kerak" });
+      const results = await Promise.all(userIds.map((uid: string) => storage.addStudentToGroup(req.params.id, uid)));
+      res.json(results);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Remove student from group
+  app.delete('/api/admin/student-groups/:groupId/members/:userId', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      await storage.removeStudentFromGroup(req.params.groupId, req.params.userId);
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ message: error.message });

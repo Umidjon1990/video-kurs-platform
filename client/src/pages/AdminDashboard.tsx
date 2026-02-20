@@ -62,6 +62,7 @@ export default function AdminDashboard() {
     lastName: "",
     courseIds: [] as string[],
     subscriptionDays: "30",
+    groupId: "",
   });
   const [createdCredentials, setCreatedCredentials] = useState<{
     login: string;
@@ -124,6 +125,11 @@ export default function AdminDashboard() {
     enabled: isAuthenticated,
   });
 
+  const { data: studentGroups = [] } = useQuery<Array<{ id: string; name: string; memberCount: number }>>({
+    queryKey: ["/api/admin/student-groups"],
+    enabled: isAuthenticated,
+  });
+
   const { data: trends, isLoading: trendsLoading } = useQuery<Array<{
     date: string;
     enrollments: number;
@@ -179,12 +185,11 @@ export default function AdminDashboard() {
       return await response.json();
     },
     onSuccess: (data: any) => {
-      console.log("Create student response:", data);
-      console.log("Credentials:", data.credentials);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/student-groups"] });
       setCreatedCredentials(data.credentials);
-      setNewStudent({ phone: "", email: "", firstName: "", lastName: "", courseIds: [], subscriptionDays: "30" });
+      setNewStudent({ phone: "", email: "", firstName: "", lastName: "", courseIds: [], subscriptionDays: "30", groupId: "" });
       toast({
         title: "Muvaffaqiyatli",
         description: "O'quvchi yaratildi",
@@ -853,7 +858,7 @@ export default function AdminDashboard() {
           setIsCreateStudentOpen(open);
           if (!open) {
             setCreatedCredentials(null);
-            setNewStudent({ phone: "", email: "", firstName: "", lastName: "", courseIds: [], subscriptionDays: "30" });
+            setNewStudent({ phone: "", email: "", firstName: "", lastName: "", courseIds: [], subscriptionDays: "30", groupId: "" });
           }
         }}
       >
@@ -1018,6 +1023,25 @@ export default function AdminDashboard() {
                 <p className="text-xs text-muted-foreground">
                   Tanlangan kurslar uchun o'quvchi avtomatik ravishda yoziladi.
                 </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Guruhga biriktirish (ixtiyoriy)</Label>
+                <Select
+                  value={newStudent.groupId}
+                  onValueChange={(val) => setNewStudent({ ...newStudent, groupId: val })}
+                >
+                  <SelectTrigger data-testid="select-group">
+                    <SelectValue placeholder="Guruh tanlang..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Guruhsiz</SelectItem>
+                    {studentGroups.map((g) => (
+                      <SelectItem key={g.id} value={g.id}>
+                        {g.name} ({g.memberCount} ta a'zo)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="subscriptionDays">Obuna muddati (kunlarda)</Label>

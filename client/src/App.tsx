@@ -17,6 +17,7 @@ import AdminPayments from "@/pages/AdminPayments";
 import AdminCMSPage from "@/pages/AdminCMSPage";
 import AdminSubscriptionPlansPage from "@/pages/AdminSubscriptionPlansPage";
 import AdminSubscriptions from "@/pages/AdminSubscriptions";
+import AdminGroupsPage from "@/pages/AdminGroupsPage";
 import InstructorDashboard from "@/pages/InstructorDashboard";
 import InstructorSubscriptions from "@/pages/InstructorSubscriptions";
 import SpeakingTests from "@/pages/SpeakingTests";
@@ -96,6 +97,7 @@ function Router() {
                   <Route path="/admin/cms" component={AdminCMSPage} />
                   <Route path="/admin/subscription-plans" component={AdminSubscriptionPlansPage} />
                   <Route path="/admin/subscriptions" component={AdminSubscriptions} />
+                  <Route path="/admin/groups" component={AdminGroupsPage} />
                   <Route path="/learn/:courseId" component={LearningPage} />
                 </>
               )}
