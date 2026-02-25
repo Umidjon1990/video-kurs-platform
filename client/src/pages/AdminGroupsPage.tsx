@@ -416,7 +416,7 @@ export default function AdminGroupsPage() {
                 Bu guruhda hali a'zo yo'q
               </div>
             ) : (
-              <ScrollArea className="flex-1 min-h-0 border rounded-md">
+              <ScrollArea className="h-[50vh] border rounded-md">
                 <Table>
                   <TableHeader>
                     <TableRow>
