@@ -214,6 +214,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const userId = user.claims.sub;
           const currentSessionId = req.sessionID;
           console.log(`[Session Management] User ${userId} logged in with session ${currentSessionId}`);
+
+          // Enforce max 2 active sessions per user — remove oldest if exceeded
+          const MAX_SESSIONS = 2;
+          const activeSessions = await db.execute(
+            sql`SELECT sid, expire FROM sessions WHERE sess->'passport'->>'user' = ${userId} AND expire > NOW() AND sid != ${currentSessionId} ORDER BY expire ASC`
+          );
+          const rows = activeSessions.rows as { sid: string }[];
+          if (rows.length >= MAX_SESSIONS) {
+            const toDelete = rows.slice(0, rows.length - MAX_SESSIONS + 1);
+            for (const row of toDelete) {
+              await db.execute(sql`DELETE FROM sessions WHERE sid = ${row.sid}`);
+              console.log(`[Session Management] Removed old session ${row.sid} for user ${userId}`);
+            }
+          }
         } catch (sessionError: any) {
           console.error('[Session Management] Error:', sessionError);
         }
@@ -388,6 +402,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const stats = await storage.getStats();
       res.json(stats);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Active session count per user (device count)
+  app.get('/api/admin/user-sessions', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const result = await db.execute(
+        sql`SELECT sess->'passport'->>'user' as user_id, count(*)::int as session_count FROM sessions WHERE expire > NOW() AND sess->'passport'->>'user' IS NOT NULL GROUP BY user_id`
+      );
+      const counts: Record<string, number> = {};
+      for (const row of result.rows as { user_id: string; session_count: number }[]) {
+        if (row.user_id) counts[row.user_id] = row.session_count;
+      }
+      res.json(counts);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

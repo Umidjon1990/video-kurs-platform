@@ -131,6 +131,12 @@ export default function AdminDashboard() {
     enabled: isAuthenticated,
   });
 
+  const { data: sessionCounts = {} } = useQuery<Record<string, number>>({
+    queryKey: ["/api/admin/user-sessions"],
+    enabled: isAuthenticated,
+    refetchInterval: 30000,
+  });
+
   const { data: trends, isLoading: trendsLoading } = useQuery<Array<{
     date: string;
     enrollments: number;
@@ -864,6 +870,7 @@ export default function AdminDashboard() {
                   <TableHead>Email</TableHead>
                   <TableHead>Ism</TableHead>
                   <TableHead>Rol</TableHead>
+                  <TableHead>Qurilmalar</TableHead>
                   <TableHead>Qo'shilgan Sana</TableHead>
                   <TableHead>Amallar</TableHead>
                 </TableRow>
@@ -891,6 +898,15 @@ export default function AdminDashboard() {
                           <SelectItem value="admin">Admin</SelectItem>
                         </SelectContent>
                       </Select>
+                    </TableCell>
+                    <TableCell>
+                      {(sessionCounts[user.id] ?? 0) > 0 ? (
+                        <Badge variant="secondary" data-testid={`badge-sessions-${user.id}`}>
+                          {sessionCounts[user.id]} ta
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-'}

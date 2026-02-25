@@ -82,6 +82,12 @@ export default function AdminGroupsPage() {
     enabled: !!selectedGroup?.id && isMembersOpen,
   });
 
+  const { data: sessionCounts = {} } = useQuery<Record<string, number>>({
+    queryKey: ["/api/admin/user-sessions"],
+    enabled: isMembersOpen,
+    refetchInterval: 30000,
+  });
+
   const createGroupMutation = useMutation({
     mutationFn: async (data: { name: string; description: string }) => {
       const res = await apiRequest("POST", "/api/admin/student-groups", data);
@@ -388,15 +394,15 @@ export default function AdminGroupsPage() {
 
       {/* Group Members Dialog */}
       <Dialog open={isMembersOpen} onOpenChange={(open) => { setIsMembersOpen(open); if (!open) setSelectedGroup(null); }}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>
               {selectedGroup?.name} - A'zolari ({groupMembers.length})
             </DialogTitle>
             <DialogDescription>Guruh a'zolarini ko'ring va boshqaring</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <Button onClick={openAddMembersDialog} data-testid="button-add-members">
+          <div className="flex flex-col flex-1 min-h-0 gap-3">
+            <Button onClick={openAddMembersDialog} data-testid="button-add-members" className="flex-shrink-0 self-start">
               <UserPlus className="w-4 h-4 mr-2" />
               O'quvchi Qo'shish
             </Button>
@@ -410,19 +416,22 @@ export default function AdminGroupsPage() {
                 Bu guruhda hali a'zo yo'q
               </div>
             ) : (
-              <ScrollArea className="max-h-[400px]">
+              <ScrollArea className="flex-1 min-h-0 border rounded-md">
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-10">#</TableHead>
                       <TableHead>Ism</TableHead>
                       <TableHead>Telefon/Email</TableHead>
                       <TableHead>Qo'shilgan</TableHead>
+                      <TableHead>Qurilma</TableHead>
                       <TableHead>Amal</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {groupMembers.map((member) => (
+                    {groupMembers.map((member, index) => (
                       <TableRow key={member.id} data-testid={`row-member-${member.userId}`}>
+                        <TableCell className="text-muted-foreground text-sm font-mono">{index + 1}</TableCell>
                         <TableCell>
                           {member.firstName} {member.lastName}
                         </TableCell>
@@ -431,6 +440,13 @@ export default function AdminGroupsPage() {
                           {member.addedAt
                             ? new Date(member.addedAt).toLocaleDateString("uz-UZ")
                             : "-"}
+                        </TableCell>
+                        <TableCell>
+                          {(sessionCounts[member.userId] ?? 0) > 0 ? (
+                            <Badge variant="secondary">{sessionCounts[member.userId]} ta</Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">-</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Button
