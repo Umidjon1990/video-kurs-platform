@@ -180,6 +180,78 @@ export default function AdminDashboard() {
     userName: "",
   });
 
+  // Bulk import state
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [bulkImportText, setBulkImportText] = useState("");
+  const [bulkImportCourseIds, setBulkImportCourseIds] = useState<string[]>([]);
+  const [bulkImportGroupId, setBulkImportGroupId] = useState("");
+  const [bulkImportDays, setBulkImportDays] = useState("30");
+  const [bulkImportResult, setBulkImportResult] = useState<{
+    created: number;
+    skipped: number;
+    errors: { line: number; name: string; phone: string; reason: string }[];
+  } | null>(null);
+
+  const bulkImportMutation = useMutation({
+    mutationFn: async (payload: {
+      students: { firstName: string; lastName: string; phone: string }[];
+      courseIds: string[];
+      groupId: string;
+      subscriptionDays: string;
+    }) => {
+      const response = await apiRequest("POST", "/api/admin/bulk-import-students", payload);
+      return await response.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/student-groups"] });
+      setBulkImportResult(data);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Xatolik",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  function parseBulkText(text: string) {
+    const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+    const parsed: { firstName: string; lastName: string; phone: string }[] = [];
+    const parseErrors: { line: number; raw: string; reason: string }[] = [];
+
+    lines.forEach((line, idx) => {
+      const parts = line.split(/\s+/);
+      if (parts.length < 2) {
+        parseErrors.push({ line: idx + 1, raw: line, reason: "Ism va telefon raqam kiritilmagan" });
+        return;
+      }
+      const phone = parts[parts.length - 1];
+      const nameParts = parts.slice(0, parts.length - 1);
+      const firstName = nameParts[0];
+      const lastName = nameParts.slice(1).join(" ") || "-";
+      parsed.push({ firstName, lastName, phone });
+    });
+
+    return { parsed, parseErrors };
+  }
+
+  function handleBulkImport() {
+    const { parsed, parseErrors } = parseBulkText(bulkImportText);
+    if (parseErrors.length > 0 && parsed.length === 0) {
+      toast({ title: "Xatolik", description: "Matn formati noto'g'ri", variant: "destructive" });
+      return;
+    }
+    bulkImportMutation.mutate({
+      students: parsed,
+      courseIds: bulkImportCourseIds,
+      groupId: bulkImportGroupId,
+      subscriptionDays: bulkImportDays,
+    });
+  }
+
   const createStudentMutation = useMutation({
     mutationFn: async (data: typeof newStudent) => {
       const response = await apiRequest("POST", "/api/admin/create-student", data);
@@ -418,6 +490,22 @@ export default function AdminDashboard() {
               >
                 <BookOpen className="w-4 h-4" />
                 Kurs Biriktirish
+              </Button>
+              <Button
+                onClick={() => {
+                  setBulkImportText("");
+                  setBulkImportCourseIds([]);
+                  setBulkImportGroupId("");
+                  setBulkImportDays("30");
+                  setBulkImportResult(null);
+                  setIsBulkImportOpen(true);
+                }}
+                data-testid="button-bulk-import"
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <Users className="w-4 h-4" />
+                Ko'plab Import
               </Button>
               <Button
                 onClick={() => {
@@ -1416,6 +1504,163 @@ export default function AdminDashboard() {
               {assignCoursesMutation.isPending ? "Biriktirilmoqda..." : "Kurslarni Biriktirish"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Import Dialog */}
+      <Dialog
+        open={isBulkImportOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsBulkImportOpen(false);
+            setBulkImportResult(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col" data-testid="dialog-bulk-import">
+          <DialogHeader>
+            <DialogTitle>Ko'plab O'quvchi Import qilish</DialogTitle>
+            <DialogDescription>
+              Har bir qatorda: <strong>Ism Familiya TelefonRaqam</strong> formatida kiriting.
+              Login va parol avtomatik telefon raqami bo'ladi.
+            </DialogDescription>
+          </DialogHeader>
+
+          {bulkImportResult ? (
+            <div className="flex-1 overflow-y-auto space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="text-2xl font-bold text-green-600">{bulkImportResult.created}</div>
+                    <div className="text-sm text-muted-foreground">Muvaffaqiyatli yaratildi</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="text-2xl font-bold text-amber-600">{bulkImportResult.skipped}</div>
+                    <div className="text-sm text-muted-foreground">O'tkazib yuborildi</div>
+                  </CardContent>
+                </Card>
+              </div>
+              {bulkImportResult.errors.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Muammolar:</p>
+                  <ScrollArea className="h-48 border rounded-md p-2">
+                    {bulkImportResult.errors.map((err, i) => (
+                      <div key={i} className="text-sm py-1 border-b last:border-0">
+                        <span className="font-medium">{err.line}-qator ({err.name}, {err.phone}):</span>{" "}
+                        <span className="text-destructive">{err.reason}</span>
+                      </div>
+                    ))}
+                  </ScrollArea>
+                </div>
+              )}
+              <DialogFooter>
+                <Button onClick={() => { setIsBulkImportOpen(false); setBulkImportResult(null); }}>
+                  Yopish
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="bulk-import-text">O'quvchilar ro'yxati</Label>
+                <div className="text-xs text-muted-foreground bg-muted rounded-md p-2 font-mono leading-relaxed">
+                  Ahmadov Jasur 901234567<br />
+                  Karimova Malika 991234568<br />
+                  Toshmatov Ali Vali 881234569
+                </div>
+                <textarea
+                  id="bulk-import-text"
+                  className="w-full min-h-[200px] p-3 text-sm border rounded-md bg-background resize-y font-mono focus:outline-none focus:ring-2 focus:ring-ring"
+                  placeholder={"Ahmadov Jasur 901234567\nKarimova Malika 991234568\n..."}
+                  value={bulkImportText}
+                  onChange={(e) => setBulkImportText(e.target.value)}
+                  data-testid="textarea-bulk-import"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Jami: {bulkImportText.split("\n").filter((l) => l.trim()).length} ta qator
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Kurslar (ixtiyoriy)</Label>
+                <ScrollArea className="h-36 border rounded-md p-2">
+                  {Array.isArray(courses) && courses.length > 0 ? (
+                    courses.map((course) => (
+                      <div key={course.id} className="flex items-center gap-2 py-1">
+                        <Checkbox
+                          id={`bulk-course-${course.id}`}
+                          checked={bulkImportCourseIds.includes(course.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setBulkImportCourseIds((prev) => [...prev, course.id]);
+                            } else {
+                              setBulkImportCourseIds((prev) => prev.filter((id) => id !== course.id));
+                            }
+                          }}
+                          data-testid={`checkbox-bulk-course-${course.id}`}
+                        />
+                        <label htmlFor={`bulk-course-${course.id}`} className="text-sm cursor-pointer">
+                          {course.title}
+                        </label>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Kurslar topilmadi</p>
+                  )}
+                </ScrollArea>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="bulk-import-group">Guruh (ixtiyoriy)</Label>
+                  <Select value={bulkImportGroupId} onValueChange={setBulkImportGroupId}>
+                    <SelectTrigger data-testid="select-bulk-group">
+                      <SelectValue placeholder="Guruh tanlang" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Guruhsiz</SelectItem>
+                      {studentGroups.map((group) => (
+                        <SelectItem key={group.id} value={group.id}>
+                          {group.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="bulk-import-days">Obuna muddati (kun)</Label>
+                  <Input
+                    id="bulk-import-days"
+                    type="number"
+                    min="1"
+                    value={bulkImportDays}
+                    onChange={(e) => setBulkImportDays(e.target.value)}
+                    data-testid="input-bulk-days"
+                  />
+                </div>
+              </div>
+
+              <DialogFooter className="border-t pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsBulkImportOpen(false)}
+                  data-testid="button-cancel-bulk-import"
+                >
+                  Bekor qilish
+                </Button>
+                <Button
+                  onClick={handleBulkImport}
+                  disabled={bulkImportMutation.isPending || !bulkImportText.trim()}
+                  data-testid="button-submit-bulk-import"
+                >
+                  {bulkImportMutation.isPending ? "Import qilinmoqda..." : "Import qilish"}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

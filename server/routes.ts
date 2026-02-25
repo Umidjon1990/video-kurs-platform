@@ -889,6 +889,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk import students
+  app.post('/api/admin/bulk-import-students', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { students, courseIds, groupId, subscriptionDays } = req.body;
+
+      const bulkImportSchema = z.object({
+        students: z.array(z.object({
+          firstName: z.string().min(1),
+          lastName: z.string().min(1),
+          phone: z.string().min(1),
+        })).min(1, 'Kamida bitta o\'quvchi kiritish shart'),
+        courseIds: z.preprocess(
+          (val) => (val === '' || val === undefined || val === null || (Array.isArray(val) && val.length === 0)) ? undefined : val,
+          z.array(z.string()).optional()
+        ),
+        groupId: z.preprocess(
+          (val) => (val === '' || val === undefined || val === null || val === 'none') ? undefined : val,
+          z.string().optional()
+        ),
+        subscriptionDays: z.preprocess(
+          (val) => (val === '' || val === undefined || val === null) ? 30 : Number(val),
+          z.number().min(1).default(30)
+        ),
+      });
+
+      const validated = bulkImportSchema.parse({ students, courseIds, groupId, subscriptionDays });
+
+      let created = 0;
+      let skipped = 0;
+      const errors: { line: number; name: string; phone: string; reason: string }[] = [];
+
+      // Get default subscription plan once
+      const [defaultPlan] = await db.select().from(subscriptionPlans).limit(1);
+
+      for (let i = 0; i < validated.students.length; i++) {
+        const student = validated.students[i];
+        const lineNum = i + 1;
+
+        try {
+          // Check duplicate phone
+          const existing = await storage.getUserByPhoneOrEmail(student.phone);
+          if (existing) {
+            skipped++;
+            errors.push({ line: lineNum, name: `${student.firstName} ${student.lastName}`, phone: student.phone, reason: 'Bu telefon raqam allaqachon mavjud' });
+            continue;
+          }
+
+          const passwordHash = await bcrypt.hash(student.phone, 10);
+
+          await db.transaction(async (tx: any) => {
+            const [createdUser] = await tx
+              .insert(users)
+              .values({
+                phone: student.phone,
+                passwordHash,
+                firstName: student.firstName,
+                lastName: student.lastName,
+                role: 'student',
+                status: 'active',
+              })
+              .returning();
+
+            if (validated.courseIds && validated.courseIds.length > 0 && defaultPlan) {
+              for (const courseId of validated.courseIds) {
+                const [enrollment] = await tx
+                  .insert(enrollments)
+                  .values({
+                    userId: createdUser.id,
+                    courseId,
+                    planId: defaultPlan.id,
+                    paymentStatus: 'approved',
+                  })
+                  .returning();
+
+                const startDate = new Date();
+                const endDate = new Date();
+                endDate.setDate(endDate.getDate() + validated.subscriptionDays);
+
+                await tx.insert(userSubscriptions).values({
+                  userId: createdUser.id,
+                  courseId,
+                  planId: defaultPlan.id,
+                  enrollmentId: enrollment.id,
+                  status: 'active',
+                  startDate,
+                  endDate,
+                });
+              }
+            }
+
+            if (validated.groupId) {
+              await tx.insert(studentGroupMembers).values({
+                groupId: validated.groupId,
+                userId: createdUser.id,
+              });
+            }
+          });
+
+          created++;
+        } catch (err: any) {
+          skipped++;
+          errors.push({ line: lineNum, name: `${student.firstName} ${student.lastName}`, phone: student.phone, reason: err.message || 'Noma\'lum xato' });
+        }
+      }
+
+      res.json({ created, skipped, errors });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Assign courses to existing student
   app.post('/api/admin/assign-courses', isAuthenticated, isAdmin, async (req, res) => {
     try {
