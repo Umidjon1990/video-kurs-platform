@@ -863,12 +863,12 @@ export default function AdminDashboard() {
               </p>
             </div>
           </CardHeader>
-          <CardContent>
-            <Table>
+          <CardContent className="overflow-x-auto">
+            <Table className="min-w-[700px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Email</TableHead>
                   <TableHead>Ism</TableHead>
+                  <TableHead>Telefon/Email</TableHead>
                   <TableHead>Rol</TableHead>
                   <TableHead>Qurilmalar</TableHead>
                   <TableHead>Qo'shilgan Sana</TableHead>
@@ -878,9 +878,11 @@ export default function AdminDashboard() {
               <TableBody>
                 {users?.map((user) => (
                   <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
-                    <TableCell data-testid={`text-user-email-${user.id}`}>{user.email}</TableCell>
                     <TableCell>
                       {user.firstName} {user.lastName}
+                    </TableCell>
+                    <TableCell data-testid={`text-user-email-${user.id}`} className="text-sm text-muted-foreground">
+                      {user.phone || user.email || "-"}
                     </TableCell>
                     <TableCell>
                       <Select
