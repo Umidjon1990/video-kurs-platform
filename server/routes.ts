@@ -1409,6 +1409,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get student enrollments with course info
+  app.get('/api/admin/students/:userId/enrollments', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const userEnrollments = await storage.getEnrollmentsByUser(userId);
+      const allCourses = await storage.getCourses();
+      const courseMap = new Map(allCourses.map(c => [c.id, c.title]));
+      const result = userEnrollments.map(e => ({
+        id: e.id,
+        courseId: e.courseId,
+        courseTitle: courseMap.get(e.courseId) || 'Noma\'lum kurs',
+        paymentStatus: e.paymentStatus,
+        enrolledAt: e.enrolledAt,
+      }));
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Delete enrollment (admin)
+  app.delete('/api/admin/enrollments/:enrollmentId', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { enrollmentId } = req.params;
+      await storage.deleteEnrollment(enrollmentId);
+      res.json({ message: "Kurs yozilishi o'chirildi" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Get all courses (for admin - student creation form)
   app.get('/api/courses', isAuthenticated, async (req: any, res) => {
     try {

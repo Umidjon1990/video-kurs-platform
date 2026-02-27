@@ -70,6 +70,13 @@ export default function AdminDashboard() {
     password: string;
   } | null>(null);
   
+  // Manage student enrollments (remove courses)
+  const [manageEnrollmentsDialog, setManageEnrollmentsDialog] = useState<{
+    isOpen: boolean;
+    userId: string;
+    userName: string;
+  } | null>(null);
+
   // Assign courses to existing student
   const [isAssignCoursesOpen, setIsAssignCoursesOpen] = useState(false);
   const [assignCoursesData, setAssignCoursesData] = useState({
@@ -387,6 +394,27 @@ export default function AdminDashboard() {
         description: error.message,
         variant: "destructive",
       });
+    },
+  });
+
+  // Fetch enrollments for a specific student
+  const { data: studentEnrollments = [], isLoading: enrollmentsLoading } = useQuery<{
+    id: string; courseId: string; courseTitle: string; paymentStatus: string; enrolledAt: string;
+  }[]>({
+    queryKey: ["/api/admin/students", manageEnrollmentsDialog?.userId, "enrollments"],
+    enabled: !!manageEnrollmentsDialog?.isOpen && !!manageEnrollmentsDialog?.userId,
+  });
+
+  const removeEnrollmentMutation = useMutation({
+    mutationFn: async (enrollmentId: string) => {
+      await apiRequest("DELETE", `/api/admin/enrollments/${enrollmentId}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/students", manageEnrollmentsDialog?.userId, "enrollments"] });
+      toast({ title: "Muvaffaqiyatli", description: "Kurs o'chirildi" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
     },
   });
 
@@ -914,7 +942,18 @@ export default function AdminDashboard() {
                       {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-'}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {user.role === 'student' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setManageEnrollmentsDialog({ isOpen: true, userId: user.id, userName: `${user.firstName} ${user.lastName}` })}
+                            data-testid={`button-manage-enrollments-${user.id}`}
+                          >
+                            <BookOpen className="w-4 h-4 mr-1" />
+                            Kurslar
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"
@@ -1730,6 +1769,73 @@ export default function AdminDashboard() {
               data-testid="button-confirm-delete"
             >
               {deleteUserMutation.isPending ? "O'chirilmoqda..." : "Ha, O'chirish"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manage Enrollments Dialog */}
+      <Dialog
+        open={!!manageEnrollmentsDialog?.isOpen}
+        onOpenChange={(open) => { if (!open) setManageEnrollmentsDialog(null); }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{manageEnrollmentsDialog?.userName} — Kurslar</DialogTitle>
+            <DialogDescription>O'quvchiga biriktirilgan kurslarni ko'ring yoki o'chiring</DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            {enrollmentsLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin w-6 h-6 border-4 border-primary border-t-transparent rounded-full" />
+              </div>
+            ) : studentEnrollments.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Bu o'quvchiga hech qanday kurs biriktirilmagan
+              </div>
+            ) : (
+              <div className="overflow-y-auto max-h-[55vh] border rounded-md">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>#</TableHead>
+                      <TableHead>Kurs nomi</TableHead>
+                      <TableHead>Holat</TableHead>
+                      <TableHead>Amal</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {studentEnrollments.map((enrollment, idx) => (
+                      <TableRow key={enrollment.id}>
+                        <TableCell className="text-muted-foreground text-sm">{idx + 1}</TableCell>
+                        <TableCell className="font-medium">{enrollment.courseTitle}</TableCell>
+                        <TableCell>
+                          <Badge variant={enrollment.paymentStatus === 'approved' ? 'default' : 'secondary'}>
+                            {enrollment.paymentStatus === 'approved' ? 'Tasdiqlangan' :
+                             enrollment.paymentStatus === 'pending' ? 'Kutilmoqda' : 'Rad etilgan'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => removeEnrollmentMutation.mutate(enrollment.id)}
+                            disabled={removeEnrollmentMutation.isPending}
+                            data-testid={`button-remove-enrollment-${enrollment.id}`}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setManageEnrollmentsDialog(null)}>
+              Yopish
             </Button>
           </DialogFooter>
         </DialogContent>

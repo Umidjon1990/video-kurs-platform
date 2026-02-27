@@ -189,6 +189,7 @@ export interface IStorage {
   getEnrolledCourses(userId: string): Promise<Course[]>;
   getPendingPayments(): Promise<any[]>;
   updateEnrollmentStatus(enrollmentId: string, status: string): Promise<Enrollment>;
+  deleteEnrollment(enrollmentId: string): Promise<void>;
   
   // Submission operations
   createSubmission(submission: InsertSubmission): Promise<Submission>;
@@ -1092,6 +1093,11 @@ export class DatabaseStorage implements IStorage {
     }
     
     return enrollment;
+  }
+
+  async deleteEnrollment(enrollmentId: string): Promise<void> {
+    await db.delete(userSubscriptions).where(eq(userSubscriptions.enrollmentId, enrollmentId));
+    await db.delete(enrollments).where(eq(enrollments.id, enrollmentId));
   }
 
   // Submission operations
