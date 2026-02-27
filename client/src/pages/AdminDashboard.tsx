@@ -229,15 +229,15 @@ export default function AdminDashboard() {
     const parseErrors: { line: number; raw: string; reason: string }[] = [];
 
     lines.forEach((line, idx) => {
-      const parts = line.split(/\s+/);
+      const parts = line.trim().split(/\s+/).filter(Boolean);
       if (parts.length < 2) {
         parseErrors.push({ line: idx + 1, raw: line, reason: "Ism va telefon raqam kiritilmagan" });
         return;
       }
-      const phone = parts[parts.length - 1];
+      const phone = parts[parts.length - 1].trim();
       const nameParts = parts.slice(0, parts.length - 1);
-      const firstName = nameParts[0];
-      const lastName = nameParts.slice(1).join(" ") || "-";
+      const firstName = nameParts[0].trim();
+      const lastName = nameParts.slice(1).join(" ").trim() || "-";
       parsed.push({ firstName, lastName, phone });
     });
 
@@ -969,7 +969,7 @@ export default function AdminDashboard() {
           }
         }}
       >
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Yangi O'quvchi Yaratish</DialogTitle>
             <DialogDescription>

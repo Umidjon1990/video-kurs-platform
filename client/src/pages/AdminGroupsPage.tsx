@@ -394,15 +394,15 @@ export default function AdminGroupsPage() {
 
       {/* Group Members Dialog */}
       <Dialog open={isMembersOpen} onOpenChange={(open) => { setIsMembersOpen(open); if (!open) setSelectedGroup(null); }}>
-        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
-          <DialogHeader className="flex-shrink-0">
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
             <DialogTitle>
               {selectedGroup?.name} - A'zolari ({groupMembers.length})
             </DialogTitle>
             <DialogDescription>Guruh a'zolarini ko'ring va boshqaring</DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col flex-1 min-h-0 gap-3">
-            <Button onClick={openAddMembersDialog} data-testid="button-add-members" className="flex-shrink-0 self-start">
+          <div className="flex flex-col gap-3">
+            <Button onClick={openAddMembersDialog} data-testid="button-add-members" className="self-start">
               <UserPlus className="w-4 h-4 mr-2" />
               O'quvchi Qo'shish
             </Button>
@@ -416,7 +416,7 @@ export default function AdminGroupsPage() {
                 Bu guruhda hali a'zo yo'q
               </div>
             ) : (
-              <ScrollArea className="h-[50vh] border rounded-md">
+              <div className="overflow-y-auto max-h-[55vh] border rounded-md">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -468,7 +468,7 @@ export default function AdminGroupsPage() {
                     ))}
                   </TableBody>
                 </Table>
-              </ScrollArea>
+              </div>
             )}
           </div>
         </DialogContent>
