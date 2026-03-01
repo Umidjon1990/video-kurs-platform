@@ -6,17 +6,27 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Users, Circle, MessageCircle, Loader2 } from "lucide-react";
+import { Send, Users, Circle, MessageCircle, Loader2, Trash2, CornerDownLeft, X } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+
+interface ReplyInfo {
+  id: string;
+  message: string | null;
+  isDeleted: boolean;
+  sender: { id: string; firstName: string; lastName: string } | null;
+}
 
 interface ChatMessage {
   id: string;
   courseId: string;
   senderId: string;
-  message: string;
+  groupId: string | null;
+  replyToId: string | null;
+  message: string | null;
   messageType: string;
+  isDeleted: boolean;
   createdAt: string;
   sender: {
     id: string;
@@ -25,6 +35,7 @@ interface ChatMessage {
     profileImageUrl: string | null;
     role: string;
   } | null;
+  replyTo: ReplyInfo | null;
 }
 
 interface OnlineUser {
@@ -39,26 +50,30 @@ interface OnlineUser {
 interface CourseGroupChatProps {
   courseId: string;
   currentUserId: string;
+  currentUserRole?: string;
+  groupId?: string | null;
   isOpen?: boolean;
   onToggle?: () => void;
 }
 
-export function CourseGroupChat({ courseId, currentUserId, isOpen = true, onToggle }: CourseGroupChatProps) {
+export function CourseGroupChat({ courseId, currentUserId, currentUserRole, groupId, isOpen = true, onToggle }: CourseGroupChatProps) {
   const { toast } = useToast();
   const [newMessage, setNewMessage] = useState("");
-  const [lastPollTime, setLastPollTime] = useState<Date | null>(null);
+  const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  const gParam = groupId ? `groupId=${groupId}` : "";
 
   const { data: messages = [], isLoading: messagesLoading } = useQuery<ChatMessage[]>({
-    queryKey: ['/api/courses', courseId, 'group-chat'],
+    queryKey: ['/api/courses', courseId, 'group-chat', groupId ?? 'general'],
     queryFn: async () => {
-      const res = await fetch(`/api/courses/${courseId}/group-chat`);
+      const res = await fetch(`/api/courses/${courseId}/group-chat${gParam ? '?' + gParam : ''}`);
       if (!res.ok) throw new Error('Failed to fetch messages');
       return res.json();
     },
     enabled: isOpen && !!courseId,
-    refetchInterval: 5000,
+    refetchInterval: 4000,
   });
 
   const { data: onlineUsers = [] } = useQuery<OnlineUser[]>({
@@ -73,10 +88,10 @@ export function CourseGroupChat({ courseId, currentUserId, isOpen = true, onTogg
   });
 
   const sendMessageMutation = useMutation({
-    mutationFn: async (message: string) => {
+    mutationFn: async ({ message, replyToId }: { message: string; replyToId?: string }) => {
       const res = await fetch(`/api/courses/${courseId}/group-chat`, {
         method: 'POST',
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message, groupId: groupId ?? null, replyToId: replyToId ?? null }),
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
       });
@@ -88,14 +103,28 @@ export function CourseGroupChat({ courseId, currentUserId, isOpen = true, onTogg
     },
     onSuccess: () => {
       setNewMessage("");
-      queryClient.invalidateQueries({ queryKey: ['/api/courses', courseId, 'group-chat'] });
+      setReplyingTo(null);
+      queryClient.invalidateQueries({ queryKey: ['/api/courses', courseId, 'group-chat', groupId ?? 'general'] });
     },
     onError: (error: any) => {
-      toast({
-        title: "Xatolik",
-        description: error.message || "Xabar yuborib bo'lmadi",
-        variant: "destructive",
+      toast({ title: "Xatolik", description: error.message || "Xabar yuborib bo'lmadi", variant: "destructive" });
+    },
+  });
+
+  const deleteMessageMutation = useMutation({
+    mutationFn: async (messageId: string) => {
+      const res = await fetch(`/api/courses/${courseId}/group-chat/${messageId}`, {
+        method: 'DELETE',
+        credentials: 'include',
       });
+      if (!res.ok) throw new Error('Failed to delete');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/courses', courseId, 'group-chat', groupId ?? 'general'] });
+    },
+    onError: () => {
+      toast({ title: "Xatolik", description: "Xabarni o'chirib bo'lmadi", variant: "destructive" });
     },
   });
 
@@ -107,7 +136,6 @@ export function CourseGroupChat({ courseId, currentUserId, isOpen = true, onTogg
         body: JSON.stringify({ courseId }),
       }).catch(() => {});
     }
-
     const interval = setInterval(() => {
       if (isOpen && courseId) {
         fetch('/api/presence/heartbeat', {
@@ -117,7 +145,6 @@ export function CourseGroupChat({ courseId, currentUserId, isOpen = true, onTogg
         }).catch(() => {});
       }
     }, 30000);
-
     return () => clearInterval(interval);
   }, [isOpen, courseId]);
 
@@ -128,7 +155,13 @@ export function CourseGroupChat({ courseId, currentUserId, isOpen = true, onTogg
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
-    sendMessageMutation.mutate(newMessage.trim());
+    sendMessageMutation.mutate({ message: newMessage.trim(), replyToId: replyingTo?.id });
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Escape' && replyingTo) {
+      setReplyingTo(null);
+    }
   };
 
   const formatTime = (dateString: string) => {
@@ -141,6 +174,12 @@ export function CourseGroupChat({ courseId, currentUserId, isOpen = true, onTogg
 
   const getInitials = (firstName?: string, lastName?: string) => {
     return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase() || '?';
+  };
+
+  const canDelete = (msg: ChatMessage) => {
+    if (msg.isDeleted) return false;
+    if (currentUserRole === 'admin' || currentUserRole === 'instructor') return true;
+    return msg.senderId === currentUserId;
   };
 
   if (!isOpen) {
@@ -164,18 +203,16 @@ export function CourseGroupChat({ courseId, currentUserId, isOpen = true, onTogg
             <MessageCircle className="h-5 w-5 text-primary" />
             <CardTitle className="text-base">Guruh Suhbati</CardTitle>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="flex items-center gap-1">
-              <Circle className="h-2 w-2 fill-green-500 text-green-500" />
-              <span>{onlineUsers.length} online</span>
-            </Badge>
-          </div>
+          <Badge variant="secondary" className="flex items-center gap-1">
+            <Circle className="h-2 w-2 fill-green-500 text-green-500" />
+            <span>{onlineUsers.length} online</span>
+          </Badge>
         </div>
       </CardHeader>
 
       <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
         <div className="flex-1 overflow-hidden">
-          <ScrollArea className="h-full p-3" ref={scrollAreaRef}>
+          <ScrollArea className="h-full p-3">
             {messagesLoading ? (
               <div className="flex items-center justify-center h-full">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -187,23 +224,28 @@ export function CourseGroupChat({ courseId, currentUserId, isOpen = true, onTogg
                 <p className="text-xs">Birinchi xabarni yuboring!</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-1">
                 {messages.map((msg) => {
-                  const isOwnMessage = msg.senderId === currentUserId;
+                  const isOwn = msg.senderId === currentUserId;
+                  const isHovered = hoveredId === msg.id;
+
                   return (
                     <div
                       key={msg.id}
-                      className={`flex gap-2 ${isOwnMessage ? 'flex-row-reverse' : ''}`}
+                      className={`flex gap-2 group relative ${isOwn ? 'flex-row-reverse' : ''}`}
                       data-testid={`message-${msg.id}`}
+                      onMouseEnter={() => setHoveredId(msg.id)}
+                      onMouseLeave={() => setHoveredId(null)}
                     >
-                      <Avatar className="h-8 w-8 flex-shrink-0">
+                      <Avatar className="h-8 w-8 flex-shrink-0 mt-1">
                         <AvatarImage src={msg.sender?.profileImageUrl || undefined} />
                         <AvatarFallback className="text-xs">
                           {getInitials(msg.sender?.firstName, msg.sender?.lastName)}
                         </AvatarFallback>
                       </Avatar>
-                      <div className={`flex flex-col max-w-[75%] ${isOwnMessage ? 'items-end' : ''}`}>
-                        <div className="flex items-center gap-1.5 mb-0.5">
+
+                      <div className={`flex flex-col max-w-[75%] ${isOwn ? 'items-end' : ''}`}>
+                        <div className={`flex items-center gap-1.5 mb-0.5 ${isOwn ? 'flex-row-reverse' : ''}`}>
                           <span className="text-xs font-medium">
                             {msg.sender?.firstName} {msg.sender?.lastName}
                           </span>
@@ -212,19 +254,64 @@ export function CourseGroupChat({ courseId, currentUserId, isOpen = true, onTogg
                               O'qituvchi
                             </Badge>
                           )}
-                          <span className="text-[10px] text-muted-foreground">
-                            {formatTime(msg.createdAt)}
-                          </span>
+                          <span className="text-[10px] text-muted-foreground">{formatTime(msg.createdAt)}</span>
                         </div>
+
+                        {msg.replyTo && (
+                          <div className={`mb-1 px-2 py-1 rounded border-l-2 border-primary bg-muted/60 text-xs max-w-full ${isOwn ? 'text-right border-l-0 border-r-2' : ''}`}>
+                            <span className="font-medium text-primary">
+                              {msg.replyTo.sender?.firstName} {msg.replyTo.sender?.lastName}
+                            </span>
+                            <p className="text-muted-foreground truncate">
+                              {msg.replyTo.isDeleted ? <em>Xabar o'chirildi</em> : msg.replyTo.message}
+                            </p>
+                          </div>
+                        )}
+
                         <div
-                          className={`rounded-lg px-3 py-2 text-sm ${
-                            isOwnMessage
+                          className={`rounded-2xl px-3 py-2 text-sm leading-relaxed ${
+                            msg.isDeleted
+                              ? 'italic text-muted-foreground bg-muted/40 border border-dashed'
+                              : isOwn
                               ? 'bg-primary text-primary-foreground'
                               : 'bg-muted'
                           }`}
                         >
-                          {msg.message}
+                          {msg.isDeleted ? "Xabar o'chirildi" : msg.message}
                         </div>
+                      </div>
+
+                      {/* Action buttons — hover shows */}
+                      <div
+                        className={`flex items-center gap-0.5 self-center transition-all ${
+                          isHovered ? 'visible opacity-100' : 'invisible opacity-0'
+                        } ${isOwn ? 'mr-1' : 'ml-1'}`}
+                      >
+                        {!msg.isDeleted && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                            title="Javob berish"
+                            onClick={() => setReplyingTo(msg)}
+                            data-testid={`button-reply-${msg.id}`}
+                          >
+                            <CornerDownLeft className="h-3 w-3" />
+                          </Button>
+                        )}
+                        {canDelete(msg) && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6 text-destructive"
+                            title="O'chirish"
+                            onClick={() => deleteMessageMutation.mutate(msg.id)}
+                            disabled={deleteMessageMutation.isPending}
+                            data-testid={`button-delete-${msg.id}`}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   );
@@ -235,11 +322,33 @@ export function CourseGroupChat({ courseId, currentUserId, isOpen = true, onTogg
           </ScrollArea>
         </div>
 
+        {/* Reply bar */}
+        {replyingTo && (
+          <div className="mx-3 mb-1 flex items-start justify-between gap-2 rounded-md border-l-4 border-primary bg-muted/60 px-3 py-2 text-xs">
+            <div className="min-w-0">
+              <p className="font-medium text-primary">
+                {replyingTo.sender?.firstName} {replyingTo.sender?.lastName}
+              </p>
+              <p className="truncate text-muted-foreground">{replyingTo.message}</p>
+            </div>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-5 w-5 flex-shrink-0"
+              onClick={() => setReplyingTo(null)}
+              data-testid="button-cancel-reply"
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
+
         <div className="p-3 border-t flex-shrink-0">
           <form onSubmit={handleSendMessage} className="flex gap-2">
             <Input
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="Xabar yozing..."
               className="flex-1"
               disabled={sendMessageMutation.isPending}
@@ -290,9 +399,7 @@ export function OnlineUsersList({ courseId }: { courseId: string }) {
       </CardHeader>
       <CardContent className="p-3">
         {onlineUsers.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-2">
-            Hozirda hech kim online emas
-          </p>
+          <p className="text-xs text-muted-foreground text-center py-2">Hozirda hech kim online emas</p>
         ) : (
           <div className="space-y-2">
             {onlineUsers.map((user) => (
@@ -300,20 +407,14 @@ export function OnlineUsersList({ courseId }: { courseId: string }) {
                 <div className="relative">
                   <Avatar className="h-7 w-7">
                     <AvatarImage src={user.profileImageUrl || undefined} />
-                    <AvatarFallback className="text-[10px]">
-                      {getInitials(user.firstName, user.lastName)}
-                    </AvatarFallback>
+                    <AvatarFallback className="text-[10px]">{getInitials(user.firstName, user.lastName)}</AvatarFallback>
                   </Avatar>
                   <Circle className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 fill-green-500 text-green-500" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium truncate">
-                    {user.firstName} {user.lastName}
-                  </p>
+                  <p className="text-xs font-medium truncate">{user.firstName} {user.lastName}</p>
                   {user.role === 'instructor' && (
-                    <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5">
-                      O'qituvchi
-                    </Badge>
+                    <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5">O'qituvchi</Badge>
                   )}
                 </div>
               </div>

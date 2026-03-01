@@ -2855,39 +2855,61 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
   
-  async getCourseGroupChats(courseId: string, limit: number = 50, offset: number = 0): Promise<CourseGroupChat[]> {
+  async getCourseGroupChats(courseId: string, limit: number = 50, offset: number = 0, groupId?: string | null): Promise<CourseGroupChat[]> {
+    const conditions = [eq(courseGroupChats.courseId, courseId)];
+    if (groupId) {
+      conditions.push(eq(courseGroupChats.groupId, groupId));
+    } else {
+      conditions.push(sql`${courseGroupChats.groupId} IS NULL`);
+    }
     return await db
       .select()
       .from(courseGroupChats)
-      .where(and(
-        eq(courseGroupChats.courseId, courseId),
-        eq(courseGroupChats.isDeleted, false)
-      ))
+      .where(and(...conditions))
       .orderBy(desc(courseGroupChats.createdAt))
       .limit(limit)
       .offset(offset);
   }
   
-  async getCourseGroupChatsSince(courseId: string, sinceTime: Date): Promise<CourseGroupChat[]> {
+  async getCourseGroupChatsSince(courseId: string, sinceTime: Date, groupId?: string | null): Promise<CourseGroupChat[]> {
+    const conditions = [
+      eq(courseGroupChats.courseId, courseId),
+      sql`${courseGroupChats.createdAt} > ${sinceTime}`,
+    ];
+    if (groupId) {
+      conditions.push(eq(courseGroupChats.groupId, groupId));
+    } else {
+      conditions.push(sql`${courseGroupChats.groupId} IS NULL`);
+    }
     return await db
       .select()
       .from(courseGroupChats)
-      .where(and(
-        eq(courseGroupChats.courseId, courseId),
-        eq(courseGroupChats.isDeleted, false),
-        sql`${courseGroupChats.createdAt} > ${sinceTime}`
-      ))
+      .where(and(...conditions))
       .orderBy(courseGroupChats.createdAt);
   }
+
+  async getCourseGroupChatById(id: string): Promise<CourseGroupChat | null> {
+    const [result] = await db.select().from(courseGroupChats).where(eq(courseGroupChats.id, id));
+    return result || null;
+  }
   
-  async deleteCourseGroupChat(id: string, senderId: string): Promise<void> {
-    await db
-      .update(courseGroupChats)
-      .set({ isDeleted: true })
-      .where(and(
-        eq(courseGroupChats.id, id),
-        eq(courseGroupChats.senderId, senderId)
-      ));
+  async deleteCourseGroupChat(id: string, userId: string, userRole: string): Promise<void> {
+    if (userRole === 'admin' || userRole === 'instructor') {
+      await db.update(courseGroupChats).set({ isDeleted: true }).where(eq(courseGroupChats.id, id));
+    } else {
+      await db.update(courseGroupChats).set({ isDeleted: true }).where(and(eq(courseGroupChats.id, id), eq(courseGroupChats.senderId, userId)));
+    }
+  }
+
+  async getCourseEnrollmentGroupsForInstructor(courseId: string): Promise<{ groupId: string; groupName: string }[]> {
+    const enrollmentRows = await db
+      .select({ groupId: enrollments.groupId })
+      .from(enrollments)
+      .where(and(eq(enrollments.courseId, courseId), sql`${enrollments.groupId} IS NOT NULL`));
+    const uniqueGroupIds = [...new Set(enrollmentRows.map(r => r.groupId).filter(Boolean))] as string[];
+    if (uniqueGroupIds.length === 0) return [];
+    const groups = await db.select().from(studentGroups).where(inArray(studentGroups.id, uniqueGroupIds));
+    return groups.map(g => ({ groupId: g.id, groupName: g.name }));
   }
   
   // ============ USER PRESENCE OPERATIONS ============

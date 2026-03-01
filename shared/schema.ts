@@ -1268,9 +1268,11 @@ export const courseGroupChats = pgTable("course_group_chats", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: 'cascade' }),
   senderId: varchar("sender_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  groupId: varchar("group_id").references(() => studentGroups.id, { onDelete: 'cascade' }),
+  replyToId: varchar("reply_to_id"),
   message: text("message").notNull(),
-  messageType: varchar("message_type", { length: 20 }).notNull().default('text'), // text, image, file
-  fileUrl: text("file_url"), // Fayl yoki rasm URL
+  messageType: varchar("message_type", { length: 20 }).notNull().default('text'),
+  fileUrl: text("file_url"),
   isDeleted: boolean("is_deleted").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -1278,6 +1280,8 @@ export const courseGroupChats = pgTable("course_group_chats", {
 export const courseGroupChatsRelations = relations(courseGroupChats, ({ one }) => ({
   course: one(courses, { fields: [courseGroupChats.courseId], references: [courses.id] }),
   sender: one(users, { fields: [courseGroupChats.senderId], references: [users.id] }),
+  group: one(studentGroups, { fields: [courseGroupChats.groupId], references: [studentGroups.id] }),
+  replyTo: one(courseGroupChats, { fields: [courseGroupChats.replyToId], references: [courseGroupChats.id] }),
 }));
 
 export const insertCourseGroupChatSchema = createInsertSchema(courseGroupChats).omit({

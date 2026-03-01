@@ -254,6 +254,19 @@ export default function InstructorDashboard() {
     enabled: !!selectedCourse,
   });
 
+  // Course groups for chat channels
+  const { data: courseGroups = [] } = useQuery<{ groupId: string; groupName: string }[]>({
+    queryKey: ["/api/courses", selectedCourse?.id, "groups"],
+    queryFn: async () => {
+      const res = await fetch(`/api/courses/${selectedCourse?.id}/groups`, { credentials: 'include' });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!selectedCourse?.id,
+  });
+
+  const [chatGroupId, setChatGroupId] = useState<string | null>(null);
+
   // Language levels and resource types for course filtering
   const { data: languageLevels } = useQuery<any[]>({
     queryKey: ["/api/language-levels"],
@@ -2162,11 +2175,37 @@ export default function InstructorDashboard() {
               </TabsContent>
 
               <TabsContent value="group-chat" className="space-y-4">
+                {/* Channel selector for instructor */}
+                {courseGroups.length > 0 && (
+                  <div className="flex flex-wrap gap-2 border-b pb-2">
+                    <Button
+                      variant={chatGroupId === null ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setChatGroupId(null)}
+                      data-testid="button-channel-general"
+                    >
+                      Umumiy
+                    </Button>
+                    {courseGroups.map((g) => (
+                      <Button
+                        key={g.groupId}
+                        variant={chatGroupId === g.groupId ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setChatGroupId(g.groupId)}
+                        data-testid={`button-channel-group-${g.groupId}`}
+                      >
+                        {g.groupName}
+                      </Button>
+                    ))}
+                  </div>
+                )}
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
                   <div className="lg:col-span-3">
                     <CourseGroupChat 
                       courseId={selectedCourse?.id || ''} 
-                      currentUserId={user?.id || ''} 
+                      currentUserId={user?.id || ''}
+                      currentUserRole={user?.role}
+                      groupId={chatGroupId}
                     />
                   </div>
                   <div className="lg:col-span-1">

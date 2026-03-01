@@ -5772,56 +5772,63 @@ So'zlar soni: ${submission.wordCount}`;
   // ============ COURSE GROUP CHAT ROUTES ============
   
   // Get chat messages for a course
+  // Helper: enrich messages with sender + replyTo info
+  const enrichGroupChatMessages = async (messages: any[]) => {
+    return await Promise.all(messages.map(async (msg) => {
+      const sender = await storage.getUser(msg.senderId);
+      let replyTo = null;
+      if (msg.replyToId) {
+        const replyMsg = await storage.getCourseGroupChatById(msg.replyToId);
+        if (replyMsg) {
+          const replySender = await storage.getUser(replyMsg.senderId);
+          replyTo = {
+            id: replyMsg.id,
+            message: replyMsg.isDeleted ? null : replyMsg.message,
+            isDeleted: replyMsg.isDeleted,
+            sender: replySender ? { id: replySender.id, firstName: replySender.firstName, lastName: replySender.lastName } : null,
+          };
+        }
+      }
+      return {
+        ...msg,
+        message: msg.isDeleted ? null : msg.message,
+        sender: sender ? {
+          id: sender.id,
+          firstName: sender.firstName,
+          lastName: sender.lastName,
+          profileImageUrl: sender.profileImageUrl,
+          role: sender.role,
+        } : null,
+        replyTo,
+      };
+    }));
+  };
+
   app.get('/api/courses/:courseId/group-chat', isAuthenticated, async (req: any, res) => {
     try {
       const { courseId } = req.params;
-      const { limit = 50, offset = 0 } = req.query;
+      const { limit = 50, offset = 0, groupId } = req.query;
       const userId = req.user?.id || req.user?.claims?.sub;
       const user = await storage.getUser(userId);
       
-      if (!user) {
-        return res.status(401).json({ message: 'Foydalanuvchi topilmadi' });
-      }
+      if (!user) return res.status(401).json({ message: 'Foydalanuvchi topilmadi' });
       
-      // Check if user has access to this course
       if (user.role === 'student') {
-        const enrollments = await storage.getEnrollmentsByUser(userId);
-        const hasAccess = enrollments.some(e => 
-          e.courseId === courseId && 
-          (e.paymentStatus === 'approved' || e.paymentStatus === 'confirmed')
-        );
-        if (!hasAccess) {
-          return res.status(403).json({ message: 'Bu kursga kirishga ruxsatingiz yo\'q' });
-        }
+        const userEnrollments = await storage.getEnrollmentsByUser(userId);
+        const hasAccess = userEnrollments.some(e => e.courseId === courseId && (e.paymentStatus === 'approved' || e.paymentStatus === 'confirmed'));
+        if (!hasAccess) return res.status(403).json({ message: 'Bu kursga kirishga ruxsatingiz yo\'q' });
       } else if (user.role === 'instructor') {
         const course = await storage.getCourse(courseId);
-        if (!course || course.instructorId !== userId) {
-          return res.status(403).json({ message: 'Bu kursga kirishga ruxsatingiz yo\'q' });
-        }
+        if (!course || course.instructorId !== userId) return res.status(403).json({ message: 'Bu kursga kirishga ruxsatingiz yo\'q' });
       }
       
-      // Update user presence
       await storage.updateUserPresence(userId, courseId);
       
-      // Get messages
-      const messages = await storage.getCourseGroupChats(courseId, Number(limit), Number(offset));
+      const gId = groupId && groupId !== 'general' ? String(groupId) : null;
+      const messages = await storage.getCourseGroupChats(courseId, Number(limit), Number(offset), gId);
+      const enriched = await enrichGroupChatMessages(messages);
       
-      // Add sender info
-      const messagesWithSender = await Promise.all(messages.map(async (msg) => {
-        const sender = await storage.getUser(msg.senderId);
-        return {
-          ...msg,
-          sender: sender ? {
-            id: sender.id,
-            firstName: sender.firstName,
-            lastName: sender.lastName,
-            profileImageUrl: sender.profileImageUrl,
-            role: sender.role,
-          } : null,
-        };
-      }));
-      
-      res.json(messagesWithSender.reverse()); // Oldest first
+      res.json(enriched.reverse());
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -5831,56 +5838,53 @@ So'zlar soni: ${submission.wordCount}`;
   app.post('/api/courses/:courseId/group-chat', isAuthenticated, async (req: any, res) => {
     try {
       const { courseId } = req.params;
-      const { message, messageType = 'text', fileUrl } = req.body;
+      const { message, messageType = 'text', fileUrl, groupId, replyToId } = req.body;
       const userId = req.user?.id || req.user?.claims?.sub;
       const user = await storage.getUser(userId);
       
-      if (!user) {
-        return res.status(401).json({ message: 'Foydalanuvchi topilmadi' });
-      }
+      if (!user) return res.status(401).json({ message: 'Foydalanuvchi topilmadi' });
+      if (!message || message.trim().length === 0) return res.status(400).json({ message: 'Xabar bo\'sh bo\'lmasligi kerak' });
       
-      if (!message || message.trim().length === 0) {
-        return res.status(400).json({ message: 'Xabar bo\'sh bo\'lmasligi kerak' });
-      }
-      
-      // Check access
       if (user.role === 'student') {
-        const enrollments = await storage.getEnrollmentsByUser(userId);
-        const hasAccess = enrollments.some(e => 
-          e.courseId === courseId && 
-          (e.paymentStatus === 'approved' || e.paymentStatus === 'confirmed')
-        );
-        if (!hasAccess) {
-          return res.status(403).json({ message: 'Bu kursga kirishga ruxsatingiz yo\'q' });
-        }
+        const userEnrollments = await storage.getEnrollmentsByUser(userId);
+        const hasAccess = userEnrollments.some(e => e.courseId === courseId && (e.paymentStatus === 'approved' || e.paymentStatus === 'confirmed'));
+        if (!hasAccess) return res.status(403).json({ message: 'Bu kursga kirishga ruxsatingiz yo\'q' });
       } else if (user.role === 'instructor') {
         const course = await storage.getCourse(courseId);
-        if (!course || course.instructorId !== userId) {
-          return res.status(403).json({ message: 'Bu kursga kirishga ruxsatingiz yo\'q' });
-        }
+        if (!course || course.instructorId !== userId) return res.status(403).json({ message: 'Bu kursga kirishga ruxsatingiz yo\'q' });
       }
       
-      // Create message
+      const gId = groupId && groupId !== 'general' ? String(groupId) : null;
       const newMessage = await storage.createCourseGroupChat({
         courseId,
         senderId: userId,
+        groupId: gId,
+        replyToId: replyToId || null,
         message: message.trim(),
         messageType,
         fileUrl,
       });
       
-      // Update presence
       await storage.updateUserPresence(userId, courseId);
       
+      let replyTo = null;
+      if (replyToId) {
+        const replyMsg = await storage.getCourseGroupChatById(replyToId);
+        if (replyMsg) {
+          const replySender = await storage.getUser(replyMsg.senderId);
+          replyTo = {
+            id: replyMsg.id,
+            message: replyMsg.isDeleted ? null : replyMsg.message,
+            isDeleted: replyMsg.isDeleted,
+            sender: replySender ? { id: replySender.id, firstName: replySender.firstName, lastName: replySender.lastName } : null,
+          };
+        }
+      }
+
       res.status(201).json({
         ...newMessage,
-        sender: {
-          id: user.id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          profileImageUrl: user.profileImageUrl,
-          role: user.role,
-        },
+        sender: { id: user.id, firstName: user.firstName, lastName: user.lastName, profileImageUrl: user.profileImageUrl, role: user.role },
+        replyTo,
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -5891,48 +5895,63 @@ So'zlar soni: ${submission.wordCount}`;
   app.get('/api/courses/:courseId/group-chat/poll', isAuthenticated, async (req: any, res) => {
     try {
       const { courseId } = req.params;
-      const { since } = req.query;
+      const { since, groupId } = req.query;
       const userId = req.user?.id || req.user?.claims?.sub;
       
-      // Update presence
       await storage.updateUserPresence(userId, courseId);
+      if (!since) return res.json([]);
       
-      if (!since) {
-        return res.json([]);
-      }
+      const sinceTime = new Date(String(since));
+      const gId = groupId && groupId !== 'general' ? String(groupId) : null;
+      const messages = await storage.getCourseGroupChatsSince(courseId, sinceTime, gId);
+      const enriched = await enrichGroupChatMessages(messages);
       
-      const sinceTime = new Date(since);
-      const messages = await storage.getCourseGroupChatsSince(courseId, sinceTime);
-      
-      // Add sender info
-      const messagesWithSender = await Promise.all(messages.map(async (msg) => {
-        const sender = await storage.getUser(msg.senderId);
-        return {
-          ...msg,
-          sender: sender ? {
-            id: sender.id,
-            firstName: sender.firstName,
-            lastName: sender.lastName,
-            profileImageUrl: sender.profileImageUrl,
-            role: sender.role,
-          } : null,
-        };
-      }));
-      
-      res.json(messagesWithSender);
+      res.json(enriched);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   });
   
-  // Delete a message (only sender can delete)
+  // Delete a message
   app.delete('/api/courses/:courseId/group-chat/:messageId', isAuthenticated, async (req: any, res) => {
     try {
       const { courseId, messageId } = req.params;
       const userId = req.user?.id || req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: 'Foydalanuvchi topilmadi' });
       
-      await storage.deleteCourseGroupChat(messageId, userId);
+      await storage.deleteCourseGroupChat(messageId, userId, user.role);
       res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get student's group in a course
+  app.get('/api/courses/:courseId/my-group', isAuthenticated, async (req: any, res) => {
+    try {
+      const { courseId } = req.params;
+      const userId = req.user?.id || req.user?.claims?.sub;
+      const enrollment = await storage.getEnrollmentByCourseAndUser(courseId, userId);
+      if (!enrollment || !enrollment.groupId) {
+        return res.json({ groupId: null, groupName: null });
+      }
+      const { db } = await import('./db');
+      const { studentGroups } = await import('../shared/schema');
+      const { eq } = await import('drizzle-orm');
+      const [group] = await db.select().from(studentGroups).where(eq(studentGroups.id, enrollment.groupId));
+      res.json({ groupId: enrollment.groupId, groupName: group?.name || null });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get all groups in a course (for instructor)
+  app.get('/api/courses/:courseId/groups', isAuthenticated, async (req: any, res) => {
+    try {
+      const { courseId } = req.params;
+      const groups = await storage.getCourseEnrollmentGroupsForInstructor(courseId);
+      res.json(groups);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
