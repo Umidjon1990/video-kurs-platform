@@ -36,7 +36,16 @@ import {
   UserMinus,
   Search,
   Users,
+  FileDown,
+  BookOpen,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { User } from "@shared/schema";
 
 interface StudentGroup {
@@ -64,10 +73,12 @@ export default function AdminGroupsPage() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isMembersOpen, setIsMembersOpen] = useState(false);
   const [isAddMembersOpen, setIsAddMembersOpen] = useState(false);
+  const [isAssignCourseOpen, setIsAssignCourseOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<StudentGroup | null>(null);
   const [groupForm, setGroupForm] = useState({ name: "", description: "" });
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+  const [assignCourseData, setAssignCourseData] = useState({ courseId: "", subscriptionDays: "30" });
 
   const { data: groups = [], isLoading: groupsLoading } = useQuery<StudentGroup[]>({
     queryKey: ["/api/admin/student-groups"],
@@ -75,6 +86,10 @@ export default function AdminGroupsPage() {
 
   const { data: students = [] } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
+  });
+
+  const { data: courses = [] } = useQuery<{ id: string; title: string }[]>({
+    queryKey: ["/api/courses"],
   });
 
   const { data: groupMembers = [], isLoading: membersLoading } = useQuery<GroupMember[]>({
@@ -164,6 +179,55 @@ export default function AdminGroupsPage() {
       toast({ title: "Xatolik", description: error.message, variant: "destructive" });
     },
   });
+
+  const assignCourseMutation = useMutation({
+    mutationFn: async ({ groupId, courseId, subscriptionDays }: { groupId: string; courseId: string; subscriptionDays: string }) => {
+      const res = await apiRequest("POST", `/api/admin/student-groups/${groupId}/assign-course`, { courseId, subscriptionDays });
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      setIsAssignCourseOpen(false);
+      setAssignCourseData({ courseId: "", subscriptionDays: "30" });
+      toast({ title: "Muvaffaqiyatli", description: data.message });
+    },
+    onError: (error: any) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const downloadPdf = async () => {
+    const { default: jsPDF } = await import("jspdf");
+    const { default: autoTable } = await import("jspdf-autotable");
+    const doc = new jsPDF();
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text(selectedGroup?.name || "Guruh", 14, 18);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(`Jami: ${groupMembers.length} ta o'quvchi`, 14, 26);
+    doc.text(`Sana: ${new Date().toLocaleDateString("uz-UZ")}`, 14, 32);
+
+    autoTable(doc, {
+      startY: 38,
+      head: [["#", "Ism Familiya", "Login (Telefon)", "Parol"]],
+      body: groupMembers.map((m, i) => {
+        const login = m.phone || m.email || "-";
+        return [i + 1, `${m.firstName} ${m.lastName}`, login, login];
+      }),
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [245, 248, 252] },
+      columnStyles: { 0: { cellWidth: 12 }, 1: { cellWidth: 60 }, 2: { cellWidth: 55 }, 3: { cellWidth: 55 } },
+    });
+
+    const noteY = (doc as any).lastAutoTable.finalY + 8;
+    doc.setFontSize(8);
+    doc.setTextColor(120);
+    doc.text("* Standart parol = login (telefon raqam). O'quvchi kirganidan keyin parolni o'zgartirishi mumkin.", 14, noteY);
+
+    doc.save(`${selectedGroup?.name || "guruh"}-royxat.pdf`);
+  };
 
   const openEditDialog = (group: StudentGroup) => {
     setSelectedGroup(group);
@@ -276,6 +340,15 @@ export default function AdminGroupsPage() {
                   >
                     <UsersRound className="w-4 h-4 mr-1" />
                     A'zolar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => { setSelectedGroup(group); setAssignCourseData({ courseId: "", subscriptionDays: "30" }); setIsAssignCourseOpen(true); }}
+                    data-testid={`button-assign-course-group-${group.id}`}
+                  >
+                    <BookOpen className="w-4 h-4 mr-1" />
+                    Kurs
                   </Button>
                   <Button
                     size="sm"
@@ -402,10 +475,18 @@ export default function AdminGroupsPage() {
             <DialogDescription>Guruh a'zolarini ko'ring va boshqaring</DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-3">
-            <Button onClick={openAddMembersDialog} data-testid="button-add-members" className="self-start">
-              <UserPlus className="w-4 h-4 mr-2" />
-              O'quvchi Qo'shish
-            </Button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button onClick={openAddMembersDialog} data-testid="button-add-members">
+                <UserPlus className="w-4 h-4 mr-2" />
+                O'quvchi Qo'shish
+              </Button>
+              {groupMembers.length > 0 && (
+                <Button variant="outline" onClick={downloadPdf} data-testid="button-download-pdf">
+                  <FileDown className="w-4 h-4 mr-2" />
+                  PDF Yuklab olish
+                </Button>
+              )}
+            </div>
 
             {membersLoading ? (
               <div className="flex justify-center py-8">
@@ -551,6 +632,59 @@ export default function AdminGroupsPage() {
               {addMembersMutation.isPending
                 ? "Qo'shilmoqda..."
                 : `${selectedStudentIds.length} ta Qo'shish`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Course to Group Dialog */}
+      <Dialog open={isAssignCourseOpen} onOpenChange={(open) => { setIsAssignCourseOpen(open); if (!open) setAssignCourseData({ courseId: "", subscriptionDays: "30" }); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Guruhga Kurs Biriktirish</DialogTitle>
+            <DialogDescription>
+              <span className="font-semibold">{selectedGroup?.name}</span> guruhidagi barcha {selectedGroup?.memberCount} ta o'quvchiga kurs biriktiriladi
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Kurs *</Label>
+              <Select
+                value={assignCourseData.courseId}
+                onValueChange={(v) => setAssignCourseData({ ...assignCourseData, courseId: v })}
+              >
+                <SelectTrigger data-testid="select-course-for-group">
+                  <SelectValue placeholder="Kursni tanlang" />
+                </SelectTrigger>
+                <SelectContent>
+                  {courses.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="group-sub-days">Obuna muddati (kunlarda)</Label>
+              <Input
+                id="group-sub-days"
+                type="number"
+                min="1"
+                placeholder="30"
+                value={assignCourseData.subscriptionDays}
+                onChange={(e) => setAssignCourseData({ ...assignCourseData, subscriptionDays: e.target.value })}
+                data-testid="input-group-subscription-days"
+              />
+              <p className="text-xs text-muted-foreground">Allaqachon yozilgan o'quvchilar o'tkazib yuboriladi</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAssignCourseOpen(false)}>Bekor qilish</Button>
+            <Button
+              onClick={() => selectedGroup && assignCourseMutation.mutate({ groupId: selectedGroup.id, courseId: assignCourseData.courseId, subscriptionDays: assignCourseData.subscriptionDays })}
+              disabled={!assignCourseData.courseId || assignCourseMutation.isPending}
+              data-testid="button-confirm-assign-course-group"
+            >
+              {assignCourseMutation.isPending ? "Biriktirilmoqda..." : "Kurs Biriktirish"}
             </Button>
           </DialogFooter>
         </DialogContent>

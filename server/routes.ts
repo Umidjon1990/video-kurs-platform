@@ -6075,6 +6075,56 @@ So'zlar soni: ${submission.wordCount}`;
     }
   });
 
+  // Assign course to all group members
+  app.post('/api/admin/student-groups/:groupId/assign-course', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { groupId } = req.params;
+      const { courseId, subscriptionDays } = req.body;
+      if (!courseId) return res.status(400).json({ message: "courseId majburiy" });
+      const days = parseInt(subscriptionDays) || 30;
+
+      const members = await storage.getGroupMembers(groupId);
+      const plans = await storage.getSubscriptionPlans();
+      const plan = plans[0];
+
+      let enrolled = 0;
+      let skipped = 0;
+
+      for (const member of members) {
+        const existing = await storage.getEnrollmentByCourseAndUser(courseId, member.userId);
+        if (existing) { skipped++; continue; }
+
+        const enrollment = await storage.createEnrollment({
+          userId: member.userId,
+          courseId,
+          planId: plan?.id || null,
+          paymentMethod: 'manual',
+          paymentStatus: 'approved',
+          groupId,
+        });
+
+        const startDate = new Date();
+        const endDate = new Date();
+        endDate.setDate(endDate.getDate() + days);
+        await db.insert(userSubscriptions).values({
+          userId: member.userId,
+          courseId,
+          planId: plan?.id || null,
+          enrollmentId: enrollment.id,
+          startDate,
+          endDate,
+          status: 'active',
+        });
+
+        enrolled++;
+      }
+
+      res.json({ message: `${enrolled} o'quvchi yozildi, ${skipped} ta allaqachon yozilgan` });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
