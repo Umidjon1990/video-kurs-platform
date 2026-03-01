@@ -195,38 +195,54 @@ export default function AdminGroupsPage() {
     },
   });
 
-  const downloadPdf = async () => {
-    const { default: jsPDF } = await import("jspdf");
-    const { default: autoTable } = await import("jspdf-autotable");
-    const doc = new jsPDF();
+  const downloadPdf = () => {
+    const groupName = selectedGroup?.name || "Guruh";
+    const date = new Date().toLocaleDateString("uz-UZ");
+    const rows = groupMembers.map((m, i) => {
+      const login = m.phone || m.email || "-";
+      return `<tr>
+        <td>${i + 1}</td>
+        <td>${m.firstName} ${m.lastName}</td>
+        <td>${login}</td>
+        <td>${login}</td>
+      </tr>`;
+    }).join("");
 
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.text(selectedGroup?.name || "Guruh", 14, 18);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.text(`Jami: ${groupMembers.length} ta o'quvchi`, 14, 26);
-    doc.text(`Sana: ${new Date().toLocaleDateString("uz-UZ")}`, 14, 32);
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>${groupName} - Ro'yxat</title>
+  <style>
+    @media print { @page { margin: 15mm; } }
+    body { font-family: Arial, sans-serif; font-size: 11px; color: #111; margin: 0; padding: 20px; }
+    h2 { font-size: 18px; margin: 0 0 6px; }
+    .meta { font-size: 11px; color: #555; margin-bottom: 14px; }
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { background: #2980b9; color: #fff; }
+    th { padding: 7px 8px; text-align: left; font-size: 11px; }
+    td { padding: 6px 8px; border-bottom: 1px solid #e0e0e0; font-size: 11px; }
+    tr:nth-child(even) td { background: #f5f8fc; }
+    .note { margin-top: 12px; font-size: 9px; color: #888; }
+  </style>
+</head>
+<body>
+  <h2>${groupName}</h2>
+  <div class="meta">Jami: ${groupMembers.length} ta o'quvchi &nbsp;|&nbsp; Sana: ${date}</div>
+  <table>
+    <thead><tr><th>#</th><th>Ism Familiya</th><th>Login (Telefon)</th><th>Parol</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="note">* Standart parol = login (telefon raqam). O'quvchi kirganidan keyin parolni o'zgartirishi mumkin.</div>
+  <script>window.onload = function(){ window.print(); window.onafterprint = function(){ window.close(); }; }</script>
+</body>
+</html>`;
 
-    autoTable(doc, {
-      startY: 38,
-      head: [["#", "Ism Familiya", "Login (Telefon)", "Parol"]],
-      body: groupMembers.map((m, i) => {
-        const login = m.phone || m.email || "-";
-        return [i + 1, `${m.firstName} ${m.lastName}`, login, login];
-      }),
-      styles: { fontSize: 9, cellPadding: 3 },
-      headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: "bold" },
-      alternateRowStyles: { fillColor: [245, 248, 252] },
-      columnStyles: { 0: { cellWidth: 12 }, 1: { cellWidth: 60 }, 2: { cellWidth: 55 }, 3: { cellWidth: 55 } },
-    });
-
-    const noteY = (doc as any).lastAutoTable.finalY + 8;
-    doc.setFontSize(8);
-    doc.setTextColor(120);
-    doc.text("* Standart parol = login (telefon raqam). O'quvchi kirganidan keyin parolni o'zgartirishi mumkin.", 14, noteY);
-
-    doc.save(`${selectedGroup?.name || "guruh"}-royxat.pdf`);
+    const win = window.open("", "_blank");
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+    }
   };
 
   const openEditDialog = (group: StudentGroup) => {
