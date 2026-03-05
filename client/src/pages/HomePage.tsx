@@ -554,458 +554,215 @@ export default function HomePage() {
                   {isFree ? (
                     <div className="relative">
                       <Card
-                        className="modern-card hover-elevate transition-all cursor-pointer rounded-xl h-full border-2 border-amber-400 shadow-lg"
+                        className="rounded-2xl overflow-hidden border-2 border-amber-400 shadow-lg bg-card"
                         data-testid={`card-course-${course.id}`}
-                        onClick={() => setDetailCourse(course)}
                       >
-                        {/* Thumbnail with BEPUL Badge */}
-                        <div className="relative aspect-video bg-gradient-to-br from-amber-100 to-yellow-100 dark:from-amber-900/50 dark:to-yellow-900/50 flex items-center justify-center rounded-t-xl overflow-hidden">
-                          {/* "Yangi" ribbon */}
+                        {/* Thumbnail */}
+                        <div className="relative aspect-video bg-gradient-to-br from-amber-100 to-yellow-100 dark:from-amber-900/50 dark:to-yellow-900/50 flex items-center justify-center overflow-hidden">
                           {isNew && (
                             <div className="absolute top-0 left-0 z-20 w-24 h-24 overflow-hidden">
                               <div className="absolute transform -rotate-45 bg-green-500 text-white text-center font-bold py-1 left-[-28px] top-[18px] w-[130px] shadow-md">
-                                <div className="text-[10px]">
-                                  YANGI
-                                  {daysAgo === 0 ? "" : ` (${daysAgo}k)`}
-                                </div>
+                                <div className="text-[10px]">YANGI{daysAgo === 0 ? "" : ` (${daysAgo}k)`}</div>
                               </div>
                             </div>
                           )}
-                          {/* BEPUL Badge - katta va ko'zga tashlanadigan */}
-                          <div className="absolute top-2 right-2 z-10 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 py-1.5 rounded-lg shadow-xl">
-                            <div className="text-sm font-black">BEPUL</div>
-                          </div>
+                          <div className="absolute top-2 right-2 z-10 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 py-1 rounded-full text-xs font-black shadow-lg">BEPUL</div>
                           {thumbnailUrl ? (
-                            <img
-                              src={thumbnailUrl}
-                              alt={course.title}
-                              className="w-full h-full object-cover"
-                              loading="lazy"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                                const parent = e.currentTarget.parentElement;
-                                if (parent && parent.querySelector('.fallback-icon') === null) {
-                                  const icon = document.createElement('div');
-                                  icon.className = 'fallback-icon flex items-center justify-center w-full h-full';
-                                  icon.innerHTML = '<svg class="w-16 h-16 text-amber-600" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>';
-                                  parent.appendChild(icon);
-                                }
-                              }}
-                            />
+                            <img src={thumbnailUrl} alt={course.title} className="w-full h-full object-cover" loading="lazy"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                           ) : (
-                            <BookOpen className="w-16 h-16 text-amber-600" />
+                            <BookOpen className="w-14 h-14 text-amber-500" />
                           )}
                         </div>
-
-                        <CardHeader>
-                          <div className="flex items-start justify-between gap-2">
-                            <h3 className="font-semibold text-lg line-clamp-2">{course.title}</h3>
-                            {course.category && (
-                              <Badge variant="secondary" className="shrink-0">
-                                {course.category}
-                              </Badge>
-                            )}
+                        {/* Card Body */}
+                        <div className="p-4 space-y-3">
+                          {/* Title + Author */}
+                          <div>
+                            <h3 className="font-bold text-base line-clamp-2 leading-snug">{course.title}</h3>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              <span className="font-medium">Muallif:</span> {(course as any).author || `${course.instructor.firstName} ${course.instructor.lastName}`}
+                            </p>
                           </div>
-                          <p className="text-sm text-muted-foreground">
-                            {(course as any).author || `${course.instructor.firstName} ${course.instructor.lastName}`}
-                          </p>
-                        </CardHeader>
-
-                        <CardContent className="space-y-3">
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {course.description || "Kurs tavsifi yo'q"}
-                          </p>
-
-                          {/* 3D benefit mini-strip */}
+                          {/* 3D benefit strip */}
                           <div className="grid grid-cols-3 gap-2">
-                            <div className="flex flex-col items-center gap-1 rounded-lg p-2
-                              bg-gradient-to-b from-blue-50 to-blue-100/70 dark:from-blue-900/20 dark:to-blue-800/10
-                              border border-blue-200/50 dark:border-blue-700/30
-                              shadow-[0_3px_0_0_rgba(59,130,246,0.2)]">
-                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600
-                                shadow-[0_4px_10px_rgba(59,130,246,0.4)] flex items-center justify-center">
+                            <div className="flex flex-col items-center gap-1 rounded-lg p-2 bg-gradient-to-b from-blue-50 to-blue-100/70 dark:from-blue-900/20 dark:to-blue-800/10 border border-blue-200/50 dark:border-blue-700/30 shadow-[0_3px_0_0_rgba(59,130,246,0.25)]">
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 shadow-[0_4px_10px_rgba(59,130,246,0.4)] flex items-center justify-center">
                                 <Play className="w-3.5 h-3.5 text-white fill-white" />
                               </div>
                               <p className="text-[10px] font-semibold text-blue-700 dark:text-blue-300 text-center leading-tight">Video</p>
                             </div>
-                            <div className="flex flex-col items-center gap-1 rounded-lg p-2
-                              bg-gradient-to-b from-green-50 to-green-100/70 dark:from-green-900/20 dark:to-green-800/10
-                              border border-green-200/50 dark:border-green-700/30
-                              shadow-[0_3px_0_0_rgba(34,197,94,0.2)]">
-                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-green-600
-                                shadow-[0_4px_10px_rgba(34,197,94,0.4)] flex items-center justify-center">
+                            <div className="flex flex-col items-center gap-1 rounded-lg p-2 bg-gradient-to-b from-green-50 to-green-100/70 dark:from-green-900/20 dark:to-green-800/10 border border-green-200/50 dark:border-green-700/30 shadow-[0_3px_0_0_rgba(34,197,94,0.25)]">
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-green-600 shadow-[0_4px_10px_rgba(34,197,94,0.4)] flex items-center justify-center">
                                 <Clock className="w-3.5 h-3.5 text-white" />
                               </div>
                               <p className="text-[10px] font-semibold text-green-700 dark:text-green-300 text-center leading-tight">30 kun</p>
                             </div>
-                            <div className="flex flex-col items-center gap-1 rounded-lg p-2
-                              bg-gradient-to-b from-purple-50 to-purple-100/70 dark:from-purple-900/20 dark:to-purple-800/10
-                              border border-purple-200/50 dark:border-purple-700/30
-                              shadow-[0_3px_0_0_rgba(168,85,247,0.2)]">
-                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600
-                                shadow-[0_4px_10px_rgba(168,85,247,0.4)] flex items-center justify-center">
+                            <div className="flex flex-col items-center gap-1 rounded-lg p-2 bg-gradient-to-b from-purple-50 to-purple-100/70 dark:from-purple-900/20 dark:to-purple-800/10 border border-purple-200/50 dark:border-purple-700/30 shadow-[0_3px_0_0_rgba(168,85,247,0.25)]">
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600 shadow-[0_4px_10px_rgba(168,85,247,0.4)] flex items-center justify-center">
                                 <Award className="w-3.5 h-3.5 text-white" />
                               </div>
                               <p className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 text-center leading-tight">Sertifikat</p>
                             </div>
                           </div>
-
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                              <Users className="w-3.5 h-3.5" />
-                              <span>{course.enrollmentsCount} talaba</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <StarRating rating={course.averageRating || 0} size={13} showValue={true} />
-                              <span className="text-xs text-muted-foreground">({course.totalRatings || 0})</span>
-                            </div>
+                          {/* Rating + talabalar */}
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /><span>{course.enrollmentsCount} talaba</span></div>
+                            <div className="flex items-center gap-1"><StarRating rating={course.averageRating || 0} size={12} showValue={true} /><span>({course.totalRatings || 0})</span></div>
                           </div>
-                        </CardContent>
-
-                        <CardFooter className="flex flex-col gap-2 pt-0">
-                          <div className="flex items-center justify-center w-full bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 py-2 rounded-lg border border-green-200 dark:border-green-700">
-                            <span className="text-xl font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">BEPUL</span>
+                          {/* BEPUL price */}
+                          <div className="flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl px-3 py-2 border border-green-200 dark:border-green-700">
+                            <span className="text-xs text-green-700 dark:text-green-400 font-medium">Narxi:</span>
+                            <span className="text-lg font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">BEPUL</span>
                           </div>
-                          <div className="flex gap-2 w-full">
-                            <Button
+                          {/* 3D Action Buttons */}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setDetailCourse(course); }}
+                            className="w-full py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-amber-400 to-amber-600 shadow-[0_5px_0_0_#92400e,0_7px_14px_rgba(180,83,9,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#92400e] active:translate-y-[3px] transition-all duration-75 cursor-pointer"
+                            data-testid={`button-about-${course.id}`}
+                          >
+                            Kurs haqida
+                          </button>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
                               onClick={(e) => { e.stopPropagation(); setSelectedCourseForLessons(course); }}
-                              variant="outline"
-                              className="flex-1"
+                              className="py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-blue-400 to-blue-600 shadow-[0_5px_0_0_#1e3a8a,0_7px_14px_rgba(30,58,138,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#1e3a8a] active:translate-y-[3px] transition-all duration-75 cursor-pointer"
                               data-testid={`button-view-lessons-${course.id}`}
                             >
-                              Darslarni Ko'rish
-                            </Button>
-                            <Button
+                              Darslar
+                            </button>
+                            <button
                               onClick={(e) => { e.stopPropagation(); window.open("https://t.me/zamonaviytalimuz", "_blank", "noopener,noreferrer"); }}
-                              className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500"
-                              data-testid={`button-enroll-free-${course.id}`}
+                              className="py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-green-400 to-green-600 shadow-[0_5px_0_0_#166534,0_7px_14px_rgba(22,101,52,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#166534] active:translate-y-[3px] transition-all duration-75 cursor-pointer"
+                              data-testid={`button-enroll-${course.id}`}
                             >
                               Yozilish
-                            </Button>
+                            </button>
                           </div>
-                          {(course as any).promoVideoUrl && (
-                            <Button
-                              variant="outline"
-                              onClick={(e) => { e.stopPropagation(); setPromoVideoCourse(course); }}
-                              className="w-full border-2 border-red-500 text-red-600 dark:text-red-400 font-semibold"
-                              data-testid={`button-promo-video-${course.id}`}
-                            >
-                              <Youtube className="w-5 h-5 mr-2" />
-                              Kurs haqida batafsil
-                            </Button>
-                          )}
-                        </CardFooter>
+                        </div>
                       </Card>
                     </div>
                   ) : discountPercent > 0 ? (
                     <div className={`p-[2px] bg-gradient-to-br ${gradient} rounded-xl`}>
                       <Card
-                        className="modern-card hover-elevate transition-all cursor-pointer border-0 rounded-xl h-full bg-background"
+                        className="border-0 rounded-xl bg-background"
                         data-testid={`card-course-${course.id}`}
-                        onClick={() => setDetailCourse(course)}
                       >
                         {/* Thumbnail with Sale Badge & New Ribbon */}
                         <div className="relative aspect-video bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center rounded-t-xl overflow-hidden">
-                          {/* "Yangi" ribbon - chap yuqori burchak */}
                           {isNew && (
                             <div className="absolute top-0 left-0 z-20 w-24 h-24 overflow-hidden">
                               <div className="absolute transform -rotate-45 bg-green-500 text-white text-center font-bold py-1 left-[-28px] top-[18px] w-[130px] shadow-md">
-                                <div className="text-[10px]">
-                                  YANGI
-                                  {daysAgo === 0 ? "" : ` (${daysAgo}k)`}
-                                </div>
+                                <div className="text-[10px]">YANGI{daysAgo === 0 ? "" : ` (${daysAgo}k)`}</div>
                               </div>
                             </div>
                           )}
-                          <Badge variant="destructive" className="absolute top-2 right-2 z-10 text-xs font-bold px-2 py-1 shadow-lg">
-                            -{discountPercent}%
-                          </Badge>
+                          <span className="absolute top-2 right-2 z-10 bg-red-500 text-white text-xs font-black px-2.5 py-1 rounded-full shadow-lg">-{discountPercent}%</span>
                           {thumbnailUrl ? (
-                            <img
-                              src={thumbnailUrl}
-                              alt={course.title}
-                              className="w-full h-full object-cover"
-                              loading="lazy"
-                              onError={(e) => {
-                                console.error('Course thumbnail failed to load:', course.thumbnailUrl);
-                                e.currentTarget.style.display = 'none';
-                                const parent = e.currentTarget.parentElement;
-                                if (parent && parent.querySelector('.fallback-icon') === null) {
-                                  const icon = document.createElement('div');
-                                  icon.className = 'fallback-icon flex items-center justify-center w-full h-full';
-                                  icon.innerHTML = '<svg class="w-16 h-16 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>';
-                                  parent.appendChild(icon);
-                                }
-                              }}
-                            />
+                            <img src={thumbnailUrl} alt={course.title} className="w-full h-full object-cover" loading="lazy"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                           ) : (
-                            <BookOpen className="w-16 h-16 text-muted-foreground" />
+                            <BookOpen className="w-14 h-14 text-muted-foreground" />
                           )}
                         </div>
-
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-semibold text-lg line-clamp-2">{course.title}</h3>
-                      {course.category && (
-                        <Badge variant="secondary" className="shrink-0">
-                          {course.category}
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {(course as any).author || `${course.instructor.firstName} ${course.instructor.lastName}`}
-                    </p>
-                  </CardHeader>
-
-                  <CardContent className="space-y-3">
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {course.description || "Kurs tavsifi yo'q"}
-                    </p>
-
-                    {/* 3D benefit mini-strip */}
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="flex flex-col items-center gap-1 rounded-lg p-2
-                        bg-gradient-to-b from-blue-50 to-blue-100/70 dark:from-blue-900/20 dark:to-blue-800/10
-                        border border-blue-200/50 dark:border-blue-700/30
-                        shadow-[0_3px_0_0_rgba(59,130,246,0.2)]">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600
-                          shadow-[0_4px_10px_rgba(59,130,246,0.4)] flex items-center justify-center">
-                          <Play className="w-3.5 h-3.5 text-white fill-white" />
+                        {/* Card Body */}
+                        <div className="p-4 space-y-3">
+                          <div>
+                            <h3 className="font-bold text-base line-clamp-2 leading-snug">{course.title}</h3>
+                            <p className="text-xs text-muted-foreground mt-1"><span className="font-medium">Muallif:</span> {(course as any).author || `${course.instructor.firstName} ${course.instructor.lastName}`}</p>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="flex flex-col items-center gap-1 rounded-lg p-2 bg-gradient-to-b from-blue-50 to-blue-100/70 dark:from-blue-900/20 dark:to-blue-800/10 border border-blue-200/50 dark:border-blue-700/30 shadow-[0_3px_0_0_rgba(59,130,246,0.25)]">
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 shadow-[0_4px_10px_rgba(59,130,246,0.4)] flex items-center justify-center"><Play className="w-3.5 h-3.5 text-white fill-white" /></div>
+                              <p className="text-[10px] font-semibold text-blue-700 dark:text-blue-300 text-center leading-tight">Video</p>
+                            </div>
+                            <div className="flex flex-col items-center gap-1 rounded-lg p-2 bg-gradient-to-b from-green-50 to-green-100/70 dark:from-green-900/20 dark:to-green-800/10 border border-green-200/50 dark:border-green-700/30 shadow-[0_3px_0_0_rgba(34,197,94,0.25)]">
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-green-600 shadow-[0_4px_10px_rgba(34,197,94,0.4)] flex items-center justify-center"><Clock className="w-3.5 h-3.5 text-white" /></div>
+                              <p className="text-[10px] font-semibold text-green-700 dark:text-green-300 text-center leading-tight">30 kun</p>
+                            </div>
+                            <div className="flex flex-col items-center gap-1 rounded-lg p-2 bg-gradient-to-b from-purple-50 to-purple-100/70 dark:from-purple-900/20 dark:to-purple-800/10 border border-purple-200/50 dark:border-purple-700/30 shadow-[0_3px_0_0_rgba(168,85,247,0.25)]">
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600 shadow-[0_4px_10px_rgba(168,85,247,0.4)] flex items-center justify-center"><Award className="w-3.5 h-3.5 text-white" /></div>
+                              <p className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 text-center leading-tight">Sertifikat</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /><span>{course.enrollmentsCount} talaba</span></div>
+                            <div className="flex items-center gap-1"><StarRating rating={course.averageRating || 0} size={12} showValue={true} /><span>({course.totalRatings || 0})</span></div>
+                          </div>
+                          {/* Price with discount */}
+                          <div className="flex items-center gap-2 bg-muted/50 rounded-xl px-3 py-2">
+                            <span className="text-lg font-black text-foreground">{formatPrice(displayPrice.toString())}</span>
+                            <span className="text-xs text-muted-foreground line-through">{formatPrice(basePrice.toString())}</span>
+                            <span className="ml-auto text-xs font-bold text-red-500 bg-red-100 dark:bg-red-900/30 px-2 py-0.5 rounded-full">-{discountPercent}%</span>
+                          </div>
+                          <button onClick={(e) => { e.stopPropagation(); setDetailCourse(course); }} className="w-full py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-amber-400 to-amber-600 shadow-[0_5px_0_0_#92400e,0_7px_14px_rgba(180,83,9,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#92400e] active:translate-y-[3px] transition-all duration-75 cursor-pointer" data-testid={`button-about-${course.id}`}>Kurs haqida</button>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button onClick={(e) => { e.stopPropagation(); setSelectedCourseForLessons(course); }} className="py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-blue-400 to-blue-600 shadow-[0_5px_0_0_#1e3a8a,0_7px_14px_rgba(30,58,138,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#1e3a8a] active:translate-y-[3px] transition-all duration-75 cursor-pointer" data-testid={`button-view-lessons-${course.id}`}>Darslar</button>
+                            <button onClick={(e) => { e.stopPropagation(); window.open("https://t.me/zamonaviytalimuz", "_blank", "noopener,noreferrer"); }} className="py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-green-400 to-green-600 shadow-[0_5px_0_0_#166534,0_7px_14px_rgba(22,101,52,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#166534] active:translate-y-[3px] transition-all duration-75 cursor-pointer" data-testid={`button-enroll-${course.id}`}>Yozilish</button>
+                          </div>
                         </div>
-                        <p className="text-[10px] font-semibold text-blue-700 dark:text-blue-300 text-center leading-tight">Video</p>
-                      </div>
-                      <div className="flex flex-col items-center gap-1 rounded-lg p-2
-                        bg-gradient-to-b from-green-50 to-green-100/70 dark:from-green-900/20 dark:to-green-800/10
-                        border border-green-200/50 dark:border-green-700/30
-                        shadow-[0_3px_0_0_rgba(34,197,94,0.2)]">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-green-600
-                          shadow-[0_4px_10px_rgba(34,197,94,0.4)] flex items-center justify-center">
-                          <Clock className="w-3.5 h-3.5 text-white" />
-                        </div>
-                        <p className="text-[10px] font-semibold text-green-700 dark:text-green-300 text-center leading-tight">30 kun</p>
-                      </div>
-                      <div className="flex flex-col items-center gap-1 rounded-lg p-2
-                        bg-gradient-to-b from-purple-50 to-purple-100/70 dark:from-purple-900/20 dark:to-purple-800/10
-                        border border-purple-200/50 dark:border-purple-700/30
-                        shadow-[0_3px_0_0_rgba(168,85,247,0.2)]">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600
-                          shadow-[0_4px_10px_rgba(168,85,247,0.4)] flex items-center justify-center">
-                          <Award className="w-3.5 h-3.5 text-white" />
-                        </div>
-                        <p className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 text-center leading-tight">Sertifikat</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <Users className="w-3.5 h-3.5" />
-                        <span>{course.enrollmentsCount} talaba</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <StarRating rating={course.averageRating || 0} size={13} showValue={true} />
-                        <span className="text-xs text-muted-foreground">({course.totalRatings || 0})</span>
-                      </div>
-                    </div>
-                  </CardContent>
-
-                  <CardFooter className="flex flex-col gap-2 pt-0">
-                    {/* Price */}
-                    {course.planPricing && course.planPricing.length > 0 ? (
-                      <div className="w-full flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">{course.planPricing[0].plan.displayName}</span>
-                        <span className="font-bold text-primary text-lg">{Number(course.planPricing[0].price).toLocaleString('uz-UZ')} so'm</span>
-                      </div>
-                    ) : (
-                      <div className="w-full flex items-baseline gap-2">
-                        <span className="text-xl font-bold">{formatPrice(displayPrice.toString())}</span>
-                        {discountPercent > 0 && <span className="text-sm text-muted-foreground line-through">{formatPrice(basePrice.toString())}</span>}
-                      </div>
-                    )}
-                    <div className="flex gap-2 w-full">
-                      <Button
-                        onClick={(e) => { e.stopPropagation(); setSelectedCourseForLessons(course); }}
-                        variant="outline"
-                        className="flex-1"
-                        data-testid={`button-view-lessons-${course.id}`}
-                      >
-                        Darslarni Ko'rish
-                      </Button>
-                      <Button
-                        onClick={(e) => { e.stopPropagation(); window.open("https://t.me/zamonaviytalimuz", "_blank", "noopener,noreferrer"); }}
-                        className="flex-1"
-                        data-testid={`button-enroll-${course.id}`}
-                      >
-                        Yozilish
-                      </Button>
-                    </div>
-                    {(course as any).promoVideoUrl && (
-                      <Button
-                        variant="outline"
-                        onClick={(e) => { e.stopPropagation(); setPromoVideoCourse(course); }}
-                        className="w-full border-2 border-red-500 text-red-600 dark:text-red-400 font-semibold"
-                        data-testid={`button-promo-video-${course.id}`}
-                      >
-                        <Youtube className="w-5 h-5 mr-2" />
-                        Kurs haqida batafsil
-                      </Button>
-                    )}
-                  </CardFooter>
-                </Card>
-              </div>
-            ) : (
-              <>
-                {/* Oddiy karta (chegirmasiz) */}
-                <Card
-                  className="modern-card hover-elevate transition-all cursor-pointer rounded-xl h-full"
-                  data-testid={`card-course-${course.id}`}
-                  onClick={() => setDetailCourse(course)}
-                >
-                {/* Thumbnail with New Ribbon only */}
-                <div className="relative aspect-video bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center rounded-t-xl overflow-hidden">
-                  {/* "Yangi" ribbon - chap yuqori burchak */}
-                  {isNew && (
-                    <div className="absolute top-0 left-0 z-20 w-24 h-24 overflow-hidden">
-                      <div className="absolute transform -rotate-45 bg-green-500 text-white text-center font-bold py-1 left-[-28px] top-[18px] w-[130px] shadow-md">
-                        <div className="text-[10px]">
-                          YANGI
-                          {daysAgo === 0 ? "" : ` (${daysAgo}k)`}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {thumbnailUrl ? (
-                    <img
-                      src={thumbnailUrl}
-                      alt={course.title}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                      onError={(e) => {
-                        console.error('Course thumbnail failed to load:', course.thumbnailUrl);
-                        e.currentTarget.style.display = 'none';
-                        const parent = e.currentTarget.parentElement;
-                        if (parent && parent.querySelector('.fallback-icon') === null) {
-                          const icon = document.createElement('div');
-                          icon.className = 'fallback-icon flex items-center justify-center w-full h-full';
-                          icon.innerHTML = '<svg class="w-16 h-16 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>';
-                          parent.appendChild(icon);
-                        }
-                      }}
-                    />
-                  ) : (
-                    <BookOpen className="w-16 h-16 text-muted-foreground" />
-                  )}
-                </div>
-
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-semibold text-lg line-clamp-2">{course.title}</h3>
-                    {course.category && (
-                      <Badge variant="secondary" className="shrink-0">
-                        {course.category}
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {(course as any).author || `${course.instructor.firstName} ${course.instructor.lastName}`}
-                  </p>
-                </CardHeader>
-
-                <CardContent className="space-y-3">
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {course.description || "Kurs tavsifi yo'q"}
-                  </p>
-
-                  {/* 3D benefit mini-strip */}
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="flex flex-col items-center gap-1 rounded-lg p-2
-                      bg-gradient-to-b from-blue-50 to-blue-100/70 dark:from-blue-900/20 dark:to-blue-800/10
-                      border border-blue-200/50 dark:border-blue-700/30
-                      shadow-[0_3px_0_0_rgba(59,130,246,0.2)]">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600
-                        shadow-[0_4px_10px_rgba(59,130,246,0.4)] flex items-center justify-center">
-                        <Play className="w-3.5 h-3.5 text-white fill-white" />
-                      </div>
-                      <p className="text-[10px] font-semibold text-blue-700 dark:text-blue-300 text-center leading-tight">Video</p>
-                    </div>
-                    <div className="flex flex-col items-center gap-1 rounded-lg p-2
-                      bg-gradient-to-b from-green-50 to-green-100/70 dark:from-green-900/20 dark:to-green-800/10
-                      border border-green-200/50 dark:border-green-700/30
-                      shadow-[0_3px_0_0_rgba(34,197,94,0.2)]">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-green-600
-                        shadow-[0_4px_10px_rgba(34,197,94,0.4)] flex items-center justify-center">
-                        <Clock className="w-3.5 h-3.5 text-white" />
-                      </div>
-                      <p className="text-[10px] font-semibold text-green-700 dark:text-green-300 text-center leading-tight">30 kun</p>
-                    </div>
-                    <div className="flex flex-col items-center gap-1 rounded-lg p-2
-                      bg-gradient-to-b from-purple-50 to-purple-100/70 dark:from-purple-900/20 dark:to-purple-800/10
-                      border border-purple-200/50 dark:border-purple-700/30
-                      shadow-[0_3px_0_0_rgba(168,85,247,0.2)]">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600
-                        shadow-[0_4px_10px_rgba(168,85,247,0.4)] flex items-center justify-center">
-                        <Award className="w-3.5 h-3.5 text-white" />
-                      </div>
-                      <p className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 text-center leading-tight">Sertifikat</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                      <Users className="w-3.5 h-3.5" />
-                      <span>{course.enrollmentsCount} talaba</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <StarRating rating={course.averageRating || 0} size={13} showValue={true} />
-                      <span className="text-xs text-muted-foreground">({course.totalRatings || 0})</span>
-                    </div>
-                  </div>
-                </CardContent>
-
-                <CardFooter className="flex flex-col gap-2 pt-0">
-                  {/* Price */}
-                  {course.planPricing && course.planPricing.length > 0 ? (
-                    <div className="w-full flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">{course.planPricing[0].plan.displayName}</span>
-                      <span className="font-bold text-primary text-lg">{Number(course.planPricing[0].price).toLocaleString('uz-UZ')} so'm</span>
+                      </Card>
                     </div>
                   ) : (
-                    <div className="w-full flex items-baseline gap-2">
-                      <span className="text-xl font-bold">{formatPrice(displayPrice.toString())}</span>
-                      {discountPercent > 0 && <span className="text-sm text-muted-foreground line-through">{formatPrice(basePrice.toString())}</span>}
-                    </div>
+                    <>
+                      {/* Oddiy karta (chegirmasiz) */}
+                      <Card className="rounded-xl overflow-hidden shadow-md" data-testid={`card-course-${course.id}`}>
+                        {/* Thumbnail */}
+                        <div className="relative aspect-video bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center overflow-hidden">
+                          {isNew && (
+                            <div className="absolute top-0 left-0 z-20 w-24 h-24 overflow-hidden">
+                              <div className="absolute transform -rotate-45 bg-green-500 text-white text-center font-bold py-1 left-[-28px] top-[18px] w-[130px] shadow-md">
+                                <div className="text-[10px]">YANGI{daysAgo === 0 ? "" : ` (${daysAgo}k)`}</div>
+                              </div>
+                            </div>
+                          )}
+                          {thumbnailUrl ? (
+                            <img src={thumbnailUrl} alt={course.title} className="w-full h-full object-cover" loading="lazy"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                          ) : (
+                            <BookOpen className="w-14 h-14 text-muted-foreground" />
+                          )}
+                        </div>
+                        {/* Card Body */}
+                        <div className="p-4 space-y-3">
+                          <div>
+                            <h3 className="font-bold text-base line-clamp-2 leading-snug">{course.title}</h3>
+                            <p className="text-xs text-muted-foreground mt-1"><span className="font-medium">Muallif:</span> {(course as any).author || `${course.instructor.firstName} ${course.instructor.lastName}`}</p>
+                          </div>
+                          {/* 3D benefit strip */}
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="flex flex-col items-center gap-1 rounded-lg p-2 bg-gradient-to-b from-blue-50 to-blue-100/70 dark:from-blue-900/20 dark:to-blue-800/10 border border-blue-200/50 dark:border-blue-700/30 shadow-[0_3px_0_0_rgba(59,130,246,0.25)]">
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 shadow-[0_4px_10px_rgba(59,130,246,0.4)] flex items-center justify-center"><Play className="w-3.5 h-3.5 text-white fill-white" /></div>
+                              <p className="text-[10px] font-semibold text-blue-700 dark:text-blue-300 text-center leading-tight">Video</p>
+                            </div>
+                            <div className="flex flex-col items-center gap-1 rounded-lg p-2 bg-gradient-to-b from-green-50 to-green-100/70 dark:from-green-900/20 dark:to-green-800/10 border border-green-200/50 dark:border-green-700/30 shadow-[0_3px_0_0_rgba(34,197,94,0.25)]">
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-green-600 shadow-[0_4px_10px_rgba(34,197,94,0.4)] flex items-center justify-center"><Clock className="w-3.5 h-3.5 text-white" /></div>
+                              <p className="text-[10px] font-semibold text-green-700 dark:text-green-300 text-center leading-tight">30 kun</p>
+                            </div>
+                            <div className="flex flex-col items-center gap-1 rounded-lg p-2 bg-gradient-to-b from-purple-50 to-purple-100/70 dark:from-purple-900/20 dark:to-purple-800/10 border border-purple-200/50 dark:border-purple-700/30 shadow-[0_3px_0_0_rgba(168,85,247,0.25)]">
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600 shadow-[0_4px_10px_rgba(168,85,247,0.4)] flex items-center justify-center"><Award className="w-3.5 h-3.5 text-white" /></div>
+                              <p className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 text-center leading-tight">Sertifikat</p>
+                            </div>
+                          </div>
+                          {/* Rating + talabalar */}
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /><span>{course.enrollmentsCount} talaba</span></div>
+                            <div className="flex items-center gap-1"><StarRating rating={course.averageRating || 0} size={12} showValue={true} /><span>({course.totalRatings || 0})</span></div>
+                          </div>
+                          {/* Price */}
+                          <div className="flex items-center gap-2 bg-muted/50 rounded-xl px-3 py-2">
+                            <span className="text-xs text-muted-foreground font-medium">Narxi:</span>
+                            <span className="text-lg font-black text-foreground ml-auto">{formatPrice(displayPrice.toString())}</span>
+                          </div>
+                          {/* 3D Buttons */}
+                          <button onClick={(e) => { e.stopPropagation(); setDetailCourse(course); }} className="w-full py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-amber-400 to-amber-600 shadow-[0_5px_0_0_#92400e,0_7px_14px_rgba(180,83,9,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#92400e] active:translate-y-[3px] transition-all duration-75 cursor-pointer" data-testid={`button-about-${course.id}`}>Kurs haqida</button>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button onClick={(e) => { e.stopPropagation(); setSelectedCourseForLessons(course); }} className="py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-blue-400 to-blue-600 shadow-[0_5px_0_0_#1e3a8a,0_7px_14px_rgba(30,58,138,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#1e3a8a] active:translate-y-[3px] transition-all duration-75 cursor-pointer" data-testid={`button-view-lessons-${course.id}`}>Darslar</button>
+                            <button onClick={(e) => { e.stopPropagation(); window.open("https://t.me/zamonaviytalimuz", "_blank", "noopener,noreferrer"); }} className="py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-green-400 to-green-600 shadow-[0_5px_0_0_#166534,0_7px_14px_rgba(22,101,52,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#166534] active:translate-y-[3px] transition-all duration-75 cursor-pointer" data-testid={`button-enroll-${course.id}`}>Yozilish</button>
+                          </div>
+                        </div>
+                      </Card>
+                    </>
                   )}
-                  <div className="flex gap-2 w-full">
-                    <Button
-                      onClick={(e) => { e.stopPropagation(); setSelectedCourseForLessons(course); }}
-                      variant="outline"
-                      className="flex-1"
-                      data-testid={`button-view-lessons-${course.id}`}
-                    >
-                      Darslarni Ko'rish
-                    </Button>
-                    <Button
-                      onClick={(e) => { e.stopPropagation(); window.open("https://t.me/zamonaviytalimuz", "_blank", "noopener,noreferrer"); }}
-                      className="flex-1"
-                      data-testid={`button-enroll-${course.id}`}
-                    >
-                      Yozilish
-                    </Button>
-                  </div>
-                  {(course as any).promoVideoUrl && (
-                    <Button
-                      variant="outline"
-                      onClick={(e) => { e.stopPropagation(); setPromoVideoCourse(course); }}
-                      className="w-full border-2 border-red-500 text-red-600 dark:text-red-400 font-semibold"
-                      data-testid={`button-promo-video-${course.id}`}
-                    >
-                      <Youtube className="w-5 h-5 mr-2" />
-                      Kurs haqida batafsil
-                    </Button>
-                  )}
-                </CardFooter>
-              </Card>
-              </>
-            )}
           </motion.div>
               );
             })}
