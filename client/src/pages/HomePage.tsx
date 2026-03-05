@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, BookOpen, Users, Award, Star, Mail, Phone, MapPin, Send, ExternalLink, X, ZoomIn, Play, Lock, Clock, GraduationCap, TrendingUp, CheckCircle, ArrowLeft, ChevronLeft, ChevronRight, PenTool, Headphones, Mic, BookText, Languages, FileText, Download, ChevronDown, Youtube, List, Info, ArrowRight, Sparkles, type LucideIcon } from "lucide-react";
+import { Search, Filter, BookOpen, Users, Award, Star, Mail, Phone, MapPin, Send, ExternalLink, X, ZoomIn, Play, Lock, Clock, GraduationCap, TrendingUp, CheckCircle, ArrowLeft, ChevronLeft, ChevronRight, PenTool, Headphones, Mic, BookText, Languages, FileText, Download, ChevronDown, Youtube, List, Info, ArrowRight, Sparkles, Code2, Megaphone, LayoutGrid, type LucideIcon } from "lucide-react";
 
 const iconMap: Record<string, LucideIcon> = {
   BookOpen,
@@ -226,12 +226,12 @@ export default function HomePage() {
   };
 
   const categories = [
-    { value: "", label: "Barcha kategoriyalar" },
-    { value: "IT", label: "💻 Dasturlash" },
-    { value: "Design", label: "🎨 Dizayn" },
-    { value: "Business", label: "📈 Biznes" },
-    { value: "Til", label: "🌍 Tillar" },
-    { value: "Marketing", label: "📢 Marketing" },
+    { value: "", label: "Barchasi", icon: LayoutGrid, from: "#64748b", to: "#475569", shadow: "rgba(100,116,139,0.5)", shadowColor: "#334155" },
+    { value: "IT", label: "Dasturlash", icon: Code2, from: "#3b82f6", to: "#1d4ed8", shadow: "rgba(59,130,246,0.5)", shadowColor: "#1e3a8a" },
+    { value: "Design", label: "Dizayn", icon: PenTool, from: "#8b5cf6", to: "#6d28d9", shadow: "rgba(139,92,246,0.5)", shadowColor: "#4c1d95" },
+    { value: "Business", label: "Biznes", icon: TrendingUp, from: "#10b981", to: "#059669", shadow: "rgba(16,185,129,0.5)", shadowColor: "#064e3b" },
+    { value: "Til", label: "Tillar", icon: Languages, from: "#06b6d4", to: "#0891b2", shadow: "rgba(6,182,212,0.5)", shadowColor: "#164e63" },
+    { value: "Marketing", label: "Marketing", icon: Megaphone, from: "#f97316", to: "#ea580c", shadow: "rgba(249,115,22,0.5)", shadowColor: "#7c2d12" },
   ];
 
   const priceRanges = [
@@ -638,31 +638,71 @@ export default function HomePage() {
                   </div>
                 )}
 
-                {/* Category & Price Selects */}
+                {/* 3D Category Chips */}
                 <div
-                  className="flex flex-wrap gap-3 pt-4"
+                  className="pt-4"
                   style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}
                 >
-                  <div
-                    className="flex items-center gap-2 rounded-xl px-4 py-2.5"
-                    style={{
-                      background: "rgba(124,58,237,0.15)",
-                      border: "1px solid rgba(124,58,237,0.3)",
-                    }}
-                  >
-                    <Filter className="w-4 h-4 flex-shrink-0" style={{ color: "#a78bfa" }} />
-                    <select
-                      value={selectedCategory}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                      className="bg-transparent border-0 text-sm font-semibold focus:outline-none cursor-pointer"
-                      style={{ color: "rgba(255,255,255,0.85)" }}
-                      data-testid="select-category"
+                  <div className="flex items-center gap-2 mb-3">
+                    <div
+                      className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: "rgba(37,99,235,0.25)" }}
                     >
-                      {categories.map((cat) => (
-                        <option key={cat.value} value={cat.value} style={{ background: "#0d1440", color: "#fff" }}>{cat.label}</option>
-                      ))}
-                    </select>
+                      <Filter className="w-3.5 h-3.5" style={{ color: "#93c5fd" }} />
+                    </div>
+                    <span className="text-sm font-bold tracking-wide" style={{ color: "rgba(147,197,253,0.9)" }}>
+                      Kategoriya
+                    </span>
                   </div>
+                  <div className="flex flex-wrap gap-2" data-testid="select-category">
+                    {categories.map((cat) => {
+                      const active = selectedCategory === cat.value;
+                      const Icon = cat.icon;
+                      return (
+                        <button
+                          key={cat.value}
+                          onClick={() => setSelectedCategory(cat.value)}
+                          data-testid={`cat-${cat.value || "all"}`}
+                          className="flex items-center gap-2 px-3 py-2 rounded-xl transition-all hover:scale-105 active:scale-95 text-sm font-semibold"
+                          style={
+                            active
+                              ? {
+                                  background: `linear-gradient(135deg, ${cat.from}33, ${cat.to}44)`,
+                                  border: `1px solid ${cat.from}88`,
+                                  color: "#fff",
+                                  boxShadow: `0 0 16px ${cat.shadow}`,
+                                }
+                              : {
+                                  background: "rgba(255,255,255,0.05)",
+                                  border: "1px solid rgba(255,255,255,0.10)",
+                                  color: "rgba(255,255,255,0.65)",
+                                }
+                          }
+                        >
+                          {/* 3D Icon */}
+                          <div
+                            className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all"
+                            style={{
+                              background: `linear-gradient(135deg, ${cat.from}, ${cat.to})`,
+                              boxShadow: active
+                                ? `0 4px 0 0 ${cat.shadowColor}, 0 6px 14px ${cat.shadow}`
+                                : `0 3px 0 0 ${cat.shadowColor}88, 0 4px 10px ${cat.shadow}66`,
+                            }}
+                          >
+                            <Icon className="w-3.5 h-3.5 text-white" />
+                          </div>
+                          {cat.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Price Select */}
+                <div
+                  className="flex flex-wrap gap-3 pt-4"
+                  style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+                >
                   <div
                     className="flex items-center gap-2 rounded-xl px-4 py-2.5"
                     style={{
@@ -670,7 +710,15 @@ export default function HomePage() {
                       border: "1px solid rgba(37,99,235,0.3)",
                     }}
                   >
-                    <TrendingUp className="w-4 h-4 flex-shrink-0" style={{ color: "#93c5fd" }} />
+                    <div
+                      className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0"
+                      style={{
+                        background: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
+                        boxShadow: "0 3px 0 0 #1e3a8a, 0 4px 10px rgba(59,130,246,0.4)",
+                      }}
+                    >
+                      <TrendingUp className="w-3 h-3 text-white" />
+                    </div>
                     <select
                       value={priceRange}
                       onChange={(e) => setPriceRange(e.target.value)}
