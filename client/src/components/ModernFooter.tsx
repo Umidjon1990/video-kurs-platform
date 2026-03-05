@@ -147,7 +147,7 @@ export function ModernFooter() {
                 <Send className="w-4 h-4" />
                 Telegram orqali yozilish
               </a>
-              <Link href="/">
+              <Link href="/explore">
                 <button
                   className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl font-bold text-white transition-all hover:scale-105 active:scale-95"
                   style={{
