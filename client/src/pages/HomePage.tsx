@@ -468,13 +468,31 @@ export default function HomePage() {
 
       {/* Courses Grid */}
       <div id="courses-section" className="relative overflow-x-clip">
-        {/* Enhanced background decoration */}
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-accent/5 pointer-events-none" />
-        <div className="absolute inset-0 dot-pattern opacity-30 pointer-events-none" />
-        
-        {/* Subtle floating accent shapes */}
-        <div className="absolute top-20 right-10 w-72 h-72 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-40 left-10 w-96 h-96 bg-accent/5 rounded-full blur-3xl pointer-events-none" />
+        {/* WOW aurora background */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: "linear-gradient(180deg, transparent 0%, rgba(124,58,237,0.04) 30%, rgba(37,99,235,0.04) 60%, transparent 100%)" }}
+        />
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage: "radial-gradient(circle, rgba(124,58,237,0.04) 1px, transparent 1px)",
+            backgroundSize: "32px 32px",
+          }}
+        />
+        {/* Aurora blobs */}
+        <div
+          className="absolute top-20 right-10 w-96 h-96 rounded-full pointer-events-none"
+          style={{ background: "radial-gradient(circle, rgba(124,58,237,0.10) 0%, transparent 70%)", filter: "blur(60px)" }}
+        />
+        <div
+          className="absolute bottom-40 left-10 w-[500px] h-96 rounded-full pointer-events-none"
+          style={{ background: "radial-gradient(circle, rgba(37,99,235,0.08) 0%, transparent 70%)", filter: "blur(60px)" }}
+        />
+        <div
+          className="absolute top-1/2 left-1/2 w-72 h-72 rounded-full pointer-events-none"
+          style={{ background: "radial-gradient(circle, rgba(6,182,212,0.06) 0%, transparent 70%)", filter: "blur(50px)", transform: "translate(-50%,-50%)" }}
+        />
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           {/* Section Header */}
@@ -493,10 +511,19 @@ export default function HomePage() {
             <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
               O'zingizga mos kursni tanlang va bugun bilim olishni boshlang
             </p>
-            <div className="mt-4 flex items-center justify-center gap-2">
-              <Badge variant="secondary" className="text-sm px-4 py-1" data-testid="badge-course-count">
-                {courses?.length || 0} ta kurs
-              </Badge>
+            <div className="mt-5 flex items-center justify-center gap-3">
+              <div
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-bold"
+                style={{
+                  background: "linear-gradient(135deg, rgba(124,58,237,0.12), rgba(37,99,235,0.10))",
+                  border: "1px solid rgba(124,58,237,0.3)",
+                  color: "#7c3aed",
+                }}
+                data-testid="badge-course-count"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                {courses?.length || 0} ta kurs mavjud
+              </div>
               {(selectedCategory || selectedLevel || priceRange) && (
                 <Button
                   variant="ghost"
@@ -516,88 +543,148 @@ export default function HomePage() {
             </div>
           </motion.div>
 
-          {/* Modern Filter Bar */}
+          {/* WOW Filter Bar */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="mb-10"
+            className="mb-12"
           >
-            <Card className="border-0 shadow-xl bg-gradient-to-r from-background via-muted/30 to-background backdrop-blur-sm overflow-hidden">
-              <div className="p-6 space-y-6">
-                {/* CEFR Levels - Modern Chips */}
+            {/* Gradient border wrapper */}
+            <div
+              className="rounded-2xl p-px"
+              style={{
+                background: "linear-gradient(135deg, rgba(124,58,237,0.5), rgba(37,99,235,0.3), rgba(6,182,212,0.3), rgba(236,72,153,0.2))",
+              }}
+            >
+              <div
+                className="rounded-2xl p-6 space-y-5 bg-card/90"
+                style={{
+                  backdropFilter: "blur(20px)",
+                  WebkitBackdropFilter: "blur(20px)",
+                }}
+              >
+                {/* CEFR Levels */}
                 {languageLevels && languageLevels.length > 0 && (
                   <div>
                     <div className="flex items-center gap-2 mb-3">
-                      <div className="p-1.5 rounded-lg bg-primary/10">
-                        <GraduationCap className="w-4 h-4 text-primary" />
+                      <div
+                        className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{ background: "linear-gradient(135deg, rgba(124,58,237,0.2), rgba(37,99,235,0.2))" }}
+                      >
+                        <GraduationCap className="w-3.5 h-3.5" style={{ color: "#7c3aed" }} />
                       </div>
-                      <span className="text-sm font-semibold">Til Darajasi (CEFR)</span>
+                      <span className="text-sm font-bold tracking-wide" style={{ color: "rgba(124,58,237,0.9)" }}>
+                        Til Darajasi (CEFR)
+                      </span>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <Button
-                        variant={!selectedLevel ? "default" : "ghost"}
-                        size="sm"
+                      {/* "Barchasi" chip */}
+                      <button
                         onClick={() => setSelectedLevel("")}
-                        className={!selectedLevel ? "shadow-md" : ""}
                         data-testid="filter-level-all"
+                        className="px-4 py-1.5 rounded-full text-sm font-bold transition-all hover:scale-105 active:scale-95"
+                        style={
+                          !selectedLevel
+                            ? {
+                                background: "linear-gradient(135deg, #7c3aed, #2563eb)",
+                                color: "#fff",
+                                boxShadow: "0 0 16px rgba(124,58,237,0.4)",
+                              }
+                            : {
+                                background: "hsl(var(--muted) / 0.6)",
+                                color: "hsl(var(--foreground))",
+                                border: "1px solid hsl(var(--border))",
+                              }
+                        }
                       >
                         Barchasi
-                      </Button>
-                      {languageLevels.map((level) => (
-                        <Button
-                          key={level.id}
-                          variant={selectedLevel === level.id ? "default" : "ghost"}
-                          size="sm"
-                          onClick={() => setSelectedLevel(selectedLevel === level.id ? "" : level.id)}
-                          className={selectedLevel === level.id ? "shadow-md" : ""}
-                          aria-pressed={selectedLevel === level.id}
-                          data-testid={`filter-level-${level.id}`}
-                        >
-                          <span className="font-bold mr-1">{level.code}</span>
-                          {level.name && <span className="text-muted-foreground">{level.name}</span>}
-                        </Button>
-                      ))}
+                      </button>
+                      {languageLevels.map((level) => {
+                        const active = selectedLevel === level.id;
+                        return (
+                          <button
+                            key={level.id}
+                            onClick={() => setSelectedLevel(active ? "" : level.id)}
+                            aria-pressed={active}
+                            data-testid={`filter-level-${level.id}`}
+                            className="px-4 py-1.5 rounded-full text-sm transition-all hover:scale-105 active:scale-95 flex items-center gap-1"
+                            style={
+                              active
+                                ? {
+                                    background: "linear-gradient(135deg, #7c3aed, #2563eb)",
+                                    color: "#fff",
+                                    boxShadow: "0 0 16px rgba(124,58,237,0.4)",
+                                  }
+                                : {
+                                    background: "hsl(var(--muted) / 0.6)",
+                                    color: "hsl(var(--foreground))",
+                                    border: "1px solid hsl(var(--border))",
+                                  }
+                            }
+                          >
+                            <span className="font-black">{level.code}</span>
+                            {level.name && (
+                              <span className={active ? "opacity-80 text-xs" : "text-xs text-muted-foreground"}>
+                                {level.name}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
 
-                {/* Category and Price - Modern Selects */}
-                <div className="flex flex-wrap gap-4 pt-4 border-t border-border/50">
-                  <div className="flex items-center gap-3 bg-muted/50 rounded-xl px-4 py-2">
-                    <Filter className="w-4 h-4 text-primary" />
+                {/* Category & Price Selects */}
+                <div
+                  className="flex flex-wrap gap-3 pt-4"
+                  style={{ borderTop: "1px solid hsl(var(--border) / 0.4)" }}
+                >
+                  {/* Category */}
+                  <div
+                    className="flex items-center gap-2 rounded-xl px-4 py-2.5 transition-all"
+                    style={{
+                      background: "hsl(var(--muted) / 0.5)",
+                      border: "1px solid rgba(124,58,237,0.2)",
+                    }}
+                  >
+                    <Filter className="w-4 h-4 flex-shrink-0" style={{ color: "#7c3aed" }} />
                     <select
                       value={selectedCategory}
                       onChange={(e) => setSelectedCategory(e.target.value)}
-                      className="bg-transparent border-0 text-sm font-medium focus:outline-none cursor-pointer"
+                      className="bg-transparent border-0 text-sm font-semibold focus:outline-none cursor-pointer"
                       data-testid="select-category"
                     >
                       {categories.map((cat) => (
-                        <option key={cat.value} value={cat.value}>
-                          {cat.label}
-                        </option>
+                        <option key={cat.value} value={cat.value}>{cat.label}</option>
                       ))}
                     </select>
                   </div>
-                  <div className="flex items-center gap-3 bg-muted/50 rounded-xl px-4 py-2">
-                    <TrendingUp className="w-4 h-4 text-primary" />
+                  {/* Price */}
+                  <div
+                    className="flex items-center gap-2 rounded-xl px-4 py-2.5 transition-all"
+                    style={{
+                      background: "hsl(var(--muted) / 0.5)",
+                      border: "1px solid rgba(37,99,235,0.2)",
+                    }}
+                  >
+                    <TrendingUp className="w-4 h-4 flex-shrink-0" style={{ color: "#2563eb" }} />
                     <select
                       value={priceRange}
                       onChange={(e) => setPriceRange(e.target.value)}
-                      className="bg-transparent border-0 text-sm font-medium focus:outline-none cursor-pointer"
+                      className="bg-transparent border-0 text-sm font-semibold focus:outline-none cursor-pointer"
                       data-testid="select-price"
                     >
                       {priceRanges.map((range) => (
-                        <option key={range.value} value={range.value}>
-                          {range.label}
-                        </option>
+                        <option key={range.value} value={range.value}>{range.label}</option>
                       ))}
                     </select>
                   </div>
                 </div>
               </div>
-            </Card>
+            </div>
           </motion.div>
 
         {isLoading ? (
@@ -925,13 +1012,30 @@ export default function HomePage() {
             })}
           </div>
         ) : (
-          <div className="text-center py-16">
-            <BookOpen className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-xl font-semibold mb-2">Kurslar topilmadi</h3>
-            <p className="text-muted-foreground">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center py-20"
+          >
+            <div
+              className="w-24 h-24 mx-auto mb-6 rounded-2xl flex items-center justify-center"
+              style={{ background: "linear-gradient(135deg, rgba(124,58,237,0.12), rgba(37,99,235,0.10))", border: "1px solid rgba(124,58,237,0.2)" }}
+            >
+              <BookOpen className="w-10 h-10" style={{ color: "#7c3aed" }} />
+            </div>
+            <h3 className="text-2xl font-black mb-3">Kurslar topilmadi</h3>
+            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
               Qidiruv parametrlarini o'zgartiring yoki filterlarni tozalang
             </p>
-          </div>
+            <button
+              onClick={() => { setSelectedCategory(""); setSelectedLevel(""); setPriceRange(""); setSearchQuery(""); }}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white transition-all hover:scale-105 active:scale-95"
+              style={{ background: "linear-gradient(135deg, #7c3aed, #2563eb)", boxShadow: "0 0 20px rgba(124,58,237,0.3)" }}
+            >
+              <X className="w-4 h-4" />
+              Filterlarni tozalash
+            </button>
+          </motion.div>
         )}
         </div>
       </div>
