@@ -909,6 +909,105 @@
   transform: translateY(-2px);
 }
 
+/* ============ 3D HAND CLICK ANIMATION ============ */
+@keyframes hand-bounce {
+  0%   { transform: translateY(0)    rotate(-10deg) scale(1);    }
+  18%  { transform: translateY(-18px) rotate(-10deg) scale(1.08); }
+  45%  { transform: translateY(8px)  rotate(-7deg)  scale(0.90); }
+  62%  { transform: translateY(-8px) rotate(-9deg)  scale(1.04); }
+  78%  { transform: translateY(3px)  rotate(-8deg)  scale(0.97); }
+  100% { transform: translateY(0)    rotate(-10deg) scale(1);    }
+}
+
+@keyframes hand-shadow {
+  0%,100%{ transform: scaleX(1);   opacity: 0.35; }
+  18%    { transform: scaleX(0.7); opacity: 0.15; }
+  45%    { transform: scaleX(1.2); opacity: 0.5;  }
+}
+
+@keyframes ray-appear {
+  0%,30%,100% { opacity: 0; transform: scale(0.4) translateY(0); }
+  45%,65%     { opacity: 1; transform: scale(1)   translateY(-3px); }
+}
+
+@keyframes ring-ripple {
+  0%   { transform: scale(0.3); opacity: 0.9; }
+  100% { transform: scale(2.2); opacity: 0;   }
+}
+
+.hand-3d-container {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100px;
+}
+
+.hand-3d-emoji {
+  font-size: 64px;
+  line-height: 1;
+  animation: hand-bounce 1.8s cubic-bezier(0.36,0.07,0.19,0.97) infinite;
+  filter:
+    drop-shadow(0 8px 16px rgba(37,99,235,0.35))
+    drop-shadow(0 2px 4px rgba(0,0,0,0.4))
+    drop-shadow(-2px -2px 4px rgba(255,200,150,0.2));
+  transform-origin: bottom center;
+  user-select: none;
+}
+
+.hand-3d-shadow {
+  width: 44px;
+  height: 10px;
+  background: radial-gradient(ellipse, rgba(37,99,235,0.35) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: hand-shadow 1.8s ease-in-out infinite;
+  margin-top: -4px;
+}
+
+.hand-rays {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 100px;
+  pointer-events: none;
+}
+
+.hand-ray {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 4px;
+  background: linear-gradient(90deg, #06b6d4, #3b82f6);
+  border-radius: 9999px;
+  transform-origin: left center;
+  animation: ray-appear 1.8s ease-in-out infinite;
+}
+.hand-ray:nth-child(1) { transform: rotate(0deg)   translateX(26px); animation-delay: 0s;     }
+.hand-ray:nth-child(2) { transform: rotate(45deg)  translateX(26px); animation-delay: 0.07s;  }
+.hand-ray:nth-child(3) { transform: rotate(90deg)  translateX(26px); animation-delay: 0.14s;  }
+.hand-ray:nth-child(4) { transform: rotate(135deg) translateX(26px); animation-delay: 0.21s;  }
+.hand-ray:nth-child(5) { transform: rotate(180deg) translateX(26px); animation-delay: 0.07s;  }
+.hand-ray:nth-child(6) { transform: rotate(225deg) translateX(26px); animation-delay: 0.14s;  }
+.hand-ray:nth-child(7) { transform: rotate(270deg) translateX(26px); animation-delay: 0.21s;  }
+.hand-ray:nth-child(8) { transform: rotate(315deg) translateX(26px); animation-delay: 0s;     }
+
+.hand-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin-top: -10px;
+  margin-left: -10px;
+  border: 2.5px solid rgba(6,182,212,0.8);
+  border-radius: 50%;
+  animation: ring-ripple 1.8s ease-out infinite;
+}
+.hand-ring:nth-child(2) { animation-delay: 0.3s; }
+
 /* ============ ICON CLICK ANIMATIONS ============ */
 /* Spans are used as wrappers around SVG icons so transforms work correctly */
 

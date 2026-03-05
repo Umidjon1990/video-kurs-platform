@@ -736,6 +736,43 @@ export default function HomePage() {
             </div>
           </motion.div>
 
+          {/* 3D Animated Hand — "Bosing!" */}
+          <motion.div
+            className="flex justify-center mb-8"
+            initial={{ opacity: 0, y: -20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            <div className="flex flex-col items-center gap-2">
+              <div className="hand-3d-container">
+                {/* Sparkle rays around fingertip — rays FIRST so nth-child works */}
+                <div className="hand-rays" style={{ top: "2px" }}>
+                  <div className="hand-ray" />
+                  <div className="hand-ray" />
+                  <div className="hand-ray" />
+                  <div className="hand-ray" />
+                  <div className="hand-ray" />
+                  <div className="hand-ray" />
+                  <div className="hand-ray" />
+                  <div className="hand-ray" />
+                  <div className="hand-ring" />
+                  <div className="hand-ring" style={{ animationDelay: "0.3s" }} />
+                </div>
+                {/* Hand emoji */}
+                <div className="hand-3d-emoji" aria-hidden="true">👆</div>
+                {/* Ground shadow */}
+                <div className="hand-3d-shadow" />
+              </div>
+              <p
+                className="text-xs font-bold tracking-widest uppercase"
+                style={{ color: "rgba(6,182,212,0.7)", letterSpacing: "0.2em" }}
+              >
+                Kursni bosing
+              </p>
+            </div>
+          </motion.div>
+
         {isLoading ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {[...Array(6)].map((_, i) => (
