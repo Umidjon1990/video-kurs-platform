@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -10,15 +10,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { 
-  BookOpen, 
-  User, 
-  LogOut, 
-  Menu, 
-  X, 
+import {
+  User,
+  LogOut,
+  Menu,
+  X,
   GraduationCap,
   LayoutDashboard,
-  Bell
+  Bell,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -27,6 +26,13 @@ import type { User as UserType } from "@shared/schema";
 export function ModernHeader() {
   const [location, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const { data: user } = useQuery<UserType>({
     queryKey: ["/api/auth/user"],
@@ -59,52 +65,99 @@ export function ModernHeader() {
     { href: "/contact", label: "Aloqa" },
   ];
 
+  const isScrolled = scrolled;
+
   return (
-    <header className="sticky top-0 z-50 w-full header-blur border-b border-border/50">
+    <header
+      className="sticky top-0 z-50 w-full transition-all duration-500"
+      style={{
+        background: isScrolled
+          ? "hsl(var(--background) / 0.90)"
+          : "rgba(10, 5, 32, 0.65)",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        borderBottom: isScrolled
+          ? "1px solid hsl(var(--border) / 0.5)"
+          : "1px solid rgba(255,255,255,0.08)",
+        boxShadow: isScrolled ? "0 4px 32px rgba(124,58,237,0.06)" : "none",
+      }}
+    >
+      {/* Animated gradient bottom border line */}
+      <div
+        className="absolute bottom-0 left-0 right-0 h-[1px] wow-header-border transition-opacity duration-500"
+        style={{ opacity: isScrolled ? 0.5 : 0.7 }}
+      />
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between gap-4">
+
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
+          <Link href="/" className="flex items-center gap-2.5 group flex-shrink-0">
             <div className="relative">
-              <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
+              <div
+                className="wow-logo-ring absolute inset-0 rounded-xl"
+                style={{ background: "linear-gradient(135deg, #7c3aed, #06b6d4)", opacity: 0.5 }}
+              />
+              <div
+                className="relative w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transition-shadow group-hover:shadow-violet-500/40"
+                style={{ background: "linear-gradient(135deg, #7c3aed 0%, #2563eb 55%, #06b6d4 100%)" }}
+              >
                 <GraduationCap className="w-6 h-6 text-white" />
               </div>
-              <div className="absolute -inset-1 rounded-xl gradient-primary opacity-30 blur-sm group-hover:opacity-50 transition-opacity" />
             </div>
-            <span className="font-bold text-xl hidden sm:block">
-              <span className="text-gradient">Zamonaviy</span>-EDU
-            </span>
+            <div className="hidden sm:block">
+              <span className="font-black text-xl leading-none">
+                <span className="wow-shimmer-text" style={{ fontSize: "inherit" }}>Zamonaviy</span>
+                <span
+                  className="transition-colors duration-500"
+                  style={{ color: isScrolled ? "hsl(var(--foreground))" : "rgba(255,255,255,0.9)" }}
+                >
+                  -EDU
+                </span>
+              </span>
+            </div>
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden md:flex items-center gap-1 p-1 rounded-full transition-all duration-500 wow-nav-pill">
             {navLinks.map((link) => (
               <Link key={link.href} href={link.href}>
-                <Button 
-                  variant={location === link.href ? "secondary" : "ghost"} 
-                  size="sm"
-                  className="text-sm font-medium"
-                  data-testid={`link-nav-${link.label.toLowerCase().replace(/\s/g, '-')}`}
+                <button
+                  className="px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-200"
+                  style={
+                    location === link.href
+                      ? {
+                          background: "linear-gradient(135deg, #7c3aed, #2563eb)",
+                          color: "white",
+                          boxShadow: "0 4px 16px rgba(124,58,237,0.35)",
+                        }
+                      : {
+                          color: isScrolled ? "hsl(var(--muted-foreground))" : "rgba(255,255,255,0.65)",
+                          background: "transparent",
+                        }
+                  }
+                  data-testid={`link-nav-${link.label.toLowerCase().replace(/\s/g, "-")}`}
                 >
                   {link.label}
-                </Button>
+                </button>
               </Link>
             ))}
           </nav>
 
           {/* Right Section */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <ThemeToggle />
 
             {user ? (
               <>
                 {/* Notifications */}
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
+                <Button
+                  variant="ghost"
+                  size="icon"
                   className="relative"
                   onClick={() => setLocation(getDashboardLink())}
                   data-testid="button-notifications"
+                  style={{ color: isScrolled ? undefined : "rgba(255,255,255,0.8)" }}
                 >
                   <Bell className="w-5 h-5" />
                   {unreadCount && unreadCount.count > 0 && (
@@ -117,9 +170,22 @@ export function ModernHeader() {
                 {/* User Menu */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-9 w-9 rounded-full" data-testid="button-user-menu">
-                      <Avatar className="h-9 w-9 border-2 border-primary/20">
-                        <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                    <Button
+                      variant="ghost"
+                      className="relative h-9 w-9 rounded-full"
+                      data-testid="button-user-menu"
+                    >
+                      <Avatar
+                        className="h-9 w-9 border-2 transition-all"
+                        style={{ borderColor: isScrolled ? "hsl(var(--primary) / 0.3)" : "rgba(255,255,255,0.4)" }}
+                      >
+                        <AvatarFallback
+                          style={{
+                            background: "linear-gradient(135deg, #7c3aed30, #2563eb30)",
+                            color: isScrolled ? "hsl(var(--primary))" : "#a78bfa",
+                          }}
+                          className="font-semibold"
+                        >
                           {user.firstName?.[0]}{user.lastName?.[0]}
                         </AvatarFallback>
                       </Avatar>
@@ -128,12 +194,12 @@ export function ModernHeader() {
                   <DropdownMenuContent align="end" className="w-56">
                     <div className="flex items-center gap-2 p-2">
                       <Avatar className="h-10 w-10">
-                        <AvatarFallback className="bg-primary/10 text-primary">
+                        <AvatarFallback style={{ background: "linear-gradient(135deg, #7c3aed20, #2563eb20)", color: "hsl(var(--primary))" }}>
                           {user.firstName?.[0]}{user.lastName?.[0]}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col">
-                        <span className="text-sm font-medium">{user.firstName} {user.lastName}</span>
+                        <span className="text-sm font-semibold">{user.firstName} {user.lastName}</span>
                         <span className="text-xs text-muted-foreground capitalize">{user.role}</span>
                       </div>
                     </div>
@@ -154,15 +220,29 @@ export function ModernHeader() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </>
-            ) : null}
+            ) : (
+              <Link href="/login">
+                <button
+                  className="px-5 py-2 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 active:scale-95"
+                  style={{
+                    background: "linear-gradient(135deg, #7c3aed, #2563eb)",
+                    boxShadow: "0 0 20px rgba(124,58,237,0.35)",
+                  }}
+                  data-testid="button-login"
+                >
+                  Kirish
+                </button>
+              </Link>
+            )}
 
             {/* Mobile Menu Button */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               className="md:hidden"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               data-testid="button-mobile-menu"
+              style={{ color: isScrolled ? undefined : "rgba(255,255,255,0.8)" }}
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </Button>
@@ -177,30 +257,49 @@ export function ModernHeader() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden border-t border-border/50 bg-background"
+            className="md:hidden"
+            style={{
+              background: isScrolled ? "hsl(var(--background) / 0.95)" : "rgba(10,5,32,0.95)",
+              backdropFilter: "blur(20px)",
+              borderTop: "1px solid rgba(255,255,255,0.08)",
+            }}
           >
             <nav className="flex flex-col p-4 gap-2">
               {navLinks.map((link) => (
                 <Link key={link.href} href={link.href}>
-                  <Button 
-                    variant={location === link.href ? "secondary" : "ghost"} 
-                    className="w-full justify-start"
+                  <button
+                    className="w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
+                    style={
+                      location === link.href
+                        ? { background: "linear-gradient(135deg, #7c3aed, #2563eb)", color: "white" }
+                        : { color: isScrolled ? "hsl(var(--foreground))" : "rgba(255,255,255,0.8)" }
+                    }
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     {link.label}
-                  </Button>
+                  </button>
                 </Link>
               ))}
-              {user && (
+              {user ? (
                 <Link href={getDashboardLink()}>
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-start"
+                  <button
+                    className="w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 transition-all"
+                    style={{ color: isScrolled ? "hsl(var(--foreground))" : "rgba(255,255,255,0.8)" }}
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    <LayoutDashboard className="w-4 h-4 mr-2" />
+                    <LayoutDashboard className="w-4 h-4" />
                     Dashboard
-                  </Button>
+                  </button>
+                </Link>
+              ) : (
+                <Link href="/login">
+                  <button
+                    className="w-full px-4 py-2.5 rounded-xl text-sm font-bold text-white"
+                    style={{ background: "linear-gradient(135deg, #7c3aed, #2563eb)" }}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Kirish
+                  </button>
                 </Link>
               )}
             </nav>

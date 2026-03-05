@@ -714,6 +714,201 @@
   }
 }
 
+/* ============ WOW HERO ANIMATIONS ============ */
+
+/* Aurora blobs */
+@keyframes wow-blob-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25%  { transform: translate(60px, -50px) scale(1.12); }
+  50%  { transform: translate(-40px, 70px) scale(0.93); }
+  75%  { transform: translate(-60px, -30px) scale(1.06); }
+}
+@keyframes wow-blob-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%  { transform: translate(-80px, 40px) scale(1.1); }
+  66%  { transform: translate(50px, -60px) scale(0.9); }
+}
+@keyframes wow-blob-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  40%  { transform: translate(40px, 80px) scale(1.08); }
+  80%  { transform: translate(-70px, -20px) scale(0.96); }
+}
+@keyframes wow-blob-4 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(-50px, 50px) scale(1.15); }
+}
+
+.wow-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  pointer-events: none;
+}
+.wow-blob-1 {
+  width: 800px; height: 800px;
+  top: -300px; left: -200px;
+  background: radial-gradient(circle, rgba(124,58,237,0.55) 0%, transparent 70%);
+  animation: wow-blob-1 14s ease-in-out infinite;
+}
+.wow-blob-2 {
+  width: 700px; height: 700px;
+  top: 60px; right: -250px;
+  background: radial-gradient(circle, rgba(37,99,235,0.45) 0%, transparent 70%);
+  animation: wow-blob-2 18s ease-in-out infinite 2s;
+}
+.wow-blob-3 {
+  width: 600px; height: 600px;
+  bottom: -200px; left: 20%;
+  background: radial-gradient(circle, rgba(6,182,212,0.35) 0%, transparent 70%);
+  animation: wow-blob-3 12s ease-in-out infinite 4s;
+}
+.wow-blob-4 {
+  width: 450px; height: 450px;
+  top: 35%; left: 5%;
+  background: radial-gradient(circle, rgba(236,72,153,0.28) 0%, transparent 70%);
+  animation: wow-blob-4 20s ease-in-out infinite 7s;
+}
+
+/* Dot grid overlay for hero */
+.wow-dot-grid {
+  background-image: radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Floating glass icon cards */
+@keyframes wow-float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  25%  { transform: translateY(-14px) rotate(4deg); }
+  75%  { transform: translateY(9px) rotate(-2deg); }
+}
+.wow-float-icon {
+  width: 56px; height: 56px;
+  border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(124,58,237,0.18);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(124,58,237,0.4);
+  animation: wow-float 7s ease-in-out infinite;
+}
+.wow-float-icon-1 { animation-duration: 7s; animation-delay: 0s; }
+.wow-float-icon-2 {
+  background: rgba(37,99,235,0.18);
+  border-color: rgba(37,99,235,0.4);
+  animation-duration: 9s; animation-delay: 1s;
+}
+.wow-float-icon-3 {
+  width: 48px; height: 48px; border-radius: 12px;
+  background: rgba(6,182,212,0.18);
+  border-color: rgba(6,182,212,0.4);
+  animation-duration: 8s; animation-delay: 2s;
+}
+.wow-float-icon-4 {
+  background: rgba(236,72,153,0.18);
+  border-color: rgba(236,72,153,0.4);
+  animation-duration: 10s; animation-delay: 0.5s;
+}
+.wow-float-icon-5 {
+  width: 44px; height: 44px; border-radius: 10px;
+  background: rgba(250,204,21,0.15);
+  border-color: rgba(250,204,21,0.35);
+  animation-duration: 6s; animation-delay: 1.5s;
+}
+
+/* Shimmer gradient text */
+@keyframes wow-shimmer {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+.wow-shimmer-text {
+  background: linear-gradient(90deg, #a78bfa, #60a5fa, #34d399, #f472b6, #a78bfa);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: wow-shimmer 5s linear infinite;
+}
+
+/* Animated gradient line */
+@keyframes wow-grad-line {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.wow-gradient-line {
+  background: linear-gradient(90deg, #7c3aed, #2563eb, #06b6d4, #ec4899, #7c3aed);
+  background-size: 300% 100%;
+  animation: wow-grad-line 4s ease infinite;
+}
+
+/* Animated header border */
+.wow-header-border {
+  background: linear-gradient(90deg, transparent, #7c3aed, #2563eb, #06b6d4, #ec4899, #7c3aed, transparent);
+  background-size: 300% 100%;
+  animation: wow-grad-line 6s ease infinite;
+}
+
+/* Logo pulse ring */
+@keyframes wow-logo-ring {
+  0%   { transform: scale(1); opacity: 0.6; }
+  70%  { transform: scale(1.7); opacity: 0; }
+  100% { transform: scale(1.7); opacity: 0; }
+}
+.wow-logo-ring {
+  animation: wow-logo-ring 2.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+/* Section badge */
+.wow-badge {
+  background: linear-gradient(135deg, rgba(124,58,237,0.12), rgba(37,99,235,0.12));
+  border: 1px solid rgba(124,58,237,0.25);
+  color: hsl(var(--primary));
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.dark .wow-badge {
+  background: linear-gradient(135deg, rgba(124,58,237,0.2), rgba(37,99,235,0.2));
+  border-color: rgba(124,58,237,0.4);
+}
+
+/* Section gradient heading */
+.wow-section-title {
+  background: linear-gradient(135deg, hsl(var(--foreground)) 0%, hsl(var(--primary)) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Footer dark gradient */
+.wow-footer {
+  background: linear-gradient(160deg, #0a0520 0%, #0d1440 50%, #0a0520 100%);
+}
+
+/* Nav pill */
+.wow-nav-pill {
+  background: rgba(255,255,255,0.10);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 9999px;
+  padding: 4px;
+}
+.dark .wow-nav-pill {
+  background: rgba(255,255,255,0.07);
+}
+
+/* Testimonial card glow on hover */
+.wow-card-glow {
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+.wow-card-glow:hover {
+  box-shadow: 0 0 0 1px rgba(124,58,237,0.2), 0 8px 32px rgba(124,58,237,0.12);
+  transform: translateY(-2px);
+}
+
 /* ============ ICON CLICK ANIMATIONS ============ */
 /* Spans are used as wrappers around SVG icons so transforms work correctly */
 

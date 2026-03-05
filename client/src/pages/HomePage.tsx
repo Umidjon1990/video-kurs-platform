@@ -248,76 +248,223 @@ export default function HomePage() {
       <ModernHeader />
 
       <main className="flex-1">
-      {/* Hero Section */}
-      <motion.div 
-        className="relative gradient-hero-enhanced border-b overflow-hidden"
-        initial="hidden"
-        animate="visible"
-        variants={fadeInUp}
-        transition={{ duration: 0.6 }}
+      {/* ============ HYPER-WOW HERO ============ */}
+      <section
+        className="relative flex flex-col overflow-hidden"
+        style={{
+          minHeight: '100svh',
+          background: 'linear-gradient(135deg, #0a0520 0%, #0d1440 40%, #0a1628 70%, #0d0a30 100%)',
+        }}
       >
-        {/* Animated floating orbs */}
-        <div className="floating-orb w-[500px] h-[500px] bg-blue-500/30 dark:bg-blue-400/20 top-[-200px] left-[-100px]" style={{ animationDelay: '0s' }} />
-        <div className="floating-orb w-[400px] h-[400px] bg-purple-500/25 dark:bg-purple-400/15 top-[50%] right-[-150px]" style={{ animationDelay: '-5s' }} />
-        <div className="floating-orb w-[300px] h-[300px] bg-pink-500/20 dark:bg-pink-400/10 bottom-[-100px] left-[30%]" style={{ animationDelay: '-10s' }} />
-        
-        {/* Grid pattern overlay */}
-        <div className="absolute inset-0 grid-pattern opacity-50" />
-        
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32">
-          <div className="text-center space-y-6">
-            <motion.h1 
-              className="text-4xl md:text-6xl font-bold" 
-              data-testid="text-hero-title"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-            >
-             Zamonaviy-EDU
-              <br />
-              <span className="text-primary">Zamonaviy Ta'lim loyihasi</span>
-            </motion.h1>
-            <motion.p 
-              className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-            >
-              Professional  zamonaviy video darslar.
-              <br />
-              Bilimingizni oshiring va kelajagingizni yarating!
-            </motion.p>
+        {/* Aurora blobs */}
+        <div className="wow-blob wow-blob-1" />
+        <div className="wow-blob wow-blob-2" />
+        <div className="wow-blob wow-blob-3" />
+        <div className="wow-blob wow-blob-4" />
 
-            {/* Search Bar */}
-            <div className="max-w-2xl mx-auto">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  placeholder="Kurs qidirish..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                  data-testid="input-search"
-                />
-              </div>
-            </div>
+        {/* Dot grid overlay */}
+        <div className="absolute inset-0 wow-dot-grid" />
 
-            <div className="flex flex-wrap gap-4 justify-center">
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => {
-                  setSearchQuery("");
-                  document.getElementById('courses-section')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                data-testid="button-explore"
-              >
-                Kurslarni Ko'rish
-              </Button>
-            </div>
-          </div>
+        {/* Floating glass icon cards */}
+        <div className="wow-float-icon wow-float-icon-1 absolute top-[17%] left-[4%] hidden xl:flex">
+          <BookOpen className="w-7 h-7 text-violet-400" />
         </div>
-      </motion.div>
+        <div className="wow-float-icon wow-float-icon-2 absolute top-[30%] right-[5%] hidden xl:flex">
+          <Award className="w-6 h-6 text-blue-400" />
+        </div>
+        <div className="wow-float-icon wow-float-icon-3 absolute top-[60%] left-[3%] hidden xl:flex">
+          <GraduationCap className="w-5 h-5 text-cyan-400" />
+        </div>
+        <div className="wow-float-icon wow-float-icon-4 absolute top-[70%] right-[4%] hidden xl:flex">
+          <Star className="w-6 h-6 text-pink-400" />
+        </div>
+        <div className="wow-float-icon wow-float-icon-5 absolute top-[11%] right-[18%] hidden xl:flex">
+          <TrendingUp className="w-5 h-5 text-yellow-400" />
+        </div>
+        <div className="wow-float-icon wow-float-icon-5 absolute top-[50%] right-[12%] hidden xl:flex" style={{ animationDelay: '3s' }}>
+          <CheckCircle className="w-5 h-5 text-green-400" />
+        </div>
+
+        {/* Main content */}
+        <div className="relative flex-1 flex flex-col items-center justify-center text-center px-4 sm:px-6 py-24 md:py-32">
+
+          {/* Platform badge */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: -10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold mb-8"
+            style={{
+              background: 'rgba(124,58,237,0.22)',
+              backdropFilter: 'blur(14px)',
+              border: '1px solid rgba(124,58,237,0.5)',
+              color: '#c4b5fd',
+            }}
+          >
+            <Sparkles className="w-4 h-4 text-yellow-400" />
+            O'zbekistonning zamonaviy ta'lim platformasi
+            <Sparkles className="w-4 h-4 text-yellow-400" />
+          </motion.div>
+
+          {/* Main title */}
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.85, delay: 0.15 }}
+            className="mb-6"
+          >
+            <h1
+              className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-white tracking-tight leading-none mb-3"
+              data-testid="text-hero-title"
+            >
+              Zamonaviy-EDU
+            </h1>
+            <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight leading-none wow-shimmer-text">
+              Zamonaviy Ta'lim
+            </h2>
+          </motion.div>
+
+          {/* Animated gradient divider */}
+          <motion.div
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ duration: 0.9, delay: 0.4 }}
+            className="wow-gradient-line w-40 h-1 rounded-full mx-auto mb-8"
+          />
+
+          {/* Subtitle */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.55 }}
+            className="text-lg sm:text-xl md:text-2xl max-w-2xl mx-auto mb-10 leading-relaxed"
+            style={{ color: 'rgba(255,255,255,0.68)' }}
+          >
+            Professional zamonaviy video darslar.
+            <br />
+            Bilimingizni oshiring va kelajagingizni yarating!
+          </motion.p>
+
+          {/* Glassmorphism search bar */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.68 }}
+            className="w-full max-w-2xl mx-auto mb-8"
+          >
+            <div
+              className="relative flex items-center p-2 rounded-2xl shadow-2xl"
+              style={{
+                background: 'rgba(255,255,255,0.08)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.15)',
+              }}
+            >
+              <Search className="absolute left-5 w-5 h-5 pointer-events-none flex-shrink-0" style={{ color: 'rgba(255,255,255,0.45)' }} />
+              <input
+                type="text"
+                placeholder="Kurs qidirish..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') document.getElementById('courses-section')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="flex-1 bg-transparent pl-12 pr-3 py-3 text-white placeholder:text-white/40 outline-none text-base"
+                data-testid="input-search"
+              />
+              <button
+                onClick={() => document.getElementById('courses-section')?.scrollIntoView({ behavior: 'smooth' })}
+                className="flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-white transition-all hover:opacity-90 active:scale-95 flex-shrink-0"
+                style={{ background: 'linear-gradient(135deg, #7c3aed, #2563eb)' }}
+              >
+                <Search className="w-4 h-4" />
+                <span className="hidden sm:inline">Qidirish</span>
+              </button>
+            </div>
+          </motion.div>
+
+          {/* CTA buttons */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.82 }}
+            className="flex flex-wrap gap-4 justify-center mb-16"
+          >
+            <button
+              onClick={() => {
+                setSearchQuery("");
+                document.getElementById('courses-section')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="group flex items-center gap-2 px-8 py-4 rounded-xl font-bold text-lg text-white transition-all hover:scale-105 active:scale-95"
+              style={{
+                background: 'linear-gradient(135deg, #7c3aed 0%, #2563eb 50%, #06b6d4 100%)',
+                boxShadow: '0 0 40px rgba(124,58,237,0.4), 0 8px 32px rgba(0,0,0,0.3)',
+              }}
+              data-testid="button-explore"
+            >
+              Kurslarni Ko'rish
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </button>
+            <a
+              href="https://t.me/zamonaviytalimuz"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-8 py-4 rounded-xl font-bold text-lg text-white transition-all hover:scale-105 active:scale-95"
+              style={{
+                background: 'rgba(255,255,255,0.10)',
+                backdropFilter: 'blur(12px)',
+                border: '1px solid rgba(255,255,255,0.25)',
+              }}
+            >
+              <Send className="w-5 h-5" />
+              Telegram
+            </a>
+          </motion.div>
+
+          {/* Stats grid */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.98 }}
+            className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-3xl w-full mx-auto"
+          >
+            {[
+              { Icon: Users,    value: `${courses?.reduce((s, c) => s + (c.enrollmentsCount || 0), 0) || 0}+`, label: 'Talabalar',  color: '#7c3aed' },
+              { Icon: BookOpen, value: `${courses?.length || 0}`,                                              label: 'Kurslar',    color: '#2563eb' },
+              { Icon: Star,     value: '4.9★',                                                                 label: 'Reyting',    color: '#f59e0b' },
+              { Icon: Award,    value: '100%',                                                                 label: 'Sertifikat', color: '#06b6d4' },
+            ].map((stat, i) => (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 1.1 + i * 0.08 }}
+                className="flex flex-col items-center p-4 rounded-2xl text-center"
+                style={{
+                  background: 'rgba(255,255,255,0.07)',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                }}
+              >
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center mb-2"
+                  style={{ background: `${stat.color}22` }}
+                >
+                  <stat.Icon className="w-5 h-5" style={{ color: stat.color }} />
+                </div>
+                <div className="text-2xl font-black text-white">{stat.value}</div>
+                <div className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.5)' }}>{stat.label}</div>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+
+        {/* Scroll indicator */}
+        <div className="relative flex flex-col items-center pb-10 gap-2">
+          <div className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.3)' }}>Pastga suring</div>
+          <ChevronDown className="w-5 h-5 animate-bounce" style={{ color: 'rgba(255,255,255,0.3)' }} />
+        </div>
+      </section>
 
       {/* Courses Grid */}
       <div id="courses-section" className="relative overflow-x-clip">
@@ -330,7 +477,7 @@ export default function HomePage() {
         <div className="absolute bottom-40 left-10 w-96 h-96 bg-accent/5 rounded-full blur-3xl pointer-events-none" />
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          {/* Modern Section Header */}
+          {/* Section Header */}
           <motion.div 
             className="text-center mb-12"
             initial={{ opacity: 0, y: 20 }}
@@ -338,12 +485,12 @@ export default function HomePage() {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4" data-testid="badge-courses-label">
+            <div className="wow-badge mb-4" data-testid="badge-courses-label">
               <BookOpen className="w-4 h-4" />
               <span>Bizning Kurslar</span>
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-3" data-testid="text-courses-header">Mavjud Kurslar</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
+            <h2 className="text-3xl md:text-5xl font-black mb-4 wow-section-title" data-testid="text-courses-header">Mavjud Kurslar</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
               O'zingizga mos kursni tanlang va bugun bilim olishni boshlang
             </p>
             <div className="mt-4 flex items-center justify-center gap-2">
@@ -791,59 +938,68 @@ export default function HomePage() {
 
       {/* Testimonials Section */}
       {testimonials && testimonials.length > 0 && (
-        <div className="relative overflow-hidden border-y">
-          {/* Enhanced gradient background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-muted/50 via-background to-primary/5 pointer-events-none" />
-          <div className="absolute inset-0 grid-pattern opacity-30 pointer-events-none" />
-          
-          {/* Decorative elements */}
-          <div className="absolute top-10 left-[10%] w-64 h-64 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-10 right-[10%] w-80 h-80 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
-          
-          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-            <motion.div 
-              className="text-center mb-12"
+        <div className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-violet-50/80 via-background to-blue-50/60 dark:from-violet-950/20 dark:via-background dark:to-blue-950/20 pointer-events-none" />
+          <div className="absolute top-10 left-[10%] w-72 h-72 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(124,58,237,0.07)' }} />
+          <div className="absolute bottom-10 right-[10%] w-80 h-80 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(37,99,235,0.07)' }} />
+
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+            <motion.div
+              className="text-center mb-14"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
             >
-              <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4" data-testid="badge-testimonials-label">
-                <Star className="w-4 h-4" />
+              <div className="wow-badge mb-4" data-testid="badge-testimonials-label">
+                <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                 <span>Talabalar Fikrlari</span>
               </div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-3" data-testid="text-testimonials-header">Talabalarimiz Nima Deyishadi</h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
+              <h2 className="text-3xl md:text-5xl font-black mb-4 wow-section-title" data-testid="text-testimonials-header">
+                Talabalarimiz Nima Deyishadi
+              </h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
                 Minglab talabalar bizga ishonishdi va karyeralarini qurishdi
               </p>
             </motion.div>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {testimonials.slice(0, 6).map((testimonial) => (
-                <Card key={testimonial.id} data-testid={`card-testimonial-${testimonial.id}`}>
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
-                        {testimonial.studentName.charAt(0).toUpperCase()}
+              {testimonials.slice(0, 6).map((testimonial, idx) => (
+                <motion.div
+                  key={testimonial.id}
+                  initial={{ opacity: 0, y: 24 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: idx * 0.08 }}
+                >
+                  <Card className="wow-card-glow h-full" data-testid={`card-testimonial-${testimonial.id}`}>
+                    <CardHeader>
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-12 h-12 rounded-full flex items-center justify-center font-black text-lg text-white flex-shrink-0"
+                          style={{ background: 'linear-gradient(135deg, #7c3aed, #2563eb)' }}
+                        >
+                          {testimonial.studentName.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <h4 className="font-bold">{testimonial.studentName}</h4>
+                          {testimonial.studentRole && (
+                            <p className="text-sm text-muted-foreground">{testimonial.studentRole}</p>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="font-semibold">{testimonial.studentName}</h4>
-                        {testimonial.studentRole && (
-                          <p className="text-sm text-muted-foreground">{testimonial.studentRole}</p>
-                        )}
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex gap-1 mb-3">
+                        {Array.from({ length: testimonial.rating || 5 }).map((_, i) => (
+                          <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                        ))}
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex gap-1 mb-3">
-                      {Array.from({ length: testimonial.rating || 5 }).map((_, i) => (
-                        <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                      ))}
-                    </div>
-                    <p className="text-sm text-muted-foreground italic">
-                      "{testimonial.content}"
-                    </p>
-                  </CardContent>
-                </Card>
+                      <p className="text-sm text-muted-foreground italic leading-relaxed">
+                        "{testimonial.content}"
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               ))}
             </div>
           </div>
@@ -889,12 +1045,12 @@ export default function HomePage() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5 }}
               >
-                <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4" data-testid="badge-certificates-label">
+                <div className="wow-badge mb-4" data-testid="badge-certificates-label">
                   <Award className="w-4 h-4" />
                   <span>Sertifikatlar</span>
                 </div>
-                <h2 className="text-3xl md:text-4xl font-bold mb-3" data-testid="text-certificates-header">Litsenziya va Guvohnomalar</h2>
-                <p className="text-muted-foreground max-w-2xl mx-auto">
+                <h2 className="text-3xl md:text-5xl font-black mb-4 wow-section-title" data-testid="text-certificates-header">Litsenziya va Guvohnomalar</h2>
+                <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
                   Bizning professional sertifikatlarimiz va litsenziyalarimiz
                 </p>
               </motion.div>
@@ -954,11 +1110,11 @@ export default function HomePage() {
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
             >
-              <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4" data-testid="badge-about-label">
+              <div className="wow-badge mb-4" data-testid="badge-about-label">
                 <Users className="w-4 h-4" />
                 <span>Biz Haqimizda</span>
               </div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-6" data-testid="text-about-header">Zamonaviy-EDU</h2>
+              <h2 className="text-3xl md:text-5xl font-black mb-6 wow-section-title" data-testid="text-about-header">Zamonaviy-EDU</h2>
               <p className="text-lg text-muted-foreground whitespace-pre-line leading-relaxed">
                 {getSetting("about_us")}
               </p>
@@ -986,12 +1142,12 @@ export default function HomePage() {
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
             >
-              <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4" data-testid="badge-contact-label">
+              <div className="wow-badge mb-4" data-testid="badge-contact-label">
                 <Mail className="w-4 h-4" />
                 <span>Aloqa</span>
               </div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-3" data-testid="text-contact-header">Biz bilan Bog'laning</h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
+              <h2 className="text-3xl md:text-5xl font-black mb-4 wow-section-title" data-testid="text-contact-header">Biz bilan Bog'laning</h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
                 Savollaringiz bormi? Biz sizga yordam berishga tayyormiz!
               </p>
             </motion.div>
