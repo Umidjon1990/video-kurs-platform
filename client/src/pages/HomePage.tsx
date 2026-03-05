@@ -92,6 +92,18 @@ export default function HomePage() {
     }
   }, [location]);
 
+  // Handle sessionStorage scroll targets (from header nav on other pages)
+  useEffect(() => {
+    const scrollTarget = sessionStorage.getItem('scrollTo');
+    if (scrollTarget) {
+      sessionStorage.removeItem('scrollTo');
+      const timeout = setTimeout(() => {
+        document.getElementById(scrollTarget)?.scrollIntoView({ behavior: 'smooth' });
+      }, 400);
+      return () => clearTimeout(timeout);
+    }
+  }, []);
+
   // This approach survives React re-renders because we write to the actual DOM node
   const doAnim = (btn: HTMLButtonElement, type: 'spin' | 'shoot' | 'pop', ms: number) => {
     btn.dataset.anim = type;
@@ -1171,136 +1183,187 @@ export default function HomePage() {
       })()}
 
       {/* About Us Section */}
+      {/* ── ABOUT SECTION ── */}
       {getSetting("about_us") && (
-        <div className="relative overflow-hidden">
-          {/* Background */}
-          <div className="absolute inset-0 bg-gradient-to-bl from-primary/5 via-transparent to-accent/5 pointer-events-none" />
-          
-          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-            <motion.div 
-              className="max-w-4xl mx-auto text-center"
-              initial={{ opacity: 0, y: 20 }}
+        <div
+          id="about-section"
+          className="relative overflow-hidden"
+          style={{ background: "linear-gradient(180deg, #0a0520 0%, #0d1440 100%)" }}
+        >
+          {/* Aurora orbs */}
+          <div className="wow-blob wow-blob-1 absolute" style={{ top: "10%", left: "5%", width: 320, height: 320, background: "rgba(124,58,237,0.15)", filter: "blur(70px)" }} />
+          <div className="wow-blob wow-blob-2 absolute" style={{ bottom: "5%", right: "8%", width: 260, height: 260, background: "rgba(6,182,212,0.12)", filter: "blur(60px)" }} />
+          {/* Dot grid */}
+          <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "32px 32px", pointerEvents: "none" }} />
+
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+            <motion.div
+              className="max-w-4xl mx-auto"
+              initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
+              transition={{ duration: 0.6 }}
             >
-              <div className="wow-badge mb-4" data-testid="badge-about-label">
+              <div className="wow-badge mb-5" data-testid="badge-about-label">
                 <Users className="w-4 h-4" />
                 <span>Biz Haqimizda</span>
               </div>
-              <h2 className="text-3xl md:text-5xl font-black mb-6 wow-section-title" data-testid="text-about-header">Zamonaviy-EDU</h2>
-              <p className="text-lg text-muted-foreground whitespace-pre-line leading-relaxed">
-                {getSetting("about_us")}
-              </p>
+              <h2 className="text-3xl md:text-5xl font-black mb-8 wow-section-title" data-testid="text-about-header">
+                Zamonaviy-EDU
+              </h2>
+              {/* Glassmorphic text panel */}
+              <div
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.10)",
+                  borderRadius: 24,
+                  padding: "32px 40px",
+                  backdropFilter: "blur(12px)",
+                  position: "relative",
+                  overflow: "hidden",
+                }}
+              >
+                {/* Top gradient shimmer */}
+                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, background: "linear-gradient(90deg, transparent, rgba(124,58,237,0.6), rgba(6,182,212,0.6), transparent)" }} />
+                <p
+                  className="text-lg whitespace-pre-line leading-relaxed"
+                  style={{ color: "rgba(255,255,255,0.72)" }}
+                  data-testid="text-about-content"
+                >
+                  {getSetting("about_us")}
+                </p>
+              </div>
             </motion.div>
           </div>
         </div>
       )}
 
-      {/* Contact Section */}
+      {/* ── CONTACT SECTION ── */}
       {(getSetting("contact_email") || getSetting("contact_phone") || getSetting("contact_address") || getSetting("contact_telegram")) && (
-        <div className="relative overflow-hidden border-t">
-          {/* Enhanced gradient background */}
-          <div className="absolute inset-0 bg-gradient-to-tl from-primary/5 via-background to-accent/5 pointer-events-none" />
-          <div className="absolute inset-0 grid-pattern opacity-30 pointer-events-none" />
-          
-          {/* Decorative orbs */}
-          <div className="absolute bottom-0 left-[20%] w-80 h-80 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute top-0 right-[20%] w-64 h-64 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
-          
-          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-            <motion.div 
-              className="text-center mb-12"
-              initial={{ opacity: 0, y: 20 }}
+        <div
+          id="contact-section"
+          className="relative overflow-hidden"
+          style={{ background: "linear-gradient(180deg, #0d1440 0%, #0a0520 100%)" }}
+        >
+          {/* Aurora orbs */}
+          <div className="wow-blob wow-blob-3 absolute" style={{ top: "15%", right: "5%", width: 300, height: 300, background: "rgba(37,99,235,0.15)", filter: "blur(70px)" }} />
+          <div className="wow-blob wow-blob-4 absolute" style={{ bottom: "10%", left: "10%", width: 240, height: 240, background: "rgba(236,72,153,0.10)", filter: "blur(60px)" }} />
+          {/* Dot grid */}
+          <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "32px 32px", pointerEvents: "none" }} />
+
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+            <motion.div
+              className="text-center mb-14"
+              initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
+              transition={{ duration: 0.6 }}
             >
-              <div className="wow-badge mb-4" data-testid="badge-contact-label">
+              <div className="wow-badge mb-5" data-testid="badge-contact-label">
                 <Mail className="w-4 h-4" />
                 <span>Aloqa</span>
               </div>
-              <h2 className="text-3xl md:text-5xl font-black mb-4 wow-section-title" data-testid="text-contact-header">Biz bilan Bog'laning</h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+              <h2 className="text-3xl md:text-5xl font-black mb-4 wow-section-title" data-testid="text-contact-header">
+                Biz bilan Bog'laning
+              </h2>
+              <p style={{ color: "rgba(255,255,255,0.45)" }} className="max-w-2xl mx-auto text-lg">
                 Savollaringiz bormi? Biz sizga yordam berishga tayyormiz!
               </p>
             </motion.div>
-            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4 max-w-6xl mx-auto">
-              {getSetting("contact_email") && (
-                <Card className="text-center hover-elevate">
-                  <CardContent className="pt-6">
-                    <a 
-                      href={`mailto:${getSetting("contact_email")}`}
-                      className="block"
-                      data-testid="link-contact-email"
+
+            {/* Contact cards grid */}
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 max-w-5xl mx-auto">
+              {[
+                getSetting("contact_email") && {
+                  href: `mailto:${getSetting("contact_email")}`,
+                  icon: Mail, label: "Email", value: getSetting("contact_email"),
+                  from: "#7c3aed", to: "#4f46e5", shadow: "#3b0764", glow: "rgba(124,58,237,0.4)",
+                  testId: "link-contact-email", external: false,
+                },
+                getSetting("contact_phone") && {
+                  href: `tel:${getSetting("contact_phone").replace(/\s/g, "")}`,
+                  icon: Phone, label: "Telefon", value: getSetting("contact_phone"),
+                  from: "#2563eb", to: "#1d4ed8", shadow: "#1e3a8a", glow: "rgba(37,99,235,0.4)",
+                  testId: "link-contact-phone", external: false,
+                },
+                getSetting("contact_telegram") && {
+                  href: getSetting("contact_telegram"),
+                  icon: Send, label: "Telegram", value: "Guruhga qo'shiling",
+                  from: "#06b6d4", to: "#0891b2", shadow: "#164e63", glow: "rgba(6,182,212,0.4)",
+                  testId: "link-contact-telegram", external: true,
+                },
+                getSetting("contact_address") && {
+                  href: null,
+                  icon: MapPin, label: "Manzil", value: getSetting("contact_address"),
+                  from: "#ec4899", to: "#db2777", shadow: "#831843", glow: "rgba(236,72,153,0.4)",
+                  testId: "card-contact-address", external: false,
+                },
+              ].filter(Boolean).map((card: any, i: number) => (
+                <motion.div
+                  key={card.label}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: i * 0.1 }}
+                  style={{ position: "relative" }}
+                >
+                  {/* Animated gradient border */}
+                  <div style={{
+                    position: "absolute", inset: -1.5, borderRadius: 22, zIndex: 0,
+                    background: `linear-gradient(135deg, ${card.from}, ${card.to}, ${card.from})`,
+                    backgroundSize: "200% 200%",
+                    animation: "wow-grad-line 4s ease infinite",
+                    animationDelay: `${i * 0.7}s`,
+                    opacity: 0.6,
+                  }} />
+                  {card.href ? (
+                    <a
+                      href={card.href}
+                      target={card.external ? "_blank" : undefined}
+                      rel={card.external ? "noopener noreferrer" : undefined}
+                      data-testid={card.testId}
+                      style={{
+                        display: "block", position: "relative", zIndex: 1,
+                        background: "linear-gradient(160deg, rgba(20,10,50,0.92), rgba(10,5,32,0.95))",
+                        borderRadius: 20, padding: "28px 20px", textAlign: "center",
+                        textDecoration: "none", transition: "transform 0.2s, box-shadow 0.2s",
+                        backdropFilter: "blur(12px)",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = "translateY(-6px)";
+                        e.currentTarget.style.boxShadow = `0 20px 40px ${card.glow}`;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = "translateY(0)";
+                        e.currentTarget.style.boxShadow = "none";
+                      }}
                     >
-                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                        <Mail className="w-6 h-6 text-primary" />
+                      <div style={{ width: 56, height: 56, borderRadius: 16, background: `linear-gradient(135deg, ${card.from}, ${card.to})`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", boxShadow: `0 8px 24px ${card.glow}` }}>
+                        <card.icon style={{ width: 24, height: 24, color: "#fff" }} />
                       </div>
-                      <h3 className="font-semibold mb-2">Email</h3>
-                      <p className="text-sm text-muted-foreground break-all">
-                        {getSetting("contact_email")}
-                      </p>
+                      <h3 style={{ color: "#fff", fontWeight: 700, fontSize: 15, marginBottom: 8 }}>{card.label}</h3>
+                      <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, wordBreak: "break-all" }}>{card.value}</p>
+                      {card.external && <ExternalLink style={{ width: 12, height: 12, color: "rgba(255,255,255,0.35)", margin: "6px auto 0", display: "block" }} />}
                     </a>
-                  </CardContent>
-                </Card>
-              )}
-              {getSetting("contact_phone") && (
-                <Card className="text-center hover-elevate">
-                  <CardContent className="pt-6">
-                    <a 
-                      href={`tel:${getSetting("contact_phone").replace(/\s/g, '')}`}
-                      className="block"
-                      data-testid="link-contact-phone"
+                  ) : (
+                    <div
+                      data-testid={card.testId}
+                      style={{
+                        position: "relative", zIndex: 1,
+                        background: "linear-gradient(160deg, rgba(20,10,50,0.92), rgba(10,5,32,0.95))",
+                        borderRadius: 20, padding: "28px 20px", textAlign: "center",
+                        backdropFilter: "blur(12px)",
+                      }}
                     >
-                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                        <Phone className="w-6 h-6 text-primary" />
+                      <div style={{ width: 56, height: 56, borderRadius: 16, background: `linear-gradient(135deg, ${card.from}, ${card.to})`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", boxShadow: `0 8px 24px ${card.glow}` }}>
+                        <card.icon style={{ width: 24, height: 24, color: "#fff" }} />
                       </div>
-                      <h3 className="font-semibold mb-2">Telefon</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {getSetting("contact_phone")}
-                      </p>
-                    </a>
-                  </CardContent>
-                </Card>
-              )}
-              {getSetting("contact_telegram") && (
-                <Card className="text-center hover-elevate">
-                  <CardContent className="pt-6">
-                    <a 
-                      href={getSetting("contact_telegram")}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block"
-                      data-testid="link-contact-telegram"
-                    >
-                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                        <Send className="w-6 h-6 text-primary" />
-                      </div>
-                      <h3 className="font-semibold mb-2 flex items-center justify-center gap-1">
-                        Telegram
-                        <ExternalLink className="w-3 h-3" />
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        Guruhga qo'shiling
-                      </p>
-                    </a>
-                  </CardContent>
-                </Card>
-              )}
-              {getSetting("contact_address") && (
-                <Card className="text-center">
-                  <CardContent className="pt-6">
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                      <MapPin className="w-6 h-6 text-primary" />
+                      <h3 style={{ color: "#fff", fontWeight: 700, fontSize: 15, marginBottom: 8 }}>{card.label}</h3>
+                      <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, wordBreak: "break-all" }}>{card.value}</p>
                     </div>
-                    <h3 className="font-semibold mb-2">Manzil</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {getSetting("contact_address")}
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
+                  )}
+                </motion.div>
+              ))}
             </div>
           </div>
         </div>

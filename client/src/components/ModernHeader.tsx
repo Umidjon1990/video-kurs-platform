@@ -60,10 +60,22 @@ export function ModernHeader() {
   };
 
   const navLinks = [
-    { href: "/", label: "Bosh sahifa" },
-    { href: "/about", label: "Biz haqimizda" },
-    { href: "/contact", label: "Aloqa" },
+    { href: "/", label: "Bosh sahifa", scrollTo: null },
+    { href: null, label: "Biz haqimizda", scrollTo: "about-section" },
+    { href: null, label: "Aloqa", scrollTo: "contact-section" },
   ];
+
+  const handleNavClick = (scrollTo: string | null, href: string | null) => {
+    if (scrollTo) {
+      const onHome = window.location.pathname === "/" || window.location.pathname === "/explore";
+      if (onHome) {
+        document.getElementById(scrollTo)?.scrollIntoView({ behavior: "smooth" });
+      } else {
+        sessionStorage.setItem("scrollTo", scrollTo);
+        setLocation("/");
+      }
+    }
+  };
 
   const isScrolled = scrolled;
 
@@ -120,28 +132,37 @@ export function ModernHeader() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-1 p-1 rounded-full transition-all duration-500 wow-nav-pill">
-            {navLinks.map((link) => (
-              <Link key={link.href} href={link.href}>
-                <button
-                  className="px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-200"
-                  style={
-                    location === link.href
-                      ? {
-                          background: "linear-gradient(135deg, #7c3aed, #2563eb)",
-                          color: "white",
-                          boxShadow: "0 4px 16px rgba(124,58,237,0.35)",
-                        }
-                      : {
-                          color: isScrolled ? "hsl(var(--muted-foreground))" : "rgba(255,255,255,0.65)",
-                          background: "transparent",
-                        }
-                  }
-                  data-testid={`link-nav-${link.label.toLowerCase().replace(/\s/g, "-")}`}
-                >
-                  {link.label}
-                </button>
-              </Link>
-            ))}
+            {navLinks.map((link) => {
+              const isActive = link.href ? location === link.href : false;
+              const btnStyle = isActive
+                ? { background: "linear-gradient(135deg, #7c3aed, #2563eb)", color: "white", boxShadow: "0 4px 16px rgba(124,58,237,0.35)" }
+                : { color: isScrolled ? "hsl(var(--muted-foreground))" : "rgba(255,255,255,0.65)", background: "transparent" };
+              const testId = `link-nav-${link.label.toLowerCase().replace(/\s/g, "-")}`;
+              if (link.scrollTo) {
+                return (
+                  <button
+                    key={link.label}
+                    className="px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-200 cursor-pointer"
+                    style={btnStyle}
+                    onClick={() => handleNavClick(link.scrollTo, link.href)}
+                    data-testid={testId}
+                  >
+                    {link.label}
+                  </button>
+                );
+              }
+              return (
+                <Link key={link.href!} href={link.href!}>
+                  <button
+                    className="px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-200"
+                    style={btnStyle}
+                    data-testid={testId}
+                  >
+                    {link.label}
+                  </button>
+                </Link>
+              );
+            })}
           </nav>
 
           {/* Right Section */}
