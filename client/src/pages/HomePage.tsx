@@ -644,12 +644,6 @@ export default function HomePage() {
                   style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}
                 >
                   <div className="flex items-center gap-2 mb-3">
-                    <div
-                      className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                      style={{ background: "rgba(37,99,235,0.25)" }}
-                    >
-                      <Filter className="w-3.5 h-3.5" style={{ color: "#93c5fd" }} />
-                    </div>
                     <span className="text-sm font-bold tracking-wide" style={{ color: "rgba(147,197,253,0.9)" }}>
                       Kategoriya
                     </span>
@@ -710,15 +704,6 @@ export default function HomePage() {
                       border: "1px solid rgba(37,99,235,0.3)",
                     }}
                   >
-                    <div
-                      className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0"
-                      style={{
-                        background: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
-                        boxShadow: "0 3px 0 0 #1e3a8a, 0 4px 10px rgba(59,130,246,0.4)",
-                      }}
-                    >
-                      <TrendingUp className="w-3 h-3 text-white" />
-                    </div>
                     <select
                       value={priceRange}
                       onChange={(e) => setPriceRange(e.target.value)}
@@ -733,43 +718,6 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
-            </div>
-          </motion.div>
-
-          {/* 3D Animated Hand — "Bosing!" */}
-          <motion.div
-            className="flex justify-center mb-8"
-            initial={{ opacity: 0, y: -20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-          >
-            <div className="flex flex-col items-center gap-2">
-              <div className="hand-3d-container">
-                {/* Sparkle rays around fingertip — rays FIRST so nth-child works */}
-                <div className="hand-rays" style={{ top: "2px" }}>
-                  <div className="hand-ray" />
-                  <div className="hand-ray" />
-                  <div className="hand-ray" />
-                  <div className="hand-ray" />
-                  <div className="hand-ray" />
-                  <div className="hand-ray" />
-                  <div className="hand-ray" />
-                  <div className="hand-ray" />
-                  <div className="hand-ring" />
-                  <div className="hand-ring" style={{ animationDelay: "0.3s" }} />
-                </div>
-                {/* Hand emoji */}
-                <div className="hand-3d-emoji" aria-hidden="true">👆</div>
-                {/* Ground shadow */}
-                <div className="hand-3d-shadow" />
-              </div>
-              <p
-                className="text-xs font-bold tracking-widest uppercase"
-                style={{ color: "rgba(6,182,212,0.7)", letterSpacing: "0.2em" }}
-              >
-                Kursni bosing
-              </p>
             </div>
           </motion.div>
 
@@ -950,7 +898,7 @@ export default function HomePage() {
                             className="w-full py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-amber-400 to-amber-600 shadow-[0_5px_0_0_#92400e,0_7px_14px_rgba(180,83,9,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#92400e] active:translate-y-[3px] transition-all duration-75 cursor-pointer flex items-center justify-center gap-1.5"
                             data-testid={`button-about-${course.id}`}
                           >
-                            <span className="ic"><Info className="w-4 h-4" /></span>
+                            <span className="hand-btn-hint" aria-hidden="true">👉</span><span className="ic"><Info className="w-4 h-4" /></span>
                             Kurs haqida
                           </button>
                           <div className="grid grid-cols-2 gap-2">
@@ -1027,7 +975,7 @@ export default function HomePage() {
                             <span className="text-xs text-muted-foreground line-through">{formatPrice(basePrice.toString())}</span>
                             <span className="ml-auto text-xs font-bold text-red-500 bg-red-100 dark:bg-red-900/30 px-2 py-0.5 rounded-full">-{discountPercent}%</span>
                           </div>
-                          <button onClick={(e) => { e.stopPropagation(); const b = e.currentTarget; doAnim(b, 'spin', 650); setTimeout(() => setDetailCourse(course), 160); }} className="w-full py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-amber-400 to-amber-600 shadow-[0_5px_0_0_#92400e,0_7px_14px_rgba(180,83,9,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#92400e] active:translate-y-[3px] transition-all duration-75 cursor-pointer flex items-center justify-center gap-1.5" data-testid={`button-about-${course.id}`}><span className="ic"><Info className="w-4 h-4" /></span>Kurs haqida</button>
+                          <button onClick={(e) => { e.stopPropagation(); const b = e.currentTarget; doAnim(b, 'spin', 650); setTimeout(() => setDetailCourse(course), 160); }} className="w-full py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-amber-400 to-amber-600 shadow-[0_5px_0_0_#92400e,0_7px_14px_rgba(180,83,9,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#92400e] active:translate-y-[3px] transition-all duration-75 cursor-pointer flex items-center justify-center gap-1.5" data-testid={`button-about-${course.id}`}><span className="hand-btn-hint" aria-hidden="true">👉</span><span className="ic"><Info className="w-4 h-4" /></span>Kurs haqida</button>
                           <div className="grid grid-cols-2 gap-2">
                             <button onClick={(e) => { e.stopPropagation(); const b = e.currentTarget; doAnim(b, 'pop', 550); setTimeout(() => setSelectedCourseForLessons(course), 160); }} className="py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-blue-400 to-blue-600 shadow-[0_5px_0_0_#1e3a8a,0_7px_14px_rgba(30,58,138,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#1e3a8a] active:translate-y-[3px] transition-all duration-75 cursor-pointer flex items-center justify-center gap-1" data-testid={`button-view-lessons-${course.id}`}><span className="ic"><Play className="w-3.5 h-3.5 fill-white" /></span>Darslar</button>
                             <button onClick={(e) => { e.stopPropagation(); doAnim(e.currentTarget, 'shoot', 500); window.open("https://t.me/zamonaviytalimuz", "_blank", "noopener,noreferrer"); }} className="py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-green-400 to-green-600 shadow-[0_5px_0_0_#166534,0_7px_14px_rgba(22,101,52,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#166534] active:translate-y-[3px] transition-all duration-75 cursor-pointer flex items-center justify-center gap-1" data-testid={`button-enroll-${course.id}`}><span className="ic"><ArrowRight className="w-4 h-4" /></span>Yozilish</button>
@@ -1087,7 +1035,7 @@ export default function HomePage() {
                             <span className="text-lg font-black text-foreground ml-auto">{formatPrice(displayPrice.toString())}</span>
                           </div>
                           {/* 3D Buttons */}
-                          <button onClick={(e) => { e.stopPropagation(); const b = e.currentTarget; doAnim(b, 'spin', 650); setTimeout(() => setDetailCourse(course), 160); }} className="w-full py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-amber-400 to-amber-600 shadow-[0_5px_0_0_#92400e,0_7px_14px_rgba(180,83,9,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#92400e] active:translate-y-[3px] transition-all duration-75 cursor-pointer flex items-center justify-center gap-1.5" data-testid={`button-about-${course.id}`}><span className="ic"><Info className="w-4 h-4" /></span>Kurs haqida</button>
+                          <button onClick={(e) => { e.stopPropagation(); const b = e.currentTarget; doAnim(b, 'spin', 650); setTimeout(() => setDetailCourse(course), 160); }} className="w-full py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-amber-400 to-amber-600 shadow-[0_5px_0_0_#92400e,0_7px_14px_rgba(180,83,9,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#92400e] active:translate-y-[3px] transition-all duration-75 cursor-pointer flex items-center justify-center gap-1.5" data-testid={`button-about-${course.id}`}><span className="hand-btn-hint" aria-hidden="true">👉</span><span className="ic"><Info className="w-4 h-4" /></span>Kurs haqida</button>
                           <div className="grid grid-cols-2 gap-2">
                             <button onClick={(e) => { e.stopPropagation(); const b = e.currentTarget; doAnim(b, 'pop', 550); setTimeout(() => setSelectedCourseForLessons(course), 160); }} className="py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-blue-400 to-blue-600 shadow-[0_5px_0_0_#1e3a8a,0_7px_14px_rgba(30,58,138,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#1e3a8a] active:translate-y-[3px] transition-all duration-75 cursor-pointer flex items-center justify-center gap-1" data-testid={`button-view-lessons-${course.id}`}><span className="ic"><Play className="w-3.5 h-3.5 fill-white" /></span>Darslar</button>
                             <button onClick={(e) => { e.stopPropagation(); doAnim(e.currentTarget, 'shoot', 500); window.open("https://t.me/zamonaviytalimuz", "_blank", "noopener,noreferrer"); }} className="py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-green-400 to-green-600 shadow-[0_5px_0_0_#166534,0_7px_14px_rgba(22,101,52,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#166534] active:translate-y-[3px] transition-all duration-75 cursor-pointer flex items-center justify-center gap-1" data-testid={`button-enroll-${course.id}`}><span className="ic"><ArrowRight className="w-4 h-4" /></span>Yozilish</button>

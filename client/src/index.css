@@ -909,6 +909,22 @@
   transform: translateY(-2px);
 }
 
+/* ============ INLINE HAND BUTTON HINT ============ */
+@keyframes hand-nudge-right {
+  0%, 100% { transform: translateX(0) rotate(-5deg); }
+  40%       { transform: translateX(6px) rotate(0deg); }
+  70%       { transform: translateX(2px) rotate(-3deg); }
+}
+.hand-btn-hint {
+  display: inline-block;
+  font-size: 18px;
+  line-height: 1;
+  animation: hand-nudge-right 1.2s ease-in-out infinite;
+  filter: drop-shadow(0 3px 8px rgba(37,99,235,0.45))
+          drop-shadow(0 1px 3px rgba(0,0,0,0.35));
+  margin-right: 2px;
+}
+
 /* ============ 3D HAND CLICK ANIMATION ============ */
 @keyframes hand-bounce {
   0%   { transform: translateY(0)    rotate(-10deg) scale(1);    }
