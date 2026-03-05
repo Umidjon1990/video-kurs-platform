@@ -81,31 +81,18 @@ export default function HomePage() {
   const [promoVideoCourse, setPromoVideoCourse] = useState<PublicCourse | null>(null);
   const [detailCourse, setDetailCourse] = useState<PublicCourse | null>(null);
 
-  // Icon click animation helpers
-  const spinIcon = (e: React.MouseEvent<HTMLButtonElement>) => {
-    const icon = e.currentTarget.querySelector('svg');
-    if (!icon) return;
-    icon.classList.remove('icon-spin-click', 'icon-shoot-click', 'icon-pop-click');
-    void (icon as HTMLElement).offsetHeight;
-    icon.classList.add('icon-spin-click');
-    setTimeout(() => icon.classList.remove('icon-spin-click'), 600);
+  // Icon click animation helpers — targets <span class="ic"> wrapper (not SVG directly)
+  const triggerAnim = (btn: HTMLButtonElement, cls: string, duration: number) => {
+    const wrap = btn.querySelector<HTMLElement>('.ic');
+    if (!wrap) return;
+    wrap.classList.remove('icon-spin-click', 'icon-shoot-click', 'icon-pop-click');
+    void wrap.offsetWidth; // force reflow to restart animation
+    wrap.classList.add(cls);
+    setTimeout(() => wrap.classList.remove(cls), duration);
   };
-  const shootIcon = (e: React.MouseEvent<HTMLButtonElement>) => {
-    const icon = e.currentTarget.querySelector('svg');
-    if (!icon) return;
-    icon.classList.remove('icon-spin-click', 'icon-shoot-click', 'icon-pop-click');
-    void (icon as HTMLElement).offsetHeight;
-    icon.classList.add('icon-shoot-click');
-    setTimeout(() => icon.classList.remove('icon-shoot-click'), 500);
-  };
-  const popIcon = (e: React.MouseEvent<HTMLButtonElement>) => {
-    const icon = e.currentTarget.querySelector('svg');
-    if (!icon) return;
-    icon.classList.remove('icon-spin-click', 'icon-shoot-click', 'icon-pop-click');
-    void (icon as HTMLElement).offsetHeight;
-    icon.classList.add('icon-pop-click');
-    setTimeout(() => icon.classList.remove('icon-pop-click'), 500);
-  };
+  const spinIcon  = (e: React.MouseEvent<HTMLButtonElement>) => triggerAnim(e.currentTarget, 'icon-spin-click',  600);
+  const shootIcon = (e: React.MouseEvent<HTMLButtonElement>) => triggerAnim(e.currentTarget, 'icon-shoot-click', 500);
+  const popIcon   = (e: React.MouseEvent<HTMLButtonElement>) => triggerAnim(e.currentTarget, 'icon-pop-click',   520);
 
   // Build query params
   const buildQueryParams = () => {
@@ -646,7 +633,7 @@ export default function HomePage() {
                             className="w-full py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-amber-400 to-amber-600 shadow-[0_5px_0_0_#92400e,0_7px_14px_rgba(180,83,9,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#92400e] active:translate-y-[3px] transition-all duration-75 cursor-pointer flex items-center justify-center gap-1.5"
                             data-testid={`button-about-${course.id}`}
                           >
-                            <Info className="w-4 h-4 flex-shrink-0" />
+                            <span className="ic"><Info className="w-4 h-4" /></span>
                             Kurs haqida
                           </button>
                           <div className="grid grid-cols-2 gap-2">
@@ -655,7 +642,7 @@ export default function HomePage() {
                               className="py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-blue-400 to-blue-600 shadow-[0_5px_0_0_#1e3a8a,0_7px_14px_rgba(30,58,138,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#1e3a8a] active:translate-y-[3px] transition-all duration-75 cursor-pointer flex items-center justify-center gap-1"
                               data-testid={`button-view-lessons-${course.id}`}
                             >
-                              <Play className="w-3.5 h-3.5 fill-white flex-shrink-0" />
+                              <span className="ic"><Play className="w-3.5 h-3.5 fill-white" /></span>
                               Darslar
                             </button>
                             <button
@@ -663,7 +650,7 @@ export default function HomePage() {
                               className="py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-green-400 to-green-600 shadow-[0_5px_0_0_#166534,0_7px_14px_rgba(22,101,52,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#166534] active:translate-y-[3px] transition-all duration-75 cursor-pointer flex items-center justify-center gap-1"
                               data-testid={`button-enroll-${course.id}`}
                             >
-                              <ArrowRight className="w-4 h-4 flex-shrink-0" />
+                              <span className="ic"><ArrowRight className="w-4 h-4" /></span>
                               Yozilish
                             </button>
                           </div>
@@ -723,10 +710,10 @@ export default function HomePage() {
                             <span className="text-xs text-muted-foreground line-through">{formatPrice(basePrice.toString())}</span>
                             <span className="ml-auto text-xs font-bold text-red-500 bg-red-100 dark:bg-red-900/30 px-2 py-0.5 rounded-full">-{discountPercent}%</span>
                           </div>
-                          <button onClick={(e) => { e.stopPropagation(); spinIcon(e); setDetailCourse(course); }} className="w-full py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-amber-400 to-amber-600 shadow-[0_5px_0_0_#92400e,0_7px_14px_rgba(180,83,9,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#92400e] active:translate-y-[3px] transition-all duration-75 cursor-pointer flex items-center justify-center gap-1.5" data-testid={`button-about-${course.id}`}><Info className="w-4 h-4 flex-shrink-0" />Kurs haqida</button>
+                          <button onClick={(e) => { e.stopPropagation(); spinIcon(e); setDetailCourse(course); }} className="w-full py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-amber-400 to-amber-600 shadow-[0_5px_0_0_#92400e,0_7px_14px_rgba(180,83,9,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#92400e] active:translate-y-[3px] transition-all duration-75 cursor-pointer flex items-center justify-center gap-1.5" data-testid={`button-about-${course.id}`}><span className="ic"><Info className="w-4 h-4" /></span>Kurs haqida</button>
                           <div className="grid grid-cols-2 gap-2">
-                            <button onClick={(e) => { e.stopPropagation(); popIcon(e); setSelectedCourseForLessons(course); }} className="py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-blue-400 to-blue-600 shadow-[0_5px_0_0_#1e3a8a,0_7px_14px_rgba(30,58,138,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#1e3a8a] active:translate-y-[3px] transition-all duration-75 cursor-pointer flex items-center justify-center gap-1" data-testid={`button-view-lessons-${course.id}`}><Play className="w-3.5 h-3.5 fill-white flex-shrink-0" />Darslar</button>
-                            <button onClick={(e) => { e.stopPropagation(); shootIcon(e); window.open("https://t.me/zamonaviytalimuz", "_blank", "noopener,noreferrer"); }} className="py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-green-400 to-green-600 shadow-[0_5px_0_0_#166534,0_7px_14px_rgba(22,101,52,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#166534] active:translate-y-[3px] transition-all duration-75 cursor-pointer flex items-center justify-center gap-1" data-testid={`button-enroll-${course.id}`}><ArrowRight className="w-4 h-4 flex-shrink-0" />Yozilish</button>
+                            <button onClick={(e) => { e.stopPropagation(); popIcon(e); setSelectedCourseForLessons(course); }} className="py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-blue-400 to-blue-600 shadow-[0_5px_0_0_#1e3a8a,0_7px_14px_rgba(30,58,138,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#1e3a8a] active:translate-y-[3px] transition-all duration-75 cursor-pointer flex items-center justify-center gap-1" data-testid={`button-view-lessons-${course.id}`}><span className="ic"><Play className="w-3.5 h-3.5 fill-white" /></span>Darslar</button>
+                            <button onClick={(e) => { e.stopPropagation(); shootIcon(e); window.open("https://t.me/zamonaviytalimuz", "_blank", "noopener,noreferrer"); }} className="py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-green-400 to-green-600 shadow-[0_5px_0_0_#166534,0_7px_14px_rgba(22,101,52,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#166534] active:translate-y-[3px] transition-all duration-75 cursor-pointer flex items-center justify-center gap-1" data-testid={`button-enroll-${course.id}`}><span className="ic"><ArrowRight className="w-4 h-4" /></span>Yozilish</button>
                           </div>
                         </div>
                       </Card>
@@ -783,10 +770,10 @@ export default function HomePage() {
                             <span className="text-lg font-black text-foreground ml-auto">{formatPrice(displayPrice.toString())}</span>
                           </div>
                           {/* 3D Buttons */}
-                          <button onClick={(e) => { e.stopPropagation(); spinIcon(e); setDetailCourse(course); }} className="w-full py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-amber-400 to-amber-600 shadow-[0_5px_0_0_#92400e,0_7px_14px_rgba(180,83,9,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#92400e] active:translate-y-[3px] transition-all duration-75 cursor-pointer flex items-center justify-center gap-1.5" data-testid={`button-about-${course.id}`}><Info className="w-4 h-4 flex-shrink-0" />Kurs haqida</button>
+                          <button onClick={(e) => { e.stopPropagation(); spinIcon(e); setDetailCourse(course); }} className="w-full py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-amber-400 to-amber-600 shadow-[0_5px_0_0_#92400e,0_7px_14px_rgba(180,83,9,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#92400e] active:translate-y-[3px] transition-all duration-75 cursor-pointer flex items-center justify-center gap-1.5" data-testid={`button-about-${course.id}`}><span className="ic"><Info className="w-4 h-4" /></span>Kurs haqida</button>
                           <div className="grid grid-cols-2 gap-2">
-                            <button onClick={(e) => { e.stopPropagation(); popIcon(e); setSelectedCourseForLessons(course); }} className="py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-blue-400 to-blue-600 shadow-[0_5px_0_0_#1e3a8a,0_7px_14px_rgba(30,58,138,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#1e3a8a] active:translate-y-[3px] transition-all duration-75 cursor-pointer flex items-center justify-center gap-1" data-testid={`button-view-lessons-${course.id}`}><Play className="w-3.5 h-3.5 fill-white flex-shrink-0" />Darslar</button>
-                            <button onClick={(e) => { e.stopPropagation(); shootIcon(e); window.open("https://t.me/zamonaviytalimuz", "_blank", "noopener,noreferrer"); }} className="py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-green-400 to-green-600 shadow-[0_5px_0_0_#166534,0_7px_14px_rgba(22,101,52,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#166534] active:translate-y-[3px] transition-all duration-75 cursor-pointer flex items-center justify-center gap-1" data-testid={`button-enroll-${course.id}`}><ArrowRight className="w-4 h-4 flex-shrink-0" />Yozilish</button>
+                            <button onClick={(e) => { e.stopPropagation(); popIcon(e); setSelectedCourseForLessons(course); }} className="py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-blue-400 to-blue-600 shadow-[0_5px_0_0_#1e3a8a,0_7px_14px_rgba(30,58,138,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#1e3a8a] active:translate-y-[3px] transition-all duration-75 cursor-pointer flex items-center justify-center gap-1" data-testid={`button-view-lessons-${course.id}`}><span className="ic"><Play className="w-3.5 h-3.5 fill-white" /></span>Darslar</button>
+                            <button onClick={(e) => { e.stopPropagation(); shootIcon(e); window.open("https://t.me/zamonaviytalimuz", "_blank", "noopener,noreferrer"); }} className="py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-green-400 to-green-600 shadow-[0_5px_0_0_#166534,0_7px_14px_rgba(22,101,52,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#166534] active:translate-y-[3px] transition-all duration-75 cursor-pointer flex items-center justify-center gap-1" data-testid={`button-enroll-${course.id}`}><span className="ic"><ArrowRight className="w-4 h-4" /></span>Yozilish</button>
                           </div>
                         </div>
                       </Card>
