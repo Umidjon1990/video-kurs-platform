@@ -550,21 +550,6 @@ export default function Login() {
                     </span>
                   </button>
 
-                  {/* Register link */}
-                  <div style={{ textAlign: "center", marginTop: 20 }}>
-                    <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 13 }}>Hisobingiz yo'qmi? </span>
-                    <button
-                      type="button"
-                      onClick={() => setLocation("/register")}
-                      data-testid="link-register"
-                      style={{
-                        background: "none", border: "none", cursor: "pointer",
-                        color: "#a78bfa", fontSize: 13, fontWeight: 700,
-                      }}
-                    >
-                      Ro'yxatdan o'tish
-                    </button>
-                  </div>
                 </form>
               </Form>
 
