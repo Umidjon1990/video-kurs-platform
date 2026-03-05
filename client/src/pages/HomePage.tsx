@@ -79,6 +79,7 @@ export default function HomePage() {
   const [demoCourseId, setDemoCourseId] = useState<string | null>(null);
   const [showDemoLessonsList, setShowDemoLessonsList] = useState(false);
   const [promoVideoCourse, setPromoVideoCourse] = useState<PublicCourse | null>(null);
+  const [detailCourse, setDetailCourse] = useState<PublicCourse | null>(null);
 
   // Build query params
   const buildQueryParams = () => {
@@ -555,10 +556,10 @@ export default function HomePage() {
                       <Card
                         className="modern-card hover-elevate transition-all cursor-pointer rounded-xl h-full border-2 border-amber-400 shadow-lg"
                         data-testid={`card-course-${course.id}`}
-                        onClick={() => setLocation(`/checkout/${course.id}`)}
+                        onClick={() => setDetailCourse(course)}
                       >
                         {/* Thumbnail with BEPUL Badge */}
-                        <div className="relative aspect-[4/3] bg-gradient-to-br from-amber-100 to-yellow-100 dark:from-amber-900/50 dark:to-yellow-900/50 flex items-center justify-center rounded-t-xl overflow-hidden">
+                        <div className="relative aspect-video bg-gradient-to-br from-amber-100 to-yellow-100 dark:from-amber-900/50 dark:to-yellow-900/50 flex items-center justify-center rounded-t-xl overflow-hidden">
                           {/* "Yangi" ribbon */}
                           {isNew && (
                             <div className="absolute top-0 left-0 z-20 w-24 h-24 overflow-hidden">
@@ -610,67 +611,89 @@ export default function HomePage() {
                           </p>
                         </CardHeader>
 
-                        <CardContent>
+                        <CardContent className="space-y-3">
                           <p className="text-sm text-muted-foreground line-clamp-2">
                             {course.description || "Kurs tavsifi yo'q"}
                           </p>
-                          <div className="flex items-center justify-between mt-3">
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Users className="w-4 h-4" />
+
+                          {/* 3D benefit mini-strip */}
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="flex flex-col items-center gap-1 rounded-lg p-2
+                              bg-gradient-to-b from-blue-50 to-blue-100/70 dark:from-blue-900/20 dark:to-blue-800/10
+                              border border-blue-200/50 dark:border-blue-700/30
+                              shadow-[0_3px_0_0_rgba(59,130,246,0.2)]">
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600
+                                shadow-[0_4px_10px_rgba(59,130,246,0.4)] flex items-center justify-center">
+                                <Play className="w-3.5 h-3.5 text-white fill-white" />
+                              </div>
+                              <p className="text-[10px] font-semibold text-blue-700 dark:text-blue-300 text-center leading-tight">Video</p>
+                            </div>
+                            <div className="flex flex-col items-center gap-1 rounded-lg p-2
+                              bg-gradient-to-b from-green-50 to-green-100/70 dark:from-green-900/20 dark:to-green-800/10
+                              border border-green-200/50 dark:border-green-700/30
+                              shadow-[0_3px_0_0_rgba(34,197,94,0.2)]">
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-green-600
+                                shadow-[0_4px_10px_rgba(34,197,94,0.4)] flex items-center justify-center">
+                                <Clock className="w-3.5 h-3.5 text-white" />
+                              </div>
+                              <p className="text-[10px] font-semibold text-green-700 dark:text-green-300 text-center leading-tight">30 kun</p>
+                            </div>
+                            <div className="flex flex-col items-center gap-1 rounded-lg p-2
+                              bg-gradient-to-b from-purple-50 to-purple-100/70 dark:from-purple-900/20 dark:to-purple-800/10
+                              border border-purple-200/50 dark:border-purple-700/30
+                              shadow-[0_3px_0_0_rgba(168,85,247,0.2)]">
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600
+                                shadow-[0_4px_10px_rgba(168,85,247,0.4)] flex items-center justify-center">
+                                <Award className="w-3.5 h-3.5 text-white" />
+                              </div>
+                              <p className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 text-center leading-tight">Sertifikat</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                              <Users className="w-3.5 h-3.5" />
                               <span>{course.enrollmentsCount} talaba</span>
                             </div>
                             <div className="flex items-center gap-1">
-                              <StarRating 
-                                rating={course.averageRating || 0} 
-                                size={14} 
-                                showValue={true}
-                              />
-                              <span className="text-xs text-muted-foreground">
-                                ({course.totalRatings || 0})
-                              </span>
+                              <StarRating rating={course.averageRating || 0} size={13} showValue={true} />
+                              <span className="text-xs text-muted-foreground">({course.totalRatings || 0})</span>
                             </div>
                           </div>
                         </CardContent>
 
-                        <CardFooter className="flex flex-col gap-3">
-                          {/* Darslarni Ko'rish - katta tugma */}
-                          <div className="w-full flex gap-2">
+                        <CardFooter className="flex flex-col gap-2 pt-0">
+                          <div className="flex items-center justify-center w-full bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 py-2 rounded-lg border border-green-200 dark:border-green-700">
+                            <span className="text-xl font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">BEPUL</span>
+                          </div>
+                          <div className="flex gap-2 w-full">
                             <Button
-                              size="lg"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedCourseForLessons(course);
-                              }}
-                              className="flex-1 h-14 text-lg font-bold bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+                              onClick={(e) => { e.stopPropagation(); setSelectedCourseForLessons(course); }}
+                              variant="outline"
+                              className="flex-1"
                               data-testid={`button-view-lessons-${course.id}`}
                             >
                               Darslarni Ko'rish
                             </Button>
-                                                      </div>
-                          {/* Kurs haqida batafsil tugmasi */}
+                            <Button
+                              onClick={(e) => { e.stopPropagation(); window.open("https://t.me/zamonaviytalimuz", "_blank", "noopener,noreferrer"); }}
+                              className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500"
+                              data-testid={`button-enroll-free-${course.id}`}
+                            >
+                              Yozilish
+                            </Button>
+                          </div>
                           {(course as any).promoVideoUrl && (
                             <Button
                               variant="outline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setPromoVideoCourse(course);
-                              }}
-                              className="w-full h-12 border-2 border-red-500 text-red-600 dark:text-red-400 font-semibold"
+                              onClick={(e) => { e.stopPropagation(); setPromoVideoCourse(course); }}
+                              className="w-full border-2 border-red-500 text-red-600 dark:text-red-400 font-semibold"
                               data-testid={`button-promo-video-${course.id}`}
                             >
                               <Youtube className="w-5 h-5 mr-2" />
                               Kurs haqida batafsil
                             </Button>
                           )}
-                          {/* BEPUL narx ko'rsatish */}
-                          <div className="w-full">
-                            <div className="flex items-center justify-center gap-2 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-3 rounded-lg border-2 border-green-300 dark:border-green-700">
-                              <span className="text-2xl font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                                BEPUL
-                              </span>
-                              <span className="text-xl">🎁</span>
-                            </div>
-                          </div>
                         </CardFooter>
                       </Card>
                     </div>
@@ -679,10 +702,10 @@ export default function HomePage() {
                       <Card
                         className="modern-card hover-elevate transition-all cursor-pointer border-0 rounded-xl h-full bg-background"
                         data-testid={`card-course-${course.id}`}
-                        onClick={() => setLocation(`/checkout/${course.id}`)}
+                        onClick={() => setDetailCourse(course)}
                       >
                         {/* Thumbnail with Sale Badge & New Ribbon */}
-                        <div className="relative aspect-[4/3] bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center rounded-t-xl overflow-hidden">
+                        <div className="relative aspect-video bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center rounded-t-xl overflow-hidden">
                           {/* "Yangi" ribbon - chap yuqori burchak */}
                           {isNew && (
                             <div className="absolute top-0 left-0 z-20 w-24 h-24 overflow-hidden">
@@ -734,98 +757,91 @@ export default function HomePage() {
                     </p>
                   </CardHeader>
 
-                  <CardContent>
+                  <CardContent className="space-y-3">
                     <p className="text-sm text-muted-foreground line-clamp-2">
                       {course.description || "Kurs tavsifi yo'q"}
                     </p>
-                    <div className="flex items-center justify-between mt-3">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Users className="w-4 h-4" />
+
+                    {/* 3D benefit mini-strip */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="flex flex-col items-center gap-1 rounded-lg p-2
+                        bg-gradient-to-b from-blue-50 to-blue-100/70 dark:from-blue-900/20 dark:to-blue-800/10
+                        border border-blue-200/50 dark:border-blue-700/30
+                        shadow-[0_3px_0_0_rgba(59,130,246,0.2)]">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600
+                          shadow-[0_4px_10px_rgba(59,130,246,0.4)] flex items-center justify-center">
+                          <Play className="w-3.5 h-3.5 text-white fill-white" />
+                        </div>
+                        <p className="text-[10px] font-semibold text-blue-700 dark:text-blue-300 text-center leading-tight">Video</p>
+                      </div>
+                      <div className="flex flex-col items-center gap-1 rounded-lg p-2
+                        bg-gradient-to-b from-green-50 to-green-100/70 dark:from-green-900/20 dark:to-green-800/10
+                        border border-green-200/50 dark:border-green-700/30
+                        shadow-[0_3px_0_0_rgba(34,197,94,0.2)]">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-green-600
+                          shadow-[0_4px_10px_rgba(34,197,94,0.4)] flex items-center justify-center">
+                          <Clock className="w-3.5 h-3.5 text-white" />
+                        </div>
+                        <p className="text-[10px] font-semibold text-green-700 dark:text-green-300 text-center leading-tight">30 kun</p>
+                      </div>
+                      <div className="flex flex-col items-center gap-1 rounded-lg p-2
+                        bg-gradient-to-b from-purple-50 to-purple-100/70 dark:from-purple-900/20 dark:to-purple-800/10
+                        border border-purple-200/50 dark:border-purple-700/30
+                        shadow-[0_3px_0_0_rgba(168,85,247,0.2)]">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600
+                          shadow-[0_4px_10px_rgba(168,85,247,0.4)] flex items-center justify-center">
+                          <Award className="w-3.5 h-3.5 text-white" />
+                        </div>
+                        <p className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 text-center leading-tight">Sertifikat</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <Users className="w-3.5 h-3.5" />
                         <span>{course.enrollmentsCount} talaba</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <StarRating 
-                          rating={course.averageRating || 0} 
-                          size={14} 
-                          showValue={true}
-                        />
-                        <span className="text-xs text-muted-foreground">
-                          ({course.totalRatings || 0})
-                        </span>
+                        <StarRating rating={course.averageRating || 0} size={13} showValue={true} />
+                        <span className="text-xs text-muted-foreground">({course.totalRatings || 0})</span>
                       </div>
                     </div>
                   </CardContent>
 
-                  <CardFooter className="flex flex-col gap-3">
-                    {/* Pricing by Plan */}
+                  <CardFooter className="flex flex-col gap-2 pt-0">
+                    {/* Price */}
                     {course.planPricing && course.planPricing.length > 0 ? (
-                      <div className="w-full space-y-2">
-                        <p className="text-xs font-semibold text-muted-foreground">Tariflar:</p>
-                        <div className="grid gap-1.5">
-                          {course.planPricing.map((pricing) => (
-                            <div 
-                              key={pricing.id} 
-                              className="flex items-center justify-between text-sm"
-                              data-testid={`pricing-${course.id}-${pricing.plan.name}`}
-                            >
-                              <span className="text-muted-foreground">{pricing.plan.displayName}</span>
-                              <span className="font-semibold text-primary">
-                                {Number(pricing.price).toLocaleString('uz-UZ')} so'm
-                              </span>
-                            </div>
-                          ))}
-                        </div>
+                      <div className="w-full flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">{course.planPricing[0].plan.displayName}</span>
+                        <span className="font-bold text-primary text-lg">{Number(course.planPricing[0].price).toLocaleString('uz-UZ')} so'm</span>
                       </div>
                     ) : (
-                      <div className="w-full">
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-2xl font-bold">
-                            {formatPrice(displayPrice.toString())}
-                          </span>
-                          {discountPercent > 0 && (
-                            <Badge variant="destructive" className="text-xs">
-                              -{discountPercent}%
-                            </Badge>
-                          )}
-                        </div>
-                        {discountPercent > 0 && (
-                          <span className="text-sm text-muted-foreground line-through">
-                            {formatPrice(basePrice.toString())}
-                          </span>
-                        )}
+                      <div className="w-full flex items-baseline gap-2">
+                        <span className="text-xl font-bold">{formatPrice(displayPrice.toString())}</span>
+                        {discountPercent > 0 && <span className="text-sm text-muted-foreground line-through">{formatPrice(basePrice.toString())}</span>}
                       </div>
                     )}
                     <div className="flex gap-2 w-full">
                       <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedCourseForLessons(course);
-                        }}
+                        onClick={(e) => { e.stopPropagation(); setSelectedCourseForLessons(course); }}
                         variant="outline"
                         className="flex-1"
                         data-testid={`button-view-lessons-${course.id}`}
                       >
                         Darslarni Ko'rish
                       </Button>
-                                            <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          window.open("https://t.me/zamonaviytalimuz", "_blank", "noopener,noreferrer");
-                        }}
+                      <Button
+                        onClick={(e) => { e.stopPropagation(); window.open("https://t.me/zamonaviytalimuz", "_blank", "noopener,noreferrer"); }}
                         className="flex-1"
                         data-testid={`button-enroll-${course.id}`}
                       >
                         Yozilish
                       </Button>
                     </div>
-                    {/* Kurs haqida batafsil tugmasi */}
                     {(course as any).promoVideoUrl && (
                       <Button
                         variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setPromoVideoCourse(course);
-                        }}
+                        onClick={(e) => { e.stopPropagation(); setPromoVideoCourse(course); }}
                         className="w-full border-2 border-red-500 text-red-600 dark:text-red-400 font-semibold"
                         data-testid={`button-promo-video-${course.id}`}
                       >
@@ -842,10 +858,10 @@ export default function HomePage() {
                 <Card
                   className="modern-card hover-elevate transition-all cursor-pointer rounded-xl h-full"
                   data-testid={`card-course-${course.id}`}
-                  onClick={() => setLocation(`/checkout/${course.id}`)}
+                  onClick={() => setDetailCourse(course)}
                 >
                 {/* Thumbnail with New Ribbon only */}
-                <div className="relative aspect-[4/3] bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center rounded-t-xl overflow-hidden">
+                <div className="relative aspect-video bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center rounded-t-xl overflow-hidden">
                   {/* "Yangi" ribbon - chap yuqori burchak */}
                   {isNew && (
                     <div className="absolute top-0 left-0 z-20 w-24 h-24 overflow-hidden">
@@ -894,86 +910,91 @@ export default function HomePage() {
                   </p>
                 </CardHeader>
 
-                <CardContent>
+                <CardContent className="space-y-3">
                   <p className="text-sm text-muted-foreground line-clamp-2">
                     {course.description || "Kurs tavsifi yo'q"}
                   </p>
-                  <div className="flex items-center justify-between mt-3">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Users className="w-4 h-4" />
+
+                  {/* 3D benefit mini-strip */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="flex flex-col items-center gap-1 rounded-lg p-2
+                      bg-gradient-to-b from-blue-50 to-blue-100/70 dark:from-blue-900/20 dark:to-blue-800/10
+                      border border-blue-200/50 dark:border-blue-700/30
+                      shadow-[0_3px_0_0_rgba(59,130,246,0.2)]">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600
+                        shadow-[0_4px_10px_rgba(59,130,246,0.4)] flex items-center justify-center">
+                        <Play className="w-3.5 h-3.5 text-white fill-white" />
+                      </div>
+                      <p className="text-[10px] font-semibold text-blue-700 dark:text-blue-300 text-center leading-tight">Video</p>
+                    </div>
+                    <div className="flex flex-col items-center gap-1 rounded-lg p-2
+                      bg-gradient-to-b from-green-50 to-green-100/70 dark:from-green-900/20 dark:to-green-800/10
+                      border border-green-200/50 dark:border-green-700/30
+                      shadow-[0_3px_0_0_rgba(34,197,94,0.2)]">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-green-600
+                        shadow-[0_4px_10px_rgba(34,197,94,0.4)] flex items-center justify-center">
+                        <Clock className="w-3.5 h-3.5 text-white" />
+                      </div>
+                      <p className="text-[10px] font-semibold text-green-700 dark:text-green-300 text-center leading-tight">30 kun</p>
+                    </div>
+                    <div className="flex flex-col items-center gap-1 rounded-lg p-2
+                      bg-gradient-to-b from-purple-50 to-purple-100/70 dark:from-purple-900/20 dark:to-purple-800/10
+                      border border-purple-200/50 dark:border-purple-700/30
+                      shadow-[0_3px_0_0_rgba(168,85,247,0.2)]">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600
+                        shadow-[0_4px_10px_rgba(168,85,247,0.4)] flex items-center justify-center">
+                        <Award className="w-3.5 h-3.5 text-white" />
+                      </div>
+                      <p className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 text-center leading-tight">Sertifikat</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <Users className="w-3.5 h-3.5" />
                       <span>{course.enrollmentsCount} talaba</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <StarRating 
-                        rating={course.averageRating || 0} 
-                        size={14} 
-                        showValue={true}
-                      />
-                      <span className="text-xs text-muted-foreground">
-                        ({course.totalRatings || 0})
-                      </span>
+                      <StarRating rating={course.averageRating || 0} size={13} showValue={true} />
+                      <span className="text-xs text-muted-foreground">({course.totalRatings || 0})</span>
                     </div>
                   </div>
                 </CardContent>
 
-                <CardFooter className="flex flex-col gap-3">
-                  {/* Pricing by Plan */}
+                <CardFooter className="flex flex-col gap-2 pt-0">
+                  {/* Price */}
                   {course.planPricing && course.planPricing.length > 0 ? (
-                    <div className="w-full space-y-2">
-                      <p className="text-xs font-semibold text-muted-foreground">Tariflar:</p>
-                      <div className="grid gap-1.5">
-                        {course.planPricing.map((pricing) => (
-                          <div 
-                            key={pricing.id} 
-                            className="flex items-center justify-between text-sm"
-                            data-testid={`pricing-${course.id}-${pricing.plan.name}`}
-                          >
-                            <span className="text-muted-foreground">{pricing.plan.displayName}</span>
-                            <span className="font-semibold text-primary">
-                              {Number(pricing.price).toLocaleString('uz-UZ')} so'm
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+                    <div className="w-full flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">{course.planPricing[0].plan.displayName}</span>
+                      <span className="font-bold text-primary text-lg">{Number(course.planPricing[0].price).toLocaleString('uz-UZ')} so'm</span>
                     </div>
                   ) : (
-                    <div className="w-full">
-                      <span className="text-2xl font-bold">
-                        {formatPrice(displayPrice.toString())}
-                      </span>
+                    <div className="w-full flex items-baseline gap-2">
+                      <span className="text-xl font-bold">{formatPrice(displayPrice.toString())}</span>
+                      {discountPercent > 0 && <span className="text-sm text-muted-foreground line-through">{formatPrice(basePrice.toString())}</span>}
                     </div>
                   )}
                   <div className="flex gap-2 w-full">
                     <Button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedCourseForLessons(course);
-                      }}
+                      onClick={(e) => { e.stopPropagation(); setSelectedCourseForLessons(course); }}
                       variant="outline"
                       className="flex-1"
                       data-testid={`button-view-lessons-${course.id}`}
                     >
                       Darslarni Ko'rish
                     </Button>
-                                        <Button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        window.open("https://t.me/zamonaviytalimuz", "_blank", "noopener,noreferrer");
-                      }}
+                    <Button
+                      onClick={(e) => { e.stopPropagation(); window.open("https://t.me/zamonaviytalimuz", "_blank", "noopener,noreferrer"); }}
                       className="flex-1"
                       data-testid={`button-enroll-${course.id}`}
                     >
                       Yozilish
                     </Button>
                   </div>
-                  {/* Kurs haqida batafsil tugmasi */}
                   {(course as any).promoVideoUrl && (
                     <Button
                       variant="outline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPromoVideoCourse(course);
-                      }}
+                      onClick={(e) => { e.stopPropagation(); setPromoVideoCourse(course); }}
                       className="w-full border-2 border-red-500 text-red-600 dark:text-red-400 font-semibold"
                       data-testid={`button-promo-video-${course.id}`}
                     >
@@ -1576,6 +1597,198 @@ export default function HomePage() {
               </div>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Course Detail Modal - 3D dizayn */}
+      <Dialog open={detailCourse !== null} onOpenChange={() => setDetailCourse(null)}>
+        <DialogContent className="w-full max-w-lg p-0 gap-0 overflow-hidden rounded-2xl">
+          <DialogHeader className="sr-only">
+            <DialogTitle>{detailCourse?.title || "Kurs ma'lumotlari"}</DialogTitle>
+          </DialogHeader>
+          {detailCourse && (() => {
+            const dc = detailCourse;
+            const discP = dc.discountPercentage && dc.discountPercentage > 0 ? dc.discountPercentage : 0;
+            const baseP = Number(dc.price);
+            const dispP = discP > 0 ? baseP * (1 - discP / 100) : baseP;
+
+            let thumbUrl = dc.thumbnailUrl;
+            if (thumbUrl && thumbUrl.includes('drive.google.com')) {
+              const m = thumbUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+              if (m) thumbUrl = `https://lh3.googleusercontent.com/d/${m[1]}`;
+            }
+
+            const formatPrice = (n: number) => n.toLocaleString('uz-UZ') + " so'm";
+
+            return (
+              <div className="flex flex-col max-h-[90vh] overflow-y-auto">
+                {/* Hero thumbnail with gradient overlay */}
+                <div className="relative aspect-video w-full overflow-hidden flex-shrink-0 bg-gradient-to-br from-primary/20 to-primary/5">
+                  {thumbUrl ? (
+                    <img src={thumbUrl} alt={dc.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <BookOpen className="w-20 h-20 text-primary/40" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                  {/* Badges */}
+                  <div className="absolute top-3 left-3 flex gap-2">
+                    {(dc as any).isFree && (
+                      <span className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-black px-3 py-1 rounded-full shadow-lg">BEPUL</span>
+                    )}
+                    {discP > 0 && (
+                      <span className="bg-red-500 text-white text-xs font-black px-3 py-1 rounded-full shadow-lg">-{discP}%</span>
+                    )}
+                    {dc.category && (
+                      <span className="bg-black/50 backdrop-blur-sm text-white text-xs px-3 py-1 rounded-full">{dc.category}</span>
+                    )}
+                  </div>
+                  {/* Title overlay */}
+                  <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <h2 className="text-white font-bold text-xl leading-tight drop-shadow-lg">{dc.title}</h2>
+                    <p className="text-white/80 text-sm mt-1 drop-shadow">
+                      {(dc as any).author || `${dc.instructor.firstName} ${dc.instructor.lastName}`}
+                    </p>
+                  </div>
+                  {/* Close button */}
+                  <button
+                    onClick={() => setDetailCourse(null)}
+                    className="absolute top-3 right-3 bg-black/50 backdrop-blur-sm text-white rounded-full p-1.5 hover:bg-black/70 transition-colors"
+                    data-testid="button-close-detail"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="p-5 space-y-4">
+                  {/* Rating + Enrollments row */}
+                  <div className="flex items-center gap-4 text-sm">
+                    <div className="flex items-center gap-1.5">
+                      <StarRating rating={dc.averageRating || 0} size={14} showValue={true} />
+                      <span className="text-muted-foreground">({dc.totalRatings || 0})</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Users className="w-4 h-4" />
+                      <span>{dc.enrollmentsCount} talaba</span>
+                    </div>
+                  </div>
+
+                  {/* 3D benefit tiles */}
+                  <div className="grid grid-cols-3 gap-3">
+                    {/* Tile 1 - Video darslar */}
+                    <div className="flex flex-col items-center gap-2 rounded-xl p-3
+                      bg-gradient-to-b from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20
+                      border border-blue-200/60 dark:border-blue-700/40
+                      shadow-[0_4px_0_0_rgba(59,130,246,0.25)] dark:shadow-[0_4px_0_0_rgba(59,130,246,0.15)]">
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600
+                        shadow-[0_6px_16px_rgba(59,130,246,0.45)] border border-blue-300/50
+                        flex items-center justify-center">
+                        <Play className="w-5 h-5 text-white fill-white" />
+                      </div>
+                      <p className="text-[11px] font-semibold text-center text-blue-700 dark:text-blue-300 leading-tight">Video Darslar</p>
+                      <p className="text-[10px] text-blue-500/80 dark:text-blue-400/70 text-center">Online format</p>
+                    </div>
+
+                    {/* Tile 2 - Kirish muddati */}
+                    <div className="flex flex-col items-center gap-2 rounded-xl p-3
+                      bg-gradient-to-b from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/20
+                      border border-green-200/60 dark:border-green-700/40
+                      shadow-[0_4px_0_0_rgba(34,197,94,0.25)] dark:shadow-[0_4px_0_0_rgba(34,197,94,0.15)]">
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-green-400 to-green-600
+                        shadow-[0_6px_16px_rgba(34,197,94,0.45)] border border-green-300/50
+                        flex items-center justify-center">
+                        <Clock className="w-5 h-5 text-white" />
+                      </div>
+                      <p className="text-[11px] font-semibold text-center text-green-700 dark:text-green-300 leading-tight">30 Kun Kirish</p>
+                      <p className="text-[10px] text-green-500/80 dark:text-green-400/70 text-center">To'liq huquq</p>
+                    </div>
+
+                    {/* Tile 3 - Sertifikat */}
+                    <div className="flex flex-col items-center gap-2 rounded-xl p-3
+                      bg-gradient-to-b from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/20
+                      border border-purple-200/60 dark:border-purple-700/40
+                      shadow-[0_4px_0_0_rgba(168,85,247,0.25)] dark:shadow-[0_4px_0_0_rgba(168,85,247,0.15)]">
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-400 to-purple-600
+                        shadow-[0_6px_16px_rgba(168,85,247,0.45)] border border-purple-300/50
+                        flex items-center justify-center">
+                        <Award className="w-5 h-5 text-white" />
+                      </div>
+                      <p className="text-[11px] font-semibold text-center text-purple-700 dark:text-purple-300 leading-tight">Sertifikat</p>
+                      <p className="text-[10px] text-purple-500/80 dark:text-purple-400/70 text-center">Yakunida</p>
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  {dc.description && (
+                    <div className="text-sm text-muted-foreground leading-relaxed line-clamp-3">
+                      {dc.description}
+                    </div>
+                  )}
+
+                  {/* Pricing */}
+                  {dc.planPricing && dc.planPricing.length > 0 ? (
+                    <div className="space-y-2 rounded-xl bg-muted/50 p-3">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tariflar</p>
+                      <div className="space-y-1.5">
+                        {dc.planPricing.map((pp) => (
+                          <div key={pp.id} className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">{pp.plan.displayName}</span>
+                            <span className="font-bold text-primary">{Number(pp.price).toLocaleString('uz-UZ')} so'm</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (dc as any).isFree ? (
+                    <div className="rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-3 text-center border border-green-200 dark:border-green-700">
+                      <span className="text-2xl font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">BEPUL</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-2xl font-bold">{formatPrice(dispP)}</span>
+                      {discP > 0 && (
+                        <span className="text-sm text-muted-foreground line-through">{formatPrice(baseP)}</span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Action buttons */}
+                  <div className="flex gap-3 pt-1">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => { setDetailCourse(null); setSelectedCourseForLessons(dc); }}
+                      data-testid={`button-detail-view-lessons-${dc.id}`}
+                    >
+                      <List className="w-4 h-4 mr-2" />
+                      Darslarni Ko'rish
+                    </Button>
+                    <Button
+                      className="flex-1"
+                      onClick={() => window.open("https://t.me/zamonaviytalimuz", "_blank", "noopener,noreferrer")}
+                      data-testid={`button-detail-enroll-${dc.id}`}
+                    >
+                      <Send className="w-4 h-4 mr-2" />
+                      Yozilish
+                    </Button>
+                  </div>
+
+                  {/* Promo video button */}
+                  {(dc as any).promoVideoUrl && (
+                    <Button
+                      variant="outline"
+                      className="w-full border-2 border-red-500 text-red-600 dark:text-red-400 font-semibold"
+                      onClick={() => { setDetailCourse(null); setPromoVideoCourse(dc); }}
+                      data-testid={`button-detail-promo-${dc.id}`}
+                    >
+                      <Youtube className="w-5 h-5 mr-2" />
+                      Kurs haqida batafsil (Video)
+                    </Button>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
