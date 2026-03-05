@@ -718,27 +718,30 @@
 /* Spans are used as wrappers around SVG icons so transforms work correctly */
 
 @keyframes ic-spin {
-  0%   { transform: rotate(0deg) scale(1); }
-  30%  { transform: rotate(200deg) scale(1.35); }
-  60%  { transform: rotate(330deg) scale(1.12); }
-  80%  { transform: rotate(368deg) scale(0.93); }
-  100% { transform: rotate(360deg) scale(1); }
+  /* 160ms mark ≈ 27% — must be dramatically visible here */
+  0%   { transform: rotate(0deg)   scale(1);    }
+  22%  { transform: rotate(180deg) scale(1.6);  }  /* peak at ~130ms */
+  60%  { transform: rotate(340deg) scale(1.08); }
+  80%  { transform: rotate(370deg) scale(0.94); }
+  100% { transform: rotate(360deg) scale(1);    }
 }
 
 @keyframes ic-shoot {
-  0%   { transform: translate(0, 0) scale(1); opacity: 1; }
-  38%  { transform: translate(20px, -4px) scale(1.2); opacity: 0; }
-  39%  { transform: translate(-10px, 3px) scale(0.65); opacity: 0; }
-  65%  { transform: translate(-4px, 1px) scale(0.85); opacity: 0.4; }
-  100% { transform: translate(0, 0) scale(1); opacity: 1; }
+  /* fires right, disappears, reappears from left */
+  0%   { transform: translate(0,    0)    scale(1);    opacity: 1; }
+  30%  { transform: translate(22px, -3px) scale(1.25); opacity: 0; }
+  31%  { transform: translate(-14px, 2px) scale(0.5);  opacity: 0; }
+  60%  { transform: translate(-4px,  1px) scale(0.85); opacity: 0.5; }
+  100% { transform: translate(0,    0)    scale(1);    opacity: 1; }
 }
 
 @keyframes ic-pop {
-  0%   { transform: scale(1); }
-  30%  { transform: scale(1.55) rotate(-12deg); }
-  55%  { transform: scale(0.88) rotate(8deg); }
-  75%  { transform: scale(1.18) rotate(-4deg); }
-  100% { transform: scale(1) rotate(0deg); }
+  /* 160ms mark ≈ 29% — must be dramatically visible here */
+  0%   { transform: scale(1)    rotate(0deg);   }
+  25%  { transform: scale(1.9)  rotate(-16deg); }  /* peak at ~137ms */
+  55%  { transform: scale(0.82) rotate(10deg);  }
+  75%  { transform: scale(1.16) rotate(-4deg);  }
+  100% { transform: scale(1)    rotate(0deg);   }
 }
 
 .ic {
