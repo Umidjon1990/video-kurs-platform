@@ -1765,12 +1765,85 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  {/* Description */}
-                  {dc.description && (
-                    <div className="text-sm text-muted-foreground leading-relaxed line-clamp-3">
-                      {dc.description}
-                    </div>
-                  )}
+                  {/* Description — 8D animated feature list */}
+                  {dc.description && (() => {
+                    const rawLines = dc.description!
+                      .split(/\n|;|•/)
+                      .map((l: string) => l.replace(/^[-–—*►▸▶➤➜→\s💜💛💚💙❤️🟣🔵🟢]+/u, '').trim())
+                      .filter((l: string) => l.length > 1);
+
+                    if (rawLines.length === 0) return (
+                      <p className="text-sm text-muted-foreground leading-relaxed">{dc.description}</p>
+                    );
+
+                    const palettes = [
+                      { from: '#7c3aed', to: '#4f46e5', glow: 'rgba(124,58,237,0.45)', shadow: '#3b0764' },
+                      { from: '#2563eb', to: '#1d4ed8', glow: 'rgba(37,99,235,0.45)', shadow: '#1e3a8a' },
+                      { from: '#06b6d4', to: '#0891b2', glow: 'rgba(6,182,212,0.45)', shadow: '#164e63' },
+                      { from: '#10b981', to: '#059669', glow: 'rgba(16,185,129,0.45)', shadow: '#064e3b' },
+                      { from: '#f59e0b', to: '#d97706', glow: 'rgba(245,158,11,0.45)', shadow: '#78350f' },
+                      { from: '#ec4899', to: '#db2777', glow: 'rgba(236,72,153,0.45)', shadow: '#831843' },
+                    ];
+
+                    return (
+                      <div className="space-y-2">
+                        <p className="text-[11px] font-semibold uppercase tracking-widest mb-3" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                          Kurs tarkibi
+                        </p>
+                        {rawLines.map((line: string, i: number) => {
+                          const pal = palettes[i % palettes.length];
+                          return (
+                            <motion.div
+                              key={i}
+                              initial={{ opacity: 0, x: -18 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ duration: 0.32, delay: i * 0.06 }}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 12,
+                                padding: '10px 14px',
+                                borderRadius: 14,
+                                background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                border: '1px solid rgba(255,255,255,0.08)',
+                                boxShadow: `0 2px 0 0 rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)`,
+                                position: 'relative',
+                                overflow: 'hidden',
+                                transition: 'transform 0.18s, box-shadow 0.18s',
+                              }}
+                              whileHover={{
+                                scale: 1.015,
+                                boxShadow: `0 4px 18px ${pal.glow}, 0 2px 0 rgba(0,0,0,0.4)`,
+                              }}
+                            >
+                              {/* Left shimmer accent line */}
+                              <div style={{
+                                position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
+                                background: `linear-gradient(180deg, ${pal.from}, ${pal.to})`,
+                                borderRadius: '14px 0 0 14px',
+                              }} />
+
+                              {/* 7D Tick icon */}
+                              <div style={{
+                                width: 32, height: 32, borderRadius: 10, flexShrink: 0,
+                                background: `linear-gradient(145deg, ${pal.from}, ${pal.to})`,
+                                boxShadow: `0 4px 0 0 ${pal.shadow}, 0 6px 14px ${pal.glow}`,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                border: `1px solid ${pal.from}80`,
+                              }}>
+                                <CheckCircle style={{ width: 16, height: 16, color: '#fff', fill: 'none', strokeWidth: 2.5 }} />
+                              </div>
+
+                              {/* Text */}
+                              <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.82)', lineHeight: 1.45, fontWeight: 500 }}>
+                                {line}
+                              </span>
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
 
                   {/* Pricing */}
                   {dc.planPricing && dc.planPricing.length > 0 ? (
