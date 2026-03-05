@@ -467,31 +467,35 @@ export default function HomePage() {
       </section>
 
       {/* Courses Grid */}
-      <div id="courses-section" className="relative overflow-x-clip">
-        {/* WOW aurora background */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: "linear-gradient(180deg, transparent 0%, rgba(124,58,237,0.04) 30%, rgba(37,99,235,0.04) 60%, transparent 100%)" }}
-        />
+      <div
+        id="courses-section"
+        className="relative overflow-x-clip"
+        style={{ background: "linear-gradient(160deg, #0a0520 0%, #0d1440 50%, #0a0520 100%)" }}
+      >
+        {/* Dot grid overlay */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            backgroundImage: "radial-gradient(circle, rgba(124,58,237,0.04) 1px, transparent 1px)",
+            backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)",
             backgroundSize: "32px 32px",
           }}
         />
         {/* Aurora blobs */}
         <div
-          className="absolute top-20 right-10 w-96 h-96 rounded-full pointer-events-none"
-          style={{ background: "radial-gradient(circle, rgba(124,58,237,0.10) 0%, transparent 70%)", filter: "blur(60px)" }}
+          className="absolute top-10 right-0 w-[500px] h-[500px] rounded-full pointer-events-none"
+          style={{ background: "radial-gradient(circle, rgba(124,58,237,0.25) 0%, transparent 70%)", filter: "blur(80px)" }}
         />
         <div
-          className="absolute bottom-40 left-10 w-[500px] h-96 rounded-full pointer-events-none"
-          style={{ background: "radial-gradient(circle, rgba(37,99,235,0.08) 0%, transparent 70%)", filter: "blur(60px)" }}
+          className="absolute bottom-10 left-0 w-[500px] h-[400px] rounded-full pointer-events-none"
+          style={{ background: "radial-gradient(circle, rgba(37,99,235,0.20) 0%, transparent 70%)", filter: "blur(80px)" }}
         />
         <div
-          className="absolute top-1/2 left-1/2 w-72 h-72 rounded-full pointer-events-none"
-          style={{ background: "radial-gradient(circle, rgba(6,182,212,0.06) 0%, transparent 70%)", filter: "blur(50px)", transform: "translate(-50%,-50%)" }}
+          className="absolute top-1/2 left-1/2 w-96 h-96 rounded-full pointer-events-none"
+          style={{ background: "radial-gradient(circle, rgba(6,182,212,0.12) 0%, transparent 70%)", filter: "blur(60px)", transform: "translate(-50%,-50%)" }}
+        />
+        {/* Top separator gradient */}
+        <div
+          className="absolute top-0 left-0 right-0 h-[2px] pointer-events-none wow-header-border"
         />
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
@@ -508,16 +512,16 @@ export default function HomePage() {
               <span>Bizning Kurslar</span>
             </div>
             <h2 className="text-3xl md:text-5xl font-black mb-4 wow-section-title" data-testid="text-courses-header">Mavjud Kurslar</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+            <p className="max-w-2xl mx-auto text-lg" style={{ color: "rgba(255,255,255,0.55)" }}>
               O'zingizga mos kursni tanlang va bugun bilim olishni boshlang
             </p>
             <div className="mt-5 flex items-center justify-center gap-3">
               <div
                 className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-bold"
                 style={{
-                  background: "linear-gradient(135deg, rgba(124,58,237,0.12), rgba(37,99,235,0.10))",
-                  border: "1px solid rgba(124,58,237,0.3)",
-                  color: "#7c3aed",
+                  background: "rgba(124,58,237,0.20)",
+                  border: "1px solid rgba(124,58,237,0.45)",
+                  color: "rgba(167,139,250,1)",
                 }}
                 data-testid="badge-course-count"
               >
@@ -525,20 +529,19 @@ export default function HomePage() {
                 {courses?.length || 0} ta kurs mavjud
               </div>
               {(selectedCategory || selectedLevel || priceRange) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <button
                   onClick={() => {
                     setSelectedCategory("");
                     setSelectedLevel("");
                     setPriceRange("");
                   }}
-                  className="gap-1 text-muted-foreground"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm transition-all hover:scale-105"
+                  style={{ color: "rgba(255,255,255,0.4)", border: "1px solid rgba(255,255,255,0.12)" }}
                   data-testid="button-clear-all-filters"
                 >
                   <X className="w-3 h-3" />
                   Tozalash
-                </Button>
+                </button>
               )}
             </div>
           </motion.div>
@@ -559,8 +562,9 @@ export default function HomePage() {
               }}
             >
               <div
-                className="rounded-2xl p-6 space-y-5 bg-card/90"
+                className="rounded-2xl p-6 space-y-5"
                 style={{
+                  background: "rgba(255,255,255,0.04)",
                   backdropFilter: "blur(20px)",
                   WebkitBackdropFilter: "blur(20px)",
                 }}
@@ -571,16 +575,15 @@ export default function HomePage() {
                     <div className="flex items-center gap-2 mb-3">
                       <div
                         className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ background: "linear-gradient(135deg, rgba(124,58,237,0.2), rgba(37,99,235,0.2))" }}
+                        style={{ background: "rgba(124,58,237,0.25)" }}
                       >
-                        <GraduationCap className="w-3.5 h-3.5" style={{ color: "#7c3aed" }} />
+                        <GraduationCap className="w-3.5 h-3.5" style={{ color: "#a78bfa" }} />
                       </div>
-                      <span className="text-sm font-bold tracking-wide" style={{ color: "rgba(124,58,237,0.9)" }}>
+                      <span className="text-sm font-bold tracking-wide" style={{ color: "rgba(167,139,250,0.9)" }}>
                         Til Darajasi (CEFR)
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {/* "Barchasi" chip */}
                       <button
                         onClick={() => setSelectedLevel("")}
                         data-testid="filter-level-all"
@@ -590,12 +593,12 @@ export default function HomePage() {
                             ? {
                                 background: "linear-gradient(135deg, #7c3aed, #2563eb)",
                                 color: "#fff",
-                                boxShadow: "0 0 16px rgba(124,58,237,0.4)",
+                                boxShadow: "0 0 16px rgba(124,58,237,0.5)",
                               }
                             : {
-                                background: "hsl(var(--muted) / 0.6)",
-                                color: "hsl(var(--foreground))",
-                                border: "1px solid hsl(var(--border))",
+                                background: "rgba(255,255,255,0.06)",
+                                color: "rgba(255,255,255,0.7)",
+                                border: "1px solid rgba(255,255,255,0.12)",
                               }
                         }
                       >
@@ -615,20 +618,18 @@ export default function HomePage() {
                                 ? {
                                     background: "linear-gradient(135deg, #7c3aed, #2563eb)",
                                     color: "#fff",
-                                    boxShadow: "0 0 16px rgba(124,58,237,0.4)",
+                                    boxShadow: "0 0 16px rgba(124,58,237,0.5)",
                                   }
                                 : {
-                                    background: "hsl(var(--muted) / 0.6)",
-                                    color: "hsl(var(--foreground))",
-                                    border: "1px solid hsl(var(--border))",
+                                    background: "rgba(255,255,255,0.06)",
+                                    color: "rgba(255,255,255,0.7)",
+                                    border: "1px solid rgba(255,255,255,0.12)",
                                   }
                             }
                           >
                             <span className="font-black">{level.code}</span>
                             {level.name && (
-                              <span className={active ? "opacity-80 text-xs" : "text-xs text-muted-foreground"}>
-                                {level.name}
-                              </span>
+                              <span className="text-xs opacity-70 ml-0.5">{level.name}</span>
                             )}
                           </button>
                         );
@@ -640,45 +641,45 @@ export default function HomePage() {
                 {/* Category & Price Selects */}
                 <div
                   className="flex flex-wrap gap-3 pt-4"
-                  style={{ borderTop: "1px solid hsl(var(--border) / 0.4)" }}
+                  style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}
                 >
-                  {/* Category */}
                   <div
-                    className="flex items-center gap-2 rounded-xl px-4 py-2.5 transition-all"
+                    className="flex items-center gap-2 rounded-xl px-4 py-2.5"
                     style={{
-                      background: "hsl(var(--muted) / 0.5)",
-                      border: "1px solid rgba(124,58,237,0.2)",
+                      background: "rgba(124,58,237,0.15)",
+                      border: "1px solid rgba(124,58,237,0.3)",
                     }}
                   >
-                    <Filter className="w-4 h-4 flex-shrink-0" style={{ color: "#7c3aed" }} />
+                    <Filter className="w-4 h-4 flex-shrink-0" style={{ color: "#a78bfa" }} />
                     <select
                       value={selectedCategory}
                       onChange={(e) => setSelectedCategory(e.target.value)}
                       className="bg-transparent border-0 text-sm font-semibold focus:outline-none cursor-pointer"
+                      style={{ color: "rgba(255,255,255,0.85)" }}
                       data-testid="select-category"
                     >
                       {categories.map((cat) => (
-                        <option key={cat.value} value={cat.value}>{cat.label}</option>
+                        <option key={cat.value} value={cat.value} style={{ background: "#0d1440", color: "#fff" }}>{cat.label}</option>
                       ))}
                     </select>
                   </div>
-                  {/* Price */}
                   <div
-                    className="flex items-center gap-2 rounded-xl px-4 py-2.5 transition-all"
+                    className="flex items-center gap-2 rounded-xl px-4 py-2.5"
                     style={{
-                      background: "hsl(var(--muted) / 0.5)",
-                      border: "1px solid rgba(37,99,235,0.2)",
+                      background: "rgba(37,99,235,0.15)",
+                      border: "1px solid rgba(37,99,235,0.3)",
                     }}
                   >
-                    <TrendingUp className="w-4 h-4 flex-shrink-0" style={{ color: "#2563eb" }} />
+                    <TrendingUp className="w-4 h-4 flex-shrink-0" style={{ color: "#93c5fd" }} />
                     <select
                       value={priceRange}
                       onChange={(e) => setPriceRange(e.target.value)}
                       className="bg-transparent border-0 text-sm font-semibold focus:outline-none cursor-pointer"
+                      style={{ color: "rgba(255,255,255,0.85)" }}
                       data-testid="select-price"
                     >
                       {priceRanges.map((range) => (
-                        <option key={range.value} value={range.value}>{range.label}</option>
+                        <option key={range.value} value={range.value} style={{ background: "#0d1440", color: "#fff" }}>{range.label}</option>
                       ))}
                     </select>
                   </div>
@@ -696,23 +697,26 @@ export default function HomePage() {
                 animate={{ opacity: 1 }}
                 transition={{ delay: i * 0.1 }}
               >
-                <Card className="overflow-hidden border-0 shadow-lg">
-                  <div className="aspect-[3/4] bg-gradient-to-br from-muted via-muted/80 to-muted animate-pulse" />
-                  <CardContent className="p-5 space-y-4">
+                <div
+                  className="rounded-xl overflow-hidden"
+                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}
+                >
+                  <div className="aspect-video animate-pulse" style={{ background: "rgba(255,255,255,0.06)" }} />
+                  <div className="p-5 space-y-4">
                     <div className="space-y-2">
-                      <div className="h-5 bg-muted rounded-lg w-4/5 animate-pulse" />
-                      <div className="h-4 bg-muted rounded-lg w-2/3 animate-pulse" />
+                      <div className="h-5 rounded-lg w-4/5 animate-pulse" style={{ background: "rgba(255,255,255,0.08)" }} />
+                      <div className="h-4 rounded-lg w-2/3 animate-pulse" style={{ background: "rgba(255,255,255,0.06)" }} />
                     </div>
                     <div className="flex gap-2">
-                      <div className="h-6 w-16 bg-muted rounded-full animate-pulse" />
-                      <div className="h-6 w-20 bg-muted rounded-full animate-pulse" />
+                      <div className="h-6 w-16 rounded-full animate-pulse" style={{ background: "rgba(124,58,237,0.2)" }} />
+                      <div className="h-6 w-20 rounded-full animate-pulse" style={{ background: "rgba(37,99,235,0.2)" }} />
                     </div>
                     <div className="flex justify-between items-center pt-2">
-                      <div className="h-7 w-24 bg-muted rounded-lg animate-pulse" />
-                      <div className="h-9 w-28 bg-primary/20 rounded-lg animate-pulse" />
+                      <div className="h-7 w-24 rounded-lg animate-pulse" style={{ background: "rgba(255,255,255,0.08)" }} />
+                      <div className="h-9 w-28 rounded-lg animate-pulse" style={{ background: "rgba(124,58,237,0.25)" }} />
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </motion.div>
             ))}
           </div>
@@ -1019,18 +1023,18 @@ export default function HomePage() {
           >
             <div
               className="w-24 h-24 mx-auto mb-6 rounded-2xl flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, rgba(124,58,237,0.12), rgba(37,99,235,0.10))", border: "1px solid rgba(124,58,237,0.2)" }}
+              style={{ background: "rgba(124,58,237,0.20)", border: "1px solid rgba(124,58,237,0.35)" }}
             >
-              <BookOpen className="w-10 h-10" style={{ color: "#7c3aed" }} />
+              <BookOpen className="w-10 h-10" style={{ color: "#a78bfa" }} />
             </div>
-            <h3 className="text-2xl font-black mb-3">Kurslar topilmadi</h3>
-            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+            <h3 className="text-2xl font-black mb-3" style={{ color: "#fff" }}>Kurslar topilmadi</h3>
+            <p className="mb-6 max-w-md mx-auto" style={{ color: "rgba(255,255,255,0.45)" }}>
               Qidiruv parametrlarini o'zgartiring yoki filterlarni tozalang
             </p>
             <button
               onClick={() => { setSelectedCategory(""); setSelectedLevel(""); setPriceRange(""); setSearchQuery(""); }}
               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white transition-all hover:scale-105 active:scale-95"
-              style={{ background: "linear-gradient(135deg, #7c3aed, #2563eb)", boxShadow: "0 0 20px rgba(124,58,237,0.3)" }}
+              style={{ background: "linear-gradient(135deg, #7c3aed, #2563eb)", boxShadow: "0 0 24px rgba(124,58,237,0.45)" }}
             >
               <X className="w-4 h-4" />
               Filterlarni tozalash
@@ -1043,6 +1047,8 @@ export default function HomePage() {
       {/* Testimonials Section */}
       {testimonials && testimonials.length > 0 && (
         <div className="relative overflow-hidden">
+          {/* Smooth transition from dark courses section */}
+          <div className="absolute top-0 left-0 right-0 h-24 pointer-events-none" style={{ background: "linear-gradient(to bottom, #0a0520, transparent)" }} />
           <div className="absolute inset-0 bg-gradient-to-br from-violet-50/80 via-background to-blue-50/60 dark:from-violet-950/20 dark:via-background dark:to-blue-950/20 pointer-events-none" />
           <div className="absolute top-10 left-[10%] w-72 h-72 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(124,58,237,0.07)' }} />
           <div className="absolute bottom-10 right-[10%] w-80 h-80 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(37,99,235,0.07)' }} />
