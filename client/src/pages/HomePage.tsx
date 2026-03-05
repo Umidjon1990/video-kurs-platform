@@ -554,7 +554,7 @@ export default function HomePage() {
                   {isFree ? (
                     <div className="relative">
                       <Card
-                        className="rounded-2xl overflow-hidden border-2 border-amber-400 shadow-lg bg-card"
+                        className="rounded-2xl overflow-hidden border-2 border-amber-400 bg-card card-7d-amber"
                         data-testid={`card-course-${course.id}`}
                       >
                         {/* Thumbnail */}
@@ -642,7 +642,7 @@ export default function HomePage() {
                       </Card>
                     </div>
                   ) : discountPercent > 0 ? (
-                    <div className={`p-[2px] bg-gradient-to-br ${gradient} rounded-xl`}>
+                    <div className={`p-[3px] bg-gradient-to-br ${gradient} rounded-xl card-7d-gradient`}>
                       <Card
                         className="border-0 rounded-xl bg-background"
                         data-testid={`card-course-${course.id}`}
@@ -705,7 +705,7 @@ export default function HomePage() {
                   ) : (
                     <>
                       {/* Oddiy karta (chegirmasiz) */}
-                      <Card className="rounded-xl overflow-hidden shadow-md" data-testid={`card-course-${course.id}`}>
+                      <Card className="rounded-xl overflow-hidden card-7d" data-testid={`card-course-${course.id}`}>
                         {/* Thumbnail */}
                         <div className="relative aspect-video bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center overflow-hidden">
                           {isNew && (
