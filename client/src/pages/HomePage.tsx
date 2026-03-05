@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -68,7 +68,7 @@ type CourseModule = {
 };
 
 export default function HomePage() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [priceRange, setPriceRange] = useState<string>("");
@@ -82,6 +82,16 @@ export default function HomePage() {
   const [detailCourse, setDetailCourse] = useState<PublicCourse | null>(null);
 
   // Icon animation via data-anim attribute on button — CSS selects .ic span inside
+  // Auto-scroll to courses section when navigating to /explore
+  useEffect(() => {
+    if (location === '/explore') {
+      const timeout = setTimeout(() => {
+        document.getElementById('courses-section')?.scrollIntoView({ behavior: 'smooth' });
+      }, 300);
+      return () => clearTimeout(timeout);
+    }
+  }, [location]);
+
   // This approach survives React re-renders because we write to the actual DOM node
   const doAnim = (btn: HTMLButtonElement, type: 'spin' | 'shoot' | 'pop', ms: number) => {
     btn.dataset.anim = type;
