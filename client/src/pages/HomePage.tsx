@@ -427,20 +427,6 @@ export default function HomePage() {
               Kurslarni Ko'rish
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
-            <a
-              href="https://t.me/zamonaviytalimuz"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-8 py-4 rounded-xl font-bold text-lg text-white transition-all hover:scale-105 active:scale-95"
-              style={{
-                background: 'rgba(255,255,255,0.10)',
-                backdropFilter: 'blur(12px)',
-                border: '1px solid rgba(255,255,255,0.25)',
-              }}
-            >
-              <Send className="w-5 h-5" />
-              Telegram
-            </a>
           </motion.div>
 
           {/* Stats grid */}
