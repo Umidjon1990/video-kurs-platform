@@ -355,6 +355,7 @@ export const tests = pgTable("tests", {
   passingScore: integer("passing_score"),
   isDraft: boolean("is_draft").default(true),
   randomOrder: boolean("random_order").default(false),
+  shuffleAnswers: boolean("shuffle_answers").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, EyeOff, Download, Megaphone, Users, User, MessageCircle, TrendingUp, Award, Activity, Settings, UserCheck, Upload, FileSpreadsheet, Mic, PenTool, Radio, PhoneOff, Monitor, Copy, Volume2, Calendar, Lock, Unlock } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -144,7 +145,12 @@ export default function InstructorDashboard() {
     title: "",
     passingScore: "",
     lessonId: "",
+    randomOrder: false,
+    shuffleAnswers: false,
   });
+  const [isTextImportOpen, setIsTextImportOpen] = useState(false);
+  const [textImportTestId, setTextImportTestId] = useState<string | null>(null);
+  const [textImportContent, setTextImportContent] = useState("");
 
   const [isAnnouncementOpen, setIsAnnouncementOpen] = useState(false);
   const [announcementForm, setAnnouncementForm] = useState({
@@ -687,12 +693,16 @@ export default function InstructorDashboard() {
           title: testForm.title,
           passingScore: testForm.passingScore ? parseInt(testForm.passingScore) : null,
           lessonId: testForm.lessonId || null,
+          randomOrder: testForm.randomOrder,
+          shuffleAnswers: testForm.shuffleAnswers,
         });
       } else {
         await apiRequest("POST", `/api/instructor/courses/${selectedCourse.id}/tests`, {
           title: testForm.title,
           passingScore: testForm.passingScore ? parseInt(testForm.passingScore) : null,
           lessonId: testForm.lessonId || null,
+          randomOrder: testForm.randomOrder,
+          shuffleAnswers: testForm.shuffleAnswers,
         });
       }
     },
@@ -703,7 +713,7 @@ export default function InstructorDashboard() {
         description: editingTest ? "Test yangilandi" : "Test qo'shildi" 
       });
       setIsAddTestOpen(false);
-      setTestForm({ title: "", passingScore: "", lessonId: "" });
+      setTestForm({ title: "", passingScore: "", lessonId: "", randomOrder: false, shuffleAnswers: false });
       setEditingTest(null);
     },
     onError: (error: Error) => {
@@ -970,6 +980,28 @@ export default function InstructorDashboard() {
           description: data.message 
         });
       }
+    },
+    onError: (error: Error) => {
+      toast({ title: "Import xatosi", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const textImportMutation = useMutation({
+    mutationFn: async () => {
+      if (!textImportTestId || !textImportContent.trim()) return;
+      const response = await apiRequest("POST", `/api/instructor/tests/${textImportTestId}/import-text`, {
+        text: textImportContent,
+      });
+      return response.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/instructor/tests', textImportTestId, 'questions'] });
+      setIsTextImportOpen(false);
+      setTextImportContent("");
+      toast({
+        title: "Muvaffaqiyatli!",
+        description: data?.message || `${data?.importedCount || 0} ta savol yuklandi`,
+      });
     },
     onError: (error: Error) => {
       toast({ title: "Import xatosi", description: error.message, variant: "destructive" });
@@ -2000,7 +2032,20 @@ export default function InstructorDashboard() {
                                         data-testid={`button-import-questions-${test.id}`}
                                       >
                                         <Upload className="w-3 h-3 mr-1" />
-                                        Import
+                                        Excel
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          setTextImportTestId(test.id);
+                                          setTextImportContent("");
+                                          setIsTextImportOpen(true);
+                                        }}
+                                        data-testid={`button-text-import-${test.id}`}
+                                      >
+                                        <FileText className="w-3 h-3 mr-1" />
+                                        Matn
                                       </Button>
                                       <Button
                                         variant="ghost"
@@ -2011,6 +2056,8 @@ export default function InstructorDashboard() {
                                             title: test.title,
                                             passingScore: test.passingScore?.toString() || "",
                                             lessonId: test.lessonId || "",
+                                            randomOrder: test.randomOrder || false,
+                                            shuffleAnswers: test.shuffleAnswers || false,
                                           });
                                           setIsAddTestOpen(true);
                                         }}
@@ -3131,7 +3178,7 @@ Kinescope: https://kinescope.io/watch/...'
         setIsAddTestOpen(open);
         if (!open) {
           setEditingTest(null);
-          setTestForm({ title: "", passingScore: "", lessonId: "" });
+          setTestForm({ title: "", passingScore: "", lessonId: "", randomOrder: false, shuffleAnswers: false });
         }
       }}>
         <DialogContent data-testid="dialog-add-test">
@@ -3155,15 +3202,22 @@ Kinescope: https://kinescope.io/watch/...'
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="test-passing-score">O'tish Bali</Label>
+              <Label htmlFor="test-passing-score">O'tish Bali (%) — topshirish uchun minimal ball</Label>
               <Input
                 id="test-passing-score"
                 type="number"
+                min="1"
+                max="100"
                 value={testForm.passingScore}
                 onChange={(e) => setTestForm({ ...testForm, passingScore: e.target.value })}
                 placeholder="70"
                 data-testid="input-test-passing-score"
               />
+              {testForm.passingScore && (
+                <p className="text-xs text-muted-foreground">
+                  Talaba {testForm.passingScore}% va undan yuqori ball to'plagandagina test o'tgan hisoblanadi
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="test-lesson">Darsni tanlang (ixtiyoriy)</Label>
@@ -3183,6 +3237,31 @@ Kinescope: https://kinescope.io/watch/...'
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-3 p-3 bg-muted/30 rounded-lg border">
+              <Label className="text-sm font-medium">Aralash tartib sozlamalari</Label>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Savollarni aralash</p>
+                  <p className="text-xs text-muted-foreground">Har topshirishda savollar tartibi o'zgaradi</p>
+                </div>
+                <Switch
+                  checked={testForm.randomOrder}
+                  onCheckedChange={(checked) => setTestForm({ ...testForm, randomOrder: checked })}
+                  data-testid="switch-random-order"
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Variantlarni aralash</p>
+                  <p className="text-xs text-muted-foreground">Multiple choice variantlari tartibi o'zgaradi</p>
+                </div>
+                <Switch
+                  checked={testForm.shuffleAnswers}
+                  onCheckedChange={(checked) => setTestForm({ ...testForm, shuffleAnswers: checked })}
+                  data-testid="switch-shuffle-answers"
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -3791,6 +3870,68 @@ Kinescope: https://kinescope.io/watch/...'
                 {importQuestionsMutation.isPending ? "Yuklanmoqda..." : "Import Qilish"}
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Text Import Dialog */}
+      <Dialog open={isTextImportOpen} onOpenChange={(open) => {
+        setIsTextImportOpen(open);
+        if (!open) { setTextImportContent(""); setTextImportTestId(null); }
+      }}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" data-testid="dialog-text-import">
+          <DialogHeader>
+            <DialogTitle>Matndan Savollarni Yuklash</DialogTitle>
+            <DialogDescription>
+              Quyidagi formatda savollarni matn sifatida yozing va yuklang
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-3 bg-muted/40 rounded-lg border text-xs space-y-1 font-mono">
+              <p className="font-semibold text-sm font-sans mb-2">Format namunasi:</p>
+              <p>1. O'zbekiston poytaxti?</p>
+              <p>A) Samarqand</p>
+              <p>B) Toshkent</p>
+              <p>C) Buxoro</p>
+              <p>D) Namangan</p>
+              <p>Javob: B</p>
+              <p>Ball: 2</p>
+              <p className="mt-2 text-muted-foreground">(bo'sh qator bilan savollarni ajrating)</p>
+              <p>2. Arabcha: ما هو اسمك؟</p>
+              <p>A) محمد</p>
+              <p>B) أحمد</p>
+              <p>Javob: A</p>
+              <p>Ball: 1</p>
+              <p className="mt-2 text-muted-foreground">(true/false uchun)</p>
+              <p>3. Bu to'g'rimi?</p>
+              <p>(true_false)</p>
+              <p>Javob: true</p>
+              <p>Ball: 1</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Savollar matni</Label>
+              <Textarea
+                value={textImportContent}
+                onChange={(e) => setTextImportContent(e.target.value)}
+                placeholder="Bu yerga savollarni ko'chiring..."
+                rows={12}
+                className="font-mono text-sm"
+                data-testid="textarea-text-import"
+              />
+              <p className="text-xs text-muted-foreground">
+                {textImportContent.trim().split(/\n\s*\n/).filter(b => b.trim()).length} ta blok aniqlandi
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsTextImportOpen(false)}>Bekor qilish</Button>
+            <Button
+              onClick={() => textImportMutation.mutate()}
+              disabled={!textImportContent.trim() || textImportMutation.isPending}
+              data-testid="button-submit-text-import"
+            >
+              {textImportMutation.isPending ? "Yuklanmoqda..." : "Import Qilish"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

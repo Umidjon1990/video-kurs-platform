@@ -2829,6 +2829,133 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
 
+  // Text/Paste format question import
+  app.post('/api/instructor/tests/:testId/import-text', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { testId } = req.params;
+      const instructorId = req.user.claims.sub;
+      const { text } = req.body;
+
+      if (!text || !text.trim()) {
+        return res.status(400).json({ message: 'Matn kiritish kerak' });
+      }
+
+      const test = await storage.getTest(testId);
+      if (!test) return res.status(404).json({ message: 'Test topilmadi' });
+
+      const course = await storage.getCourse(test.courseId);
+      if (course?.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') return res.status(403).json({ message: 'Forbidden' });
+      }
+
+      // Parse the text format
+      const blocks = text.trim().split(/\n\s*\n/).filter((b: string) => b.trim());
+      const questionsToCreate: any[] = [];
+      const errors: string[] = [];
+
+      for (let i = 0; i < blocks.length; i++) {
+        const lines = blocks[i].trim().split('\n').map((l: string) => l.trim()).filter((l: string) => l);
+        if (lines.length === 0) continue;
+
+        // First line: "1. Question text" or just "Question text"
+        let firstLine = lines[0];
+        const numMatch = firstLine.match(/^\d+[.)]\s*/);
+        if (numMatch) firstLine = firstLine.slice(numMatch[0].length).trim();
+
+        const questionText = firstLine;
+        if (!questionText) { errors.push(`Blok ${i + 1}: Savol matni yo'q`); continue; }
+
+        // Detect special type tag: (true_false), (fill_blanks), (short_answer), (essay), (matching)
+        let detectedType = 'multiple_choice';
+        const typeLine = lines.find((l: string) => /^\((true_false|fill_blanks|short_answer|essay|matching|multiple_choice)\)$/i.test(l));
+        if (typeLine) {
+          detectedType = typeLine.slice(1, -1).toLowerCase();
+        }
+
+        // Extract options: lines starting with A) B) C) D) or a) b) c) d)
+        const optionLines = lines.filter((l: string) => /^[A-Da-d][).]\s+/.test(l));
+        if (optionLines.length > 0 && !typeLine) detectedType = 'multiple_choice';
+
+        // Extract Javob
+        const answerLine = lines.find((l: string) => /^javob:/i.test(l));
+        const answerText = answerLine ? answerLine.replace(/^javob:\s*/i, '').trim() : '';
+
+        // Extract Ball
+        const ballLine = lines.find((l: string) => /^ball:/i.test(l));
+        const points = ballLine ? parseInt(ballLine.replace(/^ball:\s*/i, '').trim()) || 1 : 1;
+
+        const question: any = {
+          type: detectedType,
+          questionText,
+          points,
+          correctAnswer: null,
+          options: []
+        };
+
+        if (detectedType === 'multiple_choice') {
+          if (optionLines.length < 2) { errors.push(`Blok ${i + 1}: Multiple choice uchun kamida 2 variant kerak`); continue; }
+          const correctLetter = answerText.toUpperCase();
+          optionLines.forEach((ol: string, idx: number) => {
+            const letter = String.fromCharCode(65 + idx);
+            const optText = ol.replace(/^[A-Da-d][).]\s+/, '').trim();
+            question.options.push({ optionText: optText, isCorrect: letter === correctLetter, order: idx + 1 });
+          });
+        } else if (detectedType === 'true_false') {
+          const norm = answerText.toLowerCase();
+          question.correctAnswer = (norm === 'true' || norm === 'ha' || norm === 'to\'g\'ri') ? 'true' : 'false';
+        } else if (detectedType === 'fill_blanks' || detectedType === 'short_answer') {
+          question.correctAnswer = answerText;
+        } else if (detectedType === 'essay') {
+          // no correct answer
+        }
+
+        questionsToCreate.push(question);
+      }
+
+      if (questionsToCreate.length === 0) {
+        return res.status(400).json({ message: 'Hech qanday savol topilmadi', errors });
+      }
+
+      // Get existing questions count for ordering
+      const existingQs = await storage.getQuestionsByTest(testId);
+      let startOrder = existingQs.length + 1;
+
+      await db.transaction(async (tx) => {
+        for (const q of questionsToCreate) {
+          const [createdQ] = await tx.insert(questions).values({
+            testId,
+            type: q.type,
+            questionText: q.questionText,
+            points: q.points,
+            order: startOrder++,
+            correctAnswer: q.correctAnswer,
+            config: {},
+          }).returning();
+
+          if (q.options.length > 0) {
+            await tx.insert(questionOptions).values(
+              q.options.map((opt: any) => ({
+                questionId: createdQ.id,
+                optionText: opt.optionText,
+                isCorrect: opt.isCorrect,
+                order: opt.order,
+              }))
+            );
+          }
+        }
+      });
+
+      res.json({
+        message: `${questionsToCreate.length} ta savol muvaffaqiyatli yuklandi`,
+        importedCount: questionsToCreate.length,
+        errors,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ============ PUBLIC ROUTES (No Auth Required) ============
   // Public courses endpoint with filters
   app.get('/api/courses/public', async (req: any, res) => {

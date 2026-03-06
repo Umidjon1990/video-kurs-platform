@@ -33,8 +33,10 @@ export default function LearningPage() {
   const [submissionDialog, setSubmissionDialog] = useState<{ open: boolean; assignmentId: string | null }>({ open: false, assignmentId: null });
   const [submissionForm, setSubmissionForm] = useState({ content: "" });
   const [submissionFiles, setSubmissionFiles] = useState<{ images: File[], audio: File[], files: File[] }>({ images: [], audio: [], files: [] });
-  const [testDialog, setTestDialog] = useState<{ open: boolean; testId: string | null }>({ open: false, testId: null });
+  const [testDialog, setTestDialog] = useState<{ open: boolean; testId: string | null; test?: any }>({ open: false, testId: null });
   const [testAnswers, setTestAnswers] = useState<Record<string, any>>({});
+  const [testResult, setTestResult] = useState<any>(null);
+  const [shuffleSeed, setShuffleSeed] = useState(0);
   const [ratingDialog, setRatingDialog] = useState(false);
   const [selectedRating, setSelectedRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
@@ -132,6 +134,24 @@ export default function LearningPage() {
     queryKey: ["/api/tests", testDialog.testId, "questions"],
     enabled: !!testDialog.testId && testDialog.open,
   });
+
+  // Seeded random for consistent shuffle within a session
+  const seededRandom = (seed: number, idx: number) => {
+    const x = Math.sin(seed * 9301 + idx * 49297) * 49289;
+    return x - Math.floor(x);
+  };
+
+  const shuffledTestQuestions = useMemo(() => {
+    if (!testQuestions || testQuestions.length === 0) return testQuestions || [];
+    const t = testDialog.test;
+    if (!t?.randomOrder) return testQuestions;
+    const arr = [...testQuestions];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(seededRandom(shuffleSeed, i) * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }, [testQuestions, testDialog.test, shuffleSeed]);
 
   // Lesson progress tracking
   const { data: lessonProgress } = useQuery<any>({
@@ -336,13 +356,7 @@ export default function LearningPage() {
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/student/test-attempts'] });
-      toast({
-        title: data.isPassed ? "Test muvaffaqiyatli o'tildi! ✅" : "Test topshirildi",
-        description: `Sizning ballingiz: ${data.score} (${data.percentage.toFixed(0)}%)`,
-        variant: data.isPassed ? "default" : "destructive",
-      });
-      setTestDialog({ open: false, testId: null });
-      setTestAnswers({});
+      setTestResult(data);
     },
     onError: (error: Error) => {
       toast({ title: "Xatolik", description: error.message, variant: "destructive" });
@@ -683,14 +697,32 @@ export default function LearningPage() {
                       </TabsContent>
 
                       <TabsContent value="tests" className="space-y-4">
-                        {tests?.filter(t => t.lessonId === currentLessonId).map(t => (
+                        {tests?.filter(t => t.lessonId === currentLessonId).map(t => {
+                          const lastAttempt = testAttempts?.filter((a: any) => a.testId === t.id).sort((a: any, b: any) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime())[0];
+                          return (
                           <Card key={t.id}>
-                            <CardHeader><CardTitle className="text-lg">{t.title}</CardTitle></CardHeader>
+                            <CardHeader>
+                              <CardTitle className="text-lg">{t.title}</CardTitle>
+                              {t.passingScore && <p className="text-xs text-muted-foreground">O'tish bali: {t.passingScore}%</p>}
+                              {lastAttempt && (
+                                <p className={`text-xs font-medium ${lastAttempt.isPassed ? 'text-green-600' : 'text-destructive'}`}>
+                                  Oxirgi natija: {lastAttempt.totalPoints ? ((lastAttempt.score / lastAttempt.totalPoints) * 100).toFixed(0) : 0}% — {lastAttempt.isPassed ? "O'tildi" : "O'tilmadi"}
+                                </p>
+                              )}
+                            </CardHeader>
                             <CardContent>
-                              <Button className="w-full" onClick={() => { setTestDialog({ open: true, testId: t.id }); setTestAnswers({}); }}>Boshlash</Button>
+                              <Button className="w-full" onClick={() => {
+                                setTestDialog({ open: true, testId: t.id, test: t });
+                                setTestAnswers({});
+                                setTestResult(null);
+                                setShuffleSeed(Date.now());
+                              }}>
+                                {lastAttempt ? "Qayta Topshirish" : "Boshlash"}
+                              </Button>
                             </CardContent>
                           </Card>
-                        ))}
+                          );
+                        })}
                       </TabsContent>
 
                       <TabsContent value="results" className="space-y-4">
@@ -762,45 +794,257 @@ export default function LearningPage() {
         </div>
       )}
 
-      {/* Dialogs... (Rating, Submission, Test) */}
+      {/* Rating Dialog */}
       <RatingDialog open={ratingDialog} onOpenChange={setRatingDialog} rating={selectedRating} onRatingChange={setSelectedRating} review={reviewText} onReviewChange={setReviewText} onSubmit={() => submitRatingMutation.mutate()} isPending={submitRatingMutation.isPending} />
+
+      {/* Assignment Submission Dialog */}
+      <Dialog open={submissionDialog.open} onOpenChange={(open) => {
+        setSubmissionDialog({ open, assignmentId: submissionDialog.assignmentId });
+        if (!open) { setSubmissionForm({ content: "" }); setSubmissionFiles({ images: [], audio: [], files: [] }); }
+      }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Vazifani Topshirish</DialogTitle>
+            <DialogDescription>Fayllarni yuklang yoki matn kiriting</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Matn (ixtiyoriy)</Label>
+              <Textarea
+                value={submissionForm.content}
+                onChange={(e) => setSubmissionForm({ content: e.target.value })}
+                placeholder="Javobingizni yozing..."
+                rows={4}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Fayllar (ixtiyoriy)</Label>
+              <Input
+                type="file"
+                multiple
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || []);
+                  setSubmissionFiles(prev => ({ ...prev, files: [...prev.files, ...files] }));
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSubmissionDialog({ open: false, assignmentId: null })}>Bekor qilish</Button>
+            <Button onClick={() => submitAssignmentMutation.mutate()} disabled={submitAssignmentMutation.isPending}>
+              {submitAssignmentMutation.isPending ? "Yuklanmoqda..." : "Topshirish"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Test Taking Dialog */}
+      <Dialog open={testDialog.open} onOpenChange={(open) => {
+        if (!open) { setTestDialog({ open: false, testId: null }); setTestAnswers({}); setTestResult(null); }
+      }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-test-taking">
+          <DialogHeader>
+            <DialogTitle data-testid="text-test-title">
+              {testDialog.test?.title || "Test"}
+            </DialogTitle>
+            {testDialog.test?.passingScore && (
+              <DialogDescription>
+                O'tish bali: {testDialog.test.passingScore}% | Savollar: {shuffledTestQuestions.length} ta
+              </DialogDescription>
+            )}
+          </DialogHeader>
+
+          {testResult ? (
+            /* Result screen */
+            <div className="space-y-6 py-4">
+              <div className={`p-6 rounded-xl text-center ${testResult.isPassed ? 'bg-green-500/10 border-2 border-green-500/30' : 'bg-destructive/10 border-2 border-destructive/30'}`}>
+                <div className="text-4xl mb-2">{testResult.isPassed ? '✅' : '❌'}</div>
+                <h3 className="text-2xl font-bold mb-1">{testResult.percentage?.toFixed(1)}%</h3>
+                <p className="text-lg font-semibold">{testResult.isPassed ? "Test muvaffaqiyatli o'tildi!" : "Test o'tilmadi"}</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Ballar: {testResult.score} / {testResult.totalPoints}
+                </p>
+                {testDialog.test?.passingScore && !testResult.isPassed && (
+                  <p className="text-sm text-destructive mt-2">
+                    O'tish uchun {testDialog.test.passingScore}% kerak
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-3">
+                {!testResult.isPassed && (
+                  <Button className="flex-1" onClick={() => {
+                    setTestResult(null);
+                    setTestAnswers({});
+                    setShuffleSeed(Date.now());
+                  }} data-testid="button-retake-test">
+                    Qayta Topshirish
+                  </Button>
+                )}
+                <Button variant="outline" className="flex-1" onClick={() => {
+                  setTestDialog({ open: false, testId: null });
+                  setTestAnswers({});
+                  setTestResult(null);
+                }}>
+                  {testResult.isPassed ? "Yopish" : "Keyinroq"}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            /* Questions screen */
+            <div className="space-y-6 py-2">
+              {!testQuestions ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+                </div>
+              ) : shuffledTestQuestions.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">Bu testda savollar yo'q</p>
+              ) : (
+                shuffledTestQuestions.map((question: any, qIdx: number) => (
+                  <div key={question.id} className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <span className="shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary text-sm font-bold flex items-center justify-center">{qIdx + 1}</span>
+                      <div className="flex-1">
+                        <p
+                          className="font-medium leading-relaxed"
+                          dir={/[\u0600-\u06FF]/.test(question.questionText) ? 'rtl' : 'ltr'}
+                          style={{ fontFamily: /[\u0600-\u06FF]/.test(question.questionText) ? 'serif' : undefined }}
+                          data-testid={`question-text-${question.id}`}
+                        >
+                          {question.questionText}
+                        </p>
+                        <div className="mt-3">
+                          <TestQuestionInput
+                            question={question}
+                            value={testAnswers[question.id]}
+                            onChange={(val) => setTestAnswers(prev => ({ ...prev, [question.id]: val }))}
+                            shuffleAnswers={testDialog.test?.shuffleAnswers || false}
+                            shuffleSeed={shuffleSeed + qIdx}
+                            seededRandom={seededRandom}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    {qIdx < shuffledTestQuestions.length - 1 && <hr className="border-border/50" />}
+                  </div>
+                ))
+              )}
+              {shuffledTestQuestions.length > 0 && (
+                <div className="flex gap-3 pt-4 border-t">
+                  <Button variant="outline" onClick={() => setTestDialog({ open: false, testId: null })} className="flex-1">
+                    Bekor qilish
+                  </Button>
+                  <Button
+                    onClick={() => submitTestMutation.mutate()}
+                    disabled={submitTestMutation.isPending}
+                    className="flex-1"
+                    data-testid="button-submit-test"
+                  >
+                    {submitTestMutation.isPending ? "Topshirilmoqda..." : "Topshirish"}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-// Subcomponents... (TestQuestionInput, RatingDialog, etc. - keep from original)
-function TestQuestionInput({ question, value, onChange }: { question: any; value: any; onChange: (value: any) => void }) {
+function isArabic(text: string) {
+  return /[\u0600-\u06FF]/.test(text);
+}
+
+function TestQuestionInput({
+  question, value, onChange, shuffleAnswers = false, shuffleSeed = 0, seededRandom
+}: {
+  question: any;
+  value: any;
+  onChange: (value: any) => void;
+  shuffleAnswers?: boolean;
+  shuffleSeed?: number;
+  seededRandom?: (seed: number, idx: number) => number;
+}) {
   const { data: mcOptions } = useQuery<any[]>({
     queryKey: ["/api/questions", question.id, "options"],
     enabled: question.type === "multiple_choice",
   });
 
+  const displayOptions = useMemo(() => {
+    if (!mcOptions || !shuffleAnswers || !seededRandom) return mcOptions || [];
+    const arr = [...mcOptions];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(seededRandom(shuffleSeed, i) * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }, [mcOptions, shuffleAnswers, shuffleSeed, seededRandom]);
+
   if (question.type === "multiple_choice") {
     return (
-      <div className="space-y-3">
-        {mcOptions?.map((opt) => (
-          <div key={opt.id} className="flex items-start gap-3 p-3 rounded-lg border">
-            <Checkbox checked={Array.isArray(value) && value.includes(opt.id)} onCheckedChange={(checked) => {
-              const current = Array.isArray(value) ? value : [];
-              onChange(checked ? [...current, opt.id] : current.filter((id: string) => id !== opt.id));
-            }} />
-            <label className="flex-1 text-sm">{opt.optionText}</label>
-          </div>
-        ))}
+      <div className="space-y-2">
+        {displayOptions.map((opt: any) => {
+          const rtl = isArabic(opt.optionText);
+          return (
+            <label
+              key={opt.id}
+              className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover-elevate"
+              dir={rtl ? 'rtl' : 'ltr'}
+            >
+              <Checkbox
+                checked={Array.isArray(value) && value.includes(opt.id)}
+                onCheckedChange={(checked) => {
+                  const current = Array.isArray(value) ? value : [];
+                  onChange(checked ? [...current, opt.id] : current.filter((id: string) => id !== opt.id));
+                }}
+                className={rtl ? 'order-last' : ''}
+              />
+              <span
+                className={`flex-1 text-sm ${rtl ? 'text-right' : ''}`}
+                style={{ fontFamily: rtl ? 'serif' : undefined }}
+              >
+                {opt.optionText}
+              </span>
+            </label>
+          );
+        })}
       </div>
     );
   } else if (question.type === "true_false") {
     return (
       <div className="space-y-2">
-        {["true", "false"].map(v => (
-          <label key={v} className="flex items-center gap-2"><input type="radio" checked={value === v} onChange={() => onChange(v)} /> {v === "true" ? "To'g'ri" : "Noto'g'ri"}</label>
+        {[
+          { val: "true", label: "To'g'ri (Ha)" },
+          { val: "false", label: "Noto'g'ri (Yo'q)" },
+        ].map(({ val, label }) => (
+          <label key={val} className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover-elevate">
+            <input type="radio" className="accent-primary" checked={value === val} onChange={() => onChange(val)} />
+            <span className="text-sm">{label}</span>
+          </label>
         ))}
       </div>
     );
   } else if (question.type === "fill_blanks" || question.type === "short_answer") {
-    return <Input value={value || ""} onChange={(e) => onChange(e.target.value)} placeholder="Javob..." />;
+    const rtl = isArabic(value || "");
+    return (
+      <Input
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Javob yozing..."
+        dir={rtl ? 'rtl' : 'ltr'}
+      />
+    );
   } else if (question.type === "essay") {
-    return <Textarea value={value || ""} onChange={(e) => onChange(e.target.value)} placeholder="Insho..." rows={5} />;
+    const rtl = isArabic(value || "");
+    return (
+      <Textarea
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Insho yozing..."
+        rows={5}
+        dir={rtl ? 'rtl' : 'ltr'}
+      />
+    );
   }
   return null;
 }

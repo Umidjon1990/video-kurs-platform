@@ -53,6 +53,8 @@ The backend is an Express.js application in TypeScript, providing a RESTful API 
 
 **Database Initialization**: On server startup, the system automatically checks for subscription plans and creates a default "Asosiy Tarif" plan if none exists. This ensures course enrollment functionality works immediately in fresh production environments without manual database seeding.
 
+*   **Test System Improvements**: Tests now support: (1) Question shuffle (`randomOrder` boolean) — questions displayed in random order each attempt; (2) Answer shuffle (`shuffleAnswers` boolean) — multiple choice options shuffled per question; (3) Seeded random — consistent shuffle within a single test session; (4) RTL Arabic support — questions and answers auto-detect Arabic text and apply RTL/serif rendering; (5) Retake enforcement — when failing a test (score below `passingScore`%), result screen shows "Qayta Topshirish" button keeping dialog open; passing shows simple close button; (6) Matn import — paste questions in text format (numbered blocks with A/B/C/D options, Javob:, Ball: lines) via new `/api/instructor/tests/:testId/import-text` endpoint; (7) Complete test-taking dialog in LearningPage with full question rendering, progress display, and previous attempt result shown on test card.
+
 ## External Dependencies
 
 ### Third-Party Services
