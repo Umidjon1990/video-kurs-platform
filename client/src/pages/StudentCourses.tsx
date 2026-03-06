@@ -13,7 +13,6 @@ import { useLocation } from "wouter";
 import { BookOpen, Trophy, GraduationCap, PlayCircle, CheckCircle, Star, Sparkles, ArrowRight, Target, Zap, Radio, Video, Clock, LayoutGrid, Rocket, Flame, Crown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Course, StudentCourseProgress } from "@shared/schema";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -79,15 +78,15 @@ export default function StudentCourses() {
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
+        title: "Sessiya tugadi",
+        description: "Iltimos qayta kiring",
         variant: "destructive",
       });
       setTimeout(() => {
-        window.location.href = "/api/login";
+        setLocation('/login');
       }, 500);
     }
-  }, [isAuthenticated, authLoading, toast]);
+  }, [isAuthenticated, authLoading, toast, setLocation]);
 
   const { data: allCourses, isLoading: allCoursesLoading } = useQuery<Course[]>({
     queryKey: ["/api/courses/public"],
@@ -167,10 +166,10 @@ export default function StudentCourses() {
   const firstName = user?.firstName || "Talaba";
 
   return (
-    <div className="min-h-screen relative text-slate-100 selection:bg-primary/30">
+    <div className="relative text-slate-100 selection:bg-primary/30">
       <GalaxyBackground />
 
-      <ScrollArea className="h-screen w-full relative z-10">
+      <div className="relative z-10 min-h-full">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 pb-24">
           
           {/* Header Section */}
@@ -480,7 +479,7 @@ export default function StudentCourses() {
             </Tabs>
           </div>
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
