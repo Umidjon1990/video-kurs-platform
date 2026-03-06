@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Play } from "lucide-react";
+import { Play, Maximize2, Minimize2 } from "lucide-react";
 
 interface ModernVideoPlayerProps {
   videoUrl: string;
@@ -10,7 +10,32 @@ interface ModernVideoPlayerProps {
 export function ModernVideoPlayer({ videoUrl, title, onError }: ModernVideoPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleFsChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFsChange);
+    document.addEventListener('webkitfullscreenchange', handleFsChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFsChange);
+      document.removeEventListener('webkitfullscreenchange', handleFsChange);
+    };
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!containerRef.current) return;
+    if (!document.fullscreenElement) {
+      containerRef.current.requestFullscreen?.() ||
+        (containerRef.current as any).webkitRequestFullscreen?.();
+    } else {
+      document.exitFullscreen?.() ||
+        (document as any).webkitExitFullscreen?.();
+    }
+  };
 
   // Reset loading state when videoUrl changes
   useEffect(() => {
@@ -166,7 +191,7 @@ export function ModernVideoPlayer({ videoUrl, title, onError }: ModernVideoPlaye
   }
 
   return (
-    <div className="relative aspect-video bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-xl overflow-hidden shadow-2xl group">
+    <div ref={containerRef} className="relative aspect-video bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-xl overflow-hidden shadow-2xl group">
       {/* Loading overlay - pointer-events-none so iframe is always clickable */}
       {isLoading && (
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 pointer-events-none">
@@ -226,6 +251,22 @@ export function ModernVideoPlayer({ videoUrl, title, onError }: ModernVideoPlaye
           </h3>
         </div>
       )}
+
+      {/* Fullscreen toggle button */}
+      <button
+        onClick={toggleFullscreen}
+        title={isFullscreen ? "Kichraytirish" : "To'liq ekran"}
+        className="absolute bottom-3 right-3 z-30 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-black/60 hover:bg-black/80 text-white text-xs font-medium backdrop-blur-sm border border-white/20 transition-all duration-200 opacity-60 hover:opacity-100 group-hover:opacity-90"
+      >
+        {isFullscreen ? (
+          <Minimize2 className="w-3.5 h-3.5" />
+        ) : (
+          <Maximize2 className="w-3.5 h-3.5" />
+        )}
+        <span className="hidden sm:inline">
+          {isFullscreen ? "Kichraytirish" : "Kattalashtirish"}
+        </span>
+      </button>
 
     </div>
   );
