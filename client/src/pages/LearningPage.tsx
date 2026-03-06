@@ -557,9 +557,9 @@ export default function LearningPage() {
               const isLocked = isEnrollmentLocked || isScheduleLocked;
 
               return (
-                <div className="max-w-5xl mx-auto w-full space-y-4">
+                <div className="max-w-5xl mx-auto w-full">
                   {/* Player Area */}
-                  <div className="aspect-video bg-black sm:rounded-2xl overflow-hidden shadow-2xl relative group">
+                  <div className="aspect-video bg-black sm:rounded-2xl overflow-hidden shadow-2xl relative">
                     {isLocked ? (
                       <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/95 backdrop-blur-md p-6 text-center">
                         <Lock className="w-12 h-12 text-primary mb-4" />
@@ -577,49 +577,38 @@ export default function LearningPage() {
                     )}
                   </div>
 
-                  {/* Header */}
-                  <div className="px-4 sm:px-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="rounded-full">{currentIndex + 1}-dars</Badge>
-                        {currentLesson.duration && <span className="text-xs text-muted-foreground">{currentLesson.duration} daq</span>}
-                      </div>
-                      <h2 className="text-xl font-bold">{currentLesson.title}</h2>
+                  {/* Lesson title + Tugatish — compact on mobile */}
+                  <div className="px-3 sm:px-0 pt-3 pb-2 flex items-center justify-between gap-3 sm:pt-5 sm:pb-4">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Badge variant="outline" className="shrink-0 text-xs">{currentIndex + 1}-dars</Badge>
+                      <h2 className="text-base sm:text-xl font-bold truncate">{currentLesson.title}</h2>
                     </div>
                     {!isPreviewMode && !isLocked && (
                       <Button
                         variant={lessonProgress?.completed ? "outline" : "default"}
                         size="sm"
                         onClick={() => saveProgressMutation.mutate({ lessonId: currentLesson.id, completed: !lessonProgress?.completed })}
-                        className="rounded-xl"
+                        className="shrink-0 rounded-xl"
                       >
-                        {lessonProgress?.completed ? <CheckCircle className="w-4 h-4 mr-2" /> : "Tugatish"}
+                        {lessonProgress?.completed ? <CheckCircle className="w-4 h-4" /> : "Tugatish"}
                       </Button>
                     )}
                   </div>
 
-                  {/* Tabs */}
-                  <div className="px-4 sm:px-0">
+                  {/* Tabs — no gap between list and content on mobile */}
+                  <div className="px-3 sm:px-0">
                     <Tabs defaultValue="info" className="w-full">
-                      <TabsList className="w-full justify-start h-12 bg-muted/50 p-1 rounded-xl mb-6 overflow-x-auto no-scrollbar">
-                        <TabsTrigger value="info">Umumiy</TabsTrigger>
-                        <TabsTrigger value="assignments">Vazifalar</TabsTrigger>
-                        <TabsTrigger value="tests">Testlar</TabsTrigger>
-                        <TabsTrigger value="results">Natijalar</TabsTrigger>
+                      <TabsList className="w-full justify-start h-10 bg-muted/50 p-1 rounded-lg overflow-x-auto no-scrollbar">
+                        <TabsTrigger value="info" className="text-xs sm:text-sm px-3">Umumiy</TabsTrigger>
+                        <TabsTrigger value="assignments" className="text-xs sm:text-sm px-3">Vazifalar</TabsTrigger>
+                        <TabsTrigger value="tests" className="text-xs sm:text-sm px-3">Testlar</TabsTrigger>
+                        <TabsTrigger value="results" className="text-xs sm:text-sm px-3">Natijalar</TabsTrigger>
                       </TabsList>
 
-                      <TabsContent value="info" className="space-y-4">
-                        {currentLesson.description ? (
-                          <div className="bg-muted/30 p-4 sm:p-6 rounded-2xl border">
-                            <h3 className="text-base font-bold mb-3 flex items-center gap-2">
-                              <BookOpen className="w-4 h-4 text-primary" /> Dars ma'lumotlari
-                            </h3>
+                      <TabsContent value="info" className="mt-2 space-y-3">
+                        {currentLesson.description && (
+                          <div className="bg-muted/30 p-3 sm:p-6 rounded-xl border">
                             <div className="text-muted-foreground text-sm whitespace-pre-wrap leading-relaxed">{currentLesson.description}</div>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center gap-2 py-6 text-muted-foreground">
-                            <BookOpen className="w-8 h-8 opacity-30" />
-                            <p className="text-sm">Bu dars uchun qo'shimcha ma'lumot yo'q</p>
                           </div>
                         )}
                       </TabsContent>
