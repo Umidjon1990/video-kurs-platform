@@ -81,8 +81,15 @@ function Router() {
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1 overflow-hidden">
-          <header className="flex items-center gap-2 border-b p-4 bg-background">
-            <SidebarTrigger data-testid="button-sidebar-toggle" />
+          <header className="flex items-center gap-2 border-b px-4 py-3"
+            style={{
+              background: "linear-gradient(90deg,#0d0521 0%,#0a0328 100%)",
+              borderColor: "rgba(124,58,237,0.18)",
+            }}>
+            <SidebarTrigger
+              data-testid="button-sidebar-toggle"
+              className="text-white/70 hover:text-white hover:bg-white/10 rounded-lg"
+            />
             <div className="flex-1" />
           </header>
           <main className="flex-1 overflow-auto">
