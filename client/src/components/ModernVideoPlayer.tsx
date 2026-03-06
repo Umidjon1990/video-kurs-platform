@@ -292,18 +292,22 @@ export function ModernVideoPlayer({ videoUrl, title, onError }: ModernVideoPlaye
         </div>
       )}
 
-      {/* Fullscreen toggle button - always visible on mobile */}
+      {/* Fullscreen toggle button */}
       <button
         onClick={toggleFullscreen}
         title={isFullscreen ? "Kichraytirish" : "To'liq ekran"}
-        className="absolute bottom-3 right-3 z-30 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-black/70 hover:bg-black/90 text-white text-xs font-medium backdrop-blur-sm border border-white/30 transition-all duration-200"
+        className={`absolute z-30 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-black/70 hover:bg-black/90 text-white text-xs font-medium backdrop-blur-sm border border-white/30 transition-all duration-200 ${
+          isFullscreen
+            ? "top-4 right-4"
+            : "bottom-3 right-3"
+        }`}
       >
         {isFullscreen ? (
           <Minimize2 className="w-4 h-4" />
         ) : (
           <Maximize2 className="w-4 h-4" />
         )}
-        <span>{isFullscreen ? "Kichraytirish" : "Kattalashtirish"}</span>
+        <span>{isFullscreen ? "Yopish" : "Kattalashtirish"}</span>
       </button>
 
     </div>
