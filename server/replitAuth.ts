@@ -9,6 +9,7 @@ import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import bcrypt from "bcryptjs";
 import { storage } from "./storage";
+import pg from "pg";
 
 // Augment Express.User type to include id field
 declare global {
@@ -42,7 +43,7 @@ export function getSession() {
   let storeConfig: any;
 
   if (isRailway) {
-    const { Pool } = require('pg');
+    const { Pool } = pg;
     const pool = new Pool({
       connectionString: process.env.DATABASE_URL,
       ssl: process.env.DATABASE_URL?.includes('localhost') ? false : { rejectUnauthorized: false },
