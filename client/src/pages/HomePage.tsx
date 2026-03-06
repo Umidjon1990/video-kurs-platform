@@ -1913,227 +1913,340 @@ export default function HomePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Course Lessons Modal - Mobile Optimized */}
+      {/* Course Lessons Modal - Ultra WOW Dark 7D Design */}
       <Dialog 
         open={selectedCourseForLessons !== null} 
         onOpenChange={() => setSelectedCourseForLessons(null)}
       >
-        <DialogContent className="w-full max-w-3xl h-[100dvh] sm:h-[85vh] p-0 sm:p-6 gap-0 border-0 sm:border rounded-none sm:rounded-lg flex flex-col">
-          {/* Mobile-friendly header with back button */}
-          <div className="flex items-center gap-3 p-4 sm:p-0 sm:pb-4 bg-background sticky top-0 z-10 border-b sm:border-0">
-            <Button
-              variant="ghost"
-              size="icon"
+        <DialogContent className="w-full max-w-2xl h-[100dvh] sm:h-[90vh] p-0 gap-0 border-0 rounded-none sm:rounded-2xl flex flex-col overflow-hidden"
+          style={{ background: 'linear-gradient(160deg, #0d0521 0%, #130a2e 40%, #0a1628 100%)' }}>
+          <DialogHeader className="sr-only">
+            <DialogTitle>{selectedCourseForLessons?.title || "Darslar"}</DialogTitle>
+          </DialogHeader>
+
+          {/* Ambient background orbs */}
+          <div className="pointer-events-none absolute inset-0 overflow-hidden">
+            <div style={{ position:'absolute', top:-80, left:-80, width:300, height:300, borderRadius:'50%', background:'radial-gradient(circle, rgba(124,58,237,0.18) 0%, transparent 70%)' }} />
+            <div style={{ position:'absolute', bottom:-60, right:-60, width:260, height:260, borderRadius:'50%', background:'radial-gradient(circle, rgba(6,182,212,0.12) 0%, transparent 70%)' }} />
+            <div style={{ position:'absolute', top:'40%', right:-40, width:180, height:180, borderRadius:'50%', background:'radial-gradient(circle, rgba(236,72,153,0.10) 0%, transparent 70%)' }} />
+          </div>
+
+          {/* Header */}
+          <div className="relative flex-shrink-0 flex items-center gap-3 px-4 py-3 border-b"
+            style={{ borderColor: 'rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(12px)' }}>
+            <button
               onClick={() => setSelectedCourseForLessons(null)}
-              className="shrink-0"
+              className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200"
+              style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}
               data-testid="button-back-from-lessons"
             >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <DialogHeader className="flex-1 space-y-0">
-              <DialogTitle className="text-base sm:text-lg line-clamp-1">{selectedCourseForLessons?.title}</DialogTitle>
-            </DialogHeader>
+              <ArrowLeft className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.8)' }} />
+            </button>
+            <div className="flex-1 min-w-0">
+              <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 2 }}>
+                Kurs dasturi
+              </p>
+              <h2 className="font-bold truncate" style={{ color: '#fff', fontSize: 15, lineHeight: 1.2 }}>
+                {selectedCourseForLessons?.title}
+              </h2>
+            </div>
+            {courseLessons && (
+              <div className="flex-shrink-0 text-right">
+                <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: 18, fontWeight: 800, lineHeight: 1 }}>
+                  {courseLessons.length}
+                </p>
+                <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, fontWeight: 600 }}>dars</p>
+              </div>
+            )}
           </div>
-          <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-0">
+
+          {/* Content */}
+          <div className="relative flex-1 overflow-y-auto" style={{ padding: '12px 12px 20px' }}>
             {isCourseLessonsLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+              <div className="flex flex-col items-center justify-center h-full gap-4">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
+                  style={{ width: 44, height: 44, borderRadius: '50%', border: '3px solid rgba(124,58,237,0.2)', borderTopColor: '#7c3aed' }}
+                />
+                <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13 }}>Yuklanmoqda...</p>
               </div>
             ) : courseLessons && courseLessons.length > 0 ? (
-              <div className="space-y-4">
-                {/* Render lessons grouped by modules if modules exist */}
-                {courseModules && courseModules.length > 0 && (() => {
-                  const sortedModules = [...courseModules].sort((a, b) => a.order - b.order);
-                  const moduleLessons = courseLessons.filter(l => l.moduleId);
-                  const standaloneLessons = courseLessons.filter(l => !l.moduleId);
-                  
-                  return (
-                    <>
-                      {sortedModules.map((module, moduleIndex) => {
-                        const lessonsInModule = moduleLessons
-                          .filter(l => l.moduleId === module.id)
-                          .sort((a, b) => a.order - b.order);
-                        
-                        if (lessonsInModule.length === 0) return null;
-                        
-                        const colors = moduleColors[moduleIndex % moduleColors.length];
-                        const demoCount = lessonsInModule.filter(l => l.isDemo).length;
-                        
-                        return (
-                          <div key={module.id} className="mb-4" data-testid={`public-module-${module.id}`}>
-                            {/* Module Header with gradient effect */}
-                            <div 
-                              className={`relative overflow-hidden rounded-xl border ${colors.border} bg-gradient-to-r ${colors.bg} backdrop-blur-sm mb-2`}
+              <div className="space-y-3">
+                {(() => {
+                  const wowModulePalettes = [
+                    { from: '#7c3aed', to: '#4f46e5', glow: 'rgba(124,58,237,0.5)', bar: '#7c3aed', light: 'rgba(124,58,237,0.15)', border: 'rgba(124,58,237,0.3)' },
+                    { from: '#06b6d4', to: '#0284c7', glow: 'rgba(6,182,212,0.5)', bar: '#06b6d4', light: 'rgba(6,182,212,0.12)', border: 'rgba(6,182,212,0.3)' },
+                    { from: '#ec4899', to: '#db2777', glow: 'rgba(236,72,153,0.5)', bar: '#ec4899', light: 'rgba(236,72,153,0.12)', border: 'rgba(236,72,153,0.3)' },
+                    { from: '#10b981', to: '#059669', glow: 'rgba(16,185,129,0.5)', bar: '#10b981', light: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.3)' },
+                    { from: '#f59e0b', to: '#d97706', glow: 'rgba(245,158,11,0.5)', bar: '#f59e0b', light: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.3)' },
+                    { from: '#8b5cf6', to: '#7c3aed', glow: 'rgba(139,92,246,0.5)', bar: '#8b5cf6', light: 'rgba(139,92,246,0.12)', border: 'rgba(139,92,246,0.3)' },
+                  ];
+
+                  const WowLessonItem = ({ lesson, index, courseId }: { lesson: any; index: number; courseId: string }) => {
+                    const canViewDemo = lesson.isDemo && lesson.videoUrl && lesson.videoUrl.trim() !== '';
+                    return (
+                      <motion.div
+                        key={lesson.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3, delay: index * 0.05 }}
+                        onClick={() => canViewDemo && openDemoLesson(lesson, courseId)}
+                        data-testid={`public-lesson-${lesson.id}`}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 12,
+                          padding: '11px 13px',
+                          borderRadius: 14,
+                          cursor: canViewDemo ? 'pointer' : 'default',
+                          background: canViewDemo
+                            ? 'linear-gradient(135deg, rgba(251,146,60,0.12) 0%, rgba(245,158,11,0.07) 100%)'
+                            : 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)',
+                          border: canViewDemo
+                            ? '1px solid rgba(251,146,60,0.25)'
+                            : '1px solid rgba(255,255,255,0.06)',
+                          transition: 'all 0.2s',
+                          position: 'relative',
+                          overflow: 'hidden',
+                        }}
+                        whileHover={canViewDemo ? {
+                          scale: 1.01,
+                          boxShadow: '0 4px 20px rgba(251,146,60,0.25)',
+                        } : {}}
+                        whileTap={canViewDemo ? { scale: 0.99 } : {}}
+                      >
+                        {/* Left accent line for demo */}
+                        {canViewDemo && (
+                          <div style={{ position:'absolute', left:0, top:0, bottom:0, width:3,
+                            background:'linear-gradient(180deg, #fb923c, #f59e0b)',
+                            borderRadius:'14px 0 0 14px' }} />
+                        )}
+
+                        {/* Icon */}
+                        {canViewDemo ? (
+                          <motion.div
+                            animate={{ boxShadow: ['0 0 10px rgba(251,146,60,0.4)', '0 0 20px rgba(251,146,60,0.7)', '0 0 10px rgba(251,146,60,0.4)'] }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                            style={{ width:36, height:36, borderRadius:10, flexShrink:0,
+                              background:'linear-gradient(145deg, #fb923c, #f59e0b)',
+                              boxShadow:'0 4px 0 0 #92400e, 0 6px 14px rgba(251,146,60,0.45)',
+                              display:'flex', alignItems:'center', justifyContent:'center',
+                              border:'1px solid rgba(251,146,60,0.6)' }}>
+                            <Play style={{ width:15, height:15, color:'#fff', fill:'#fff' }} />
+                          </motion.div>
+                        ) : (
+                          <motion.div
+                            animate={{ rotateY: [0, 8, -8, 0] }}
+                            transition={{ duration: 4, repeat: Infinity, delay: index * 0.3 }}
+                            style={{ width:36, height:36, borderRadius:10, flexShrink:0,
+                              background:'linear-gradient(145deg, #1e1b4b, #312e81)',
+                              boxShadow:'0 4px 0 0 #1e1b4b, 0 6px 14px rgba(99,102,241,0.25)',
+                              display:'flex', alignItems:'center', justifyContent:'center',
+                              border:'1px solid rgba(99,102,241,0.3)' }}>
+                            <motion.div
+                              animate={{ scale: [1, 1.08, 1] }}
+                              transition={{ duration: 3, repeat: Infinity, delay: index * 0.2 }}
                             >
-                              <div className="absolute inset-0 bg-background/30 backdrop-blur-[2px]" />
-                              <div className="relative p-4">
-                                <div className="flex items-center gap-3">
-                                  <div className={`flex-shrink-0 w-10 h-10 rounded-xl ${colors.badge} flex items-center justify-center shadow-lg`}>
-                                    <span className="text-white font-bold">{moduleIndex + 1}</span>
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <span className={`text-[10px] font-bold uppercase tracking-wider ${colors.text}`}>
+                              <Lock style={{ width:15, height:15, color:'rgba(165,180,252,0.7)' }} />
+                            </motion.div>
+                          </motion.div>
+                        )}
+
+                        {/* Text */}
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <p style={{
+                            fontSize: 13, fontWeight: 600, marginBottom: 2,
+                            color: canViewDemo ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.45)',
+                            overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'
+                          }}>
+                            {lesson.title}
+                          </p>
+                          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                            {lesson.duration && (
+                              <span style={{ fontSize:11, color:'rgba(255,255,255,0.3)' }}>{lesson.duration} daqiqa</span>
+                            )}
+                            {lesson.pdfUrl && (
+                              <span style={{ fontSize:11, color:'rgba(255,255,255,0.3)', display:'flex', alignItems:'center', gap:3 }}>
+                                <FileText style={{ width:10, height:10 }} /> PDF
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Badge */}
+                        {canViewDemo ? (
+                          <span style={{ fontSize:10, fontWeight:700, color:'#fb923c',
+                            background:'rgba(251,146,60,0.15)', border:'1px solid rgba(251,146,60,0.35)',
+                            borderRadius:6, padding:'3px 8px', flexShrink:0, letterSpacing:'0.05em' }}>
+                            DEMO
+                          </span>
+                        ) : (
+                          <span style={{ fontSize:10, fontWeight:700, color:'rgba(165,180,252,0.6)',
+                            background:'rgba(99,102,241,0.1)', border:'1px solid rgba(99,102,241,0.2)',
+                            borderRadius:6, padding:'3px 8px', flexShrink:0, letterSpacing:'0.05em' }}>
+                            PREMIUM
+                          </span>
+                        )}
+                      </motion.div>
+                    );
+                  };
+
+                  if (courseModules && courseModules.length > 0) {
+                    const sortedModules = [...courseModules].sort((a, b) => a.order - b.order);
+                    const moduleLessons = courseLessons.filter((l: any) => l.moduleId);
+                    const standaloneLessons = courseLessons.filter((l: any) => !l.moduleId);
+                    let globalLessonIndex = 0;
+
+                    return (
+                      <>
+                        {sortedModules.map((module, moduleIndex) => {
+                          const lessonsInModule = moduleLessons
+                            .filter((l: any) => l.moduleId === module.id)
+                            .sort((a: any, b: any) => a.order - b.order);
+                          if (lessonsInModule.length === 0) return null;
+
+                          const pal = wowModulePalettes[moduleIndex % wowModulePalettes.length];
+                          const demoCount = lessonsInModule.filter((l: any) => l.isDemo).length;
+                          const startIdx = globalLessonIndex;
+                          globalLessonIndex += lessonsInModule.length;
+
+                          return (
+                            <motion.div
+                              key={module.id}
+                              initial={{ opacity: 0, y: 16 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.4, delay: moduleIndex * 0.08 }}
+                              data-testid={`public-module-${module.id}`}
+                              style={{ borderRadius: 18, overflow:'hidden',
+                                background: `linear-gradient(135deg, ${pal.light} 0%, rgba(255,255,255,0.02) 100%)`,
+                                border: `1px solid ${pal.border}`,
+                                boxShadow: `0 4px 24px ${pal.glow.replace('0.5', '0.12')}` }}
+                            >
+                              {/* Module header */}
+                              <div style={{ padding:'14px 16px 10px', position:'relative', overflow:'hidden' }}>
+                                <div style={{ position:'absolute', top:-30, right:-20, width:100, height:100, borderRadius:'50%',
+                                  background:`radial-gradient(circle, ${pal.glow.replace('0.5','0.2')} 0%, transparent 70%)` }} />
+
+                                <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:10 }}>
+                                  {/* Module number badge */}
+                                  <motion.div
+                                    animate={{ boxShadow: [`0 0 8px ${pal.glow}`, `0 0 16px ${pal.glow}`, `0 0 8px ${pal.glow}`] }}
+                                    transition={{ duration: 2.5, repeat: Infinity }}
+                                    style={{ width:38, height:38, borderRadius:12, flexShrink:0,
+                                      background:`linear-gradient(145deg, ${pal.from}, ${pal.to})`,
+                                      boxShadow:`0 4px 0 0 rgba(0,0,0,0.4), 0 6px 14px ${pal.glow}`,
+                                      display:'flex', alignItems:'center', justifyContent:'center',
+                                      border:`1px solid ${pal.from}60` }}>
+                                    <span style={{ color:'#fff', fontWeight:800, fontSize:14 }}>{moduleIndex + 1}</span>
+                                  </motion.div>
+
+                                  <div style={{ flex:1, minWidth:0 }}>
+                                    <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:3 }}>
+                                      <span style={{ fontSize:9, fontWeight:800, letterSpacing:'0.15em',
+                                        color: pal.bar, textTransform:'uppercase' }}>
                                         MODUL {moduleIndex + 1}
                                       </span>
                                       {demoCount > 0 && (
-                                        <Badge className="bg-orange-500 text-white text-[10px] px-1.5 py-0 h-4">
+                                        <span style={{ fontSize:9, fontWeight:700, color:'#fb923c',
+                                          background:'rgba(251,146,60,0.15)', border:'1px solid rgba(251,146,60,0.3)',
+                                          borderRadius:5, padding:'1px 6px' }}>
                                           {demoCount} demo
-                                        </Badge>
+                                        </span>
                                       )}
                                     </div>
-                                    <h3 className="font-semibold text-sm sm:text-base truncate">{module.title}</h3>
-                                    <p className="text-xs text-muted-foreground">{lessonsInModule.length} ta dars</p>
+                                    <h3 style={{ color:'rgba(255,255,255,0.9)', fontWeight:700, fontSize:14,
+                                      overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                                      {module.title}
+                                    </h3>
+                                  </div>
+
+                                  <div style={{ flexShrink:0, textAlign:'right' }}>
+                                    <p style={{ color:'rgba(255,255,255,0.85)', fontWeight:800, fontSize:16, lineHeight:1 }}>
+                                      {lessonsInModule.length}
+                                    </p>
+                                    <p style={{ color:'rgba(255,255,255,0.3)', fontSize:10 }}>dars</p>
                                   </div>
                                 </div>
+
+                                {/* Animated progress bar */}
+                                <div style={{ height:5, borderRadius:10, background:'rgba(255,255,255,0.07)', overflow:'hidden' }}>
+                                  <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${(demoCount / lessonsInModule.length) * 100}%` }}
+                                    transition={{ duration: 1, delay: moduleIndex * 0.15 + 0.3, ease: 'easeOut' }}
+                                    style={{ height:'100%', borderRadius:10,
+                                      background:`linear-gradient(90deg, ${pal.from}, ${pal.to})`,
+                                      boxShadow:`0 0 8px ${pal.glow}` }}
+                                  />
+                                </div>
+                                <div style={{ display:'flex', justifyContent:'space-between', marginTop:4 }}>
+                                  <span style={{ fontSize:9, color:'rgba(255,255,255,0.3)' }}>
+                                    {demoCount} demo bepul
+                                  </span>
+                                  <span style={{ fontSize:9, color:'rgba(255,255,255,0.3)' }}>
+                                    {lessonsInModule.length - demoCount} premium
+                                  </span>
+                                </div>
                               </div>
-                            </div>
-                            
-                            {/* Lessons in module */}
-                            <div className="space-y-2 pl-4">
-                              {lessonsInModule.map((lesson, lessonIndex) => {
-                                const canViewDemo = lesson.isDemo && lesson.videoUrl && lesson.videoUrl.trim() !== '';
-                                return (
-                                  <div
+
+                              {/* Lessons list */}
+                              <div style={{ padding:'4px 10px 12px', display:'flex', flexDirection:'column', gap:6 }}>
+                                {lessonsInModule.map((lesson: any, li: number) => (
+                                  <WowLessonItem
                                     key={lesson.id}
-                                    className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ${
-                                      canViewDemo 
-                                        ? "bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 border border-orange-200 dark:border-orange-800 hover-elevate cursor-pointer" 
-                                        : "bg-muted/30 opacity-75"
-                                    }`}
-                                    onClick={() => canViewDemo && selectedCourseForLessons && openDemoLesson(lesson, selectedCourseForLessons.id)}
-                                    data-testid={`public-lesson-${lesson.id}`}
-                                  >
-                                    <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${
-                                      lesson.isDemo 
-                                        ? "bg-gradient-to-br from-orange-400 to-amber-500 text-white shadow-md" 
-                                        : "bg-muted"
-                                    }`}>
-                                      {lesson.isDemo ? (
-                                        <Play className="w-4 h-4 fill-white" />
-                                      ) : (
-                                        <Lock className="w-4 h-4 text-muted-foreground" />
-                                      )}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <h4 className={`font-medium text-sm truncate ${lesson.isDemo ? 'text-orange-900 dark:text-orange-100' : ''}`}>
-                                        {lesson.title}
-                                      </h4>
-                                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                        {lesson.duration && <span>{lesson.duration} daqiqa</span>}
-                                        {lesson.pdfUrl && <span className="flex items-center gap-1"><FileText className="w-3 h-3" /> PDF</span>}
-                                      </div>
-                                    </div>
-                                    {lesson.isDemo ? (
-                                      <Badge className="bg-orange-500 text-white text-xs">Demo</Badge>
-                                    ) : (
-                                      <Badge variant="secondary" className="text-xs">Premium</Badge>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })}
-                      
-                      {/* Standalone lessons without modules */}
-                      {standaloneLessons.length > 0 && (
-                        <div className="space-y-2">
-                          {standaloneLessons.map((lesson) => {
-                            const canViewDemo = lesson.isDemo && lesson.videoUrl && lesson.videoUrl.trim() !== '';
-                            return (
-                              <div
-                                key={lesson.id}
-                                className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ${
-                                  canViewDemo 
-                                    ? "bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 border border-orange-200 dark:border-orange-800 hover-elevate cursor-pointer" 
-                                    : "bg-muted/30 opacity-75"
-                                }`}
-                                onClick={() => canViewDemo && selectedCourseForLessons && openDemoLesson(lesson, selectedCourseForLessons.id)}
-                                data-testid={`public-lesson-${lesson.id}`}
-                              >
-                                <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${
-                                  lesson.isDemo 
-                                    ? "bg-gradient-to-br from-orange-400 to-amber-500 text-white shadow-md" 
-                                    : "bg-muted"
-                                }`}>
-                                  {lesson.isDemo ? (
-                                    <Play className="w-4 h-4 fill-white" />
-                                  ) : (
-                                    <Lock className="w-4 h-4 text-muted-foreground" />
-                                  )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <h4 className={`font-medium text-sm truncate ${lesson.isDemo ? 'text-orange-900 dark:text-orange-100' : ''}`}>
-                                    {lesson.title}
-                                  </h4>
-                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                    {lesson.duration && <span>{lesson.duration} daqiqa</span>}
-                                    {lesson.pdfUrl && <span className="flex items-center gap-1"><FileText className="w-3 h-3" /> PDF</span>}
-                                  </div>
-                                </div>
-                                {lesson.isDemo ? (
-                                  <Badge className="bg-orange-500 text-white text-xs">Demo</Badge>
-                                ) : (
-                                  <Badge variant="secondary" className="text-xs">Premium</Badge>
-                                )}
+                                    lesson={lesson}
+                                    index={startIdx + li}
+                                    courseId={selectedCourseForLessons!.id}
+                                  />
+                                ))}
                               </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
-                
-                {/* Fallback: render all lessons without module grouping if no modules */}
-                {(!courseModules || courseModules.length === 0) && courseLessons.map((lesson) => {
-                  const canViewDemo = lesson.isDemo && lesson.videoUrl && lesson.videoUrl.trim() !== '';
-                  return (
-                    <div
-                      key={lesson.id}
-                      className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ${
-                        canViewDemo 
-                          ? "bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 border border-orange-200 dark:border-orange-800 hover-elevate cursor-pointer" 
-                          : "bg-muted/30 opacity-75"
-                      }`}
-                      onClick={() => canViewDemo && selectedCourseForLessons && openDemoLesson(lesson, selectedCourseForLessons.id)}
-                      data-testid={`public-lesson-${lesson.id}`}
-                    >
-                      <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${
-                        lesson.isDemo 
-                          ? "bg-gradient-to-br from-orange-400 to-amber-500 text-white shadow-md" 
-                          : "bg-muted"
-                      }`}>
-                        {lesson.isDemo ? (
-                          <Play className="w-4 h-4 fill-white" />
-                        ) : (
-                          <Lock className="w-4 h-4 text-muted-foreground" />
+                            </motion.div>
+                          );
+                        })}
+
+                        {standaloneLessons.length > 0 && (
+                          <div style={{ display:'flex', flexDirection:'column', gap:6, padding:'4px 0' }}>
+                            {standaloneLessons.map((lesson: any, i: number) => (
+                              <WowLessonItem
+                                key={lesson.id}
+                                lesson={lesson}
+                                index={globalLessonIndex + i}
+                                courseId={selectedCourseForLessons!.id}
+                              />
+                            ))}
+                          </div>
                         )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className={`font-medium text-sm truncate ${lesson.isDemo ? 'text-orange-900 dark:text-orange-100' : ''}`}>
-                          {lesson.title}
-                        </h4>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          {lesson.duration && <span>{lesson.duration} daqiqa</span>}
-                          {lesson.pdfUrl && <span className="flex items-center gap-1"><FileText className="w-3 h-3" /> PDF</span>}
-                        </div>
-                      </div>
-                      {lesson.isDemo ? (
-                        <Badge className="bg-orange-500 text-white text-xs">Demo</Badge>
-                      ) : (
-                        <Badge variant="secondary" className="text-xs">Premium</Badge>
-                      )}
+                      </>
+                    );
+                  }
+
+                  // No modules — flat list
+                  return (
+                    <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                      {courseLessons.map((lesson: any, i: number) => (
+                        <WowLessonItem
+                          key={lesson.id}
+                          lesson={lesson}
+                          index={i}
+                          courseId={selectedCourseForLessons!.id}
+                        />
+                      ))}
                     </div>
                   );
-                })}
+                })()}
               </div>
             ) : (
-              <div className="text-center py-8">
-                <BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Hali darslar qo'shilmagan</p>
+              <div className="flex flex-col items-center justify-center h-full gap-4">
+                <motion.div
+                  animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.05, 1] }}
+                  transition={{ duration: 3, repeat: Infinity }}
+                  style={{ width:60, height:60, borderRadius:18,
+                    background:'linear-gradient(145deg, #1e1b4b, #312e81)',
+                    boxShadow:'0 8px 24px rgba(99,102,241,0.3)',
+                    display:'flex', alignItems:'center', justifyContent:'center' }}
+                >
+                  <BookOpen style={{ width:28, height:28, color:'rgba(165,180,252,0.6)' }} />
+                </motion.div>
+                <p style={{ color:'rgba(255,255,255,0.35)', fontSize:14 }}>Hali darslar qo'shilmagan</p>
               </div>
             )}
           </div>
