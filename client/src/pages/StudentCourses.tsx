@@ -450,7 +450,7 @@ export default function StudentCourses() {
 
                         <div className="mb-8">
                           <div className="flex items-baseline gap-1">
-                            <span className="text-4xl font-black">{plan.price.toLocaleString()}</span>
+                            <span className="text-4xl font-black">{(plan.price ?? 0).toLocaleString()}</span>
                             <span className="text-slate-500 font-medium text-sm">so'm / oy</span>
                           </div>
                         </div>
