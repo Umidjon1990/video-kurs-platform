@@ -88,7 +88,7 @@ function Router() {
             }}>
             <SidebarTrigger
               data-testid="button-sidebar-toggle"
-              className="text-white/70 hover:text-white hover:bg-white/10 rounded-lg"
+              className="text-white/70 hover:text-white hover:bg-white/10 rounded-lg h-10 w-10 [&>svg]:w-5 [&>svg]:h-5"
             />
             <div className="flex-1" />
           </header>

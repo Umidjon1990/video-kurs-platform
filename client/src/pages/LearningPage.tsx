@@ -491,7 +491,7 @@ export default function LearningPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col overflow-x-hidden">
       {/* Mobile Header Bar - Modern App-like */}
       <div className="sm:hidden sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b px-4 h-14 flex items-center justify-between gap-3">
         <Button
@@ -543,7 +543,7 @@ export default function LearningPage() {
 
       <div className="flex flex-col lg:flex-row flex-1 h-[calc(100dvh-3.5rem)] sm:h-[calc(100vh-3rem)] overflow-hidden">
         {/* Main Content */}
-        <div className="flex-1 overflow-y-auto p-0 sm:p-4 lg:p-6 pb-32 sm:pb-4" ref={(el) => { mainContentRef.current = el; }}>
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-0 sm:p-4 lg:p-6 pb-40 sm:pb-4" ref={(el) => { mainContentRef.current = el; }}>
           {currentLesson ? (
             (() => {
               const isEnrolled = enrollment?.paymentStatus === 'confirmed' || enrollment?.paymentStatus === 'approved';
@@ -608,23 +608,20 @@ export default function LearningPage() {
                         <TabsTrigger value="results">Natijalar</TabsTrigger>
                       </TabsList>
 
-                      <TabsContent value="info" className="space-y-6">
-                        {currentLesson.description && (
+                      <TabsContent value="info" className="space-y-4">
+                        {currentLesson.description ? (
                           <div className="bg-muted/30 p-4 sm:p-6 rounded-2xl border">
-                            <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
-                              <BookOpen className="w-5 h-5 text-primary" /> Dars ma'lumotlari
+                            <h3 className="text-base font-bold mb-3 flex items-center gap-2">
+                              <BookOpen className="w-4 h-4 text-primary" /> Dars ma'lumotlari
                             </h3>
-                            <div className="text-muted-foreground text-sm whitespace-pre-wrap">{currentLesson.description}</div>
+                            <div className="text-muted-foreground text-sm whitespace-pre-wrap leading-relaxed">{currentLesson.description}</div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center gap-2 py-6 text-muted-foreground">
+                            <BookOpen className="w-8 h-8 opacity-30" />
+                            <p className="text-sm">Bu dars uchun qo'shimcha ma'lumot yo'q</p>
                           </div>
                         )}
-                        <div className="space-y-4">
-                          <h3 className="text-lg font-bold flex items-center gap-2"><FileText className="w-5 h-5 text-primary" /> Materiallar</h3>
-                          {currentLesson.description ? (
-                            <div className="bg-card border rounded-2xl p-4 sm:p-6 prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: currentLesson.description }} />
-                          ) : (
-                            <p className="text-muted-foreground italic text-center py-8">Materiallar yo'q</p>
-                          )}
-                        </div>
                       </TabsContent>
 
                       <TabsContent value="assignments" className="space-y-4">
@@ -720,15 +717,32 @@ export default function LearningPage() {
 
       {/* Mobile Nav */}
       {currentLesson && (
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 p-4 bg-gradient-to-t from-background to-transparent pointer-events-none">
-          <div className="flex items-center gap-2 pointer-events-auto">
-            <Button variant="outline" className="flex-1 h-12 rounded-2xl bg-background/80 backdrop-blur shadow-lg" onClick={() => navPrevLesson && setCurrentLessonId(navPrevLesson.id)} disabled={!navPrevLesson}>
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-lg border-t">
+          {/* Lesson list hint bar */}
+          <button
+            className="w-full flex items-center justify-center gap-2 py-2 text-xs font-semibold text-primary border-b border-primary/20 bg-primary/5 active:bg-primary/10"
+            onClick={() => setShowMobileLessons(true)}
+            data-testid="button-lessons-list-bar"
+          >
+            <List className="w-3.5 h-3.5" />
+            Barcha darslar ({currentIndex + 1}/{allSortedLessons.length}) — ko'rish
+            <ChevronDown className="w-3.5 h-3.5" />
+          </button>
+          {/* Prev / Next */}
+          <div className="flex items-center gap-3 px-4 py-3">
+            <Button
+              variant="outline"
+              className="flex-1 h-12 rounded-2xl"
+              onClick={() => navPrevLesson && setCurrentLessonId(navPrevLesson.id)}
+              disabled={!navPrevLesson}
+            >
               <ChevronLeft className="w-5 h-5 mr-1" /> Oldingi
             </Button>
-            <Button variant="outline" className="h-12 w-12 rounded-2xl bg-background/80 backdrop-blur shadow-lg p-0" onClick={() => setShowMobileLessons(true)}>
-              <List className="w-6 h-6" />
-            </Button>
-            <Button className="flex-1 h-12 rounded-2xl bg-primary shadow-lg shadow-primary/30" onClick={() => navNextLesson && setCurrentLessonId(navNextLesson.id)} disabled={!navNextLesson}>
+            <Button
+              className="flex-1 h-12 rounded-2xl shadow-lg shadow-primary/30"
+              onClick={() => navNextLesson && setCurrentLessonId(navNextLesson.id)}
+              disabled={!navNextLesson}
+            >
               Keyingi <ChevronRight className="w-5 h-5 ml-1" />
             </Button>
           </div>
