@@ -1922,11 +1922,13 @@ export default function HomePage() {
         open={selectedCourseForLessons !== null} 
         onOpenChange={() => setSelectedCourseForLessons(null)}
       >
-        <DialogContent className="w-full max-w-2xl h-[100dvh] sm:h-[90vh] p-0 gap-0 border-0 rounded-none sm:rounded-2xl flex flex-col overflow-hidden"
-          style={{ background: 'linear-gradient(160deg, #0d0521 0%, #130a2e 40%, #0a1628 100%)' }}>
+        <DialogContent className="w-full max-w-2xl h-[100dvh] sm:h-[90vh] p-0 gap-0 border-transparent shadow-none rounded-none sm:rounded-2xl flex flex-col overflow-hidden !bg-transparent">
           <DialogHeader className="sr-only">
             <DialogTitle>{selectedCourseForLessons?.title || "Darslar"}</DialogTitle>
           </DialogHeader>
+
+          {/* Full dark wrapper */}
+          <div className="absolute inset-0 sm:rounded-2xl overflow-hidden flex flex-col" style={{ background: 'linear-gradient(160deg, #0d0521 0%, #130a2e 40%, #0a1628 100%)' }}>
 
           {/* Ambient background orbs */}
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -2254,6 +2256,7 @@ export default function HomePage() {
               </div>
             )}
           </div>
+          </div>{/* end: Full dark wrapper */}
         </DialogContent>
       </Dialog>
 
