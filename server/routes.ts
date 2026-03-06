@@ -6347,24 +6347,36 @@ So'zlar soni: ${submission.wordCount}`;
 
       const now = new Date();
 
-      // Helper: get Nth scheduled date for weekly pattern
-      function getNthWeeklyDate(startDate: Date, weekDays: string[], index: number): Date {
+      // Helper: get the unlock date for the Nth lesson in weekly batch mode.
+      // Each session (unlock event) corresponds to one occurrence of a selected weekday.
+      // Sessions cycle through selected weekdays in order, week by week.
+      // Lesson index 0 = startDate itself (always unlocked on day 0).
+      // Lesson index 1 = first selected weekday >= startDate.
+      // Lesson index N = Nth occurrence of any selected weekday from startDate.
+      function getWeeklyBatchUnlockDate(startDate: Date, weekDays: string[], lessonIndex: number): Date {
+        if (lessonIndex === 0) return new Date(startDate);
         const dayMap: Record<string, number> = {
           sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
           thursday: 4, friday: 5, saturday: 6,
         };
-        const validDays = weekDays.map(d => dayMap[d.toLowerCase()]).filter(d => d !== undefined).sort((a, b) => a - b);
-        if (validDays.length === 0) return startDate;
+        const validDays = weekDays
+          .map(d => dayMap[d.toLowerCase()])
+          .filter(d => d !== undefined)
+          .sort((a, b) => a - b);
+        if (validDays.length === 0) return new Date(startDate);
 
+        // Walk forward from startDate, counting occurrences of valid days
+        // until we've found lessonIndex occurrences
         let count = 0;
-        let date = new Date(startDate);
-        // Align to first valid day >= startDate
-        while (!validDays.includes(date.getDay())) {
+        const date = new Date(startDate);
+        // Move to next day first (lesson 0 is already at startDate)
+        date.setDate(date.getDate() + 1);
+        while (count < lessonIndex) {
+          if (validDays.includes(date.getDay())) {
+            count++;
+            if (count === lessonIndex) break;
+          }
           date.setDate(date.getDate() + 1);
-        }
-        while (count < index) {
-          date.setDate(date.getDate() + 1);
-          if (validDays.includes(date.getDay())) count++;
         }
         return date;
       }
@@ -6389,8 +6401,10 @@ So'zlar soni: ${submission.wordCount}`;
           unlockDate = targetDate.toISOString();
           if (now < targetDate) { locked = true; reason = 'schedule'; }
         } else if (settings.unlockType === 'weekly' && settings.unlockStartDate && settings.unlockWeekDays?.length) {
+          // Each lesson gets its own unlock date based on cycling through selected weekdays
+          // e.g. Du, Chor, Ju selected: lesson1=nextDu, lesson2=nextChor, lesson3=nextJu, lesson4=Du+1week...
           const startD = new Date(settings.unlockStartDate);
-          const targetDate = getNthWeeklyDate(startD, settings.unlockWeekDays as string[], i);
+          const targetDate = getWeeklyBatchUnlockDate(startD, settings.unlockWeekDays as string[], i);
           unlockDate = targetDate.toISOString();
           if (now < targetDate) { locked = true; reason = 'schedule'; }
         }
