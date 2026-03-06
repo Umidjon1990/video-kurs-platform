@@ -384,12 +384,15 @@ export default function AdminGroupsPage() {
   };
 
   const toggleWeekDay = (day: string) => {
-    setSettingsForm(prev => ({
-      ...prev,
-      unlockWeekDays: prev.unlockWeekDays.includes(day)
-        ? prev.unlockWeekDays.filter(d => d !== day)
-        : [...prev.unlockWeekDays, day],
-    }));
+    setSettingsForm(prev => {
+      const current = prev.unlockWeekDays ?? [];
+      return {
+        ...prev,
+        unlockWeekDays: current.includes(day)
+          ? current.filter(d => d !== day)
+          : [...current, day],
+      };
+    });
   };
 
   const memberUserIds = groupMembers.map(m => m.userId);
@@ -852,13 +855,14 @@ export default function AdminGroupsPage() {
                           key={day.key}
                           type="button"
                           onClick={() => {
-                            const days = assignCourseData.unlockWeekDays.includes(day.key)
-                              ? assignCourseData.unlockWeekDays.filter(d => d !== day.key)
-                              : [...assignCourseData.unlockWeekDays, day.key];
+                            const cur = assignCourseData.unlockWeekDays ?? [];
+                            const days = cur.includes(day.key)
+                              ? cur.filter(d => d !== day.key)
+                              : [...cur, day.key];
                             setAssignCourseData({ ...assignCourseData, unlockWeekDays: days });
                           }}
                           className={`px-3 py-1.5 rounded-md text-sm font-medium border transition-colors ${
-                            assignCourseData.unlockWeekDays.includes(day.key)
+                            (assignCourseData.unlockWeekDays ?? []).includes(day.key)
                               ? "bg-primary text-primary-foreground border-primary"
                               : "bg-muted text-muted-foreground border-border hover:border-primary/50"
                           }`}
@@ -977,7 +981,7 @@ export default function AdminGroupsPage() {
                             type="button"
                             onClick={() => toggleWeekDay(day.key)}
                             className={`px-3 py-1.5 rounded-md text-sm font-medium border transition-colors ${
-                              settingsForm.unlockWeekDays.includes(day.key)
+                              (settingsForm.unlockWeekDays ?? []).includes(day.key)
                                 ? "bg-primary text-primary-foreground border-primary"
                                 : "bg-muted text-muted-foreground border-border hover:border-primary/50"
                             }`}
