@@ -153,7 +153,14 @@ export default function AdminGroupsPage() {
   const [groupForm, setGroupForm] = useState({ name: "", description: "" });
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
-  const [assignCourseData, setAssignCourseData] = useState({ courseId: "", subscriptionDays: "30" });
+  const [assignCourseData, setAssignCourseData] = useState({
+    courseId: "",
+    subscriptionDays: "30",
+    unlockType: "free",
+    unlockStartDate: "",
+    unlockIntervalDays: "1",
+    unlockWeekDays: [] as string[],
+  });
   const [settingsForm, setSettingsForm] = useState(defaultSettingsForm);
 
   // ─── Queries ─────────────────────────────────────────────────────────────
@@ -255,15 +262,32 @@ export default function AdminGroupsPage() {
   });
 
   const assignCourseMutation = useMutation({
-    mutationFn: async ({ groupId, courseId, subscriptionDays }: { groupId: string; courseId: string; subscriptionDays: string }) => {
+    mutationFn: async ({ groupId, courseId, subscriptionDays, unlockType, unlockStartDate, unlockIntervalDays, unlockWeekDays }: {
+      groupId: string; courseId: string; subscriptionDays: string;
+      unlockType: string; unlockStartDate: string; unlockIntervalDays: string; unlockWeekDays: string[];
+    }) => {
       const res = await apiRequest("POST", `/api/admin/student-groups/${groupId}/assign-course`, { courseId, subscriptionDays });
-      return res.json();
+      const data = await res.json();
+      // Also save schedule settings if not free
+      if (unlockType !== "free" || true) {
+        await apiRequest("POST", "/api/group-course-settings", {
+          groupId,
+          courseId,
+          unlockType,
+          unlockStartDate: unlockStartDate || null,
+          unlockIntervalDays: parseInt(unlockIntervalDays) || 1,
+          unlockWeekDays,
+          testGateEnabled: false,
+          minPassScore: 70,
+        });
+      }
+      return data;
     },
     onSuccess: (data: any) => {
       setIsAssignCourseOpen(false);
-      setAssignCourseData({ courseId: "", subscriptionDays: "30" });
+      setAssignCourseData({ courseId: "", subscriptionDays: "30", unlockType: "free", unlockStartDate: "", unlockIntervalDays: "1", unlockWeekDays: [] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/student-groups", selectedGroup?.id, "courses"] });
-      refetchGroupCourses();
+      setTimeout(() => refetchGroupCourses(), 300);
       toast({ title: "Muvaffaqiyatli", description: data.message });
     },
     onError: (error: any) => toast({ title: "Xatolik", description: error.message, variant: "destructive" }),
@@ -712,45 +736,160 @@ export default function AdminGroupsPage() {
       </Dialog>
 
       {/* ── Assign Course Dialog ── */}
-      <Dialog open={isAssignCourseOpen} onOpenChange={open => { setIsAssignCourseOpen(open); if (!open) setAssignCourseData({ courseId: "", subscriptionDays: "30" }); }}>
-        <DialogContent className="max-w-md">
+      <Dialog open={isAssignCourseOpen} onOpenChange={open => { setIsAssignCourseOpen(open); if (!open) setAssignCourseData({ courseId: "", subscriptionDays: "30", unlockType: "free", unlockStartDate: "", unlockIntervalDays: "1", unlockWeekDays: [] }); }}>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Guruhga Kurs Biriktirish</DialogTitle>
             <DialogDescription>
-              <span className="font-semibold">{selectedGroup?.name}</span> guruhidagi barcha o'quvchilarga kurs biriktiriladi
+              <span className="font-semibold">{selectedGroup?.name}</span> guruhiga kurs va dars jadvalini sozlang
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Kurs *</Label>
-              <Select value={assignCourseData.courseId} onValueChange={v => setAssignCourseData({ ...assignCourseData, courseId: v })}>
-                <SelectTrigger data-testid="select-course-for-group">
-                  <SelectValue placeholder="Kursni tanlang" />
-                </SelectTrigger>
-                <SelectContent>
-                  {allCourses.map(c => <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>)}
-                </SelectContent>
-              </Select>
+          <ScrollArea className="max-h-[65vh]">
+            <div className="space-y-4 py-2 pr-2">
+              {/* Course select */}
+              <div className="space-y-2">
+                <Label>Kurs *</Label>
+                <Select value={assignCourseData.courseId} onValueChange={v => setAssignCourseData({ ...assignCourseData, courseId: v })}>
+                  <SelectTrigger data-testid="select-course-for-group">
+                    <SelectValue placeholder="Kursni tanlang" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allCourses.map(c => <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Subscription days */}
+              <div className="space-y-2">
+                <Label>Obuna muddati (kunlarda)</Label>
+                <Input
+                  type="number" min="1" placeholder="30"
+                  value={assignCourseData.subscriptionDays}
+                  onChange={e => setAssignCourseData({ ...assignCourseData, subscriptionDays: e.target.value })}
+                  data-testid="input-group-subscription-days"
+                />
+                <p className="text-xs text-muted-foreground">Allaqachon yozilgan o'quvchilar o'tkazib yuboriladi</p>
+              </div>
+
+              {/* Schedule section */}
+              <div className="rounded-md border-2 border-primary/30 bg-primary/5 p-4 space-y-4">
+                <div className="flex items-center gap-2 pb-2 border-b border-primary/20">
+                  <div className="w-7 h-7 rounded-md bg-primary/20 flex items-center justify-center">
+                    <Calendar className="w-4 h-4 text-primary" />
+                  </div>
+                  <p className="font-semibold text-sm">Dars Ochilish Jadvali</p>
+                </div>
+
+                {/* Unlock type */}
+                <div className="space-y-2">
+                  <Label>Tartib turi</Label>
+                  <Select value={assignCourseData.unlockType} onValueChange={v => setAssignCourseData({ ...assignCourseData, unlockType: v })}>
+                    <SelectTrigger data-testid="select-assign-unlock-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="free">
+                        <span className="flex items-center gap-2"><Unlock className="w-3.5 h-3.5" /> Erkin — barcha darslar ochiq</span>
+                      </SelectItem>
+                      <SelectItem value="daily">
+                        <span className="flex items-center gap-2"><Calendar className="w-3.5 h-3.5" /> Kunlik — har N kunda bitta dars</span>
+                      </SelectItem>
+                      <SelectItem value="weekly">
+                        <span className="flex items-center gap-2"><Calendar className="w-3.5 h-3.5" /> Haftalik — tanlangan kunlarda</span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Start date */}
+                {(assignCourseData.unlockType === "daily" || assignCourseData.unlockType === "weekly") && (
+                  <div className="space-y-2">
+                    <Label>Birinchi dars boshlanish sanasi</Label>
+                    <Input
+                      type="datetime-local"
+                      value={assignCourseData.unlockStartDate}
+                      onChange={e => setAssignCourseData({ ...assignCourseData, unlockStartDate: e.target.value })}
+                      data-testid="input-assign-unlock-start"
+                    />
+                    <p className="text-xs text-muted-foreground">1-dars shu sanadan boshlab ochiladi</p>
+                  </div>
+                )}
+
+                {/* Daily interval */}
+                {assignCourseData.unlockType === "daily" && (
+                  <div className="space-y-2">
+                    <Label>Har necha kunda bir dars ochiladi?</Label>
+                    <div className="flex items-center gap-3">
+                      <Input
+                        type="number" min="1" max="30" className="w-24"
+                        value={assignCourseData.unlockIntervalDays}
+                        onChange={e => setAssignCourseData({ ...assignCourseData, unlockIntervalDays: e.target.value })}
+                        data-testid="input-assign-unlock-interval"
+                      />
+                      <span className="text-sm text-muted-foreground">kun</span>
+                    </div>
+                    <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+                      <p>Misol: <strong>{assignCourseData.unlockIntervalDays || 1}</strong> kun intervalida: 1-dars → {assignCourseData.unlockIntervalDays || 1} kun → 2-dars → {parseInt(assignCourseData.unlockIntervalDays||"1")*2} kun → 3-dars...</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Weekly days */}
+                {assignCourseData.unlockType === "weekly" && (
+                  <div className="space-y-2">
+                    <Label>Qaysi hafta kunlari dars ochiladi?</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { key: "monday", label: "Du" },
+                        { key: "tuesday", label: "Se" },
+                        { key: "wednesday", label: "Cho" },
+                        { key: "thursday", label: "Pa" },
+                        { key: "friday", label: "Ju" },
+                        { key: "saturday", label: "Sha" },
+                        { key: "sunday", label: "Ya" },
+                      ].map(day => (
+                        <button
+                          key={day.key}
+                          type="button"
+                          onClick={() => {
+                            const days = assignCourseData.unlockWeekDays.includes(day.key)
+                              ? assignCourseData.unlockWeekDays.filter(d => d !== day.key)
+                              : [...assignCourseData.unlockWeekDays, day.key];
+                            setAssignCourseData({ ...assignCourseData, unlockWeekDays: days });
+                          }}
+                          className={`px-3 py-1.5 rounded-md text-sm font-medium border transition-colors ${
+                            assignCourseData.unlockWeekDays.includes(day.key)
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-muted text-muted-foreground border-border hover:border-primary/50"
+                          }`}
+                          data-testid={`button-assign-weekday-${day.key}`}
+                        >
+                          {day.label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Tanlangan kunlarda ketma-ket darslar ochiladi</p>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Obuna muddati (kunlarda)</Label>
-              <Input
-                type="number" min="1" placeholder="30"
-                value={assignCourseData.subscriptionDays}
-                onChange={e => setAssignCourseData({ ...assignCourseData, subscriptionDays: e.target.value })}
-                data-testid="input-group-subscription-days"
-              />
-              <p className="text-xs text-muted-foreground">Allaqachon yozilgan o'quvchilar o'tkazib yuboriladi</p>
-            </div>
-          </div>
+          </ScrollArea>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAssignCourseOpen(false)}>Bekor qilish</Button>
             <Button
-              onClick={() => selectedGroup && assignCourseMutation.mutate({ groupId: selectedGroup.id, courseId: assignCourseData.courseId, subscriptionDays: assignCourseData.subscriptionDays })}
+              onClick={() => selectedGroup && assignCourseMutation.mutate({
+                groupId: selectedGroup.id,
+                courseId: assignCourseData.courseId,
+                subscriptionDays: assignCourseData.subscriptionDays,
+                unlockType: assignCourseData.unlockType,
+                unlockStartDate: assignCourseData.unlockStartDate,
+                unlockIntervalDays: assignCourseData.unlockIntervalDays,
+                unlockWeekDays: assignCourseData.unlockWeekDays,
+              })}
               disabled={!assignCourseData.courseId || assignCourseMutation.isPending}
               data-testid="button-confirm-assign-course-group"
             >
-              {assignCourseMutation.isPending ? "Biriktirilmoqda..." : "Kurs Biriktirish"}
+              {assignCourseMutation.isPending ? "Saqlanmoqda..." : "Kurs Biriktirish"}
             </Button>
           </DialogFooter>
         </DialogContent>
