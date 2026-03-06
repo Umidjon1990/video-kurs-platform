@@ -37,11 +37,9 @@ const itemVariants = {
 };
 
 const GalaxyBackground = () => (
-  <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-    <div className="absolute inset-0 bg-[#050218] bg-gradient-to-b from-[#050218] via-[#0a0328] to-[#050218]" />
-    
+  <div className="absolute inset-0 overflow-hidden pointer-events-none">
     {/* Floating Particles/Stars */}
-    {[...Array(20)].map((_, i) => (
+    {[...Array(15)].map((_, i) => (
       <motion.div
         key={i}
         className="absolute w-1 h-1 bg-white rounded-full opacity-20"
@@ -166,10 +164,10 @@ export default function StudentCourses() {
   const firstName = user?.firstName || "Talaba";
 
   return (
-    <div className="relative text-slate-100 selection:bg-primary/30">
+    <div className="relative bg-gradient-to-b from-[#050218] via-[#0a0328] to-[#050218] text-slate-100 selection:bg-primary/30 min-h-full">
       <GalaxyBackground />
 
-      <div className="relative z-10 min-h-full">
+      <div className="relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 pb-24">
           
           {/* Header Section */}
