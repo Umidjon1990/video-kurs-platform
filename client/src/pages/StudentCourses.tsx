@@ -14,7 +14,7 @@ import { useLocation } from "wouter";
 import {
   BookOpen, Trophy, GraduationCap, PlayCircle, CheckCircle, Star, Sparkles,
   ArrowRight, Target, Zap, Radio, Video, Clock, LayoutGrid, Rocket, Flame, Crown,
-  X, Maximize2, ChevronLeft, ChevronRight, Lock, Play, Layers
+  X, ChevronLeft, ChevronRight, Lock, Play, Layers
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Course, StudentCourseProgress } from "@shared/schema";
@@ -74,10 +74,9 @@ interface VideoModalState {
 interface VideoLessonModalProps {
   state: VideoModalState;
   onClose: () => void;
-  onOpenFull: (courseId: string, lessonId: string) => void;
 }
 
-function VideoLessonModal({ state, onClose, onOpenFull }: VideoLessonModalProps) {
+function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
   const [activeLessonId, setActiveLessonId] = useState(state.lessonId);
 
   const { data: lessons } = useQuery<any[]>({
@@ -131,23 +130,51 @@ function VideoLessonModal({ state, onClose, onOpenFull }: VideoLessonModalProps)
           className="absolute inset-0 bg-black/85 backdrop-blur-xl"
         />
 
-        {/* Neon glow accents */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-[100px] pointer-events-none" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-[100px] pointer-events-none" />
+        {/* Ambient glow accents */}
+        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-violet-600/8 rounded-full blur-[150px] pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-blue-600/8 rounded-full blur-[150px] pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-cyan-600/5 rounded-full blur-[120px] pointer-events-none" />
 
-        {/* Modal */}
+        {/* 7D Animated Border Wrapper */}
         <motion.div
           initial={{ opacity: 0, scale: 0.88, y: 40 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.88, y: 40 }}
           transition={{ type: "spring", stiffness: 260, damping: 24 }}
-          className="relative z-10 w-full max-w-6xl max-h-[92vh] flex flex-col rounded-3xl overflow-hidden"
+          className="relative z-10 w-full max-w-6xl rounded-3xl p-[2px] video-modal-7d"
+          style={{ maxHeight: '92vh' }}
+        >
+          {/* Corner spark glows */}
+          <div className="modal-corner-spark absolute -top-1 -left-1 w-6 h-6 rounded-full pointer-events-none"
+            style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.9) 0%, transparent 70%)', filter: 'blur(4px)' }} />
+          <div className="modal-corner-spark absolute -top-1 -right-1 w-6 h-6 rounded-full pointer-events-none"
+            style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.9) 0%, transparent 70%)', filter: 'blur(4px)' }} />
+          <div className="modal-corner-spark absolute -bottom-1 -left-1 w-6 h-6 rounded-full pointer-events-none"
+            style={{ background: 'radial-gradient(circle, rgba(236,72,153,0.9) 0%, transparent 70%)', filter: 'blur(4px)' }} />
+          <div className="modal-corner-spark absolute -bottom-1 -right-1 w-6 h-6 rounded-full pointer-events-none"
+            style={{ background: 'radial-gradient(circle, rgba(37,99,235,0.9) 0%, transparent 70%)', filter: 'blur(4px)' }} />
+
+        {/* Modal inner */}
+        <div
+          className="relative w-full flex flex-col rounded-3xl overflow-hidden"
           style={{
-            background: "linear-gradient(135deg, rgba(13,5,33,0.97) 0%, rgba(20,8,50,0.97) 50%, rgba(13,5,33,0.97) 100%)",
-            border: "1px solid rgba(139,92,246,0.25)",
-            boxShadow: "0 0 80px rgba(139,92,246,0.15), 0 0 40px rgba(37,99,235,0.08), inset 0 1px 0 rgba(255,255,255,0.06)"
+            background: "linear-gradient(135deg, rgba(6,2,18,0.99) 0%, rgba(12,4,32,0.99) 50%, rgba(6,2,18,0.99) 100%)",
+            maxHeight: 'calc(92vh - 4px)',
           }}
         >
+          {/* Scanline overlay */}
+          <div
+            className="absolute inset-0 pointer-events-none z-[5] rounded-3xl"
+            style={{
+              background: "repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(255,255,255,0.012) 3px, rgba(255,255,255,0.012) 4px)",
+            }}
+          />
+          {/* Chromatic aberration edge */}
+          <div className="absolute inset-0 pointer-events-none z-[5] rounded-3xl"
+            style={{
+              boxShadow: "inset 2px 0 8px rgba(0,255,255,0.04), inset -2px 0 8px rgba(255,0,255,0.04), inset 0 2px 8px rgba(255,200,0,0.02)"
+            }}
+          />
           {/* Top Bar */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-white/8 shrink-0">
             <div className="flex items-center gap-3 min-w-0">
@@ -174,17 +201,9 @@ function VideoLessonModal({ state, onClose, onOpenFull }: VideoLessonModalProps)
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={() => onOpenFull(state.courseId, activeLessonId)}
-                className="rounded-xl text-slate-400 hover:text-slate-100 h-8 w-8"
-                title="To'liq sahifada ochish"
-              >
-                <Maximize2 className="w-4 h-4" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
                 onClick={onClose}
-                className="rounded-xl text-slate-400 hover:text-red-400 h-8 w-8"
+                className="rounded-xl text-slate-500 hover:text-red-400 hover:bg-red-500/10 h-8 w-8 transition-colors"
+                title="Yopish (Esc)"
               >
                 <X className="w-4 h-4" />
               </Button>
@@ -317,18 +336,9 @@ function VideoLessonModal({ state, onClose, onOpenFull }: VideoLessonModalProps)
                 })}
               </div>
 
-              {/* CTA Footer */}
-              <div className="px-4 py-3 border-t border-white/8 shrink-0">
-                <Button
-                  onClick={() => onOpenFull(state.courseId, activeLessonId)}
-                  className="w-full rounded-xl bg-primary hover:bg-primary/90 shadow-[0_0_20px_rgba(139,92,246,0.3)] gap-2 font-semibold"
-                >
-                  To'liq rejimda o'qish
-                  <Maximize2 className="w-4 h-4" />
-                </Button>
-              </div>
             </div>
           </div>
+        </div>
         </motion.div>
       </motion.div>
     </AnimatePresence>
@@ -385,11 +395,6 @@ export default function StudentCourses() {
     }
   };
 
-  const openFullPage = (courseId: string, lessonId: string) => {
-    setVideoModal(null);
-    setLocation(lessonId ? `/learn/${courseId}?lesson=${lessonId}` : `/learn/${courseId}`);
-  };
-
   if (authLoading || allCoursesLoading || enrolledCoursesLoading || progressLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-[#050218]">
@@ -428,7 +433,6 @@ export default function StudentCourses() {
         <VideoLessonModal
           state={videoModal}
           onClose={() => setVideoModal(null)}
-          onOpenFull={openFullPage}
         />
       )}
 
