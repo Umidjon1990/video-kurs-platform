@@ -1414,7 +1414,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const userEnrollments = await storage.getEnrollmentsByUser(userId);
-      const allCourses = await storage.getCourses();
+      const allCourses = await db.select({ id: courses.id, title: courses.title }).from(courses);
       const courseMap = new Map(allCourses.map(c => [c.id, c.title]));
       const result = userEnrollments.map(e => ({
         id: e.id,
@@ -6104,7 +6104,7 @@ So'zlar soni: ${submission.wordCount}`;
         .select({
           id: courses.id,
           title: courses.title,
-          thumbnail: courses.thumbnail,
+          thumbnail: courses.thumbnailUrl,
           status: courses.status,
           isFree: courses.isFree,
         })
@@ -6139,7 +6139,7 @@ So'zlar soni: ${submission.wordCount}`;
         .select({
           id: courses.id,
           title: courses.title,
-          thumbnail: courses.thumbnail,
+          thumbnail: courses.thumbnailUrl,
         })
         .from(courses)
         .where(inArray(courses.id, courseIds));
@@ -6309,7 +6309,7 @@ So'zlar soni: ${submission.wordCount}`;
       // Get student's test attempts
       const attempts = await db.select()
         .from(testAttempts)
-        .where(and(eq(testAttempts.studentId, userId), eq(testAttempts.status, 'completed')));
+        .where(eq(testAttempts.userId, userId));
 
       // Get tests per lesson (each lesson may have a test)
       const testsForLessons = await db.select()

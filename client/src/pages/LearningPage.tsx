@@ -570,7 +570,7 @@ export default function LearningPage() {
                       </div>
                     ) : (
                       <ModernVideoPlayer 
-                        url={currentLesson.videoUrl || ""} 
+                        videoUrl={currentLesson.videoUrl || ""} 
                         lessonId={currentLesson.id}
                         onComplete={() => saveProgressMutation.mutate({ lessonId: currentLesson.id, completed: true })}
                       />
@@ -619,8 +619,8 @@ export default function LearningPage() {
                         )}
                         <div className="space-y-4">
                           <h3 className="text-lg font-bold flex items-center gap-2"><FileText className="w-5 h-5 text-primary" /> Materiallar</h3>
-                          {currentLesson.content ? (
-                            <div className="bg-card border rounded-2xl p-4 sm:p-6 prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: currentLesson.content }} />
+                          {currentLesson.description ? (
+                            <div className="bg-card border rounded-2xl p-4 sm:p-6 prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: currentLesson.description }} />
                           ) : (
                             <p className="text-muted-foreground italic text-center py-8">Materiallar yo'q</p>
                           )}
