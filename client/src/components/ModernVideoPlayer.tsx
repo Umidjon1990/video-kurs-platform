@@ -10,13 +10,17 @@ interface ModernVideoPlayerProps {
 export function ModernVideoPlayer({ videoUrl, title, onError }: ModernVideoPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isNativeFullscreen, setIsNativeFullscreen] = useState(false);
+  const [isCssFullscreen, setIsCssFullscreen] = useState(false);
+  const isFullscreen = isNativeFullscreen || isCssFullscreen;
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleFsChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+      const inNative = !!document.fullscreenElement;
+      setIsNativeFullscreen(inNative);
+      if (!inNative) setIsCssFullscreen(false);
     };
     document.addEventListener('fullscreenchange', handleFsChange);
     document.addEventListener('webkitfullscreenchange', handleFsChange);
@@ -26,15 +30,40 @@ export function ModernVideoPlayer({ videoUrl, title, onError }: ModernVideoPlaye
     };
   }, []);
 
-  const toggleFullscreen = () => {
-    if (!containerRef.current) return;
-    if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen?.() ||
-        (containerRef.current as any).webkitRequestFullscreen?.();
+  useEffect(() => {
+    if (isCssFullscreen) {
+      document.body.style.overflow = 'hidden';
     } else {
-      document.exitFullscreen?.() ||
-        (document as any).webkitExitFullscreen?.();
+      document.body.style.overflow = '';
     }
+    return () => { document.body.style.overflow = ''; };
+  }, [isCssFullscreen]);
+
+  const toggleFullscreen = async () => {
+    if (!containerRef.current) return;
+
+    if (isFullscreen) {
+      if (isCssFullscreen) {
+        setIsCssFullscreen(false);
+      } else {
+        await document.exitFullscreen?.().catch(() => {});
+        (document as any).webkitExitFullscreen?.();
+      }
+      return;
+    }
+
+    try {
+      if (containerRef.current.requestFullscreen) {
+        await containerRef.current.requestFullscreen();
+        return;
+      }
+      if ((containerRef.current as any).webkitRequestFullscreen) {
+        (containerRef.current as any).webkitRequestFullscreen();
+        return;
+      }
+    } catch (_) {}
+
+    setIsCssFullscreen(true);
   };
 
   // Reset loading state when videoUrl changes
@@ -191,7 +220,18 @@ export function ModernVideoPlayer({ videoUrl, title, onError }: ModernVideoPlaye
   }
 
   return (
-    <div ref={containerRef} className="relative aspect-video bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-xl overflow-hidden shadow-2xl group">
+    <div
+      ref={containerRef}
+      className={`relative bg-black shadow-2xl group ${isCssFullscreen ? 'rounded-none' : 'aspect-video rounded-xl overflow-hidden'}`}
+      style={isCssFullscreen ? {
+        position: 'fixed',
+        inset: 0,
+        width: '100vw',
+        height: '100vh',
+        zIndex: 99999,
+        overflow: 'hidden',
+      } : undefined}
+    >
       {/* Loading overlay - pointer-events-none so iframe is always clickable */}
       {isLoading && (
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 pointer-events-none">
@@ -252,20 +292,18 @@ export function ModernVideoPlayer({ videoUrl, title, onError }: ModernVideoPlaye
         </div>
       )}
 
-      {/* Fullscreen toggle button */}
+      {/* Fullscreen toggle button - always visible on mobile */}
       <button
         onClick={toggleFullscreen}
         title={isFullscreen ? "Kichraytirish" : "To'liq ekran"}
-        className="absolute bottom-3 right-3 z-30 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-black/60 hover:bg-black/80 text-white text-xs font-medium backdrop-blur-sm border border-white/20 transition-all duration-200 opacity-60 hover:opacity-100 group-hover:opacity-90"
+        className="absolute bottom-3 right-3 z-30 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-black/70 hover:bg-black/90 text-white text-xs font-medium backdrop-blur-sm border border-white/30 transition-all duration-200"
       >
         {isFullscreen ? (
-          <Minimize2 className="w-3.5 h-3.5" />
+          <Minimize2 className="w-4 h-4" />
         ) : (
-          <Maximize2 className="w-3.5 h-3.5" />
+          <Maximize2 className="w-4 h-4" />
         )}
-        <span className="hidden sm:inline">
-          {isFullscreen ? "Kichraytirish" : "Kattalashtirish"}
-        </span>
+        <span>{isFullscreen ? "Kichraytirish" : "Kattalashtirish"}</span>
       </button>
 
     </div>
