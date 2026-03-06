@@ -6144,6 +6144,176 @@ So'zlar soni: ${submission.wordCount}`;
     }
   });
 
+  // ============ GROUP COURSE SETTINGS ============
+
+  // Get settings for a group+course pair
+  app.get('/api/group-course-settings/:groupId/:courseId', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { groupId, courseId } = req.params;
+      const settings = await storage.getGroupCourseSettings(groupId, courseId);
+      res.json(settings || null);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get all settings for a group (all courses)
+  app.get('/api/group-course-settings/:groupId', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { groupId } = req.params;
+      const settings = await storage.getGroupCourseSettingsByGroup(groupId);
+      res.json(settings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Create or update settings for a group+course pair
+  app.post('/api/group-course-settings', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const {
+        groupId, courseId,
+        testGateEnabled, minPassScore,
+        unlockType, unlockIntervalDays,
+        unlockWeekDays, unlockStartDate,
+      } = req.body;
+
+      if (!groupId || !courseId) {
+        return res.status(400).json({ message: 'groupId va courseId majburiy' });
+      }
+
+      const settings = await storage.upsertGroupCourseSettings({
+        groupId,
+        courseId,
+        testGateEnabled: testGateEnabled ?? false,
+        minPassScore: minPassScore ?? 70,
+        unlockType: unlockType ?? 'free',
+        unlockIntervalDays: unlockIntervalDays ?? 1,
+        unlockWeekDays: unlockWeekDays ?? [],
+        unlockStartDate: unlockStartDate ? new Date(unlockStartDate) : null,
+      });
+
+      res.json(settings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Lesson lock status for a student in a course
+  app.get('/api/courses/:courseId/lesson-lock-status', isAuthenticated, async (req: any, res) => {
+    try {
+      const { courseId } = req.params;
+      const userId = req.user?.id || req.user?.claims?.sub;
+
+      // Get student's group enrollment
+      const enrollment = await storage.getEnrollmentByCourseAndUser(courseId, userId);
+      if (!enrollment) return res.json({ settings: null, lockedLessons: {} });
+
+      const groupId = enrollment.groupId;
+      if (!groupId) return res.json({ settings: null, lockedLessons: {} });
+
+      // Get group course settings
+      const settings = await storage.getGroupCourseSettings(groupId, courseId);
+      if (!settings || settings.unlockType === 'free') {
+        return res.json({ settings: settings || null, lockedLessons: {} });
+      }
+
+      // Get all lessons ordered
+      const courseLessons = await storage.getLessonsByCourse(courseId);
+      const sorted = [...courseLessons].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+      // Get student's test attempts
+      const attempts = await db.select()
+        .from(testAttempts)
+        .where(and(eq(testAttempts.studentId, userId), eq(testAttempts.status, 'completed')));
+
+      // Get tests per lesson (each lesson may have a test)
+      const testsForLessons = await db.select()
+        .from(tests)
+        .where(inArray(tests.lessonId, sorted.map(l => l.id)));
+
+      const testByLesson: Record<string, string> = {};
+      for (const t of testsForLessons) {
+        if (t.lessonId) testByLesson[t.lessonId] = t.id;
+      }
+
+      // Calculate lock status for each lesson
+      const lockedLessons: Record<string, { locked: boolean; unlockDate?: string; reason: string }> = {};
+
+      const now = new Date();
+
+      // Helper: get Nth scheduled date for weekly pattern
+      function getNthWeeklyDate(startDate: Date, weekDays: string[], index: number): Date {
+        const dayMap: Record<string, number> = {
+          sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
+          thursday: 4, friday: 5, saturday: 6,
+        };
+        const validDays = weekDays.map(d => dayMap[d.toLowerCase()]).filter(d => d !== undefined).sort((a, b) => a - b);
+        if (validDays.length === 0) return startDate;
+
+        let count = 0;
+        let date = new Date(startDate);
+        // Align to first valid day >= startDate
+        while (!validDays.includes(date.getDay())) {
+          date.setDate(date.getDate() + 1);
+        }
+        while (count < index) {
+          date.setDate(date.getDate() + 1);
+          if (validDays.includes(date.getDay())) count++;
+        }
+        return date;
+      }
+
+      for (let i = 0; i < sorted.length; i++) {
+        const lesson = sorted[i];
+        let locked = false;
+        let unlockDate: string | undefined;
+        let reason = '';
+
+        // First lesson is always available (unless schedule says no)
+        if (i === 0 && !settings.unlockStartDate) {
+          lockedLessons[lesson.id] = { locked: false, reason: '' };
+          continue;
+        }
+
+        // Schedule check
+        if (settings.unlockType === 'daily' && settings.unlockStartDate) {
+          const startD = new Date(settings.unlockStartDate);
+          const targetDate = new Date(startD);
+          targetDate.setDate(targetDate.getDate() + i * (settings.unlockIntervalDays || 1));
+          unlockDate = targetDate.toISOString();
+          if (now < targetDate) { locked = true; reason = 'schedule'; }
+        } else if (settings.unlockType === 'weekly' && settings.unlockStartDate && settings.unlockWeekDays?.length) {
+          const startD = new Date(settings.unlockStartDate);
+          const targetDate = getNthWeeklyDate(startD, settings.unlockWeekDays as string[], i);
+          unlockDate = targetDate.toISOString();
+          if (now < targetDate) { locked = true; reason = 'schedule'; }
+        }
+
+        // Test gate check (stacks with schedule)
+        if (settings.testGateEnabled && i > 0 && !locked) {
+          const prevLesson = sorted[i - 1];
+          const prevTestId = testByLesson[prevLesson.id];
+          if (prevTestId) {
+            const passed = attempts.some(
+              a => a.testId === prevTestId && (a.score ?? 0) >= (settings.minPassScore ?? 70)
+            );
+            if (!passed) {
+              locked = true;
+              reason = 'test_gate';
+            }
+          }
+        }
+
+        lockedLessons[lesson.id] = { locked, unlockDate, reason };
+      }
+
+      res.json({ settings, lockedLessons });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

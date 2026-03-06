@@ -120,6 +120,9 @@ import {
   type InsertStudentGroup,
   type StudentGroupMember,
   type InsertStudentGroupMember,
+  groupCourseSettings,
+  type GroupCourseSettings,
+  type InsertGroupCourseSettings,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, sql, inArray } from "drizzle-orm";
@@ -383,6 +386,11 @@ export interface IStorage {
   removeStudentFromGroup(groupId: string, userId: string): Promise<void>;
   getGroupMembers(groupId: string): Promise<any[]>;
   getStudentGroups_byUser(userId: string): Promise<StudentGroup[]>;
+
+  // ============ GROUP COURSE SETTINGS ============
+  getGroupCourseSettings(groupId: string, courseId: string): Promise<GroupCourseSettings | undefined>;
+  upsertGroupCourseSettings(data: InsertGroupCourseSettings): Promise<GroupCourseSettings>;
+  getGroupCourseSettingsByGroup(groupId: string): Promise<GroupCourseSettings[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3043,6 +3051,33 @@ export class DatabaseStorage implements IStorage {
     .innerJoin(studentGroups, eq(studentGroupMembers.groupId, studentGroups.id))
     .where(eq(studentGroupMembers.userId, userId));
     return memberships;
+  }
+
+  // ============ GROUP COURSE SETTINGS ============
+  async getGroupCourseSettings(groupId: string, courseId: string): Promise<GroupCourseSettings | undefined> {
+    const [settings] = await db.select()
+      .from(groupCourseSettings)
+      .where(and(eq(groupCourseSettings.groupId, groupId), eq(groupCourseSettings.courseId, courseId)));
+    return settings;
+  }
+
+  async upsertGroupCourseSettings(data: InsertGroupCourseSettings): Promise<GroupCourseSettings> {
+    const existing = await this.getGroupCourseSettings(data.groupId, data.courseId);
+    if (existing) {
+      const [updated] = await db.update(groupCourseSettings)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(groupCourseSettings.id, existing.id))
+        .returning();
+      return updated;
+    }
+    const [created] = await db.insert(groupCourseSettings).values(data).returning();
+    return created;
+  }
+
+  async getGroupCourseSettingsByGroup(groupId: string): Promise<GroupCourseSettings[]> {
+    return await db.select()
+      .from(groupCourseSettings)
+      .where(eq(groupCourseSettings.groupId, groupId));
   }
 }
 

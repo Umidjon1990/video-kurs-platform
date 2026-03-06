@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   UsersRound,
   Plus,
@@ -38,6 +39,10 @@ import {
   Users,
   FileDown,
   BookOpen,
+  Settings2,
+  Calendar,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import {
   Select,
@@ -67,6 +72,38 @@ interface GroupMember {
   email: string | null;
 }
 
+interface GroupCourseSettings {
+  id: string;
+  groupId: string;
+  courseId: string;
+  testGateEnabled: boolean;
+  minPassScore: number;
+  unlockType: string;
+  unlockIntervalDays: number;
+  unlockWeekDays: string[];
+  unlockStartDate: string | null;
+}
+
+const WEEK_DAYS = [
+  { key: "monday", label: "Du" },
+  { key: "tuesday", label: "Se" },
+  { key: "wednesday", label: "Cho" },
+  { key: "thursday", label: "Pa" },
+  { key: "friday", label: "Ju" },
+  { key: "saturday", label: "Sha" },
+  { key: "sunday", label: "Ya" },
+];
+
+const defaultSettingsForm = {
+  courseId: "",
+  testGateEnabled: false,
+  minPassScore: 70,
+  unlockType: "free",
+  unlockIntervalDays: 1,
+  unlockWeekDays: [] as string[],
+  unlockStartDate: "",
+};
+
 export default function AdminGroupsPage() {
   const { toast } = useToast();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -74,11 +111,13 @@ export default function AdminGroupsPage() {
   const [isMembersOpen, setIsMembersOpen] = useState(false);
   const [isAddMembersOpen, setIsAddMembersOpen] = useState(false);
   const [isAssignCourseOpen, setIsAssignCourseOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<StudentGroup | null>(null);
   const [groupForm, setGroupForm] = useState({ name: "", description: "" });
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [assignCourseData, setAssignCourseData] = useState({ courseId: "", subscriptionDays: "30" });
+  const [settingsForm, setSettingsForm] = useState(defaultSettingsForm);
 
   const { data: groups = [], isLoading: groupsLoading } = useQuery<StudentGroup[]>({
     queryKey: ["/api/admin/student-groups"],
@@ -101,6 +140,30 @@ export default function AdminGroupsPage() {
     queryKey: ["/api/admin/user-sessions"],
     enabled: isMembersOpen,
     refetchInterval: 30000,
+  });
+
+  // Load existing settings when group + course selected in settings dialog
+  const { data: existingSettings, isLoading: settingsLoading } = useQuery<GroupCourseSettings | null>({
+    queryKey: ["/api/group-course-settings", selectedGroup?.id, settingsForm.courseId],
+    enabled: !!selectedGroup?.id && !!settingsForm.courseId && isSettingsOpen,
+    refetchOnWindowFocus: false,
+  });
+
+  // When settings load, fill form
+  useState(() => {
+    if (existingSettings) {
+      setSettingsForm({
+        courseId: existingSettings.courseId,
+        testGateEnabled: existingSettings.testGateEnabled ?? false,
+        minPassScore: existingSettings.minPassScore ?? 70,
+        unlockType: existingSettings.unlockType ?? "free",
+        unlockIntervalDays: existingSettings.unlockIntervalDays ?? 1,
+        unlockWeekDays: existingSettings.unlockWeekDays ?? [],
+        unlockStartDate: existingSettings.unlockStartDate
+          ? new Date(existingSettings.unlockStartDate).toISOString().slice(0, 16)
+          : "",
+      });
+    }
   });
 
   const createGroupMutation = useMutation({
@@ -195,6 +258,30 @@ export default function AdminGroupsPage() {
     },
   });
 
+  const saveSettingsMutation = useMutation({
+    mutationFn: async (data: typeof settingsForm & { groupId: string }) => {
+      const res = await apiRequest("POST", "/api/group-course-settings", {
+        groupId: data.groupId,
+        courseId: data.courseId,
+        testGateEnabled: data.testGateEnabled,
+        minPassScore: data.minPassScore,
+        unlockType: data.unlockType,
+        unlockIntervalDays: data.unlockIntervalDays,
+        unlockWeekDays: data.unlockWeekDays,
+        unlockStartDate: data.unlockStartDate || null,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/group-course-settings"] });
+      setIsSettingsOpen(false);
+      toast({ title: "Dars sozlamalari saqlandi" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+
   const downloadPdf = () => {
     const groupName = selectedGroup?.name || "Guruh";
     const date = new Date().toLocaleDateString("uz-UZ");
@@ -260,6 +347,47 @@ export default function AdminGroupsPage() {
     setSelectedStudentIds([]);
     setSearchTerm("");
     setIsAddMembersOpen(true);
+  };
+
+  const openSettingsDialog = (group: StudentGroup) => {
+    setSelectedGroup(group);
+    setSettingsForm(defaultSettingsForm);
+    setIsSettingsOpen(true);
+  };
+
+  const toggleWeekDay = (day: string) => {
+    setSettingsForm(prev => ({
+      ...prev,
+      unlockWeekDays: prev.unlockWeekDays.includes(day)
+        ? prev.unlockWeekDays.filter(d => d !== day)
+        : [...prev.unlockWeekDays, day],
+    }));
+  };
+
+  // When course selected in settings, load existing settings
+  const handleSettingsCourseChange = async (courseId: string) => {
+    setSettingsForm(prev => ({ ...prev, courseId }));
+    if (selectedGroup && courseId) {
+      try {
+        const res = await fetch(`/api/group-course-settings/${selectedGroup.id}/${courseId}`, { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          if (data) {
+            setSettingsForm({
+              courseId: data.courseId,
+              testGateEnabled: data.testGateEnabled ?? false,
+              minPassScore: data.minPassScore ?? 70,
+              unlockType: data.unlockType ?? "free",
+              unlockIntervalDays: data.unlockIntervalDays ?? 1,
+              unlockWeekDays: data.unlockWeekDays ?? [],
+              unlockStartDate: data.unlockStartDate
+                ? new Date(data.unlockStartDate).toISOString().slice(0, 16)
+                : "",
+            });
+          }
+        }
+      } catch {}
+    }
   };
 
   const memberUserIds = groupMembers.map((m) => m.userId);
@@ -365,6 +493,15 @@ export default function AdminGroupsPage() {
                   >
                     <BookOpen className="w-4 h-4 mr-1" />
                     Kurs
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openSettingsDialog(group)}
+                    data-testid={`button-settings-group-${group.id}`}
+                  >
+                    <Settings2 className="w-4 h-4 mr-1" />
+                    Jadval
                   </Button>
                   <Button
                     size="sm"
@@ -701,6 +838,176 @@ export default function AdminGroupsPage() {
               data-testid="button-confirm-assign-course-group"
             >
               {assignCourseMutation.isPending ? "Biriktirilmoqda..." : "Kurs Biriktirish"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Group Course Settings (Dars Jadval) Dialog */}
+      <Dialog open={isSettingsOpen} onOpenChange={(open) => { setIsSettingsOpen(open); if (!open) { setSettingsForm(defaultSettingsForm); } }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-primary" />
+              Dars Ochilish Jadvali
+            </DialogTitle>
+            <DialogDescription>
+              <span className="font-semibold">{selectedGroup?.name}</span> guruhi uchun darslarni qulflash va jadval sozlamalari
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="max-h-[65vh]">
+            <div className="space-y-5 pr-1">
+
+              {/* Course selector */}
+              <div className="space-y-2">
+                <Label>Kurs *</Label>
+                <Select
+                  value={settingsForm.courseId}
+                  onValueChange={handleSettingsCourseChange}
+                >
+                  <SelectTrigger data-testid="select-settings-course">
+                    <SelectValue placeholder="Kursni tanlang" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {courses.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {settingsForm.courseId && (
+                <>
+                  {/* Unlock type */}
+                  <div className="space-y-2">
+                    <Label>Dars ochilish tartibi</Label>
+                    <Select
+                      value={settingsForm.unlockType}
+                      onValueChange={(v) => setSettingsForm(prev => ({ ...prev, unlockType: v }))}
+                    >
+                      <SelectTrigger data-testid="select-unlock-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="free">
+                          <span className="flex items-center gap-2"><Unlock className="w-3.5 h-3.5" /> Erkin (jadval yo'q)</span>
+                        </SelectItem>
+                        <SelectItem value="daily">
+                          <span className="flex items-center gap-2"><Calendar className="w-3.5 h-3.5" /> Har N kunda</span>
+                        </SelectItem>
+                        <SelectItem value="weekly">
+                          <span className="flex items-center gap-2"><Calendar className="w-3.5 h-3.5" /> Haftalik (kunlar bo'yicha)</span>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Unlock start date (daily or weekly) */}
+                  {(settingsForm.unlockType === "daily" || settingsForm.unlockType === "weekly") && (
+                    <div className="space-y-2">
+                      <Label>Boshlanish sanasi</Label>
+                      <Input
+                        type="datetime-local"
+                        value={settingsForm.unlockStartDate}
+                        onChange={(e) => setSettingsForm(prev => ({ ...prev, unlockStartDate: e.target.value }))}
+                        data-testid="input-unlock-start-date"
+                      />
+                      <p className="text-xs text-muted-foreground">1-dars shu sanadan boshlab ochiladi</p>
+                    </div>
+                  )}
+
+                  {/* Daily interval */}
+                  {settingsForm.unlockType === "daily" && (
+                    <div className="space-y-2">
+                      <Label>Har necha kunda bitta dars</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="30"
+                        value={settingsForm.unlockIntervalDays}
+                        onChange={(e) => setSettingsForm(prev => ({ ...prev, unlockIntervalDays: parseInt(e.target.value) || 1 }))}
+                        data-testid="input-unlock-interval"
+                      />
+                    </div>
+                  )}
+
+                  {/* Weekly days */}
+                  {settingsForm.unlockType === "weekly" && (
+                    <div className="space-y-2">
+                      <Label>Hafta kunlari</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {WEEK_DAYS.map((day) => (
+                          <button
+                            key={day.key}
+                            type="button"
+                            onClick={() => toggleWeekDay(day.key)}
+                            className={`px-3 py-1.5 rounded-md text-sm font-medium border transition-colors ${
+                              settingsForm.unlockWeekDays.includes(day.key)
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-muted text-muted-foreground border-border hover:border-primary/50"
+                            }`}
+                            data-testid={`button-weekday-${day.key}`}
+                          >
+                            {day.label}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Tanlangan kunlarda ketma-ket darslar ochiladi
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Test gate */}
+                  <div className="rounded-md border p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <p className="font-medium text-sm flex items-center gap-1.5">
+                          <Lock className="w-4 h-4 text-amber-500" />
+                          Test qo'shinligi
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          O'quvchi keyingi darsga o'tish uchun avvalgi darsning testini topshirishi shart
+                        </p>
+                      </div>
+                      <Switch
+                        checked={settingsForm.testGateEnabled}
+                        onCheckedChange={(v) => setSettingsForm(prev => ({ ...prev, testGateEnabled: v }))}
+                        data-testid="switch-test-gate"
+                      />
+                    </div>
+
+                    {settingsForm.testGateEnabled && (
+                      <div className="space-y-1.5 pt-1 border-t">
+                        <Label className="text-xs">Minimal o'tish bali (%)</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="100"
+                          value={settingsForm.minPassScore}
+                          onChange={(e) => setSettingsForm(prev => ({ ...prev, minPassScore: parseInt(e.target.value) || 70 }))}
+                          className="h-8"
+                          data-testid="input-min-pass-score"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </ScrollArea>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSettingsOpen(false)}>
+              Bekor qilish
+            </Button>
+            <Button
+              onClick={() => selectedGroup && saveSettingsMutation.mutate({ ...settingsForm, groupId: selectedGroup.id })}
+              disabled={!settingsForm.courseId || saveSettingsMutation.isPending}
+              data-testid="button-save-settings"
+            >
+              {saveSettingsMutation.isPending ? "Saqlanmoqda..." : "Saqlash"}
             </Button>
           </DialogFooter>
         </DialogContent>

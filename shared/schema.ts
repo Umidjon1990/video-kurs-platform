@@ -1357,3 +1357,34 @@ export const insertStudentGroupMemberSchema = createInsertSchema(studentGroupMem
 
 export type InsertStudentGroupMember = z.infer<typeof insertStudentGroupMemberSchema>;
 export type StudentGroupMember = typeof studentGroupMembers.$inferSelect;
+
+// Group Course Settings - Guruh uchun kurs progressi sozlamalari
+export const groupCourseSettings = pgTable("group_course_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  groupId: varchar("group_id").notNull().references(() => studentGroups.id, { onDelete: 'cascade' }),
+  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: 'cascade' }),
+  // Test gate settings
+  testGateEnabled: boolean("test_gate_enabled").default(false),
+  minPassScore: integer("min_pass_score").default(70),
+  // Unlock schedule settings
+  unlockType: varchar("unlock_type", { length: 20 }).default('free'), // 'free' | 'daily' | 'weekly'
+  unlockIntervalDays: integer("unlock_interval_days").default(1),
+  unlockWeekDays: jsonb("unlock_week_days").$type<string[]>().default([]),
+  unlockStartDate: timestamp("unlock_start_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const groupCourseSettingsRelations = relations(groupCourseSettings, ({ one }) => ({
+  group: one(studentGroups, { fields: [groupCourseSettings.groupId], references: [studentGroups.id] }),
+  course: one(courses, { fields: [groupCourseSettings.courseId], references: [courses.id] }),
+}));
+
+export const insertGroupCourseSettingsSchema = createInsertSchema(groupCourseSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertGroupCourseSettings = z.infer<typeof insertGroupCourseSettingsSchema>;
+export type GroupCourseSettings = typeof groupCourseSettings.$inferSelect;

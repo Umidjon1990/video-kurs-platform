@@ -170,6 +170,16 @@ export default function LearningPage() {
 
   // Channel state for group chat
   const [chatChannel, setChatChannel] = useState<'general' | 'group'>('general');
+
+  // Lesson lock status from group course settings (schedule/test-gate locking)
+  const { data: lessonLockData } = useQuery<{
+    settings: any;
+    lockedLessons: Record<string, { locked: boolean; unlockDate?: string; reason: string }>;
+  }>({
+    queryKey: ["/api/courses", courseId, "lesson-lock-status"],
+    enabled: !!courseId && isAuthenticated && !isPreviewMode,
+    refetchInterval: 60 * 1000,
+  });
   
   // Fetch all essay questions for the course (to show indicators in lesson list)
   const { data: courseEssayQuestions } = useQuery<any[]>({
@@ -527,8 +537,12 @@ export default function LearningPage() {
               
               // Lock lesson if not demo AND (not enrolled OR subscription expired) AND not in preview mode
               const isEnrollmentLocked = !isPreviewMode && !currentLesson.isDemo && (!isEnrolled || !hasActiveSubscription);
+
+              // Schedule/test-gate lock from group course settings
+              const scheduleInfo = !isPreviewMode ? lessonLockData?.lockedLessons?.[currentLesson.id] : undefined;
+              const isScheduleLocked = scheduleInfo?.locked ?? false;
               
-              const isLocked = isEnrollmentLocked;
+              const isLocked = isEnrollmentLocked || isScheduleLocked;
               
               if (isLocked) {
                 // Check if subscription expired
@@ -538,7 +552,29 @@ export default function LearningPage() {
                   <Card>
                     <CardContent className="p-12 text-center">
                       <Lock className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-                      {subscriptionExpired ? (
+                      {isScheduleLocked && !isEnrollmentLocked ? (
+                        <>
+                          <h3 className="text-xl font-semibold mb-2">
+                            {scheduleInfo?.reason === 'test_gate' ? 'Avvalgi dars testini topshiring' : 'Dars hali ochilmagan'}
+                          </h3>
+                          {scheduleInfo?.reason === 'test_gate' ? (
+                            <p className="text-muted-foreground mb-4">
+                              Keyingi darsga o'tish uchun avvalgi darsning testini muvaffaqiyatli topshirishingiz kerak ({lessonLockData?.settings?.minPassScore ?? 70}% va undan yuqori)
+                            </p>
+                          ) : scheduleInfo?.unlockDate ? (
+                            <p className="text-muted-foreground mb-4">
+                              Bu dars <span className="font-semibold text-primary">
+                                {new Date(scheduleInfo.unlockDate).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </span> da ochiladi
+                            </p>
+                          ) : (
+                            <p className="text-muted-foreground mb-4">Bu dars hali ochilmagan</p>
+                          )}
+                          <Button onClick={() => window.history.back()} variant="outline">
+                            Orqaga
+                          </Button>
+                        </>
+                      ) : subscriptionExpired ? (
                         <>
                           <h3 className="text-xl font-semibold mb-2">Obuna muddati tugagan</h3>
                           <p className="text-muted-foreground mb-4">
@@ -1193,7 +1229,9 @@ export default function LearningPage() {
                 const lessonProgressData = courseProgress?.find((p: any) => p.lessonId === lesson.id);
                 const isCompleted = lessonProgressData?.completed || false;
                 const isEnrollmentLocked = !isPreviewMode && !lesson.isDemo && (!isEnrolled || !hasActiveSubscription);
-                const isLocked = isEnrollmentLocked;
+                const mobileScheduleInfo = !isPreviewMode ? lessonLockData?.lockedLessons?.[lesson.id] : undefined;
+                const isMobileScheduleLocked = mobileScheduleInfo?.locked ?? false;
+                const isLocked = isEnrollmentLocked || isMobileScheduleLocked;
                 const isActive = currentLessonId === lesson.id;
 
                 return (
@@ -1427,7 +1465,9 @@ export default function LearningPage() {
                 const isCompleted = lessonProgressData?.completed || false;
                 
                 const isEnrollmentLocked = !isPreviewMode && !lesson.isDemo && (!isEnrolled || !hasActiveSubscription);
-                const isLocked = isEnrollmentLocked;
+                const sidebarScheduleInfo = !isPreviewMode ? lessonLockData?.lockedLessons?.[lesson.id] : undefined;
+                const isScheduleLocked = sidebarScheduleInfo?.locked ?? false;
+                const isLocked = isEnrollmentLocked || isScheduleLocked;
                 
                 const isActive = currentLessonId === lesson.id;
                 
@@ -1494,6 +1534,17 @@ export default function LearningPage() {
                         {isCompleted && (
                           <span className="text-[10px] font-semibold uppercase bg-green-500/20 text-green-600 dark:text-green-400 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
                             <CheckCircle className="w-2.5 h-2.5" /> Tugatildi
+                          </span>
+                        )}
+                        {isScheduleLocked && sidebarScheduleInfo?.reason === 'test_gate' && (
+                          <span className="text-[10px] font-semibold uppercase bg-amber-500/20 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                            <Lock className="w-2.5 h-2.5" /> Test
+                          </span>
+                        )}
+                        {isScheduleLocked && sidebarScheduleInfo?.reason === 'schedule' && sidebarScheduleInfo?.unlockDate && (
+                          <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                            <Clock className="w-2.5 h-2.5" />
+                            {new Date(sidebarScheduleInfo.unlockDate).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short' })}
                           </span>
                         )}
                       </div>
