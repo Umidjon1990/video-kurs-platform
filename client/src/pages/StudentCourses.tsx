@@ -220,9 +220,11 @@ export default function StudentCourses() {
                 value={totalEnrolled}
                 icon={BookOpen}
                 testId="stats-total-courses"
-                gradient="from-blue-600/20 via-blue-900/10 to-transparent"
-                iconBg="bg-blue-500/20"
-                iconColor="text-blue-400"
+                gradient="from-blue-600/25 via-blue-900/15 to-transparent"
+                iconBg="bg-blue-500/25"
+                iconColor="text-blue-300"
+                borderColor="border-blue-500/35"
+                glowColor="rgba(59,130,246,0.45)"
                 delay={0.1}
               />
               <StatsCard
@@ -230,9 +232,11 @@ export default function StudentCourses() {
                 value={completedCourses}
                 icon={Trophy}
                 testId="stats-completed"
-                gradient="from-emerald-600/20 via-emerald-900/10 to-transparent"
-                iconBg="bg-emerald-500/20"
-                iconColor="text-emerald-400"
+                gradient="from-emerald-600/25 via-emerald-900/15 to-transparent"
+                iconBg="bg-emerald-500/25"
+                iconColor="text-emerald-300"
+                borderColor="border-emerald-500/35"
+                glowColor="rgba(52,211,153,0.45)"
                 delay={0.2}
               />
               <StatsCard
@@ -240,9 +244,11 @@ export default function StudentCourses() {
                 value={inProgressCourses}
                 icon={Rocket}
                 testId="stats-in-progress"
-                gradient="from-orange-600/20 via-orange-900/10 to-transparent"
-                iconBg="bg-orange-500/20"
-                iconColor="text-orange-400"
+                gradient="from-orange-600/25 via-orange-900/15 to-transparent"
+                iconBg="bg-orange-500/25"
+                iconColor="text-orange-300"
+                borderColor="border-orange-500/35"
+                glowColor="rgba(251,146,60,0.45)"
                 delay={0.3}
               />
               <StatsCard
@@ -250,9 +256,11 @@ export default function StudentCourses() {
                 value={`${totalProgress}%`}
                 icon={Target}
                 testId="stats-avg-progress"
-                gradient="from-purple-600/20 via-purple-900/10 to-transparent"
-                iconBg="bg-purple-500/20"
-                iconColor="text-purple-400"
+                gradient="from-purple-600/25 via-purple-900/15 to-transparent"
+                iconBg="bg-purple-500/25"
+                iconColor="text-purple-300"
+                borderColor="border-purple-500/35"
+                glowColor="rgba(168,85,247,0.45)"
                 delay={0.4}
               />
             </motion.div>
