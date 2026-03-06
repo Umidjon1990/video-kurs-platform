@@ -413,7 +413,7 @@ export default function LearningPage() {
 
   if (authLoading || courseLoading || isLessonsDataLoading || (lessons && lessons.length > 0 && !effectiveCurrentLesson)) {
     return (
-      <div className="h-screen flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
     );
@@ -421,7 +421,7 @@ export default function LearningPage() {
 
   if (!course) {
     return (
-      <div className="h-screen flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <p className="text-muted-foreground">Kurs topilmadi</p>
       </div>
     );
@@ -491,7 +491,7 @@ export default function LearningPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col overflow-x-hidden">
+    <div className="h-full bg-background flex flex-col overflow-hidden w-full">
       {/* Mobile Header Bar - Modern App-like */}
       <div className="sm:hidden sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b px-4 h-14 flex items-center justify-between gap-3">
         <Button
@@ -541,7 +541,7 @@ export default function LearningPage() {
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row flex-1 h-[calc(100dvh-3.5rem)] sm:h-[calc(100vh-3rem)] overflow-hidden">
+      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
         {/* Main Content */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-0 sm:p-4 lg:p-6 pb-40 sm:pb-4" ref={(el) => { mainContentRef.current = el; }}>
           {currentLesson ? (

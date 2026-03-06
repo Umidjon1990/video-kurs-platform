@@ -75,13 +75,27 @@ function Router() {
     return <HomePage />;
   }
 
+  // Full-screen routes (no sidebar/header)
+  const isFullScreen = location.startsWith('/learn/') || location.startsWith('/live/');
+  if (isFullScreen) {
+    return (
+      <div className="h-full w-full overflow-hidden">
+        <Switch>
+          <Route path="/learn/:courseId" component={LearningPage} />
+          <Route path="/live/:roomId" component={LiveRoom} />
+          <Route component={NotFound} />
+        </Switch>
+      </div>
+    );
+  }
+
   // Authenticated routes (with sidebar)
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex h-screen w-full">
+      <div className="flex h-full w-full overflow-hidden">
         <AppSidebar />
-        <div className="flex flex-col flex-1 overflow-hidden">
-          <header className="flex items-center gap-2 border-b px-4 py-3"
+        <div className="flex flex-col flex-1 overflow-hidden min-w-0">
+          <header className="shrink-0 flex items-center gap-2 border-b px-4 py-3"
             style={{
               background: "linear-gradient(90deg,#0d0521 0%,#0a0328 100%)",
               borderColor: "rgba(124,58,237,0.18)",
@@ -92,7 +106,7 @@ function Router() {
             />
             <div className="flex-1" />
           </header>
-          <main className="flex-1 overflow-auto">
+          <main className="flex-1 overflow-auto overscroll-none">
             <Switch>
               {/* Admin Routes */}
               {user?.role === 'admin' && (
@@ -105,10 +119,9 @@ function Router() {
                   <Route path="/admin/subscription-plans" component={AdminSubscriptionPlansPage} />
                   <Route path="/admin/subscriptions" component={AdminSubscriptions} />
                   <Route path="/admin/groups" component={AdminGroupsPage} />
-                  <Route path="/learn/:courseId" component={LearningPage} />
                 </>
               )}
-              
+
               {/* Instructor Routes */}
               {user?.role === 'instructor' && (
                 <>
@@ -116,13 +129,11 @@ function Router() {
                   <Route path="/instructor/subscriptions" component={InstructorSubscriptions} />
                   <Route path="/instructor/courses/:courseId/speaking-tests" component={SpeakingTests} />
                   <Route path="/instructor/speaking-tests/:testId" component={SpeakingTestEdit} />
-                  <Route path="/learn/:courseId" component={LearningPage} />
                   <Route path="/chat" component={ChatPage} />
                   <Route path="/chat/:conversationId" component={ChatPage} />
-                  <Route path="/live/:roomId" component={LiveRoom} />
                 </>
               )}
-              
+
               {/* Student Routes */}
               {user?.role === 'student' && (
                 <>
@@ -130,10 +141,8 @@ function Router() {
                   <Route path="/results" component={StudentResults} />
                   <Route path="/checkout/:courseId" component={Checkout} />
                   <Route path="/student/speaking-test/:testId" component={StudentSpeakingTest} />
-                  <Route path="/learn/:courseId" component={LearningPage} />
                   <Route path="/chat" component={ChatPage} />
                   <Route path="/chat/:conversationId" component={ChatPage} />
-                  <Route path="/live/:roomId" component={LiveRoom} />
                 </>
               )}
               <Route component={NotFound} />
