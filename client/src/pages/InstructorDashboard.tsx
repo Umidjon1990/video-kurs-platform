@@ -2254,7 +2254,7 @@ export default function InstructorDashboard() {
 
       {/* Create/Edit Course Dialog */}
       <Dialog open={isCreateCourseOpen} onOpenChange={setIsCreateCourseOpen}>
-        <DialogContent className="max-h-[90vh] flex flex-col" data-testid="dialog-create-course">
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col" data-testid="dialog-create-course">
           <DialogHeader>
             <DialogTitle>{editingCourse ? "Kursni Tahrirlash" : "Yangi Kurs Yaratish"}</DialogTitle>
             <DialogDescription>Kurs ma'lumotlarini {editingCourse ? "yangilang" : "kiriting"}</DialogDescription>
@@ -2503,10 +2503,13 @@ export default function InstructorDashboard() {
             </div>
 
             {/* ── Dars Jadvali ── */}
-            <div className="rounded-md border p-4 space-y-4">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-primary" />
-                <p className="font-medium text-sm">Dars Ochilish Jadvali</p>
+            <div className="rounded-md border-2 border-primary/30 bg-primary/5 p-4 space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b border-primary/20">
+                <div className="w-7 h-7 rounded-md bg-primary/20 flex items-center justify-center">
+                  <Calendar className="w-4 h-4 text-primary" />
+                </div>
+                <p className="font-semibold text-sm">Dars Ochilish Jadvali</p>
+                <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary font-medium">Yangi</span>
               </div>
               <div className="space-y-2">
                 <Label>Tartib turi</Label>
@@ -2547,14 +2550,25 @@ export default function InstructorDashboard() {
               {courseForm.unlockType === "daily" && (
                 <div className="space-y-2">
                   <Label>Har necha kunda bir dars ochiladi?</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="30"
-                    value={courseForm.unlockIntervalDays}
-                    onChange={e => setCourseForm({ ...courseForm, unlockIntervalDays: e.target.value })}
-                    data-testid="input-course-unlock-interval"
-                  />
+                  <div className="flex items-center gap-3">
+                    <Input
+                      type="number"
+                      min="1"
+                      max="30"
+                      className="w-24"
+                      value={courseForm.unlockIntervalDays}
+                      onChange={e => setCourseForm({ ...courseForm, unlockIntervalDays: e.target.value })}
+                      data-testid="input-course-unlock-interval"
+                    />
+                    <span className="text-sm text-muted-foreground">kun</span>
+                  </div>
+                  <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground space-y-0.5">
+                    <p>Misol: interval = <strong>{courseForm.unlockIntervalDays || 1}</strong> kun bo'lsa:</p>
+                    <p>• 1-dars: boshlash sanasida ochiladi</p>
+                    <p>• 2-dars: {courseForm.unlockIntervalDays || 1} kundan keyin</p>
+                    <p>• 3-dars: {(parseInt(courseForm.unlockIntervalDays || "1") * 2)} kundan keyin</p>
+                    <p>• va hokazo...</p>
+                  </div>
                 </div>
               )}
 
