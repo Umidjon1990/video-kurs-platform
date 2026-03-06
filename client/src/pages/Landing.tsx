@@ -18,7 +18,7 @@ export default function Landing() {
             <div className="flex gap-4 justify-center">
               <Button 
                 size="lg" 
-                onClick={() => window.location.href = '/api/login'}
+                onClick={() => window.location.href = '/login'}
                 data-testid="button-get-started"
               >
                 Boshlash
@@ -26,7 +26,7 @@ export default function Landing() {
               <Button 
                 size="lg" 
                 variant="outline"
-                onClick={() => window.location.href = '/api/login'}
+                onClick={() => window.location.href = '/login'}
                 data-testid="button-login"
               >
                 Kirish
@@ -91,7 +91,7 @@ export default function Landing() {
           </p>
           <Button 
             size="lg"
-            onClick={() => window.location.href = '/api/login'}
+            onClick={() => window.location.href = '/login'}
             data-testid="button-cta-signup"
           >
             Ro'yxatdan o'tish
