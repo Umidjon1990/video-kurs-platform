@@ -15,7 +15,8 @@ import { useLocation } from "wouter";
 import {
   BookOpen, Trophy, GraduationCap, PlayCircle, CheckCircle, Star, Sparkles,
   ArrowRight, Target, Zap, Radio, Video, Clock, LayoutGrid, Rocket, Flame, Crown,
-  X, ChevronLeft, ChevronRight, Lock, Play, Layers
+  X, ChevronLeft, ChevronRight, Lock, Play, Layers, FileText, ClipboardCheck,
+  ExternalLink, Info
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Course, StudentCourseProgress } from "@shared/schema";
@@ -79,6 +80,7 @@ interface VideoLessonModalProps {
 
 function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
   const [activeLessonId, setActiveLessonId] = useState(state.lessonId);
+  const [, setLocation] = useLocation();
 
   const { data: lessons } = useQuery<any[]>({
     queryKey: ["/api/courses", state.courseId, "lessons"],
@@ -89,6 +91,31 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
     queryKey: ["/api/courses", state.courseId, "modules"],
     queryFn: () => fetch(`/api/courses/${state.courseId}/modules`).then(r => r.json()),
   });
+
+  const { data: assignments } = useQuery<any[]>({
+    queryKey: ["/api/courses", state.courseId, "assignments"],
+    queryFn: () => fetch(`/api/courses/${state.courseId}/assignments`, { credentials: 'include' }).then(r => r.json()),
+  });
+
+  const { data: tests } = useQuery<any[]>({
+    queryKey: ["/api/courses", state.courseId, "tests"],
+    queryFn: () => fetch(`/api/courses/${state.courseId}/tests`, { credentials: 'include' }).then(r => r.json()),
+  });
+
+  const lessonAssignments = useMemo(() =>
+    (assignments || []).filter((a: any) => a.lessonId === activeLessonId || !a.lessonId),
+    [assignments, activeLessonId]
+  );
+
+  const lessonTests = useMemo(() =>
+    (tests || []).filter((t: any) => t.lessonId === activeLessonId),
+    [tests, activeLessonId]
+  );
+
+  const goToLearningPage = () => {
+    onClose();
+    setLocation(`/learn/${state.courseId}`);
+  };
 
   const sortedLessons = useMemo(() => {
     if (!lessons) return [];
@@ -239,7 +266,7 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
               </div>
 
               {/* Bottom controls */}
-              <div className="flex items-center justify-between px-4 py-3 border-t border-white/8">
+              <div className="flex items-center justify-between px-4 py-3 border-t border-white/8 shrink-0">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -252,9 +279,8 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                 </Button>
 
                 <div className="flex items-center gap-2">
-                  {/* mini progress dots */}
                   <div className="flex gap-1 items-center">
-                    {sortedLessons.slice(Math.max(0, currentIdx - 2), currentIdx + 3).map((l, i) => {
+                    {sortedLessons.slice(Math.max(0, currentIdx - 2), currentIdx + 3).map((l) => {
                       const isActive = l.id === activeLessonId;
                       return (
                         <button
@@ -277,6 +303,112 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                   <span className="hidden sm:inline">Keyingi</span>
                   <ChevronRight className="w-4 h-4" />
                 </Button>
+              </div>
+
+              {/* ── Lesson Tabs: Umumiy / Vazifalar / Testlar ── */}
+              <div className="border-t border-white/8 shrink-0">
+                <Tabs defaultValue="umumiy" className="w-full">
+                  <TabsList className="w-full rounded-none bg-black/30 border-b border-white/8 h-10 px-2 gap-1 justify-start">
+                    <TabsTrigger
+                      value="umumiy"
+                      className="rounded-lg text-xs gap-1.5 data-[state=active]:bg-white/10 data-[state=active]:text-white text-slate-500"
+                    >
+                      <Info className="w-3.5 h-3.5" />
+                      Umumiy
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="vazifalar"
+                      className="rounded-lg text-xs gap-1.5 data-[state=active]:bg-white/10 data-[state=active]:text-white text-slate-500"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      Vazifalar
+                      {lessonAssignments.length > 0 && (
+                        <Badge className="bg-primary/20 text-primary border-primary/30 text-[9px] px-1 py-0 ml-0.5 min-w-4 h-4">
+                          {lessonAssignments.length}
+                        </Badge>
+                      )}
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="testlar"
+                      className="rounded-lg text-xs gap-1.5 data-[state=active]:bg-white/10 data-[state=active]:text-white text-slate-500"
+                    >
+                      <ClipboardCheck className="w-3.5 h-3.5" />
+                      Testlar
+                      {lessonTests.length > 0 && (
+                        <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 text-[9px] px-1 py-0 ml-0.5 min-w-4 h-4">
+                          {lessonTests.length}
+                        </Badge>
+                      )}
+                    </TabsTrigger>
+                  </TabsList>
+
+                  {/* Umumiy */}
+                  <TabsContent value="umumiy" className="m-0 px-4 py-3 max-h-36 overflow-y-auto overscroll-none">
+                    {currentLesson?.description ? (
+                      <p className="text-sm text-slate-400 leading-relaxed">{currentLesson.description}</p>
+                    ) : (
+                      <p className="text-xs text-slate-600 italic">Bu dars uchun tavsif yo'q</p>
+                    )}
+                  </TabsContent>
+
+                  {/* Vazifalar */}
+                  <TabsContent value="vazifalar" className="m-0 max-h-48 overflow-y-auto overscroll-none">
+                    {lessonAssignments.length === 0 ? (
+                      <div className="px-4 py-3 text-xs text-slate-600 italic">Bu darsda vazifa yo'q</div>
+                    ) : (
+                      <div className="divide-y divide-white/5">
+                        {lessonAssignments.map((a: any) => (
+                          <div key={a.id} className="px-4 py-3 flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-slate-200 truncate">{a.title}</p>
+                              {a.description && (
+                                <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{a.description}</p>
+                              )}
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={goToLearningPage}
+                              className="shrink-0 text-xs border-primary/30 text-primary hover:bg-primary/10 gap-1"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              Topshirish
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  {/* Testlar */}
+                  <TabsContent value="testlar" className="m-0 max-h-48 overflow-y-auto overscroll-none">
+                    {lessonTests.length === 0 ? (
+                      <div className="px-4 py-3 text-xs text-slate-600 italic">Bu darsda test yo'q</div>
+                    ) : (
+                      <div className="divide-y divide-white/5">
+                        {lessonTests.map((t: any) => (
+                          <div key={t.id} className="px-4 py-3 flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-slate-200 truncate">{t.title}</p>
+                              {t.description && (
+                                <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{t.description}</p>
+                              )}
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={goToLearningPage}
+                              className="shrink-0 text-xs border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 gap-1"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              Boshlash
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </TabsContent>
+                </Tabs>
               </div>
             </div>
 

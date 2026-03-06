@@ -131,6 +131,11 @@ export const courses = pgTable("courses", {
   isFree: boolean("is_free").default(false), // Bepul kurs
   subscriptionDays: integer("subscription_days").default(30), // Obuna muddati (kunlarda), bepul kurslarda null
   promoVideoUrl: varchar("promo_video_url", { length: 500 }), // YouTube promo video URL (ixtiyoriy)
+  // Dars ochilish jadvali (course-level default)
+  unlockType: varchar("unlock_type", { length: 20 }).default('free'), // 'free' | 'daily' | 'weekly'
+  unlockIntervalDays: integer("unlock_interval_days").default(1),
+  unlockWeekDays: jsonb("unlock_week_days").$type<string[]>().default([]),
+  unlockStartDate: timestamp("unlock_start_date"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

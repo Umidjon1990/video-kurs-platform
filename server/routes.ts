@@ -1584,6 +1584,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         subscriptionDays: true,
         levelId: true,
         promoVideoUrl: true,
+        unlockType: true,
+        unlockIntervalDays: true,
+        unlockWeekDays: true,
+        unlockStartDate: true,
       }).partial();
       
       const updateData = editableFields.parse(req.body);
@@ -6293,11 +6297,28 @@ So'zlar soni: ${submission.wordCount}`;
       const enrollment = await storage.getEnrollmentByCourseAndUser(courseId, userId);
       if (!enrollment) return res.json({ settings: null, lockedLessons: {} });
 
+      // Try group-specific settings first
+      let settings: any = null;
       const groupId = enrollment.groupId;
-      if (!groupId) return res.json({ settings: null, lockedLessons: {} });
+      if (groupId) {
+        settings = await storage.getGroupCourseSettings(groupId, courseId);
+      }
 
-      // Get group course settings
-      const settings = await storage.getGroupCourseSettings(groupId, courseId);
+      // Fallback: use course-level unlock settings
+      if (!settings || settings.unlockType === 'free') {
+        const course = await storage.getCourse(courseId);
+        if (course && course.unlockType && course.unlockType !== 'free') {
+          settings = {
+            unlockType: course.unlockType,
+            unlockIntervalDays: course.unlockIntervalDays ?? 1,
+            unlockWeekDays: course.unlockWeekDays ?? [],
+            unlockStartDate: course.unlockStartDate,
+            testGateEnabled: false,
+            minPassScore: 70,
+          };
+        }
+      }
+
       if (!settings || settings.unlockType === 'free') {
         return res.json({ settings: settings || null, lockedLessons: {} });
       }

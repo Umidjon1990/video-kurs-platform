@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, EyeOff, Download, Megaphone, Users, User, MessageCircle, TrendingUp, Award, Activity, Settings, UserCheck, Upload, FileSpreadsheet, Mic, PenTool, Radio, PhoneOff, Monitor, Copy, Volume2 } from "lucide-react";
+import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, EyeOff, Download, Megaphone, Users, User, MessageCircle, TrendingUp, Award, Activity, Settings, UserCheck, Upload, FileSpreadsheet, Mic, PenTool, Radio, PhoneOff, Monitor, Copy, Volume2, Calendar, Lock, Unlock } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NotificationBell } from "@/components/NotificationBell";
 import { StarRating } from "@/components/StarRating";
@@ -96,7 +96,11 @@ export default function InstructorDashboard() {
     subscriptionDays: "30",
     levelId: "",
     selectedResourceTypes: [] as string[],
-    promoVideoUrl: "", // YouTube promo video URL (ixtiyoriy)
+    promoVideoUrl: "",
+    unlockType: "free",
+    unlockIntervalDays: "1",
+    unlockWeekDays: [] as string[],
+    unlockStartDate: "",
   });
 
   const [lessonForm, setLessonForm] = useState({
@@ -424,6 +428,10 @@ export default function InstructorDashboard() {
         isFree: courseForm.isFree,
         subscriptionDays: courseForm.isFree ? null : (parseInt(courseForm.subscriptionDays) || 30),
         levelId: courseForm.levelId || null,
+        unlockType: courseForm.unlockType || 'free',
+        unlockIntervalDays: parseInt(courseForm.unlockIntervalDays) || 1,
+        unlockWeekDays: courseForm.unlockWeekDays,
+        unlockStartDate: courseForm.unlockStartDate ? new Date(courseForm.unlockStartDate).toISOString() : null,
       };
       
       // Only include pricing data for paid courses
@@ -457,7 +465,7 @@ export default function InstructorDashboard() {
         description: editingCourse ? "Kurs yangilandi" : "Kurs yaratildi" 
       });
       setIsCreateCourseOpen(false);
-      setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "", promoVideoUrl: "", isFree: false, subscriptionDays: "30", levelId: "", selectedResourceTypes: [] });
+      setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "", promoVideoUrl: "", isFree: false, subscriptionDays: "30", levelId: "", selectedResourceTypes: [], unlockType: "free", unlockIntervalDays: "1", unlockWeekDays: [], unlockStartDate: "" });
       setEditingCourse(null);
     },
     onError: (error: Error) => {
@@ -1405,6 +1413,12 @@ export default function InstructorDashboard() {
                               subscriptionDays: ((course as any).subscriptionDays || 30).toString(),
                               levelId: (course as any).levelId || "",
                               selectedResourceTypes: courseResourceTypes,
+                              unlockType: (course as any).unlockType || "free",
+                              unlockIntervalDays: ((course as any).unlockIntervalDays || 1).toString(),
+                              unlockWeekDays: (course as any).unlockWeekDays || [],
+                              unlockStartDate: (course as any).unlockStartDate
+                                ? new Date((course as any).unlockStartDate).toISOString().slice(0, 16)
+                                : "",
                             });
                             setEditingCourse(course);
                             setIsCreateCourseOpen(true);
@@ -2487,6 +2501,109 @@ export default function InstructorDashboard() {
                 YouTube havolasi - umumiy sahifada o'quvchilar ko'ra oladi
               </p>
             </div>
+
+            {/* ── Dars Jadvali ── */}
+            <div className="rounded-md border p-4 space-y-4">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-primary" />
+                <p className="font-medium text-sm">Dars Ochilish Jadvali</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Tartib turi</Label>
+                <Select
+                  value={courseForm.unlockType}
+                  onValueChange={v => setCourseForm({ ...courseForm, unlockType: v })}
+                >
+                  <SelectTrigger data-testid="select-course-unlock-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="free">
+                      <span className="flex items-center gap-2"><Unlock className="w-3.5 h-3.5" /> Erkin — barcha darslar ochiq</span>
+                    </SelectItem>
+                    <SelectItem value="daily">
+                      <span className="flex items-center gap-2"><Calendar className="w-3.5 h-3.5" /> Kunlik — har N kunda bitta dars</span>
+                    </SelectItem>
+                    <SelectItem value="weekly">
+                      <span className="flex items-center gap-2"><Calendar className="w-3.5 h-3.5" /> Haftalik — tanlangan kunlarda</span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {(courseForm.unlockType === "daily" || courseForm.unlockType === "weekly") && (
+                <div className="space-y-2">
+                  <Label>Birinchi dars boshlanish sanasi</Label>
+                  <Input
+                    type="datetime-local"
+                    value={courseForm.unlockStartDate}
+                    onChange={e => setCourseForm({ ...courseForm, unlockStartDate: e.target.value })}
+                    data-testid="input-course-unlock-start"
+                  />
+                  <p className="text-xs text-muted-foreground">1-dars shu sanadan boshlab ochiladi</p>
+                </div>
+              )}
+
+              {courseForm.unlockType === "daily" && (
+                <div className="space-y-2">
+                  <Label>Har necha kunda bir dars ochiladi?</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="30"
+                    value={courseForm.unlockIntervalDays}
+                    onChange={e => setCourseForm({ ...courseForm, unlockIntervalDays: e.target.value })}
+                    data-testid="input-course-unlock-interval"
+                  />
+                </div>
+              )}
+
+              {courseForm.unlockType === "weekly" && (
+                <div className="space-y-2">
+                  <Label>Qaysi hafta kunlarida dars ochiladi?</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { key: "monday", label: "Du" },
+                      { key: "tuesday", label: "Se" },
+                      { key: "wednesday", label: "Cho" },
+                      { key: "thursday", label: "Pa" },
+                      { key: "friday", label: "Ju" },
+                      { key: "saturday", label: "Sha" },
+                      { key: "sunday", label: "Ya" },
+                    ].map(day => (
+                      <button
+                        key={day.key}
+                        type="button"
+                        onClick={() => {
+                          const days = courseForm.unlockWeekDays.includes(day.key)
+                            ? courseForm.unlockWeekDays.filter(d => d !== day.key)
+                            : [...courseForm.unlockWeekDays, day.key];
+                          setCourseForm({ ...courseForm, unlockWeekDays: days });
+                        }}
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium border transition-colors ${
+                          courseForm.unlockWeekDays.includes(day.key)
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-muted text-muted-foreground border-border hover:border-primary/50"
+                        }`}
+                        data-testid={`button-course-weekday-${day.key}`}
+                      >
+                        {day.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Tanlangan kunlarda ketma-ket darslar ochiladi</p>
+                </div>
+              )}
+
+              {courseForm.unlockType !== "free" && (
+                <div className="flex items-start gap-2 p-3 rounded-md bg-amber-500/10 border border-amber-500/20">
+                  <Lock className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    Jadval barcha o'quvchilarga qo'llaniladi. Guruh-specific sozlamalar bu jadvaldan ustun turadi.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter className="flex-shrink-0">
             <Button
@@ -2494,7 +2611,7 @@ export default function InstructorDashboard() {
               onClick={() => {
                 setIsCreateCourseOpen(false);
                 setEditingCourse(null);
-                setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "", promoVideoUrl: "", isFree: false, subscriptionDays: "30", levelId: "", selectedResourceTypes: [] });
+                setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "", promoVideoUrl: "", isFree: false, subscriptionDays: "30", levelId: "", selectedResourceTypes: [], unlockType: "free", unlockIntervalDays: "1", unlockWeekDays: [], unlockStartDate: "" });
               }}
               data-testid="button-cancel-create-course"
             >
