@@ -36,21 +36,46 @@ const getOidcConfig = memoize(
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
-  const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
-    createTableIfMissing: false,
-    ttl: sessionTtl,
-    tableName: "sessions",
-  });
+
+  // For Railway: use pg.Pool with SSL handling; for Replit: use conString directly
+  const isRailway = !process.env.REPLIT_DOMAINS;
+  let storeConfig: any;
+
+  if (isRailway) {
+    const { Pool } = require('pg');
+    const pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.DATABASE_URL?.includes('localhost') ? false : { rejectUnauthorized: false },
+    });
+    storeConfig = {
+      pool,
+      createTableIfMissing: true,
+      ttl: sessionTtl,
+      tableName: "sessions",
+    };
+  } else {
+    storeConfig = {
+      conString: process.env.DATABASE_URL,
+      createTableIfMissing: true,
+      ttl: sessionTtl,
+      tableName: "sessions",
+    };
+  }
+
+  const sessionStore = new pgStore(storeConfig);
+
+  // Cookie settings: secure=true only on HTTPS (production/Railway), false on local dev
+  const isProduction = process.env.NODE_ENV === 'production' || isRailway;
+
   return session({
-    secret: process.env.SESSION_SECRET!,
+    secret: process.env.SESSION_SECRET || 'fallback-secret-change-in-production',
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,
-      sameSite: 'none', // Required for cross-site auth to work in modern browsers
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
       maxAge: sessionTtl,
     },
   });
