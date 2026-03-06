@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Play, Maximize2, Volume2 } from "lucide-react";
+import { Play } from "lucide-react";
 
 interface ModernVideoPlayerProps {
   videoUrl: string;
@@ -227,19 +227,6 @@ export function ModernVideoPlayer({ videoUrl, title, onError }: ModernVideoPlaye
         </div>
       )}
 
-      {/* Control hints overlay */}
-      <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-10">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-white/80 text-xs sm:text-sm">
-            <Volume2 className="w-4 h-4" />
-            <span className="hidden sm:inline">Ovozni boshqarish uchun video ustida</span>
-          </div>
-          <div className="flex items-center gap-2 text-white/80 text-xs sm:text-sm">
-            <Maximize2 className="w-4 h-4" />
-            <span className="hidden sm:inline">To'liq ekran</span>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
