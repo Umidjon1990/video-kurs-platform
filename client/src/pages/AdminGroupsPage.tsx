@@ -165,8 +165,8 @@ export default function AdminGroupsPage() {
     queryKey: ["/api/admin/users"],
   });
 
-  const { data: allCourses = [] } = useQuery<{ id: string; title: string }[]>({
-    queryKey: ["/api/courses"],
+  const { data: allCourses = [] } = useQuery<{ id: string; title: string; thumbnail?: string; status?: string; isFree?: boolean }[]>({
+    queryKey: ["/api/admin/all-courses"],
   });
 
   const { data: groupMembers = [], isLoading: membersLoading } = useQuery<GroupMember[]>({

@@ -6097,6 +6097,25 @@ So'zlar soni: ${submission.wordCount}`;
     }
   });
 
+  // Admin: get all courses (for dropdowns/selects)
+  app.get('/api/admin/all-courses', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const allCourses = await db
+        .select({
+          id: courses.id,
+          title: courses.title,
+          thumbnail: courses.thumbnail,
+          status: courses.status,
+          isFree: courses.isFree,
+        })
+        .from(courses)
+        .orderBy(courses.title);
+      res.json(allCourses);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Get all courses assigned to a group (via enrollments)
   app.get('/api/admin/student-groups/:groupId/courses', isAuthenticated, isAdmin, async (req, res) => {
     try {
