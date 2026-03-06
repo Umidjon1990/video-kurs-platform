@@ -6094,6 +6094,68 @@ So'zlar soni: ${submission.wordCount}`;
     }
   });
 
+  // Get all courses assigned to a group (via enrollments)
+  app.get('/api/admin/student-groups/:groupId/courses', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { groupId } = req.params;
+
+      // Get all enrollments for this group
+      const groupEnrollments = await db
+        .select({
+          courseId: enrollments.courseId,
+        })
+        .from(enrollments)
+        .where(eq(enrollments.groupId, groupId))
+        .groupBy(enrollments.courseId);
+
+      if (groupEnrollments.length === 0) return res.json([]);
+
+      const courseIds = groupEnrollments.map(e => e.courseId).filter(Boolean) as string[];
+
+      // Get course details
+      const courseDetails = await db
+        .select({
+          id: courses.id,
+          title: courses.title,
+          thumbnail: courses.thumbnail,
+        })
+        .from(courses)
+        .where(inArray(courses.id, courseIds));
+
+      // Get enrollment counts per course for this group
+      const enrollCounts = await db
+        .select({
+          courseId: enrollments.courseId,
+          count: count(),
+        })
+        .from(enrollments)
+        .where(and(eq(enrollments.groupId, groupId), inArray(enrollments.courseId, courseIds)))
+        .groupBy(enrollments.courseId);
+
+      const countMap: Record<string, number> = {};
+      for (const e of enrollCounts) {
+        if (e.courseId) countMap[e.courseId] = Number(e.count);
+      }
+
+      // Get groupCourseSettings for each course
+      const allSettings = await storage.getGroupCourseSettingsByGroup(groupId);
+      const settingsMap: Record<string, any> = {};
+      for (const s of allSettings) {
+        settingsMap[s.courseId] = s;
+      }
+
+      const result = courseDetails.map(c => ({
+        ...c,
+        enrolledCount: countMap[c.id] || 0,
+        settings: settingsMap[c.id] || null,
+      }));
+
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Assign course to all group members
   app.post('/api/admin/student-groups/:groupId/assign-course', isAuthenticated, isAdmin, async (req, res) => {
     try {
