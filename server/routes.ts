@@ -2087,6 +2087,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const testData = insertTestSchema.parse({
         ...req.body,
         courseId,
+        instructorId,
         lessonId: req.body.lessonId === "none" ? null : req.body.lessonId,
       });
       const test = await storage.createTest(testData);

@@ -350,6 +350,7 @@ export const tests = pgTable("tests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: 'cascade' }),
   lessonId: varchar("lesson_id").references(() => lessons.id, { onDelete: 'cascade' }),
+  instructorId: varchar("instructor_id"),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   passingScore: integer("passing_score"),
