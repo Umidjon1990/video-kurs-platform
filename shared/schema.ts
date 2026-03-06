@@ -129,6 +129,7 @@ export const courses = pgTable("courses", {
   imageUrl: text("image_url"), // Kurs sahifasi uchun rasm
   status: varchar("status", { length: 20 }).notNull().default('draft'), // draft, published
   isFree: boolean("is_free").default(false), // Bepul kurs
+  subscriptionDays: integer("subscription_days").default(30), // Obuna muddati (kunlarda), bepul kurslarda null
   promoVideoUrl: varchar("promo_video_url", { length: 500 }), // YouTube promo video URL (ixtiyoriy)
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

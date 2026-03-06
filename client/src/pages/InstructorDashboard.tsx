@@ -93,6 +93,7 @@ export default function InstructorDashboard() {
     thumbnailUrl: "",
     imageUrl: "",
     isFree: false,
+    subscriptionDays: "30",
     levelId: "",
     selectedResourceTypes: [] as string[],
     promoVideoUrl: "", // YouTube promo video URL (ixtiyoriy)
@@ -421,6 +422,7 @@ export default function InstructorDashboard() {
         imageUrl: courseForm.imageUrl,
         promoVideoUrl: courseForm.promoVideoUrl || null,
         isFree: courseForm.isFree,
+        subscriptionDays: courseForm.isFree ? null : (parseInt(courseForm.subscriptionDays) || 30),
         levelId: courseForm.levelId || null,
       };
       
@@ -455,7 +457,7 @@ export default function InstructorDashboard() {
         description: editingCourse ? "Kurs yangilandi" : "Kurs yaratildi" 
       });
       setIsCreateCourseOpen(false);
-      setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "", promoVideoUrl: "", isFree: false, levelId: "", selectedResourceTypes: [] });
+      setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "", promoVideoUrl: "", isFree: false, subscriptionDays: "30", levelId: "", selectedResourceTypes: [] });
       setEditingCourse(null);
     },
     onError: (error: Error) => {
@@ -1400,6 +1402,7 @@ export default function InstructorDashboard() {
                               imageUrl: (course as any).imageUrl || "",
                               promoVideoUrl: (course as any).promoVideoUrl || "",
                               isFree: (course as any).isFree || false,
+                              subscriptionDays: ((course as any).subscriptionDays || 30).toString(),
                               levelId: (course as any).levelId || "",
                               selectedResourceTypes: courseResourceTypes,
                             });
@@ -2385,6 +2388,27 @@ export default function InstructorDashboard() {
                 {courseForm.isFree ? "Bepul kurs uchun chegirma berilmaydi" : "0 = chegirma yo'q, 20 = 20% chegirma"}
               </p>
             </div>
+            {!courseForm.isFree && (
+              <div className="space-y-2">
+                <Label htmlFor="subscriptionDays">Obuna muddati (kun)</Label>
+                <Input
+                  id="subscriptionDays"
+                  type="number"
+                  min={1}
+                  max={365}
+                  value={courseForm.subscriptionDays}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    setCourseForm({ ...courseForm, subscriptionDays: val });
+                  }}
+                  placeholder="30"
+                  data-testid="input-course-subscription-days"
+                />
+                <p className="text-xs text-muted-foreground">
+                  O'quvchi to'lovdan keyin necha kun davomida kursga kirishini belgilang (standart: 30 kun)
+                </p>
+              </div>
+            )}
             <div className="flex items-center space-x-2 p-4 border rounded-lg bg-muted/50">
               <Checkbox 
                 id="isFree"
@@ -2462,7 +2486,7 @@ export default function InstructorDashboard() {
               onClick={() => {
                 setIsCreateCourseOpen(false);
                 setEditingCourse(null);
-                setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "", promoVideoUrl: "", isFree: false, levelId: "", selectedResourceTypes: [] });
+                setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "", promoVideoUrl: "", isFree: false, subscriptionDays: "30", levelId: "", selectedResourceTypes: [] });
               }}
               data-testid="button-cancel-create-course"
             >

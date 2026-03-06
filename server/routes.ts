@@ -1492,7 +1492,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/instructor/courses', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
       const instructorId = req.user.claims.sub;
-      const { title, description, author, category, thumbnailUrl, imageUrl, pricing, isFree, levelId, promoVideoUrl } = req.body;
+      const { title, description, author, category, thumbnailUrl, imageUrl, pricing, isFree, levelId, promoVideoUrl, subscriptionDays } = req.body;
       
       // If course is free, force price to 0; otherwise require pricing
       if (!isFree && (!pricing || !pricing.oddiy)) {
@@ -1513,6 +1513,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         originalPrice: isFree ? "0" : (req.body.originalPrice || null),
         discountPercentage: isFree ? 0 : (req.body.discountPercentage != null ? req.body.discountPercentage : 0),
         isFree: isFree || false,
+        subscriptionDays: isFree ? null : (subscriptionDays || 30),
         levelId: levelId || null,
         promoVideoUrl: promoVideoUrl || null,
       });
@@ -1580,6 +1581,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         thumbnailUrl: true,
         imageUrl: true,
         isFree: true,
+        subscriptionDays: true,
         levelId: true,
         promoVideoUrl: true,
       }).partial();
@@ -1591,6 +1593,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updateData.price = "0";
         updateData.originalPrice = "0";
         updateData.discountPercentage = 0;
+        updateData.subscriptionDays = null;
         
         // Delete existing coursePlanPricing entries
         await db.delete(coursePlanPricing).where(eq(coursePlanPricing.courseId, courseId));

@@ -798,12 +798,14 @@ export default function HomePage() {
                               </div>
                               <p className="text-[10px] font-semibold text-blue-700 dark:text-blue-300 text-center leading-tight">Video</p>
                             </div>
+                            {!(course as any).isFree && (
                             <div className="flex flex-col items-center gap-1 rounded-lg p-2 bg-gradient-to-b from-green-50 to-green-100/70 dark:from-green-900/20 dark:to-green-800/10 border border-green-200/50 dark:border-green-700/30 shadow-[0_3px_0_0_rgba(34,197,94,0.25)]">
                               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-green-600 shadow-[0_4px_10px_rgba(34,197,94,0.4)] flex items-center justify-center">
                                 <Clock className="w-3.5 h-3.5 text-white" />
                               </div>
-                              <p className="text-[10px] font-semibold text-green-700 dark:text-green-300 text-center leading-tight">30 kun</p>
+                              <p className="text-[10px] font-semibold text-green-700 dark:text-green-300 text-center leading-tight">{(course as any).subscriptionDays || 30} kun</p>
                             </div>
+                            )}
                             <div className="flex flex-col items-center gap-1 rounded-lg p-2 bg-gradient-to-b from-purple-50 to-purple-100/70 dark:from-purple-900/20 dark:to-purple-800/10 border border-purple-200/50 dark:border-purple-700/30 shadow-[0_3px_0_0_rgba(168,85,247,0.25)]">
                               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600 shadow-[0_4px_10px_rgba(168,85,247,0.4)] flex items-center justify-center">
                                 <Award className="w-3.5 h-3.5 text-white" />
@@ -887,7 +889,7 @@ export default function HomePage() {
                             </div>
                             <div className="flex flex-col items-center gap-1 rounded-lg p-2 bg-gradient-to-b from-green-50 to-green-100/70 dark:from-green-900/20 dark:to-green-800/10 border border-green-200/50 dark:border-green-700/30 shadow-[0_3px_0_0_rgba(34,197,94,0.25)]">
                               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-green-600 shadow-[0_4px_10px_rgba(34,197,94,0.4)] flex items-center justify-center"><Clock className="w-3.5 h-3.5 text-white" /></div>
-                              <p className="text-[10px] font-semibold text-green-700 dark:text-green-300 text-center leading-tight">30 kun</p>
+                              <p className="text-[10px] font-semibold text-green-700 dark:text-green-300 text-center leading-tight">{(course as any).subscriptionDays || 30} kun</p>
                             </div>
                             <div className="flex flex-col items-center gap-1 rounded-lg p-2 bg-gradient-to-b from-purple-50 to-purple-100/70 dark:from-purple-900/20 dark:to-purple-800/10 border border-purple-200/50 dark:border-purple-700/30 shadow-[0_3px_0_0_rgba(168,85,247,0.25)]">
                               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600 shadow-[0_4px_10px_rgba(168,85,247,0.4)] flex items-center justify-center"><Award className="w-3.5 h-3.5 text-white" /></div>
@@ -946,7 +948,7 @@ export default function HomePage() {
                             </div>
                             <div className="flex flex-col items-center gap-1 rounded-lg p-2 bg-gradient-to-b from-green-50 to-green-100/70 dark:from-green-900/20 dark:to-green-800/10 border border-green-200/50 dark:border-green-700/30 shadow-[0_3px_0_0_rgba(34,197,94,0.25)]">
                               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-green-600 shadow-[0_4px_10px_rgba(34,197,94,0.4)] flex items-center justify-center"><Clock className="w-3.5 h-3.5 text-white" /></div>
-                              <p className="text-[10px] font-semibold text-green-700 dark:text-green-300 text-center leading-tight">30 kun</p>
+                              <p className="text-[10px] font-semibold text-green-700 dark:text-green-300 text-center leading-tight">{(course as any).subscriptionDays || 30} kun</p>
                             </div>
                             <div className="flex flex-col items-center gap-1 rounded-lg p-2 bg-gradient-to-b from-purple-50 to-purple-100/70 dark:from-purple-900/20 dark:to-purple-800/10 border border-purple-200/50 dark:border-purple-700/30 shadow-[0_3px_0_0_rgba(168,85,247,0.25)]">
                               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600 shadow-[0_4px_10px_rgba(168,85,247,0.4)] flex items-center justify-center"><Award className="w-3.5 h-3.5 text-white" /></div>
@@ -1736,7 +1738,8 @@ export default function HomePage() {
                       <p className="text-[10px] text-blue-500/80 dark:text-blue-400/70 text-center">Online format</p>
                     </div>
 
-                    {/* Tile 2 - Kirish muddati */}
+                    {/* Tile 2 - Kirish muddati (only for paid courses) */}
+                    {!dc.isFree && (
                     <div className="flex flex-col items-center gap-2 rounded-xl p-3
                       bg-gradient-to-b from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/20
                       border border-green-200/60 dark:border-green-700/40
@@ -1746,9 +1749,10 @@ export default function HomePage() {
                         flex items-center justify-center">
                         <Clock className="w-5 h-5 text-white" />
                       </div>
-                      <p className="text-[11px] font-semibold text-center text-green-700 dark:text-green-300 leading-tight">30 Kun Kirish</p>
+                      <p className="text-[11px] font-semibold text-center text-green-700 dark:text-green-300 leading-tight">{(dc as any).subscriptionDays || 30} Kun</p>
                       <p className="text-[10px] text-green-500/80 dark:text-green-400/70 text-center">To'liq huquq</p>
                     </div>
+                    )}
 
                     {/* Tile 3 - Sertifikat */}
                     <div className="flex flex-col items-center gap-2 rounded-xl p-3
