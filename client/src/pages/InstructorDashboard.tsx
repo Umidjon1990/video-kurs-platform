@@ -1442,13 +1442,21 @@ export default function InstructorDashboard() {
                     </div>
                     
                     {/* Stats */}
-                    <div className="flex gap-4 text-sm">
+                    <div className="flex gap-4 text-sm flex-wrap">
                       <div className="flex items-center gap-1">
                         <Video className="w-4 h-4 text-muted-foreground" />
                         <span data-testid={`text-lessons-${course.id}`}>
                           {course.lessonsCount || 0} dars
                         </span>
                       </div>
+                      {(course.moduleCount || 0) > 0 && (
+                        <div className="flex items-center gap-1">
+                          <BookOpen className="w-4 h-4 text-muted-foreground" />
+                          <span data-testid={`text-modules-${course.id}`}>
+                            {course.moduleCount} modul
+                          </span>
+                        </div>
+                      )}
                     </div>
                     
                     {/* Pricing by Plan */}

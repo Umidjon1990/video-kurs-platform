@@ -462,7 +462,7 @@ export class DatabaseStorage implements IStorage {
     // Get enrollments, lessons count, and planPricing for each course
     const coursesWithCounts = await Promise.all(
       instructorCourses.map(async (course) => {
-        const [enrollmentCount, lessonCount, planPricing] = await Promise.all([
+        const [enrollmentCount, lessonCount, moduleCount, planPricing] = await Promise.all([
           db
             .select({ count: sql<number>`count(*)::int` })
             .from(enrollments)
@@ -482,6 +482,11 @@ export class DatabaseStorage implements IStorage {
             .where(eq(lessons.courseId, course.id))
             .then(result => result[0]?.count || 0),
           db
+            .select({ count: sql<number>`count(*)::int` })
+            .from(courseModules)
+            .where(eq(courseModules.courseId, course.id))
+            .then(result => result[0]?.count || 0),
+          db
             .select({
               pricing: coursePlanPricing,
               plan: subscriptionPlans,
@@ -497,6 +502,7 @@ export class DatabaseStorage implements IStorage {
           ...course,
           enrollmentsCount: enrollmentCount,
           lessonsCount: lessonCount,
+          moduleCount,
           planPricing,
         };
       })

@@ -73,23 +73,23 @@ export function StatsCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: "easeOut", delay }}
-      whileHover={{ y: -4, transition: { duration: 0.2 } }}
-      className="h-full"
+      whileHover={{ y: -8, transition: { duration: 0.2 } }}
+      className="h-full group"
     >
       <Card 
         data-testid={testId} 
-        className={`h-full relative overflow-hidden border-0 shadow-lg bg-gradient-to-br ${gradient}`}
+        className={`h-full relative overflow-hidden border border-white/10 shadow-2xl bg-gradient-to-br ${gradient} backdrop-blur-xl rounded-[2rem] transition-all duration-300 group-hover:border-primary/30 group-hover:shadow-primary/20`}
       >
-        <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-primary/5" />
-        <div className="absolute -bottom-8 -left-8 w-24 h-24 rounded-full bg-primary/5" />
+        <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-white/5 blur-2xl group-hover:bg-primary/10 transition-colors" />
+        <div className="absolute -bottom-8 -left-8 w-24 h-24 rounded-full bg-white/5 blur-2xl" />
         
         <CardContent className="relative p-6">
           <div className="flex items-start justify-between">
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">{title}</p>
+            <div className="space-y-3">
+              <p className="text-sm font-bold text-slate-400 tracking-wider uppercase">{title}</p>
               <div className="flex items-baseline gap-2">
                 <motion.span 
-                  className="text-3xl font-bold tracking-tight"
+                  className="text-4xl font-black tracking-tight text-white drop-shadow-md"
                   data-testid={testId ? `${testId}-value` : undefined}
                   initial={{ scale: 0.5, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
@@ -99,7 +99,7 @@ export function StatsCard({
                 </motion.span>
                 {trend && (
                   <motion.div 
-                    className={`flex items-center text-xs font-medium ${trendColor} px-1.5 py-0.5 rounded-md ${trend.value >= 0 ? 'bg-green-500/10' : 'bg-destructive/10'}`} 
+                    className={`flex items-center text-xs font-bold ${trendColor} px-2 py-1 rounded-full ${trend.value >= 0 ? 'bg-green-500/10' : 'bg-destructive/10'} border border-white/5`} 
                     data-testid={testId ? `${testId}-trend` : undefined}
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -111,19 +111,19 @@ export function StatsCard({
                 )}
               </div>
               {description && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs font-medium text-slate-500">
                   {description}
                 </p>
               )}
             </div>
             <motion.div 
-              className={`p-3 rounded-2xl ${iconBg} shadow-sm`}
+              className={`p-4 rounded-2xl ${iconBg} shadow-inner border border-white/10`}
               initial={{ scale: 0, rotate: -20 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ delay: delay + 0.1, type: "spring", stiffness: 250 }}
-              whileHover={{ rotate: 10, scale: 1.1 }}
+              whileHover={{ rotate: 12, scale: 1.1 }}
             >
-              <Icon className={`h-6 w-6 ${iconColor}`} />
+              <Icon className={`h-7 w-7 ${iconColor} drop-shadow-[0_0_8px_rgba(var(--primary),0.5)]`} />
             </motion.div>
           </div>
         </CardContent>

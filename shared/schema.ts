@@ -1048,6 +1048,7 @@ export type CourseWithFilters = Course & {
 export type InstructorCourseWithCounts = Course & {
   enrollmentsCount: number;
   lessonsCount: number;
+  moduleCount: number;
   planPricing?: Array<CoursePlanPricing & { plan: SubscriptionPlan }>;
 };
 
