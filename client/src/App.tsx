@@ -79,7 +79,7 @@ function Router() {
   const isFullScreen = location.startsWith('/learn/') || location.startsWith('/live/');
   if (isFullScreen) {
     return (
-      <div className="h-full w-full overflow-hidden">
+      <div className="h-full w-full flex flex-col overflow-hidden">
         <Switch>
           <Route path="/learn/:courseId" component={LearningPage} />
           <Route path="/live/:roomId" component={LiveRoom} />

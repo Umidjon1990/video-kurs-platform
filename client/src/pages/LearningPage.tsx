@@ -491,7 +491,7 @@ export default function LearningPage() {
   }
 
   return (
-    <div className="h-full bg-background flex flex-col overflow-hidden w-full">
+    <div className="h-full bg-background flex flex-col w-full">
       {/* Mobile Header Bar - Modern App-like */}
       <div className="sm:hidden sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b px-4 h-14 flex items-center justify-between gap-3">
         <Button
@@ -541,9 +541,9 @@ export default function LearningPage() {
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
+      <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden">
         {/* Main Content */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-0 sm:p-4 lg:p-6 pb-40 sm:pb-4" ref={(el) => { mainContentRef.current = el; }}>
+        <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-none p-0 sm:p-4 lg:p-6 pb-36 sm:pb-4 bg-muted/10" ref={(el) => { mainContentRef.current = el; }}>
           {currentLesson ? (
             (() => {
               const isEnrolled = enrollment?.paymentStatus === 'confirmed' || enrollment?.paymentStatus === 'approved';
@@ -606,9 +606,33 @@ export default function LearningPage() {
                       </TabsList>
 
                       <TabsContent value="info" className="mt-2 space-y-3">
-                        {currentLesson.description && (
+                        {currentLesson.description ? (
                           <div className="bg-muted/30 p-3 sm:p-6 rounded-xl border">
                             <div className="text-muted-foreground text-sm whitespace-pre-wrap leading-relaxed">{currentLesson.description}</div>
+                          </div>
+                        ) : (
+                          <div className="space-y-2 pt-1">
+                            {/* Course progress mini-card */}
+                            <div className="flex items-center justify-between px-1 py-2 rounded-xl bg-muted/40 border text-sm">
+                              <span className="text-muted-foreground text-xs">Kurs bo'yicha progress</span>
+                              <span className="font-bold text-primary text-xs">
+                                {courseProgress?.filter((p: any) => p.completed).length || 0} / {allSortedLessons.length} dars
+                              </span>
+                            </div>
+                            {/* Next lesson card */}
+                            {navNextLesson && (
+                              <button
+                                className="w-full flex items-center gap-3 p-3 rounded-xl border border-primary/20 bg-primary/5 text-left"
+                                onClick={() => setCurrentLessonId(navNextLesson.id)}
+                              >
+                                <PlayCircle className="w-7 h-7 text-primary shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Keyingi dars</p>
+                                  <p className="text-sm font-semibold truncate">{navNextLesson.title}</p>
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-primary shrink-0" />
+                              </button>
+                            )}
                           </div>
                         )}
                       </TabsContent>
