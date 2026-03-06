@@ -63,8 +63,15 @@ export default function Login() {
   });
 
   useEffect(() => {
-    const saved = localStorage.getItem("rememberedUsername");
-    if (saved) { form.setValue("username", saved); setRememberMe(true); }
+    const savedUser = localStorage.getItem("rememberedUsername");
+    const savedPass = localStorage.getItem("rememberedPassword");
+    if (savedUser) {
+      form.setValue("username", savedUser);
+      setRememberMe(true);
+    }
+    if (savedPass) {
+      form.setValue("password", savedPass);
+    }
   }, []);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -88,8 +95,10 @@ export default function Login() {
       const response = await res.json();
       if (rememberMe) {
         localStorage.setItem("rememberedUsername", data.username);
+        localStorage.setItem("rememberedPassword", data.password);
       } else {
         localStorage.removeItem("rememberedUsername");
+        localStorage.removeItem("rememberedPassword");
       }
       queryClient.setQueryData(["/api/auth/user"], response.user);
       toast({ title: "Xush kelibsiz!", description: "Tizimga muvaffaqiyatli kirdingiz" });

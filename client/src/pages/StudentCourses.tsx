@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -114,7 +115,7 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
     return modules.find(m => m.id === moduleId)?.title || null;
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
       <motion.div
         initial={{ opacity: 0 }}
@@ -341,7 +342,8 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
         </div>
         </motion.div>
       </motion.div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
 
