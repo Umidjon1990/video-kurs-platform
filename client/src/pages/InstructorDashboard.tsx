@@ -151,6 +151,8 @@ export default function InstructorDashboard() {
   const [isTextImportOpen, setIsTextImportOpen] = useState(false);
   const [textImportTestId, setTextImportTestId] = useState<string | null>(null);
   const [textImportContent, setTextImportContent] = useState("");
+  const [textImportTab, setTextImportTab] = useState<"text" | "word">("text");
+  const [wordImportFile, setWordImportFile] = useState<File | null>(null);
 
   const [isAnnouncementOpen, setIsAnnouncementOpen] = useState(false);
   const [announcementForm, setAnnouncementForm] = useState({
@@ -1005,6 +1007,36 @@ export default function InstructorDashboard() {
     },
     onError: (error: Error) => {
       toast({ title: "Import xatosi", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const wordImportMutation = useMutation({
+    mutationFn: async () => {
+      if (!textImportTestId || !wordImportFile) return;
+      const formData = new FormData();
+      formData.append("file", wordImportFile);
+      const response = await fetch(`/api/instructor/tests/${textImportTestId}/import-word`, {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.message || "Xatolik yuz berdi");
+      }
+      return response.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/instructor/tests', textImportTestId, 'questions'] });
+      setIsTextImportOpen(false);
+      setWordImportFile(null);
+      toast({
+        title: "Muvaffaqiyatli!",
+        description: data?.message || `${data?.importedCount || 0} ta savol Word fayldan yuklandi`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Word import xatosi", description: error.message, variant: "destructive" });
     },
   });
 
@@ -3877,61 +3909,100 @@ Kinescope: https://kinescope.io/watch/...'
       {/* Text Import Dialog */}
       <Dialog open={isTextImportOpen} onOpenChange={(open) => {
         setIsTextImportOpen(open);
-        if (!open) { setTextImportContent(""); setTextImportTestId(null); }
+        if (!open) { setTextImportContent(""); setTextImportTestId(null); setWordImportFile(null); setTextImportTab("text"); }
       }}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" data-testid="dialog-text-import">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-text-import">
           <DialogHeader>
-            <DialogTitle>Matndan Savollarni Yuklash</DialogTitle>
-            <DialogDescription>
-              Quyidagi formatda savollarni matn sifatida yozing va yuklang
-            </DialogDescription>
+            <DialogTitle>Savollarni Yuklash</DialogTitle>
+            <DialogDescription>Matn ko'chirish yoki Word fayl (.docx) orqali savollarni import qiling</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="p-3 bg-muted/40 rounded-lg border text-xs space-y-1 font-mono">
-              <p className="font-semibold text-sm font-sans mb-2">Format namunasi:</p>
-              <p>1. O'zbekiston poytaxti?</p>
-              <p>A) Samarqand</p>
-              <p>B) Toshkent</p>
-              <p>C) Buxoro</p>
-              <p>D) Namangan</p>
-              <p>Javob: B</p>
-              <p>Ball: 2</p>
-              <p className="mt-2 text-muted-foreground">(bo'sh qator bilan savollarni ajrating)</p>
-              <p>2. Arabcha: ما هو اسمك؟</p>
-              <p>A) محمد</p>
-              <p>B) أحمد</p>
-              <p>Javob: A</p>
-              <p>Ball: 1</p>
-              <p className="mt-2 text-muted-foreground">(true/false uchun)</p>
-              <p>3. Bu to'g'rimi?</p>
-              <p>(true_false)</p>
-              <p>Javob: true</p>
-              <p>Ball: 1</p>
-            </div>
-            <div className="space-y-2">
-              <Label>Savollar matni</Label>
-              <Textarea
-                value={textImportContent}
-                onChange={(e) => setTextImportContent(e.target.value)}
-                placeholder="Bu yerga savollarni ko'chiring..."
-                rows={12}
-                className="font-mono text-sm"
-                data-testid="textarea-text-import"
-              />
-              <p className="text-xs text-muted-foreground">
-                {textImportContent.trim().split(/\n\s*\n/).filter(b => b.trim()).length} ta blok aniqlandi
-              </p>
-            </div>
-          </div>
+          <Tabs value={textImportTab} onValueChange={(v) => setTextImportTab(v as "text" | "word")} className="space-y-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="text">Matn Ko'chirish</TabsTrigger>
+              <TabsTrigger value="word">Word Fayl (.docx)</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="text" className="space-y-4">
+              <div className="p-3 bg-muted/40 rounded-lg border text-xs space-y-1 font-mono">
+                <p className="font-semibold text-sm font-sans mb-1">Format 1 — Yulduzcha (*) bilan to'g'ri javob:</p>
+                <p>1. "بِصِراحَةٍ" so'zining tarjimasi?</p>
+                <p>A) Rostini aytsam</p>
+                <p className="text-green-600 dark:text-green-400">B) Ochig'ini aytsam *</p>
+                <p>C) Aslida</p>
+                <p>D) Albatta</p>
+                <p className="mt-2 font-semibold text-sm font-sans">Format 2 — Javob: harfi bilan:</p>
+                <p>2. O'zbekiston poytaxti?</p>
+                <p>A) Samarqand</p>
+                <p>B) Toshkent</p>
+                <p>C) Namangan</p>
+                <p>D) Buxoro</p>
+                <p>Javob: B</p>
+                <p>Ball: 2</p>
+                <p className="mt-1 text-muted-foreground">* Bo'sh qator bilan savollarni ajrating</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Savollar matni</Label>
+                <Textarea
+                  value={textImportContent}
+                  onChange={(e) => setTextImportContent(e.target.value)}
+                  placeholder="Bu yerga savollarni ko'chiring..."
+                  rows={12}
+                  className="font-mono text-sm"
+                  data-testid="textarea-text-import"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {textImportContent.trim().split(/\n\s*\n/).filter(b => b.trim()).length} ta blok aniqlandi
+                </p>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="word" className="space-y-4">
+              <div className="p-3 bg-muted/40 rounded-lg border text-sm space-y-2">
+                <p className="font-semibold">Word faylni yuklash qoidalari:</p>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground text-xs">
+                  <li>Faqat <strong>.docx</strong> format qabul qilinadi</li>
+                  <li>Har bir savol orasida <strong>bo'sh qator</strong> bo'lishi shart</li>
+                  <li>To'g'ri javob: variant oxiriga <strong>*</strong> qo'ying yoki <strong>Javob: B</strong> yozing</li>
+                  <li>Ball ko'rsatish ixtiyoriy — ko'rsatilmasa 1 ball hisoblanadi</li>
+                </ul>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="word-file-input">Word Fayl (.docx)</Label>
+                <Input
+                  id="word-file-input"
+                  type="file"
+                  accept=".docx"
+                  onChange={(e) => setWordImportFile(e.target.files?.[0] || null)}
+                  data-testid="input-word-file"
+                />
+                {wordImportFile && (
+                  <p className="text-xs text-green-600 dark:text-green-400">
+                    Tanlangan: {wordImportFile.name} ({(wordImportFile.size / 1024).toFixed(1)} KB)
+                  </p>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsTextImportOpen(false)}>Bekor qilish</Button>
-            <Button
-              onClick={() => textImportMutation.mutate()}
-              disabled={!textImportContent.trim() || textImportMutation.isPending}
-              data-testid="button-submit-text-import"
-            >
-              {textImportMutation.isPending ? "Yuklanmoqda..." : "Import Qilish"}
-            </Button>
+            {textImportTab === "text" ? (
+              <Button
+                onClick={() => textImportMutation.mutate()}
+                disabled={!textImportContent.trim() || textImportMutation.isPending}
+                data-testid="button-submit-text-import"
+              >
+                {textImportMutation.isPending ? "Yuklanmoqda..." : "Matndan Import"}
+              </Button>
+            ) : (
+              <Button
+                onClick={() => wordImportMutation.mutate()}
+                disabled={!wordImportFile || wordImportMutation.isPending}
+                data-testid="button-submit-word-import"
+              >
+                {wordImportMutation.isPending ? "Yuklanmoqda..." : "Word dan Import"}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
