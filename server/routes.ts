@@ -2853,16 +2853,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Shared question parser function — supports two formats:
       // Format 1 (classic): Javob: B  + Ball: 2 on separate lines
       // Format 2 (star):    B) Answer text *  (asterisk marks correct option)
+      // Smart parser: groups lines by numbered questions (handles Word docs where options are separated by blank lines)
       function parseQuestionsFromText(rawText: string) {
-        const blocks = rawText.trim().split(/\n\s*\n/).filter((b: string) => b.trim());
+        // Collect all non-empty lines (ignore blank lines between options in Word docs)
+        const allLines = rawText.split('\n').map((l: string) => l.trim()).filter((l: string) => l);
+
+        // Group into question blocks: a new block starts when we see "1." "2." etc.
+        const questionBlocks: string[][] = [];
+        let currentBlock: string[] = [];
+
+        for (const line of allLines) {
+          if (/^\d+[.)]\s+\S/.test(line)) {
+            // New numbered question detected
+            if (currentBlock.length > 0) questionBlocks.push(currentBlock);
+            currentBlock = [line];
+          } else {
+            currentBlock.push(line);
+          }
+        }
+        if (currentBlock.length > 0) questionBlocks.push(currentBlock);
+
         const questionsToCreate: any[] = [];
         const errors: string[] = [];
 
-        for (let i = 0; i < blocks.length; i++) {
-          const lines = blocks[i].trim().split('\n').map((l: string) => l.trim()).filter((l: string) => l);
+        for (let i = 0; i < questionBlocks.length; i++) {
+          const lines = questionBlocks[i];
           if (lines.length === 0) continue;
 
-          // First line: "1. Question text" or just "Question text"
+          // First line: "1. Question text"
           let firstLine = lines[0];
           const numMatch = firstLine.match(/^\d+[.)]\s*/);
           if (numMatch) firstLine = firstLine.slice(numMatch[0].length).trim();
@@ -2873,12 +2891,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Detect special type tag
           let detectedType = 'multiple_choice';
           const typeLine = lines.find((l: string) => /^\((true_false|fill_blanks|short_answer|essay|matching|multiple_choice)\)$/i.test(l));
-          if (typeLine) {
-            detectedType = typeLine.slice(1, -1).toLowerCase();
-          }
+          if (typeLine) detectedType = typeLine.slice(1, -1).toLowerCase();
 
-          // Extract options: lines starting with A) B) C) D) (may have * at the end)
-          const rawOptionLines = lines.filter((l: string) => /^[A-Da-d][).]\s+/.test(l));
+          // Extract options: lines starting with A) B) C) D)
+          const rawOptionLines = lines.filter((l: string) => /^[A-Da-d][).]\s+\S/.test(l));
           if (rawOptionLines.length > 0 && !typeLine) detectedType = 'multiple_choice';
 
           // Detect format: star (*) vs classic (Javob: B)
@@ -2892,26 +2908,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const ballLine = lines.find((l: string) => /^ball:/i.test(l));
           const points = ballLine ? parseInt(ballLine.replace(/^ball:\s*/i, '').trim()) || 1 : 1;
 
-          const question: any = {
-            type: detectedType,
-            questionText,
-            points,
-            correctAnswer: null,
-            options: []
-          };
+          const question: any = { type: detectedType, questionText, points, correctAnswer: null, options: [] };
 
           if (detectedType === 'multiple_choice') {
-            if (rawOptionLines.length < 2) { errors.push(`Blok ${i + 1}: Multiple choice uchun kamida 2 variant kerak`); continue; }
+            if (rawOptionLines.length < 2) { errors.push(`Savol ${i + 1}: kamida 2 variant kerak (${rawOptionLines.length} ta topildi)`); continue; }
 
             if (hasStarFormat) {
-              // Star format: correct answer is the option ending with *
               rawOptionLines.forEach((ol: string, idx: number) => {
                 const isCorrect = ol.trimEnd().endsWith('*');
                 const optText = ol.replace(/^[A-Da-d][).]\s+/, '').replace(/\s*\*\s*$/, '').trim();
                 question.options.push({ optionText: optText, isCorrect, order: idx + 1 });
               });
             } else {
-              // Classic format: correct letter from Javob:
               const correctLetter = answerText.toUpperCase();
               rawOptionLines.forEach((ol: string, idx: number) => {
                 const letter = String.fromCharCode(65 + idx);
@@ -2921,7 +2929,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           } else if (detectedType === 'true_false') {
             const norm = answerText.toLowerCase();
-            question.correctAnswer = (norm === 'true' || norm === 'ha' || norm === 'to\'g\'ri') ? 'true' : 'false';
+            question.correctAnswer = (norm === 'true' || norm === 'ha' || norm === "to'g'ri") ? 'true' : 'false';
           } else if (detectedType === 'fill_blanks' || detectedType === 'short_answer') {
             question.correctAnswer = answerText;
           }
@@ -3007,14 +3015,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: 'Word fayldan matn topilmadi' });
         }
 
-        // Reuse shared parser
+        // Smart parser: groups by numbered question lines
         function parseQuestionsFromText(rawText: string) {
-          const blocks = rawText.trim().split(/\n\s*\n/).filter((b: string) => b.trim());
+          const allLines = rawText.split('\n').map((l: string) => l.trim()).filter((l: string) => l);
+          const questionBlocks: string[][] = [];
+          let currentBlock: string[] = [];
+
+          for (const line of allLines) {
+            if (/^\d+[.)]\s+\S/.test(line)) {
+              if (currentBlock.length > 0) questionBlocks.push(currentBlock);
+              currentBlock = [line];
+            } else {
+              currentBlock.push(line);
+            }
+          }
+          if (currentBlock.length > 0) questionBlocks.push(currentBlock);
+
           const questionsToCreate: any[] = [];
           const errors: string[] = [];
 
-          for (let i = 0; i < blocks.length; i++) {
-            const lines = blocks[i].trim().split('\n').map((l: string) => l.trim()).filter((l: string) => l);
+          for (let i = 0; i < questionBlocks.length; i++) {
+            const lines = questionBlocks[i];
             if (lines.length === 0) continue;
 
             let firstLine = lines[0];
@@ -3028,7 +3049,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const typeLine = lines.find((l: string) => /^\((true_false|fill_blanks|short_answer|essay|matching|multiple_choice)\)$/i.test(l));
             if (typeLine) detectedType = typeLine.slice(1, -1).toLowerCase();
 
-            const rawOptionLines = lines.filter((l: string) => /^[A-Da-d][).]\s+/.test(l));
+            const rawOptionLines = lines.filter((l: string) => /^[A-Da-d][).]\s+\S/.test(l));
             if (rawOptionLines.length > 0 && !typeLine) detectedType = 'multiple_choice';
 
             const hasStarFormat = rawOptionLines.some((l: string) => l.trimEnd().endsWith('*'));
@@ -3040,7 +3061,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const question: any = { type: detectedType, questionText, points, correctAnswer: null, options: [] };
 
             if (detectedType === 'multiple_choice') {
-              if (rawOptionLines.length < 2) { errors.push(`Blok ${i + 1}: Multiple choice uchun kamida 2 variant kerak`); continue; }
+              if (rawOptionLines.length < 2) { errors.push(`Savol ${i + 1}: kamida 2 variant kerak (${rawOptionLines.length} ta topildi)`); continue; }
               if (hasStarFormat) {
                 rawOptionLines.forEach((ol: string, idx: number) => {
                   const isCorrect = ol.trimEnd().endsWith('*');
