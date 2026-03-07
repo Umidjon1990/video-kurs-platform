@@ -257,7 +257,7 @@ export default function InstructorDashboard() {
         if (projectId) metadata.parent_id = projectId;
 
         const upload = new tus.Upload(file, {
-          endpoint: "https://uploader.kinescope.io/v2/video",
+          endpoint: "https://uploader.kinescope.io/tus/",
           retryDelays: [0, 1000, 3000, 5000, 10000],
           chunkSize: 10 * 1024 * 1024, // 10MB chunks
           metadata,
