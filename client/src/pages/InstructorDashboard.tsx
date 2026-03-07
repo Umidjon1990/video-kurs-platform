@@ -308,7 +308,12 @@ export default function InstructorDashboard() {
         const err = await authRes.json();
         throw new Error(err.message || "Bunny auth xatosi");
       }
-      const { libraryId, expiry, signature, tusEndpoint } = await authRes.json();
+      const data = await authRes.json();
+      const { libraryId, expiry, signature, tusEndpoint } = data;
+
+      if (!tusEndpoint || !libraryId || !signature) {
+        throw new Error(`Server xatosi: kerakli maydonlar yetishmayapti (${JSON.stringify(Object.keys(data))})`);
+      }
 
       // Step 2: Direct TUS upload from browser to Bunny.net (Bunny creates videoId automatically)
       await new Promise<void>((resolve, reject) => {
