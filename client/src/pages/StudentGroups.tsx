@@ -3,8 +3,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Users, Calendar, User } from "lucide-react";
+import { Users, Calendar, BookOpen } from "lucide-react";
 import { motion } from "framer-motion";
+import { Link } from "wouter";
 
 export default function StudentGroups() {
   const { user } = useAuth();
@@ -72,6 +73,38 @@ export default function StudentGroups() {
                   <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
                     <Calendar className="w-3.5 h-3.5" />
                     <span>Qo'shilgan: {new Date(group.addedAt).toLocaleDateString('uz-UZ')}</span>
+                  </div>
+                )}
+
+                {group.courses && group.courses.length > 0 && (
+                  <div className="mb-4">
+                    <p className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+                      <BookOpen className="w-3.5 h-3.5" />
+                      Biriktirilgan kurslar:
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {group.courses.map((course: any) => (
+                        <Link key={course.id} href={`/learn/${course.id}`}>
+                          <div
+                            className="flex items-center gap-3 p-2.5 rounded-lg bg-primary/5 border border-primary/10 hover-elevate cursor-pointer"
+                            data-testid={`course-link-${course.id}`}
+                          >
+                            {course.thumbnailUrl ? (
+                              <img
+                                src={course.thumbnailUrl}
+                                alt={course.title}
+                                className="w-10 h-10 rounded object-cover shrink-0"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center shrink-0">
+                                <BookOpen className="w-5 h-5 text-primary" />
+                              </div>
+                            )}
+                            <p className="text-sm font-medium truncate">{course.title}</p>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
                   </div>
                 )}
 

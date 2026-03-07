@@ -10,7 +10,7 @@ import { ObjectStorageService } from "./objectStorage";
 import { db } from "./db";
 import bcrypt from "bcryptjs";
 import passport from "passport";
-import { users, courses, lessons, assignments, tests, questions, questionOptions, enrollments, submissions, testAttempts, notifications, conversations, messages, siteSettings, testimonials, subscriptionPlans, coursePlanPricing, userSubscriptions, passwordResetRequests, speakingTests, speakingTestSections, speakingQuestions, speakingSubmissions, speakingAnswers, speakingEvaluations, essaySubmissions, courseRatings, courseLikes, lessonProgress, announcements, liveRooms, courseGroupChats, userPresence, courseModules, lessonSections, courseResourceTypes, lessonEssayQuestions, studentGroups, studentGroupMembers } from "@shared/schema";
+import { users, courses, lessons, assignments, tests, questions, questionOptions, enrollments, submissions, testAttempts, notifications, conversations, messages, siteSettings, testimonials, subscriptionPlans, coursePlanPricing, userSubscriptions, passwordResetRequests, speakingTests, speakingTestSections, speakingQuestions, speakingSubmissions, speakingAnswers, speakingEvaluations, essaySubmissions, courseRatings, courseLikes, lessonProgress, announcements, liveRooms, courseGroupChats, userPresence, courseModules, lessonSections, courseResourceTypes, lessonEssayQuestions, studentGroups, studentGroupMembers, groupCourseSettings } from "@shared/schema";
 import { eq, and, or, desc, sql, count, avg, inArray } from "drizzle-orm";
 import {
   insertCourseSchema,
@@ -6643,9 +6643,6 @@ So'zlar soni: ${submission.wordCount}`;
   app.get('/api/student/my-groups', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
-      const { db } = await import('./db');
-      const { studentGroups, studentGroupMembers, users } = await import('../shared/schema');
-      const { eq, and } = await import('drizzle-orm');
       const memberships = await db.select({
         groupId: studentGroupMembers.groupId,
         addedAt: studentGroupMembers.addedAt,
@@ -6662,7 +6659,26 @@ So'zlar soni: ${submission.wordCount}`;
         }).from(studentGroupMembers)
           .innerJoin(users, eq(studentGroupMembers.userId, users.id))
           .where(eq(studentGroupMembers.groupId, m.groupId));
-        return { ...group, memberCount: members.length, members, addedAt: m.addedAt };
+        const enrollmentCourseIds = await db.select({ courseId: enrollments.courseId })
+          .from(enrollments)
+          .where(eq(enrollments.groupId, m.groupId))
+          .groupBy(enrollments.courseId);
+        const settingsCourseIds = await db.select({ courseId: groupCourseSettings.courseId })
+          .from(groupCourseSettings)
+          .where(eq(groupCourseSettings.groupId, m.groupId));
+        const courseIdSet = new Set<string>();
+        for (const e of enrollmentCourseIds) { if (e.courseId) courseIdSet.add(e.courseId); }
+        for (const s of settingsCourseIds) { if (s.courseId) courseIdSet.add(s.courseId); }
+        const courseIds = Array.from(courseIdSet);
+        let groupCourses: any[] = [];
+        if (courseIds.length > 0) {
+          groupCourses = await db.select({
+            id: courses.id,
+            title: courses.title,
+            thumbnailUrl: courses.thumbnailUrl,
+          }).from(courses).where(inArray(courses.id, courseIds));
+        }
+        return { ...group, memberCount: members.length, members, courses: groupCourses, addedAt: m.addedAt };
       }));
       res.json(result.filter(Boolean));
     } catch (error: any) {
@@ -6727,12 +6743,45 @@ So'zlar soni: ${submission.wordCount}`;
     }
   });
 
+  async function autoEnrollMemberInGroupCourses(groupId: string, userId: string) {
+    const groupCourseEnrollments = await db.select({ courseId: enrollments.courseId })
+      .from(enrollments)
+      .where(eq(enrollments.groupId, groupId))
+      .groupBy(enrollments.courseId);
+    const settingsCourses = await db.select({ courseId: groupCourseSettings.courseId })
+      .from(groupCourseSettings)
+      .where(eq(groupCourseSettings.groupId, groupId));
+    const courseIdSet = new Set<string>();
+    for (const e of groupCourseEnrollments) { if (e.courseId) courseIdSet.add(e.courseId); }
+    for (const s of settingsCourses) { if (s.courseId) courseIdSet.add(s.courseId); }
+    const courseIds = Array.from(courseIdSet);
+    if (courseIds.length === 0) return;
+    const plans = await storage.getSubscriptionPlans();
+    const plan = plans[0];
+    for (const courseId of courseIds) {
+      const existing = await storage.getEnrollmentByCourseAndUser(courseId, userId);
+      if (existing) continue;
+      const enrollment = await storage.createEnrollment({
+        userId, courseId, planId: plan?.id || null,
+        paymentMethod: 'manual', paymentStatus: 'approved', groupId,
+      });
+      const startDate = new Date();
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + 30);
+      await db.insert(userSubscriptions).values({
+        userId, courseId, planId: plan?.id || null,
+        enrollmentId: enrollment.id, startDate, endDate, status: 'active',
+      });
+    }
+  }
+
   // Add student to group
   app.post('/api/admin/student-groups/:id/members', isAuthenticated, isAdmin, async (req, res) => {
     try {
       const { userId } = req.body;
       if (!userId) return res.status(400).json({ message: "O'quvchi tanlanishi shart" });
       const member = await storage.addStudentToGroup(req.params.id, userId);
+      await autoEnrollMemberInGroupCourses(req.params.id, userId);
       res.json(member);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -6744,7 +6793,11 @@ So'zlar soni: ${submission.wordCount}`;
     try {
       const { userIds } = req.body;
       if (!userIds || !Array.isArray(userIds)) return res.status(400).json({ message: "O'quvchilar ro'yxati kerak" });
-      const results = await Promise.all(userIds.map((uid: string) => storage.addStudentToGroup(req.params.id, uid)));
+      const results = await Promise.all(userIds.map(async (uid: string) => {
+        const member = await storage.addStudentToGroup(req.params.id, uid);
+        await autoEnrollMemberInGroupCourses(req.params.id, uid);
+        return member;
+      }));
       res.json(results);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
