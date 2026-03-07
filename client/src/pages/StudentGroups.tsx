@@ -93,7 +93,7 @@ export default function StudentGroups() {
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {group.courses.map((course: any) => (
-                        <Link key={course.id} href={`/learn/${course.id}`}>
+                        <Link key={course.id} href="/">
                           <div
                             className="flex items-center gap-3 p-2.5 rounded-lg bg-primary/5 border border-primary/10 hover-elevate cursor-pointer"
                             data-testid={`course-link-${course.id}`}

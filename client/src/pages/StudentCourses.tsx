@@ -102,6 +102,34 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
     queryFn: () => fetch(`/api/courses/${state.courseId}/tests`, { credentials: 'include' }).then(r => r.json()),
   });
 
+  const { data: lockStatus } = useQuery<Record<string, any>>({
+    queryKey: ["/api/courses", state.courseId, "lesson-lock-status"],
+    queryFn: () => fetch(`/api/courses/${state.courseId}/lesson-lock-status`, { credentials: 'include' }).then(r => r.json()),
+  });
+
+  const isLessonLocked = (lessonId: string, lesson: any): boolean => {
+    if (lesson?.isDemo) return false;
+    if (!lockStatus) return false;
+    const status = lockStatus[lessonId];
+    if (!status) return false;
+    return status.locked === true;
+  };
+
+  const getLockReason = (lessonId: string): string | null => {
+    if (!lockStatus) return null;
+    const status = lockStatus[lessonId];
+    if (!status || !status.locked) return null;
+    if (status.reason === 'test_gate') return 'Oldingi dars testidan o\'ting';
+    if (status.reason === 'schedule') {
+      if (status.unlockDate) {
+        const d = new Date(status.unlockDate);
+        return `${d.toLocaleDateString('uz-UZ')} da ochiladi`;
+      }
+      return 'Hali ochilmagan';
+    }
+    return 'Dars qulflangan';
+  };
+
   const lessonAssignments = useMemo(() =>
     (assignments || []).filter((a: any) => a.lessonId === activeLessonId || !a.lessonId),
     [assignments, activeLessonId]
@@ -124,8 +152,18 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
 
   const currentIdx = sortedLessons.findIndex(l => l.id === activeLessonId);
   const currentLesson = sortedLessons[currentIdx] || sortedLessons[0];
-  const prevLesson = currentIdx > 0 ? sortedLessons[currentIdx - 1] : null;
-  const nextLesson = currentIdx < sortedLessons.length - 1 ? sortedLessons[currentIdx + 1] : null;
+  const prevLesson = useMemo(() => {
+    for (let i = currentIdx - 1; i >= 0; i--) {
+      if (!isLessonLocked(sortedLessons[i].id, sortedLessons[i])) return sortedLessons[i];
+    }
+    return null;
+  }, [currentIdx, sortedLessons, lockStatus]);
+  const nextLesson = useMemo(() => {
+    for (let i = currentIdx + 1; i < sortedLessons.length; i++) {
+      if (!isLessonLocked(sortedLessons[i].id, sortedLessons[i])) return sortedLessons[i];
+    }
+    return null;
+  }, [currentIdx, sortedLessons, lockStatus]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -243,7 +281,15 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
             {/* Video Area */}
             <div className="flex-1 flex flex-col min-h-0 bg-black/40">
               <div className="aspect-video w-full bg-black relative">
-                {currentLesson ? (
+                {currentLesson && isLessonLocked(currentLesson.id, currentLesson) ? (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/60">
+                    <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                      <Lock className="w-8 h-8 text-red-400" />
+                    </div>
+                    <p className="text-slate-400 text-sm font-medium">Dars qulflangan</p>
+                    <p className="text-slate-500 text-xs">{getLockReason(currentLesson.id)}</p>
+                  </div>
+                ) : currentLesson ? (
                   currentLesson.videoUrl ? (
                     <ModernVideoPlayer videoUrl={currentLesson.videoUrl} title={currentLesson.title} />
                   ) : (
@@ -427,19 +473,25 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                 {sortedLessons.map((lesson, idx) => {
                   const isActive = lesson.id === activeLessonId;
                   const moduleTitle = getModuleTitle(lesson.moduleId);
+                  const locked = isLessonLocked(lesson.id, lesson);
                   return (
                     <button
                       key={lesson.id}
-                      onClick={() => setActiveLessonId(lesson.id)}
+                      onClick={() => !locked && setActiveLessonId(lesson.id)}
+                      disabled={locked}
                       className={`w-full text-left px-4 py-3 flex items-start gap-3 transition-all duration-200 group
-                        ${isActive
-                          ? 'bg-primary/15 border-l-2 border-primary'
-                          : 'hover:bg-white/5 border-l-2 border-transparent'
+                        ${locked
+                          ? 'opacity-40 cursor-not-allowed border-l-2 border-transparent'
+                          : isActive
+                            ? 'bg-primary/15 border-l-2 border-primary'
+                            : 'hover:bg-white/5 border-l-2 border-transparent'
                         }`}
                     >
                       <div className={`shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold mt-0.5
-                        ${isActive ? 'bg-primary text-white' : 'bg-white/8 text-slate-500 group-hover:bg-white/12'}`}>
-                        {lesson.isDemo ? (
+                        ${locked ? 'bg-red-500/10 text-red-400' : isActive ? 'bg-primary text-white' : 'bg-white/8 text-slate-500 group-hover:bg-white/12'}`}>
+                        {locked ? (
+                          <Lock className="w-3 h-3" />
+                        ) : lesson.isDemo ? (
                           <Play className="w-3 h-3" />
                         ) : (
                           <span>{idx + 1}</span>
@@ -451,14 +503,17 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                             {moduleTitle}
                           </p>
                         )}
-                        <p className={`text-xs font-medium leading-snug line-clamp-2 ${isActive ? 'text-slate-100' : 'text-slate-400 group-hover:text-slate-300'}`}>
+                        <p className={`text-xs font-medium leading-snug line-clamp-2 ${locked ? 'text-slate-600' : isActive ? 'text-slate-100' : 'text-slate-400 group-hover:text-slate-300'}`}>
                           {lesson.title}
                         </p>
-                        {lesson.isDemo && (
+                        {lesson.isDemo && !locked && (
                           <span className="text-[9px] text-orange-400/70 font-medium">Demo</span>
                         )}
+                        {locked && getLockReason(lesson.id) && (
+                          <span className="text-[9px] text-red-400/70 font-medium">{getLockReason(lesson.id)}</span>
+                        )}
                       </div>
-                      {isActive && (
+                      {isActive && !locked && (
                         <motion.div
                           layoutId="active-indicator"
                           className="w-1.5 h-1.5 rounded-full bg-primary mt-2 shrink-0"
