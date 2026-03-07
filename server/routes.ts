@@ -121,6 +121,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  app.get('/api/public/lessons/:lessonId/tests', async (req, res) => {
+    try {
+      const { lessonId } = req.params;
+      const lesson = await storage.getLesson(lessonId);
+      if (!lesson || !lesson.isDemo) {
+        return res.status(404).json({ message: "Demo dars topilmadi" });
+      }
+      const courseTests = await storage.getTestsByCourse(lesson.courseId);
+      const lessonTests = courseTests.filter(t => t.lessonId === lessonId);
+      const testsWithCounts = await Promise.all(
+        lessonTests.map(async (test) => {
+          const qs = await storage.getQuestionsByTest(test.id);
+          return { id: test.id, title: test.title, passingScore: test.passingScore, questionCount: qs.length, shuffleAnswers: test.shuffleAnswers, randomOrder: test.randomOrder };
+        })
+      );
+      res.json(testsWithCounts.filter(t => t.questionCount > 0));
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/public/tests/:testId/questions', async (req, res) => {
+    try {
+      const { testId } = req.params;
+      const test = await storage.getTest(testId);
+      if (!test || !test.lessonId) return res.status(404).json({ message: "Test topilmadi" });
+      const lesson = await storage.getLesson(test.lessonId);
+      if (!lesson || !lesson.isDemo) return res.status(403).json({ message: "Bu test demo emas" });
+      const questions = await storage.getQuestionsByTest(testId);
+      const sanitizedQuestions = questions.map((q: any) => ({
+        id: q.id, testId: q.testId, type: q.type, questionText: q.questionText, points: q.points, order: q.order, mediaUrl: q.mediaUrl,
+        config: q.type === 'matching' ? { leftColumn: (q.config as any)?.leftColumn || [], rightColumn: (q.config as any)?.rightColumn || [] } : (q.config || {}),
+      }));
+      res.json(sanitizedQuestions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/public/questions/:questionId/options', async (req, res) => {
+    try {
+      const { questionId } = req.params;
+      const question = await storage.getQuestion(questionId);
+      if (!question) return res.status(404).json({ message: "Savol topilmadi" });
+      const test = await storage.getTest(question.testId);
+      if (!test || !test.lessonId) return res.status(403).json({ message: "Ruxsat yo'q" });
+      const lesson = await storage.getLesson(test.lessonId);
+      if (!lesson || !lesson.isDemo) return res.status(403).json({ message: "Ruxsat yo'q" });
+      const options = await storage.getQuestionOptionsByQuestion(questionId);
+      const sanitizedOptions = options.map((o: any) => ({ id: o.id, questionId: o.questionId, optionText: o.optionText, order: o.order }));
+      res.json(sanitizedOptions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/public/tests/:testId/submit', async (req, res) => {
+    try {
+      const { testId } = req.params;
+      const { answers } = req.body;
+      const test = await storage.getTest(testId);
+      if (!test || !test.lessonId) return res.status(404).json({ message: "Test topilmadi" });
+      const lesson = await storage.getLesson(test.lessonId);
+      if (!lesson || !lesson.isDemo) return res.status(403).json({ message: "Bu test demo emas" });
+      const questions = await storage.getQuestionsByTest(testId);
+      let totalScore = 0;
+      let totalPoints = 0;
+      for (const question of questions) {
+        totalPoints += question.points;
+        const studentAnswer = answers[question.id];
+        if (!studentAnswer || (Array.isArray(studentAnswer) && studentAnswer.length === 0)) continue;
+        if (question.type === 'multiple_choice') {
+          const options = await storage.getQuestionOptionsByQuestion(question.id);
+          const correctOptions = options.filter((o: any) => o.isCorrect).map((o: any) => o.id);
+          const studentOptions = Array.isArray(studentAnswer) ? studentAnswer : [studentAnswer];
+          if (JSON.stringify(correctOptions.sort()) === JSON.stringify(studentOptions.sort())) totalScore += question.points;
+        } else if (question.type === 'true_false') {
+          if (studentAnswer === question.correctAnswer) totalScore += question.points;
+        } else if (question.type === 'fill_blanks') {
+          if (studentAnswer.toLowerCase().trim() === question.correctAnswer?.toLowerCase().trim()) totalScore += question.points;
+        } else if (question.type === 'matching') {
+          const config = question.config as any;
+          if (JSON.stringify((config.correctPairs || []).sort()) === JSON.stringify(studentAnswer.sort())) totalScore += question.points;
+        } else if (question.type === 'short_answer') {
+          const keywords = question.correctAnswer?.toLowerCase().split(',').map((k: string) => k.trim()) || [];
+          const matchedKeywords = keywords.filter((k: string) => studentAnswer.toLowerCase().includes(k));
+          if (matchedKeywords.length >= keywords.length * 0.5) totalScore += question.points;
+        }
+      }
+      const percentage = totalPoints > 0 ? (totalScore / totalPoints) * 100 : 0;
+      const isPassed = test.passingScore ? percentage >= test.passingScore : false;
+      res.json({ score: totalScore, totalPoints, percentage, isPassed });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
   app.patch('/api/auth/profile', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

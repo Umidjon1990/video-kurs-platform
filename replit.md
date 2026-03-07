@@ -48,6 +48,8 @@ The frontend uses Wouter for routing and TanStack Query for state management. Au
 *   **Course Group Chat**: Real-time group messaging within courses for instructors and students, with presence tracking.
 *   **Free Lesson Access**: Students can access any lesson in any order, with enrollment/subscription managing access to non-demo lessons.
 *   **Student Group Management**: Admins can create and manage student groups for organizational purposes and bulk assignments.
+*   **Demo Lesson Test Taking**: Public (no auth) test-taking on demo lessons. Visitors can take tests on free demo lessons and see results immediately — serves as marketing to demonstrate the platform's assessment capabilities. Public API endpoints: `GET /api/public/lessons/:id/tests`, `GET /api/public/tests/:id/questions`, `POST /api/public/tests/:id/submit`. Results are graded server-side but not saved to DB.
+*   **Bulk Test Creation**: Instructors can create tests for multiple lessons at once via "Ommaviy Test Qo'shish" dialog with shared settings (passing score, shuffle options). Backend: `POST /api/instructor/courses/:id/tests/bulk`.
 
 ## External Dependencies
 

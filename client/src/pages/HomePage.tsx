@@ -1,9 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, BookOpen, Users, Award, Star, Mail, Phone, MapPin, Send, ExternalLink, X, ZoomIn, Play, Lock, Clock, GraduationCap, TrendingUp, CheckCircle, ArrowLeft, ChevronLeft, ChevronRight, PenTool, Headphones, Mic, BookText, Languages, FileText, Download, ChevronDown, Youtube, List, Info, ArrowRight, Sparkles, Code2, Megaphone, LayoutGrid, type LucideIcon } from "lucide-react";
+import { Search, Filter, BookOpen, Users, Award, Star, Mail, Phone, MapPin, Send, ExternalLink, X, ZoomIn, Play, Lock, Clock, GraduationCap, TrendingUp, CheckCircle, ArrowLeft, ChevronLeft, ChevronRight, PenTool, Headphones, Mic, BookText, Languages, FileText, Download, ChevronDown, Youtube, List, Info, ArrowRight, Sparkles, Code2, Megaphone, LayoutGrid, ClipboardCheck, type LucideIcon } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 
 const iconMap: Record<string, LucideIcon> = {
   BookOpen,
@@ -33,6 +36,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { StarRating } from "@/components/StarRating";
 import { ModernHeader } from "@/components/ModernHeader";
@@ -80,6 +84,10 @@ export default function HomePage() {
   const [showDemoLessonsList, setShowDemoLessonsList] = useState(false);
   const [promoVideoCourse, setPromoVideoCourse] = useState<PublicCourse | null>(null);
   const [detailCourse, setDetailCourse] = useState<PublicCourse | null>(null);
+  const [demoTestDialog, setDemoTestDialog] = useState<{ open: boolean; testId: string | null; test?: any }>({ open: false, testId: null });
+  const [demoTestAnswers, setDemoTestAnswers] = useState<Record<string, any>>({});
+  const [demoTestResult, setDemoTestResult] = useState<any>(null);
+  const [demoShuffleSeed, setDemoShuffleSeed] = useState(Date.now());
 
   // Icon animation via data-anim attribute on button — CSS selects .ic span inside
   // Auto-scroll to courses section when navigating to /explore
@@ -212,6 +220,44 @@ export default function HomePage() {
     setDemoCourseId(null);
     setShowDemoLessonsList(false);
   };
+
+  const { data: demoLessonTests } = useQuery<any[]>({
+    queryKey: ["/api/public/lessons", selectedDemoLesson?.id, "tests"],
+    enabled: !!selectedDemoLesson?.id,
+  });
+
+  const { data: demoTestQuestions } = useQuery<any[]>({
+    queryKey: ["/api/public/tests", demoTestDialog.testId, "questions"],
+    enabled: !!demoTestDialog.testId && demoTestDialog.open,
+  });
+
+  const seededRandom = (seed: number, idx: number) => {
+    let x = Math.sin(seed + idx * 9301 + 49297) * 233280;
+    return x - Math.floor(x);
+  };
+
+  const shuffledDemoQuestions = useMemo(() => {
+    if (!demoTestQuestions) return [];
+    const t = demoTestDialog.test;
+    if (!t?.randomOrder) return demoTestQuestions;
+    const arr = [...demoTestQuestions];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(seededRandom(demoShuffleSeed, i) * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }, [demoTestQuestions, demoTestDialog.test, demoShuffleSeed]);
+
+  const submitDemoTestMutation = useMutation({
+    mutationFn: async () => {
+      if (!demoTestDialog.testId) return;
+      const response = await apiRequest("POST", `/api/public/tests/${demoTestDialog.testId}/submit`, { answers: demoTestAnswers });
+      return response.json();
+    },
+    onSuccess: (data: any) => {
+      setDemoTestResult(data);
+    },
+  });
 
   // Module gradient colors palette - same as LearningPage
   const moduleColors = [
@@ -1561,6 +1607,35 @@ export default function HomePage() {
               </div>
             )}
 
+            {demoLessonTests && demoLessonTests.length > 0 && (
+              <div className="p-4 sm:p-0 border-t sm:border-t-0">
+                <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-200 dark:border-blue-800">
+                  <CardContent className="p-3 flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <ClipboardCheck className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      <p className="text-sm font-medium">Dars bo'yicha test</p>
+                      <Badge variant="secondary">{demoLessonTests[0].questionCount} savol</Badge>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const test = demoLessonTests[0];
+                        setDemoTestDialog({ open: true, testId: test.id, test });
+                        setDemoTestAnswers({});
+                        setDemoTestResult(null);
+                        setDemoShuffleSeed(Date.now());
+                      }}
+                      data-testid="button-demo-test"
+                    >
+                      <ClipboardCheck className="w-4 h-4 mr-1" />
+                      Testni Boshlash
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
             {demoCourseContext && (
               <div className="p-4 sm:p-0 border-t sm:border-t-0">
                 <Card className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 border-orange-200 dark:border-orange-800">
@@ -1645,6 +1720,112 @@ export default function HomePage() {
               </div>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={demoTestDialog.open} onOpenChange={(open) => {
+        if (!open) { setDemoTestDialog({ open: false, testId: null }); setDemoTestAnswers({}); setDemoTestResult(null); }
+      }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-demo-test">
+          <DialogHeader>
+            <DialogTitle data-testid="text-demo-test-title">
+              {demoTestDialog.test?.title || "Test"}
+            </DialogTitle>
+            {demoTestDialog.test?.passingScore && (
+              <DialogDescription>
+                O'tish bali: {demoTestDialog.test.passingScore}% | Savollar: {shuffledDemoQuestions.length} ta
+              </DialogDescription>
+            )}
+          </DialogHeader>
+
+          {demoTestResult ? (
+            <div className="space-y-6 py-4">
+              <div className={`p-6 rounded-xl text-center ${demoTestResult.isPassed ? 'bg-green-500/10 border-2 border-green-500/30' : 'bg-destructive/10 border-2 border-destructive/30'}`}>
+                <h3 className="text-2xl font-bold mb-1">{demoTestResult.percentage?.toFixed(1)}%</h3>
+                <p className="text-lg font-semibold">{demoTestResult.isPassed ? "Test muvaffaqiyatli o'tildi!" : "Test o'tilmadi"}</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Ballar: {demoTestResult.score} / {demoTestResult.totalPoints}
+                </p>
+                {demoTestDialog.test?.passingScore && !demoTestResult.isPassed && (
+                  <p className="text-sm text-destructive mt-2">
+                    O'tish uchun {demoTestDialog.test.passingScore}% kerak
+                  </p>
+                )}
+              </div>
+              <Card className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200 dark:border-green-800">
+                <CardContent className="p-4 text-center space-y-2">
+                  <p className="text-sm font-medium">To'liq kursga yozilib, barcha testlardan o'ting!</p>
+                  <Button size="sm" onClick={() => setLocation('/auth')} data-testid="button-enroll-after-test">
+                    Kursga Yozilish
+                  </Button>
+                </CardContent>
+              </Card>
+              <div className="flex gap-3">
+                {!demoTestResult.isPassed && (
+                  <Button className="flex-1" onClick={() => { setDemoTestResult(null); setDemoTestAnswers({}); setDemoShuffleSeed(Date.now()); }} data-testid="button-retake-demo-test">
+                    Qayta Topshirish
+                  </Button>
+                )}
+                <Button variant="outline" className="flex-1" onClick={() => { setDemoTestDialog({ open: false, testId: null }); setDemoTestAnswers({}); setDemoTestResult(null); }}>
+                  {demoTestResult.isPassed ? "Yopish" : "Keyinroq"}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-6 py-2">
+              {!demoTestQuestions ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+                </div>
+              ) : shuffledDemoQuestions.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">Bu testda savollar yo'q</p>
+              ) : (
+                shuffledDemoQuestions.map((question: any, qIdx: number) => (
+                  <div key={question.id} className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <span className="shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary text-sm font-bold flex items-center justify-center">{qIdx + 1}</span>
+                      <div className="flex-1">
+                        <p
+                          className="font-medium leading-relaxed"
+                          dir={/[\u0600-\u06FF]/.test(question.questionText) ? 'rtl' : 'ltr'}
+                          style={{ fontFamily: /[\u0600-\u06FF]/.test(question.questionText) ? 'serif' : undefined }}
+                          data-testid={`demo-question-text-${question.id}`}
+                        >
+                          {question.questionText}
+                        </p>
+                        <div className="mt-3">
+                          <DemoTestQuestionInput
+                            question={question}
+                            value={demoTestAnswers[question.id]}
+                            onChange={(val: any) => setDemoTestAnswers(prev => ({ ...prev, [question.id]: val }))}
+                            shuffleAnswers={demoTestDialog.test?.shuffleAnswers || false}
+                            shuffleSeed={demoShuffleSeed + qIdx}
+                            seededRandom={seededRandom}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    {qIdx < shuffledDemoQuestions.length - 1 && <hr className="border-border/50" />}
+                  </div>
+                ))
+              )}
+              {shuffledDemoQuestions.length > 0 && (
+                <div className="flex gap-3 pt-4 border-t">
+                  <Button variant="outline" onClick={() => { setDemoTestDialog({ open: false, testId: null }); setDemoTestAnswers({}); }} className="flex-1">
+                    Bekor qilish
+                  </Button>
+                  <Button
+                    onClick={() => submitDemoTestMutation.mutate()}
+                    disabled={submitDemoTestMutation.isPending}
+                    className="flex-1"
+                    data-testid="button-submit-demo-test"
+                  >
+                    {submitDemoTestMutation.isPending ? "Tekshirilmoqda..." : "Topshirish"}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -2367,4 +2548,127 @@ export default function HomePage() {
       <ModernFooter />
     </div>
   );
+}
+
+function isArabicText(text: string) {
+  return /[\u0600-\u06FF]/.test(text);
+}
+
+function DemoTestQuestionInput({
+  question, value, onChange, shuffleAnswers = false, shuffleSeed = 0, seededRandom
+}: {
+  question: any;
+  value: any;
+  onChange: (value: any) => void;
+  shuffleAnswers?: boolean;
+  shuffleSeed?: number;
+  seededRandom?: (seed: number, idx: number) => number;
+}) {
+  const { data: mcOptions } = useQuery<any[]>({
+    queryKey: ["/api/public/questions", question.id, "options"],
+    enabled: question.type === "multiple_choice",
+  });
+
+  const displayOptions = useMemo(() => {
+    if (!mcOptions || !shuffleAnswers || !seededRandom) return mcOptions || [];
+    const arr = [...mcOptions];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(seededRandom(shuffleSeed, i) * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }, [mcOptions, shuffleAnswers, shuffleSeed, seededRandom]);
+
+  if (question.type === "multiple_choice") {
+    return (
+      <div className="space-y-2">
+        {displayOptions.map((opt: any) => {
+          const rtl = isArabicText(opt.optionText);
+          return (
+            <label key={opt.id} className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover-elevate" dir={rtl ? 'rtl' : 'ltr'}>
+              <Checkbox
+                checked={Array.isArray(value) && value.includes(opt.id)}
+                onCheckedChange={(checked) => {
+                  const current = Array.isArray(value) ? value : [];
+                  onChange(checked ? [...current, opt.id] : current.filter((id: string) => id !== opt.id));
+                }}
+                className={rtl ? 'order-last' : ''}
+              />
+              <span className={`flex-1 text-sm ${rtl ? 'text-right' : ''}`} style={{ fontFamily: rtl ? 'serif' : undefined }}>
+                {opt.optionText}
+              </span>
+            </label>
+          );
+        })}
+      </div>
+    );
+  } else if (question.type === "true_false") {
+    return (
+      <div className="space-y-2">
+        {[
+          { val: "true", label: "To'g'ri (Ha)" },
+          { val: "false", label: "Noto'g'ri (Yo'q)" },
+        ].map(({ val, label }) => (
+          <label key={val} className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover-elevate">
+            <input type="radio" className="accent-primary" checked={value === val} onChange={() => onChange(val)} />
+            <span className="text-sm">{label}</span>
+          </label>
+        ))}
+      </div>
+    );
+  } else if (question.type === "matching") {
+    const config = question.config as any;
+    const leftColumn: string[] = config?.leftColumn || [];
+    const rightColumn: string[] = config?.rightColumn || [];
+    const currentMatches: Record<string, string> = Array.isArray(value)
+      ? Object.fromEntries(value.map((p: any) => [p.left, p.right]))
+      : (value || {});
+    return (
+      <div className="space-y-3">
+        {leftColumn.map((left: string, idx: number) => {
+          const rtl = isArabicText(left);
+          return (
+            <div key={idx} className="flex items-center gap-3 flex-wrap" dir={rtl ? 'rtl' : 'ltr'}>
+              <span className="text-sm font-medium min-w-[80px]" style={{ fontFamily: rtl ? 'serif' : undefined }}>{left}</span>
+              <select
+                className="flex-1 border rounded-md p-2 text-sm bg-background"
+                value={currentMatches[left] || ""}
+                onChange={(e) => {
+                  const newMatches = { ...currentMatches, [left]: e.target.value };
+                  onChange(Object.entries(newMatches).filter(([, v]) => v).map(([l, r]) => ({ left: l, right: r })));
+                }}
+              >
+                <option value="">Tanlang...</option>
+                {rightColumn.map((right: string, rIdx: number) => (
+                  <option key={rIdx} value={right}>{right}</option>
+                ))}
+              </select>
+            </div>
+          );
+        })}
+      </div>
+    );
+  } else if (question.type === "fill_blanks" || question.type === "short_answer") {
+    const rtl = isArabicText(value || "");
+    return (
+      <Input
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Javob yozing..."
+        dir={rtl ? 'rtl' : 'ltr'}
+      />
+    );
+  } else if (question.type === "essay") {
+    const rtl = isArabicText(value || "");
+    return (
+      <Textarea
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Insho yozing..."
+        rows={5}
+        dir={rtl ? 'rtl' : 'ltr'}
+      />
+    );
+  }
+  return null;
 }
