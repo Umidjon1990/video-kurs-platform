@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import * as tus from "tus-js-client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -157,6 +158,7 @@ export default function InstructorDashboard() {
   // Kinescope upload state
   const [kinescopeUploading, setKinescopeUploading] = useState(false);
   const [kinescopeProgress, setKinescopeProgress] = useState(0);
+  const kinescopeUploadRef = useRef<tus.Upload | null>(null);
 
   const [isAnnouncementOpen, setIsAnnouncementOpen] = useState(false);
   const [announcementForm, setAnnouncementForm] = useState({
@@ -238,34 +240,58 @@ export default function InstructorDashboard() {
     setKinescopeUploading(true);
     setKinescopeProgress(0);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      if (title) formData.append("title", title);
+      // Fetch API key from our backend (authenticated endpoint)
+      const tokenRes = await fetch("/api/instructor/kinescope/token", { credentials: "include" });
+      if (!tokenRes.ok) {
+        const err = await tokenRes.json();
+        throw new Error(err.message || "Token olishda xato");
+      }
+      const { apiKey, projectId } = await tokenRes.json();
 
-      const xhr = new XMLHttpRequest();
       await new Promise<void>((resolve, reject) => {
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) setKinescopeProgress(Math.round((e.loaded / e.total) * 100));
+        const metadata: Record<string, string> = {
+          filename: file.name,
+          filetype: file.type || "video/mp4",
+          title: title || file.name.replace(/\.[^/.]+$/, ""),
         };
-        xhr.onload = () => {
-          if (xhr.status === 200) {
-            const data = JSON.parse(xhr.responseText);
-            setLessonForm(prev => ({ ...prev, videoUrl: data.embedUrl }));
-            toast({ title: "Video yuklandi!", description: `Kinescope ID: ${data.videoId}` });
+        if (projectId) metadata.parent_id = projectId;
+
+        const upload = new tus.Upload(file, {
+          endpoint: "https://uploader.kinescope.io/v2/video",
+          retryDelays: [0, 1000, 3000, 5000, 10000],
+          chunkSize: 10 * 1024 * 1024, // 10MB chunks
+          metadata,
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+          },
+          onError(error) {
+            reject(new Error(error.message || "TUS yuklash xatosi"));
+          },
+          onProgress(bytesUploaded, bytesTotal) {
+            const pct = bytesTotal > 0 ? Math.round((bytesUploaded / bytesTotal) * 100) : 0;
+            setKinescopeProgress(pct);
+          },
+          onSuccess() {
+            // Extract video ID from the upload URL
+            const uploadUrl = upload.url ?? "";
+            const videoId = uploadUrl.split("/").pop() || "";
+            if (videoId) {
+              setLessonForm(prev => ({ ...prev, videoUrl: `https://kinescope.io/${videoId}` }));
+              toast({ title: "Video yuklandi!", description: `Kinescope ID: ${videoId}` });
+            } else {
+              toast({ title: "Video yuklandi!", description: "URL avtomatik to'ldirilmadi, qo'lda kiriting" });
+            }
             resolve();
-          } else {
-            const err = JSON.parse(xhr.responseText);
-            reject(new Error(err.message || "Yuklash xatosi"));
-          }
-        };
-        xhr.onerror = () => reject(new Error("Tarmoq xatosi"));
-        xhr.open("POST", "/api/instructor/kinescope/upload");
-        xhr.withCredentials = true;
-        xhr.send(formData);
+          },
+        });
+
+        kinescopeUploadRef.current = upload;
+        upload.start();
       });
     } catch (err: any) {
       toast({ title: "Kinescope xatosi", description: err.message, variant: "destructive" });
     } finally {
+      kinescopeUploadRef.current = null;
       setKinescopeUploading(false);
       setKinescopeProgress(0);
     }
@@ -2869,16 +2895,31 @@ Kinescope: https://kinescope.io/watch/...'
                         )}
                       </span>
                     </label>
-                    {kinescopeUploading && kinescopeProgress > 0 && (
-                      <div className="flex-1 min-w-[120px]">
-                        <div className="h-2 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-violet-500 rounded-full transition-all"
-                            style={{ width: `${kinescopeProgress}%` }}
-                          />
+                    {kinescopeUploading && (
+                      <>
+                        <div className="flex-1 min-w-[120px]">
+                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-violet-500 rounded-full transition-all duration-300"
+                              style={{ width: `${kinescopeProgress}%` }}
+                            />
+                          </div>
+                          <span className="text-xs text-muted-foreground mt-0.5 block">{kinescopeProgress}% yuklandi</span>
                         </div>
-                        <span className="text-xs text-muted-foreground">{kinescopeProgress}% yuklandi</span>
-                      </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            kinescopeUploadRef.current?.abort();
+                            setKinescopeUploading(false);
+                            setKinescopeProgress(0);
+                            kinescopeUploadRef.current = null;
+                          }}
+                          data-testid="button-cancel-kinescope"
+                        >
+                          Bekor qilish
+                        </Button>
+                      </>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">Video Kinescope-ga yuklanib, URL avtomatik to'ldiriladi.</p>
