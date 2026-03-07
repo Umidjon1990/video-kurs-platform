@@ -14,6 +14,7 @@ import {
   Zap,
   GraduationCap,
   ChevronRight,
+  Users,
 } from "lucide-react";
 import {
   Sidebar,
@@ -58,6 +59,7 @@ const instructorMenuItems: MenuItem[] = [
 
 const studentMenuItems: MenuItem[] = [
   { title: "Mening Kurslarim", url: "/", icon: BookOpen, activeColor: "#60a5fa", glowColor: "rgba(96,165,250,0.6)" },
+  { title: "Guruhlarim", url: "/groups", icon: Users, activeColor: "#a78bfa", glowColor: "rgba(167,139,250,0.6)" },
   { title: "Natijalarim", url: "/results", icon: Award, activeColor: "#fbbf24", glowColor: "rgba(251,191,36,0.6)" },
   { title: "Xabarlar", url: "/chat", icon: MessageSquare, activeColor: "#22d3ee", glowColor: "rgba(34,211,238,0.6)" },
 ];

@@ -23,6 +23,7 @@ import InstructorSubscriptions from "@/pages/InstructorSubscriptions";
 import SpeakingTests from "@/pages/SpeakingTests";
 import SpeakingTestEdit from "@/pages/SpeakingTestEdit";
 import StudentCourses from "@/pages/StudentCourses";
+import StudentGroups from "@/pages/StudentGroups";
 import StudentResults from "@/pages/StudentResults";
 import StudentSpeakingTest from "@/pages/StudentSpeakingTest";
 import LearningPage from "@/pages/LearningPage";
@@ -138,6 +139,7 @@ function Router() {
               {user?.role === 'student' && (
                 <>
                   <Route path="/" component={StudentCourses} />
+                  <Route path="/groups" component={StudentGroups} />
                   <Route path="/results" component={StudentResults} />
                   <Route path="/checkout/:courseId" component={Checkout} />
                   <Route path="/student/speaking-test/:testId" component={StudentSpeakingTest} />

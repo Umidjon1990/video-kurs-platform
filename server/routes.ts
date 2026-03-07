@@ -6639,6 +6639,37 @@ So'zlar soni: ${submission.wordCount}`;
 
   // ============ STUDENT GROUP ROUTES ============
 
+  // Get student's own groups (for student dashboard)
+  app.get('/api/student/my-groups', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id || req.user?.claims?.sub;
+      const { db } = await import('./db');
+      const { studentGroups, studentGroupMembers, users } = await import('../shared/schema');
+      const { eq, and } = await import('drizzle-orm');
+      const memberships = await db.select({
+        groupId: studentGroupMembers.groupId,
+        addedAt: studentGroupMembers.addedAt,
+      }).from(studentGroupMembers).where(eq(studentGroupMembers.userId, userId));
+      const result = await Promise.all(memberships.map(async (m) => {
+        const [group] = await db.select().from(studentGroups).where(eq(studentGroups.id, m.groupId));
+        if (!group) return null;
+        const members = await db.select({
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+          phone: users.phone,
+        }).from(studentGroupMembers)
+          .innerJoin(users, eq(studentGroupMembers.userId, users.id))
+          .where(eq(studentGroupMembers.groupId, m.groupId));
+        return { ...group, memberCount: members.length, members, addedAt: m.addedAt };
+      }));
+      res.json(result.filter(Boolean));
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Get all student groups
   app.get('/api/admin/student-groups', isAuthenticated, isAdmin, async (req, res) => {
     try {
