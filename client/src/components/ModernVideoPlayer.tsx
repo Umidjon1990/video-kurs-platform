@@ -135,8 +135,9 @@ export function ModernVideoPlayer({ videoUrl, title, onError }: ModernVideoPlaye
       }
     }
 
-    // Kinescope, Vimeo and other platforms
-    if (content.includes('kinescope.io') || 
+    // Kinescope, Bunny.net, Vimeo and other platforms
+    if (content.includes('kinescope.io') ||
+        content.includes('mediadelivery.net') ||
         content.includes('vimeo.com') ||
         content.includes('player.vimeo.com') ||
         content.includes('dailymotion.com') ||

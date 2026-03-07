@@ -2995,6 +2995,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bunny.net Stream: check if configured
+  app.get('/api/bunny/status', isAuthenticated, async (_req, res) => {
+    try {
+      const apiKeySetting = await db.select().from(siteSettings).where(eq(siteSettings.key, 'bunny_api_key')).limit(1);
+      const libSetting = await db.select().from(siteSettings).where(eq(siteSettings.key, 'bunny_library_id')).limit(1);
+      res.json({
+        configured: !!(apiKeySetting[0]?.value && libSetting[0]?.value),
+        libraryId: libSetting[0]?.value || '',
+      });
+    } catch {
+      res.json({ configured: false, libraryId: '' });
+    }
+  });
+
+  // Bunny.net Stream: create video entry + return TUS auth for direct browser upload
+  app.post('/api/instructor/bunny/create-upload', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const apiKeySetting = await db.select().from(siteSettings).where(eq(siteSettings.key, 'bunny_api_key')).limit(1);
+      const libSetting = await db.select().from(siteSettings).where(eq(siteSettings.key, 'bunny_library_id')).limit(1);
+
+      if (!apiKeySetting[0]?.value || !libSetting[0]?.value) {
+        return res.status(400).json({ message: 'Bunny.net sozlanmagan. Admin CMS ga kiring.' });
+      }
+
+      const apiKey = apiKeySetting[0].value;
+      const libraryId = libSetting[0].value;
+      const title = req.body.title || 'Untitled Video';
+
+      // Step 1: Create video entry via Bunny API
+      const axios = (await import('axios')).default;
+      const createRes = await axios.post(
+        `https://video.bunnycdn.com/library/${libraryId}/videos`,
+        { title },
+        { headers: { AccessKey: apiKey, 'Content-Type': 'application/json' } }
+      );
+      const videoId: string = createRes.data.guid;
+      if (!videoId) return res.status(500).json({ message: 'Bunny.net video ID olinmadi' });
+
+      // Step 2: Generate TUS authorization signature (SHA-256)
+      const crypto = await import('crypto');
+      const expiry = Math.floor(Date.now() / 1000) + 7200; // 2 hours
+      const signature = crypto.createHash('sha256')
+        .update(libraryId + apiKey + expiry + videoId)
+        .digest('hex');
+
+      res.json({
+        videoId,
+        libraryId,
+        expiry,
+        signature,
+        embedUrl: `https://iframe.mediadelivery.net/embed/${libraryId}/${videoId}`,
+      });
+    } catch (error: any) {
+      const msg = error.response?.data?.Message || error.response?.data?.message || error.message;
+      res.status(500).json({ message: `Bunny.net xatosi: ${msg}` });
+    }
+  });
+
   // Kinescope: check if API key is configured
   app.get('/api/kinescope/status', isAuthenticated, async (_req, res) => {
     try {

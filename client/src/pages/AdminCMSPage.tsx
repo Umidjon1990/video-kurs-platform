@@ -48,6 +48,12 @@ export default function AdminCMSPage() {
   const [kinescopeProjectId, setKinescopeProjectId] = useState("");
   const [kinescopeKeyVisible, setKinescopeKeyVisible] = useState(false);
   const [kinescopeConfigured, setKinescopeConfigured] = useState(false);
+
+  // Bunny.net Stream state
+  const [bunnyApiKey, setBunnyApiKey] = useState("");
+  const [bunnyLibraryId, setBunnyLibraryId] = useState("");
+  const [bunnyKeyVisible, setBunnyKeyVisible] = useState(false);
+  const [bunnyConfigured, setBunnyConfigured] = useState(false);
   
   // Certificate upload state
   const [uploadingCertificate, setUploadingCertificate] = useState(false);
@@ -167,7 +173,10 @@ export default function AdminCMSPage() {
         if (setting.key === "kinescope_project_id") setKinescopeProjectId(setting.value || "");
         if (setting.key === "kinescope_api_key") {
           setKinescopeConfigured(!!(setting.value));
-          // Don't load actual key value for security - show masked version
+        }
+        if (setting.key === "bunny_library_id") setBunnyLibraryId(setting.value || "");
+        if (setting.key === "bunny_api_key") {
+          setBunnyConfigured(!!(setting.value));
         }
         if (setting.key === "footer_quick_links") {
           try {
@@ -459,6 +468,20 @@ export default function AdminCMSPage() {
     setKinescopeApiKey("");
     setKinescopeConfigured(true);
     toast({ title: "Muvaffaqiyatli", description: "Kinescope sozlamalari saqlandi" });
+  };
+
+  const saveBunnySettings = () => {
+    if (!bunnyLibraryId.trim()) {
+      toast({ title: "Xato", description: "Library ID majburiy", variant: "destructive" });
+      return;
+    }
+    if (bunnyApiKey.trim()) {
+      updateSettingMutation.mutate({ key: "bunny_api_key", value: bunnyApiKey.trim() });
+    }
+    updateSettingMutation.mutate({ key: "bunny_library_id", value: bunnyLibraryId.trim() });
+    setBunnyApiKey("");
+    setBunnyConfigured(true);
+    toast({ title: "Muvaffaqiyatli", description: "Bunny.net Stream sozlamalari saqlandi" });
   };
 
   const saveFooterLinks = async () => {
@@ -885,6 +908,73 @@ export default function AdminCMSPage() {
                 >
                   <Save className="w-4 h-4 mr-2" />
                   Kinescope Sozlamalarini Saqlash
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Bunny.net Stream Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <svg viewBox="0 0 24 24" className="w-5 h-5 text-orange-500" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+                  Bunny.net Stream Sozlamalari
+                </CardTitle>
+                <CardDescription>
+                  Bunny.net Stream API kaliti bilan o'qituvchilar to'g'ridan brauzerdan video yuklaydi — server orqali o'tmaydi, juda tez.
+                  {bunnyConfigured && <span className="ml-2 text-green-600 dark:text-green-400 font-medium">✓ Sozlangan</span>}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="bunny-library-id">Library ID <span className="text-destructive">*</span></Label>
+                  <Input
+                    id="bunny-library-id"
+                    value={bunnyLibraryId}
+                    onChange={(e) => setBunnyLibraryId(e.target.value)}
+                    placeholder="Masalan: 123456"
+                    data-testid="input-bunny-library-id"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Bunny dashboard → Stream → Library tanlab oching → yuqorida Library ID ko'rinadi
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bunny-api-key">
+                    Stream API Kalit {bunnyConfigured && <span className="text-xs text-muted-foreground">(o'zgartirish uchun yangi kalit kiriting)</span>}
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="bunny-api-key"
+                      type={bunnyKeyVisible ? "text" : "password"}
+                      value={bunnyApiKey}
+                      onChange={(e) => setBunnyApiKey(e.target.value)}
+                      placeholder={bunnyConfigured ? "••••••••••••••••••••••••" : "Stream API kalitini kiriting..."}
+                      data-testid="input-bunny-api-key"
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setBunnyKeyVisible(!bunnyKeyVisible)}
+                      data-testid="button-toggle-bunny-key"
+                    >
+                      {bunnyKeyVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Bunny dashboard → Stream → Library → API tab → Stream API Key
+                  </p>
+                </div>
+                <div className="p-3 rounded-md bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 text-xs text-orange-800 dark:text-orange-300">
+                  <p className="font-medium mb-1">To'g'ridan yuklash — server orqali o'tmaydi</p>
+                  <p>Bunny.net brauzerdan to'g'ridan yuklashga ruxsat beradi. Kinescope kabi ikki marta yuklash muammosi yo'q.</p>
+                </div>
+                <Button
+                  onClick={saveBunnySettings}
+                  disabled={updateSettingMutation.isPending || (!bunnyApiKey.trim() && !bunnyLibraryId.trim())}
+                  data-testid="button-save-bunny"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Bunny.net Sozlamalarini Saqlash
                 </Button>
               </CardContent>
             </Card>

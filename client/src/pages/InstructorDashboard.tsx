@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import * as tus from "tus-js-client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -159,6 +160,11 @@ export default function InstructorDashboard() {
   const [kinescopeProgress, setKinescopeProgress] = useState(0);
   const kinescopeUploadRef = useRef<XMLHttpRequest | null>(null);
 
+  // Bunny.net upload state
+  const [bunnyUploading, setBunnyUploading] = useState(false);
+  const [bunnyProgress, setBunnyProgress] = useState(0);
+  const bunnyUploadRef = useRef<tus.Upload | null>(null);
+
   const [isAnnouncementOpen, setIsAnnouncementOpen] = useState(false);
   const [announcementForm, setAnnouncementForm] = useState({
     title: "",
@@ -235,6 +241,11 @@ export default function InstructorDashboard() {
     enabled: isAuthenticated,
   });
 
+  const { data: bunnyStatus } = useQuery<{ configured: boolean; libraryId: string }>({
+    queryKey: ["/api/bunny/status"],
+    enabled: isAuthenticated,
+  });
+
   const handleKinescopeUpload = async (file: File, title?: string) => {
     setKinescopeUploading(true);
     setKinescopeProgress(0);
@@ -279,6 +290,64 @@ export default function InstructorDashboard() {
       kinescopeUploadRef.current = null;
       setKinescopeUploading(false);
       setKinescopeProgress(0);
+    }
+  };
+
+  const handleBunnyUpload = async (file: File, title?: string) => {
+    setBunnyUploading(true);
+    setBunnyProgress(0);
+    try {
+      // Step 1: Backend creates video entry + returns TUS auth
+      const authRes = await fetch("/api/instructor/bunny/create-upload", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: title || file.name.replace(/\.[^/.]+$/, "") }),
+      });
+      if (!authRes.ok) {
+        const err = await authRes.json();
+        throw new Error(err.message || "Bunny auth xatosi");
+      }
+      const { videoId, libraryId, expiry, signature, embedUrl } = await authRes.json();
+
+      // Step 2: Direct TUS upload from browser to Bunny.net
+      await new Promise<void>((resolve, reject) => {
+        const upload = new tus.Upload(file, {
+          uploadUrl: `https://video.bunnycdn.com/${libraryId}/${videoId}`,
+          retryDelays: [0, 1000, 3000, 5000, 10000],
+          chunkSize: 5 * 1024 * 1024, // 5MB chunks
+          headers: {
+            AuthorizationSignature: signature,
+            AuthorizationExpire: String(expiry),
+            VideoId: videoId,
+            LibraryId: String(libraryId),
+          },
+          metadata: {
+            filename: file.name,
+            filetype: file.type || "video/mp4",
+          },
+          onError(error) {
+            reject(new Error(error.message || "Bunny TUS yuklash xatosi"));
+          },
+          onProgress(bytesUploaded, bytesTotal) {
+            const pct = bytesTotal > 0 ? Math.round((bytesUploaded / bytesTotal) * 100) : 0;
+            setBunnyProgress(pct);
+          },
+          onSuccess() {
+            setLessonForm(prev => ({ ...prev, videoUrl: embedUrl }));
+            toast({ title: "Video yuklandi!", description: `Bunny.net ID: ${videoId}` });
+            resolve();
+          },
+        });
+        bunnyUploadRef.current = upload;
+        upload.start();
+      });
+    } catch (err: any) {
+      toast({ title: "Bunny.net xatosi", description: err.message, variant: "destructive" });
+    } finally {
+      bunnyUploadRef.current = null;
+      setBunnyUploading(false);
+      setBunnyProgress(0);
     }
   };
 
@@ -2905,6 +2974,64 @@ Kinescope: https://kinescope.io/watch/...'
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">Video Kinescope-ga yuklanib, URL avtomatik to'ldiriladi.</p>
+                </div>
+              )}
+
+              {/* Bunny.net Stream direct upload */}
+              {bunnyStatus?.configured && (
+                <div className="mt-2 p-3 rounded-md border bg-orange-50/60 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800 space-y-2">
+                  <Label className="text-xs font-medium text-orange-700 dark:text-orange-400 uppercase tracking-wide">Bunny.net Stream — To'g'ridan yuklash</Label>
+                  <div className="flex gap-2 flex-wrap items-center">
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        accept="video/*"
+                        className="hidden"
+                        data-testid="input-bunny-video-file"
+                        disabled={bunnyUploading}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleBunnyUpload(file, lessonForm.title || undefined);
+                          e.target.value = "";
+                        }}
+                      />
+                      <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-md border text-sm font-medium cursor-pointer ${bunnyUploading ? "opacity-60 pointer-events-none" : "hover-elevate active-elevate-2"} bg-background`}>
+                        {bunnyUploading ? (
+                          <>
+                            <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                            Yuklanmoqda... {bunnyProgress > 0 && `${bunnyProgress}%`}
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-4 h-4 text-orange-500" />
+                            Bunny.net ga yuklash
+                          </>
+                        )}
+                      </span>
+                    </label>
+                    {bunnyUploading && (
+                      <>
+                        <div className="flex-1 min-w-[120px]">
+                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-orange-500 rounded-full transition-all duration-300"
+                              style={{ width: `${bunnyProgress}%` }}
+                            />
+                          </div>
+                          <span className="text-xs text-muted-foreground mt-0.5 block">{bunnyProgress}% yuklandi</span>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => bunnyUploadRef.current?.abort()}
+                          data-testid="button-cancel-bunny"
+                        >
+                          Bekor qilish
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                  <p className="text-xs text-orange-700 dark:text-orange-400">Server orqali o'tmaydi — to'g'ridan Bunny.net ga yuklanadi. URL avtomatik to'ldiriladi.</p>
                 </div>
               )}
             </div>

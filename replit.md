@@ -29,7 +29,8 @@ The frontend uses Wouter for routing and TanStack Query for state management. Au
 *   **Private Messaging**: Direct student-instructor communication with real-time updates.
 *   **Announcement System**: Targeted announcements by instructors.
 *   **CMS & Homepage Enhancements**: Dynamic content management for "About Us," "Contact Us," Testimonials, and Certificates.
-*   **Kinescope Video Integration**: Admin-configured API key enables direct video uploads to Kinescope via the backend proxy.
+*   **Kinescope Video Integration**: Admin-configured API key enables direct video uploads to Kinescope via the backend proxy (disk-based streaming, no memory buffering).
+*   **Bunny.net Stream Integration**: Admin configures Library ID + Stream API Key via Admin CMS → Sozlamalar. Instructors upload directly from browser to Bunny.net via TUS (no server proxy). Backend creates video entry, generates SHA-256 TUS signature, returns to frontend. Frontend uses tus-js-client with `uploadUrl` = `https://video.bunnycdn.com/{libraryId}/{videoId}`. Embed URL: `https://iframe.mediadelivery.net/embed/{libraryId}/{videoId}`. Video player recognizes `mediadelivery.net` URLs.
 *   **Admin Subscription Management**: Comprehensive CRUD for subscription plans.
 *   **Admin Student Creation with Course Enrollment**: Admins can create students, assign them to groups, enroll them in courses, and manage subscriptions.
 *   **Admin User Deletion**: Comprehensive, atomic user deletion with multi-level safeguards and cascade deletion for associated data.
