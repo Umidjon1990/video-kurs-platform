@@ -11,7 +11,7 @@ import { z } from "zod";
 import { useState, useEffect, useRef } from "react";
 import {
   ArrowLeft, Eye, EyeOff, GraduationCap, BookOpen, Users, Award,
-  Zap, Shield, Star, ChevronRight, Lock, User
+  Zap, Shield, Star, ChevronRight, Lock, User, AlertTriangle, Monitor
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -49,6 +49,7 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [deviceLimitError, setDeviceLimitError] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
 
@@ -88,11 +89,21 @@ export default function Login() {
 
   const handleLogin = async (data: LoginFormData) => {
     try {
-      const res = await apiRequest("POST", "/api/auth/login", {
-        username: data.username,
-        password: data.password,
+      setDeviceLimitError(false);
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: data.username, password: data.password }),
+        credentials: "include",
       });
       const response = await res.json();
+      if (!res.ok) {
+        if (response.message === "device_limit") {
+          setDeviceLimitError(true);
+          return;
+        }
+        throw new Error(response.message || "Login qilishda xatolik");
+      }
       if (rememberMe) {
         localStorage.setItem("rememberedUsername", data.username);
         localStorage.setItem("rememberedPassword", data.password);
@@ -354,7 +365,7 @@ export default function Login() {
 
               {/* Info box */}
               <div style={{
-                marginBottom: 28,
+                marginBottom: 16,
                 padding: "12px 16px",
                 borderRadius: 14,
                 background: "rgba(37,99,235,0.12)",
@@ -366,6 +377,47 @@ export default function Login() {
                   Administrator tomonidan berilgan login va parol bilan kiring.
                 </p>
               </div>
+
+              {/* Security warning */}
+              <div style={{
+                marginBottom: 28,
+                padding: "10px 16px",
+                borderRadius: 14,
+                background: "rgba(234,179,8,0.08)",
+                border: "1px solid rgba(234,179,8,0.25)",
+                display: "flex", gap: 10, alignItems: "flex-start",
+              }}>
+                <AlertTriangle style={{ width: 16, height: 16, color: "#facc15", flexShrink: 0, marginTop: 1 }} />
+                <p style={{ color: "rgba(253,224,71,0.85)", fontSize: 11, lineHeight: 1.5 }}>
+                  Login parolni boshqalarga bermang. Ko'plab qurilmadan kirish sizni bloklashga olib keladi.
+                </p>
+              </div>
+
+              {/* Device limit error */}
+              {deviceLimitError && (
+                <div
+                  data-testid="alert-device-limit"
+                  style={{
+                    marginBottom: 24,
+                    padding: "16px",
+                    borderRadius: 14,
+                    background: "rgba(239,68,68,0.12)",
+                    border: "1px solid rgba(239,68,68,0.40)",
+                  }}
+                >
+                  <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                    <Monitor style={{ width: 20, height: 20, color: "#f87171", flexShrink: 0, marginTop: 1 }} />
+                    <div>
+                      <p style={{ color: "#fca5a5", fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
+                        Boshqa qurilmada aktiv sessiya mavjud
+                      </p>
+                      <p style={{ color: "rgba(252,165,165,0.8)", fontSize: 12, lineHeight: 1.6 }}>
+                        Siz boshqa qurilmadan allaqachon tizimga kirgansiz. Avvalgi qurilmadan chiqib (Logout qiling), so'ngra qayta login qiling.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Form */}
               <Form {...form}>

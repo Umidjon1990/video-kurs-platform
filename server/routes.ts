@@ -223,19 +223,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const userId = user.claims.sub;
           const currentSessionId = req.sessionID;
-          console.log(`[Session Management] User ${userId} logged in with session ${currentSessionId}`);
+          const userRole = user.claims.role;
+          console.log(`[Session Management] User ${userId} (role: ${userRole}) logged in with session ${currentSessionId}`);
 
-          // Enforce max 2 active sessions per user — remove oldest if exceeded
-          const MAX_SESSIONS = 2;
           const activeSessions = await db.execute(
             sql`SELECT sid, expire FROM sessions WHERE sess->'passport'->>'user' = ${userId} AND expire > NOW() AND sid != ${currentSessionId} ORDER BY expire ASC`
           );
           const rows = activeSessions.rows as { sid: string }[];
-          if (rows.length >= MAX_SESSIONS) {
-            const toDelete = rows.slice(0, rows.length - MAX_SESSIONS + 1);
-            for (const row of toDelete) {
-              await db.execute(sql`DELETE FROM sessions WHERE sid = ${row.sid}`);
-              console.log(`[Session Management] Removed old session ${row.sid} for user ${userId}`);
+
+          if (userRole === 'student') {
+            if (rows.length >= 1) {
+              await db.execute(sql`DELETE FROM sessions WHERE sid = ${currentSessionId}`);
+              req.logout(() => {});
+              req.session.destroy(() => {});
+              return res.status(403).json({
+                message: "device_limit",
+                description: "Siz boshqa qurilmadan allaqachon tizimga kirgansiz. Avvalgi qurilmadan chiqib (Logout), so'ngra qayta login qiling."
+              });
+            }
+          } else {
+            const MAX_SESSIONS = 2;
+            if (rows.length >= MAX_SESSIONS) {
+              const toDelete = rows.slice(0, rows.length - MAX_SESSIONS + 1);
+              for (const row of toDelete) {
+                await db.execute(sql`DELETE FROM sessions WHERE sid = ${row.sid}`);
+                console.log(`[Session Management] Removed old session ${row.sid} for user ${userId}`);
+              }
             }
           }
         } catch (sessionError: any) {
