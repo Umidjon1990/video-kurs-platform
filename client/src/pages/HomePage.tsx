@@ -265,7 +265,7 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-full overflow-y-auto overflow-x-hidden bg-background flex flex-col">
       {/* Modern Header */}
       <ModernHeader />
 
