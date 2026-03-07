@@ -1,7 +1,7 @@
 # Zamonaviy-EDU - Video Course Platform (LMS)
 
 ## Overview
-This project is a comprehensive Learning Management System (LMS) platform designed for video-based courses, catering to Administrators, Instructors, and Students. Its primary purpose is to facilitate course creation, delivery, and student progress tracking through robust course management, diverse assessment types (assignments and tests), and a manual payment system with admin approval. The platform emphasizes a professional, trustworthy, and scannable learning experience, localized in Uzbek, with key features including a subscription-based pricing model, certificate image uploads, and extensive CMS capabilities for managing site content and testimonials.
+Zamonaviy-EDU is a comprehensive Learning Management System (LMS) platform designed for video-based courses, serving Administrators, Instructors, and Students. Its core purpose is to streamline course creation, delivery, and student progress tracking. Key capabilities include robust course management, diverse assessment types (assignments and tests), and a manual payment system with admin approval, evolving into a subscription-based model. The platform aims to provide a professional, trustworthy, and scannable learning experience, localized in Uzbek, with features such as certificate image uploads and extensive CMS capabilities for managing site content and testimonials. It supports flexible subscription plans, multi-device access, and a rich set of communication tools including private messaging and announcements.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language (Uzbek interface).
@@ -9,62 +9,55 @@ Preferred communication style: Simple, everyday language (Uzbek interface).
 ## System Architecture
 
 ### UI/UX Decisions
-The frontend, built with React, TypeScript, and Vite, uses Radix UI and Shadcn/ui components styled with Tailwind CSS, following a Material Design-inspired aesthetic. It supports distinct user role experiences, dark/light modes, and a responsive design. The navigation system features a role-based Shadcn Sidebar with collapsible options, user profile display, and active route highlighting. Public routes like login and registration exclude the sidebar. Dashboard enhancements include modern stats cards, interactive charts, and animated elements using `framer-motion`. Course thumbnail display is standardized with `h-56` and `object-contain`. Demo lessons are visually distinct with orange gradient cards, while premium lessons are muted with a lock icon. Course creation/edit dialogs are scrollable with fixed footers for accessibility.
+The frontend, built with React, TypeScript, and Vite, utilizes Radix UI and Shadcn/ui components styled with Tailwind CSS, adhering to a Material Design-inspired aesthetic. It features distinct user role experiences, dark/light modes, and a responsive design. Navigation is handled by a role-based Shadcn Sidebar. Dashboards include modern stats cards, interactive charts, and animated elements. Visual cues differentiate demo and premium lessons, and course creation/edit dialogs are designed for accessibility. Special visual treatments are applied for discounted, new, and free courses, including gradient borders, sparkle stars, and thematic badges. CEFR language levels and resource types are integrated into filtering and display.
 
 ### Technical Implementations
-The frontend utilizes Wouter for routing and TanStack Query for state management. Authentication uses local phone/email + password, with Replit Auth removed from the login page. Public lesson previews display descriptions for both demo and premium lessons. Backend updates properly handle course categories, dual pricing (price and originalPrice), and plan-specific pricing.
+The frontend uses Wouter for routing and TanStack Query for state management. Authentication relies on local phone/email and password. The backend is an Express.js application in TypeScript, offering a RESTful API with role-based protection. It employs session-based `express-session` with a PostgreSQL store and Passport.js for authentication. Drizzle ORM with PostgreSQL (Neon Serverless) is used for type-safe database operations. Automatic default subscription plan creation ensures immediate functionality in new environments. The platform integrates a sophisticated assessment system with various question types, secure server-side grading, and advanced features like question/answer shuffling, RTL support for Arabic, and text import. Video content is supported from multiple platforms, and a robust notification system provides real-time updates.
 
 ### Feature Specifications
-*   **Role-Based Access Control**: Strict access control for Admin, Instructor, and Student roles.
-*   **Multi-Device Login**: Users can log in from multiple devices simultaneously. Single-device enforcement was removed to allow flexible access.
-*   **Assessment System**: Supports six question types with auto and manual grading, question banks, and secure server-side grading.
+*   **Role-Based Access Control**: Strict access for Admin, Instructor, and Student roles.
+*   **Multi-Device Login**: Allows concurrent logins from multiple devices.
+*   **Assessment System**: Supports six question types, auto/manual grading, question banks, and secure server-side grading, with features like question/answer shuffling, RTL Arabic support, and retake enforcement.
 *   **Assignment Submission**: Multi-file upload with server-side validation.
-*   **Grading Workflow**: Integrated notifications from submission to grading and result viewing.
-*   **Course Structure**: Simplified course-to-lesson linkage, with demo lessons universally accessible.
-*   **Payment Flow**: Manual payment system with student receipt upload and admin approval, evolving into a subscription model.
-*   **Dual Student Registration**: Students can self-register (pending admin approval) or be created by admins (immediate active status).
-*   **Subscription System**: Flexible, admin-managed plans with customizable features, linked to course pricing.
-*   **Subscription Lifecycle Management**: Automated 30-day lifecycle with real-time expiration enforcement, daily notifications, and immediate access revocation upon expiry. Admin/Instructor dashboards facilitate extension.
-*   **Notification System**: Real-time, in-app notifications with unread counts and polling.
-*   **Video Player Support**: Compatible with YouTube, Kinescope, Vimeo, Dailymotion, Wistia, and generic HTTPS video URLs.
-*   **Private Messaging**: Direct communication between students and instructors with unread indicators and real-time polling, including notification integration.
-*   **Announcement System**: Instructors can send targeted announcements to individuals, groups, or all students.
-*   **CMS & Homepage Enhancements**: Dynamic "About Us," "Contact Us," Testimonials, and Certificates sections managed via Admin CMS, with certificate image upload to Replit Object Storage.
-*   **Admin Subscription Management**: Comprehensive CRUD for subscription plans, supporting base, dynamic, custom, and bonus features.
-*   **Admin Student Creation with Course Enrollment**: Admins can create students and automatically enroll them in courses. Subscription duration is optional and defaults to 30 days if not specified. Admin-created enrollments have immediate `paymentStatus: 'approved'` status, bypassing the manual payment approval workflow.
-*   **Admin User Deletion**: Comprehensive, atomic user deletion system for all associated data, with multi-level safeguards and detailed preview of affected data. Handles deep cascade deletion for instructors (courses, lessons, sections, essays, assignments, submissions, speaking tests, modules, resource types, ratings, likes, group chats, live rooms) and common cleanup for all roles (speaking data, essay submissions, test attempts, lesson progress, enrollments, subscriptions, notifications, messages, conversations, presence, sessions).
-*   **Course Rating System**: Enrolled students can submit 1-5 star ratings and optional reviews, with unique per-student-per-course rating enforcement and atomic upsert operations. All star ratings display in golden (amber) color by default for visual consistency.
-*   **Custom Course Author Names**: Instructors can specify custom author names for courses, overriding default instructor names on public listings.
-*   **Discount/Sale System**: Instructors can set course discounts (0-90%) via `discountPercentage` field. HomePage displays modern gradient-bordered course cards with sale badges ("-X% CHEGIRMA") when discounts are active. Discounted prices are calculated as `price * (1 - discountPercentage/100)` with original price shown as strikethrough. Gradient borders use a deterministic 6-color palette cycling by course index.
-*   **"Yangi" New Course Ribbon**: Courses created within the last 7 days display a green diagonal ribbon badge in the top-left corner showing "YANGI" with days elapsed (e.g., "YANGI (3 kun)", "YANGI (Bugun)"). This helps users identify newly added content.
-*   **Free Course Feature**: Instructors can mark courses as free using the `isFree` boolean field. Free courses display with a special visual design on the HomePage including: animated sparkle stars (⭐✨) around the card, a large "BEPUL" (FREE) badge with gradient styling, amber/yellow themed borders and backgrounds, floating animation effect, and a prominent "BEPUL" price display with gift emoji. Free courses use a green gradient "Bepul Yozilish" (Free Enrollment) button.
-*   **CEFR Language Level Filtering**: Courses can be categorized by CEFR language levels (A0, A1, A2, B1, B2, C1, C2). Admins manage language levels via CMS "Filtrlar" tab. Instructors select a level when creating/editing courses. Public HomePage includes a level dropdown filter. Database uses `languageLevels` table with `code`, `name`, `description`, `order`, and `isActive` fields.
-*   **Resource Type Filtering**: Courses can be tagged with multiple resource types (Reading/O'qish, Writing/Yozuv, Listening/Tinglash, Speaking/Gapirish, Grammar/Grammatika, Vocabulary/Lug'at). Many-to-many relationship via `courseResourceTypes` junction table. Admins manage resource types via CMS. Instructors select types as badges in course form. HomePage displays resource type badges for filtering. Filtering uses Drizzle's `inArray` helper with a two-step query approach for secure parameterized queries.
-*   **Arabic Essay Assignments**: Instructors can add essay questions in Arabic to lessons with configurable word count limits (min/max). Students submit essays through an RTL-enabled textarea with live word counter. Each submission can be checked once by OpenAI GPT-4o, which provides detailed feedback on grammar, spelling, style, and content in Uzbek language. Database uses `lessonEssayQuestions` table (linked to lessons) and `essaySubmissions` table (linked to students) with one-time AI check enforcement via `aiChecked` boolean flag.
-*   **Course Module System**: Optional modular course structure allowing instructors to organize lessons into modules (Bo'limlar). Database uses `courseModules` table with `courseId`, `title`, `description`, and `order` fields. Lessons can optionally be assigned to modules via nullable `moduleId` field. Instructor Dashboard provides dedicated "Modullar" tab with full CRUD operations and module selector in lesson form. Student LearningPage displays lessons grouped by module with progress indicators (completed/total) for each module. Fallback rendering ensures lessons display correctly when modules are unavailable.
-*   **Lesson Sections (Multi-Video Support)**: Lessons can contain multiple video sections via `lessonSections` table with `lessonId`, `title`, `order`, `videoUrl`, and `videoPlatform` fields. Supports multiple video platforms (youtube, kinescope, vimeo, dailymotion, wistia, direct_link) for flexible content delivery.
-*   **Live Video Conferencing (Jitsi Meet + Zoom)**: Instructors can start live video classes with platform selection between Jitsi Meet (free, unlimited) or Zoom (premium). Database uses `liveRooms` table with `platform` field ('jitsi' or 'zoom'), `jitsiRoomName` for Jitsi rooms, and `zoomMeetingId`, `zoomJoinUrl`, `zoomStartUrl`, `zoomPassword` for Zoom meetings. Zoom integration uses Server-to-Server OAuth with `ZOOM_ACCOUNT_ID`, `ZOOM_CLIENT_ID`, and `ZOOM_CLIENT_SECRET` environment variables. Students see active live rooms on their dashboard with platform-specific join buttons. Access control ensures students can only join rooms for courses they're enrolled in.
-*   **Course Group Chat**: Real-time group messaging within courses for communication between instructors and enrolled students. Database uses `course_group_chats` table for messages and `user_presence` table for online/offline status tracking. Features include: message history with sender info, online user indicators (5-minute activity window), automatic presence heartbeat updates, and role-based access control. Available in LearningPage "Guruh Suhbati" tab and InstructorDashboard "Suhbat" tab.
-*   **Free Lesson Access**: Students can access any lesson in any order without restrictions. Only enrollment/subscription-based locking applies (non-demo lessons require active subscription). Uses centralized `allSortedLessons` useMemo hook for consistent ordering. Mobile-optimized with full-screen lesson overlay drawer and auto-scroll-to-top on lesson change.
-*   **Student Group Management**: Admin can create student groups (e.g., "1-guruh", "Ertalabki guruh") to organize students before enrolling them in courses. Database uses `student_groups` table for group definitions and `student_group_members` junction table for student-group membership. Enrollments table has optional `group_id` field. Admin sidebar includes "Guruhlar" link to dedicated AdminGroupsPage with full CRUD operations, member management (add/remove students), and bulk student assignment. When creating new students, admin can optionally assign them to a group. Groups display member counts on cards.
-
-### System Design Choices
-The backend is an Express.js application in TypeScript, providing a RESTful API with role-based route protection. It uses session-based `express-session` with a PostgreSQL store for authentication, integrated with Passport.js. The database uses Drizzle ORM with PostgreSQL (Neon Serverless) for type-safe operations, including models for Users, Courses, Lessons, Assignments, Tests, Enrollments, Submissions, Notifications, Conversations, Messages, Site Settings, Testimonials, Subscription Plans, Course Plan Pricing, and User Subscriptions. The schema utilizes UUID primary keys and timestamp tracking for a comprehensive relational design.
-
-**Database Initialization**: On server startup, the system automatically checks for subscription plans and creates a default "Asosiy Tarif" plan if none exists. This ensures course enrollment functionality works immediately in fresh production environments without manual database seeding.
-
-*   **Test System Improvements**: Tests now support: (1) Question shuffle (`randomOrder` boolean) — questions displayed in random order each attempt; (2) Answer shuffle (`shuffleAnswers` boolean) — multiple choice options shuffled per question; (3) Seeded random — consistent shuffle within a single test session; (4) RTL Arabic support — questions and answers auto-detect Arabic text and apply RTL/serif rendering; (5) Retake enforcement — when failing a test (score below `passingScore`%), result screen shows "Qayta Topshirish" button keeping dialog open; passing shows simple close button; (6) Matn import — paste questions in text format (numbered blocks with A/B/C/D options, Javob:, Ball: lines) via new `/api/instructor/tests/:testId/import-text` endpoint; (7) Complete test-taking dialog in LearningPage with full question rendering, progress display, and previous attempt result shown on test card.
+*   **Grading Workflow**: Integrated notifications for submissions, grading, and results.
+*   **Course Structure**: Simplified course-to-lesson linkage, with universally accessible demo lessons.
+*   **Payment Flow**: Manual payment with student receipt upload and admin approval, evolving into a subscription model.
+*   **Dual Student Registration**: Self-registration (pending admin approval) or admin-created (immediate active status).
+*   **Subscription System**: Flexible, admin-managed plans linked to course pricing, with automated lifecycle management and expiration enforcement.
+*   **Notification System**: Real-time, in-app notifications with unread counts.
+*   **Video Player Support**: Compatible with YouTube, Kinescope, Vimeo, Dailymotion, Wistia, and direct HTTPS links.
+*   **Private Messaging**: Direct student-instructor communication with real-time updates.
+*   **Announcement System**: Targeted announcements by instructors.
+*   **CMS & Homepage Enhancements**: Dynamic content management for "About Us," "Contact Us," Testimonials, and Certificates.
+*   **Kinescope Video Integration**: Admin-configured API key enables direct video uploads to Kinescope via the backend proxy.
+*   **Admin Subscription Management**: Comprehensive CRUD for subscription plans.
+*   **Admin Student Creation with Course Enrollment**: Admins can create students, assign them to groups, enroll them in courses, and manage subscriptions.
+*   **Admin User Deletion**: Comprehensive, atomic user deletion with multi-level safeguards and cascade deletion for associated data.
+*   **Course Rating System**: Students provide 1-5 star ratings and reviews.
+*   **Custom Course Author Names**: Instructors can specify custom author names.
+*   **Discount/Sale System**: Instructors set course discounts, displayed with badges and calculated prices.
+*   **"Yangi" New Course Ribbon**: Highlights courses created within the last 7 days.
+*   **Free Course Feature**: Instructors can mark courses as free, with special visual designs and enrollment buttons.
+*   **CEFR Language Level Filtering**: Courses categorized by CEFR levels, managed by admins, and filterable on the homepage.
+*   **Resource Type Filtering**: Courses tagged with multiple resource types (e.g., Reading, Writing), managed by admins, and filterable.
+*   **Arabic Essay Assignments**: Instructors can create Arabic essay questions with AI-powered feedback via OpenAI GPT-4o.
+*   **Course Module System**: Optional modular course structure to organize lessons.
+*   **Lesson Sections (Multi-Video Support)**: Lessons can contain multiple video sections from various platforms.
+*   **Live Video Conferencing**: Integration with Jitsi Meet and Zoom for live classes, with platform selection and access control.
+*   **Course Group Chat**: Real-time group messaging within courses for instructors and students, with presence tracking.
+*   **Free Lesson Access**: Students can access any lesson in any order, with enrollment/subscription managing access to non-demo lessons.
+*   **Student Group Management**: Admins can create and manage student groups for organizational purposes and bulk assignments.
 
 ## External Dependencies
 
 ### Third-Party Services
-*   **Replit Authentication**: OpenID Connect provider (for OIDC authentication).
-*   **Neon Serverless PostgreSQL**: PostgreSQL database hosting.
-*   **Object Storage (Replit)**: Cloud storage for multimedia files.
-*   **Jitsi Meet**: Free video conferencing (no API key required).
-*   **Zoom**: Premium video conferencing with Server-to-Server OAuth integration.
+*   **Replit Authentication**: OpenID Connect provider.
+*   **Neon Serverless PostgreSQL**: Database hosting.
+*   **Object Storage (Replit)**: Cloud storage for multimedia.
+*   **Jitsi Meet**: Free video conferencing.
+*   **Zoom**: Premium video conferencing with Server-to-Server OAuth.
+*   **OpenAI GPT-4o**: For AI-powered feedback on Arabic essay assignments.
 
 ### Key NPM Packages
 *   **Frontend**: `@tanstack/react-query`, `wouter`, `@radix-ui/*`, `react-hook-form`, `zod`, `date-fns`, `lucide-react`, `framer-motion`, `recharts`.
 *   **Backend**: `express`, `drizzle-orm`, `passport`, `openid-client`, `express-session`, `connect-pg-simple`, `@google-cloud/storage`, `multer`, `axios`.
-*   **Development**: `typescript`, `vite`, `tailwindcss`, `drizzle-kit`, `tsx`.

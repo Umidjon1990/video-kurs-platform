@@ -52,6 +52,12 @@ const upload = multer({
   }
 });
 
+// Larger upload for Kinescope video files (500MB)
+const videoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 500 * 1024 * 1024 },
+});
+
 // Object Storage setup
 const objectStorage = new ObjectStorageService();
 
@@ -2983,6 +2989,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
+  });
+
+  // Kinescope: check if API key is configured
+  app.get('/api/kinescope/status', isAuthenticated, async (_req, res) => {
+    try {
+      const setting = await db.select().from(siteSettings).where(eq(siteSettings.key, 'kinescope_api_key')).limit(1);
+      const projectSetting = await db.select().from(siteSettings).where(eq(siteSettings.key, 'kinescope_project_id')).limit(1);
+      res.json({
+        configured: !!(setting[0]?.value),
+        hasProjectId: !!(projectSetting[0]?.value),
+      });
+    } catch (e: any) {
+      res.json({ configured: false, hasProjectId: false });
+    }
+  });
+
+  // Kinescope: upload video proxy (instructor only)
+  app.post('/api/instructor/kinescope/upload', isAuthenticated, isInstructor, (req: any, res: any, next: any) => {
+    videoUpload.single('file')(req, res, async (err: any) => {
+      if (err) return res.status(400).json({ message: err.message });
+      try {
+        if (!req.file) return res.status(400).json({ message: 'Video fayl yuklanmadi' });
+
+        // Get API key from site settings
+        const apiKeySetting = await db.select().from(siteSettings).where(eq(siteSettings.key, 'kinescope_api_key')).limit(1);
+        const projectSetting = await db.select().from(siteSettings).where(eq(siteSettings.key, 'kinescope_project_id')).limit(1);
+
+        if (!apiKeySetting[0]?.value) {
+          return res.status(400).json({ message: 'Kinescope API kaliti sozlanmagan. Admin CMS ga kiring.' });
+        }
+
+        const apiKey = apiKeySetting[0].value;
+        const projectId = projectSetting[0]?.value || '';
+        const videoTitle = req.body.title || req.file.originalname.replace(/\.[^/.]+$/, '');
+
+        // Build multipart FormData for Kinescope
+        const FormDataModule = await import('form-data');
+        const formData = new FormDataModule.default();
+        formData.append('file', req.file.buffer, {
+          filename: req.file.originalname,
+          contentType: req.file.mimetype,
+        });
+
+        const headers: Record<string, string> = {
+          ...formData.getHeaders(),
+          'Authorization': `Bearer ${apiKey}`,
+          'X-Video-Title': videoTitle,
+        };
+        if (projectId) headers['X-Parent-ID'] = projectId;
+
+        const axios = (await import('axios')).default;
+        const response = await axios.post('https://uploader.kinescope.io/v2/video', formData, {
+          headers,
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity,
+          timeout: 10 * 60 * 1000, // 10 minutes
+        });
+
+        const videoId = response.data?.data?.id || response.data?.id;
+        if (!videoId) {
+          return res.status(500).json({ message: "Kinescope javobida video ID topilmadi", data: response.data });
+        }
+
+        res.json({
+          videoId,
+          embedUrl: `https://kinescope.io/${videoId}`,
+          title: videoTitle,
+        });
+      } catch (error: any) {
+        const msg = error.response?.data?.message || error.response?.data?.error || error.message;
+        res.status(500).json({ message: `Kinescope xatosi: ${msg}` });
+      }
+    });
   });
 
   // Word (.docx) file question import — extracts text and reuses same parser

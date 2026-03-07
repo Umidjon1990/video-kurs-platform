@@ -25,7 +25,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, MessageSquare, Save, Trash2, Plus, Star, Edit, ArrowLeft, Upload, X, Link2, ExternalLink, Filter, BookOpen, Layers } from "lucide-react";
+import { Settings, MessageSquare, Save, Trash2, Plus, Star, Edit, ArrowLeft, Upload, X, Link2, ExternalLink, Filter, BookOpen, Layers, Eye, EyeOff } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import type { SiteSetting, Testimonial, LanguageLevel, ResourceType } from "@shared/schema";
 import { useLocation } from "wouter";
@@ -42,6 +42,12 @@ export default function AdminCMSPage() {
   const [contactAddress, setContactAddress] = useState("");
   const [contactTelegram, setContactTelegram] = useState("");
   const [certificateUrls, setCertificateUrls] = useState("");
+
+  // Kinescope API state
+  const [kinescopeApiKey, setKinescopeApiKey] = useState("");
+  const [kinescopeProjectId, setKinescopeProjectId] = useState("");
+  const [kinescopeKeyVisible, setKinescopeKeyVisible] = useState(false);
+  const [kinescopeConfigured, setKinescopeConfigured] = useState(false);
   
   // Certificate upload state
   const [uploadingCertificate, setUploadingCertificate] = useState(false);
@@ -158,6 +164,11 @@ export default function AdminCMSPage() {
         if (setting.key === "contact_address") setContactAddress(setting.value || "");
         if (setting.key === "contact_telegram") setContactTelegram(setting.value || "");
         if (setting.key === "certificate_urls") setCertificateUrls(setting.value || "");
+        if (setting.key === "kinescope_project_id") setKinescopeProjectId(setting.value || "");
+        if (setting.key === "kinescope_api_key") {
+          setKinescopeConfigured(!!(setting.value));
+          // Don't load actual key value for security - show masked version
+        }
         if (setting.key === "footer_quick_links") {
           try {
             const parsed = JSON.parse(setting.value || "[]");
@@ -438,6 +449,16 @@ export default function AdminCMSPage() {
     updateSettingMutation.mutate({ key: "contact_address", value: contactAddress });
     updateSettingMutation.mutate({ key: "contact_telegram", value: contactTelegram });
     updateSettingMutation.mutate({ key: "certificate_urls", value: certificateUrls });
+  };
+
+  const saveKinescopeSettings = () => {
+    if (kinescopeApiKey.trim()) {
+      updateSettingMutation.mutate({ key: "kinescope_api_key", value: kinescopeApiKey.trim() });
+    }
+    updateSettingMutation.mutate({ key: "kinescope_project_id", value: kinescopeProjectId.trim() });
+    setKinescopeApiKey("");
+    setKinescopeConfigured(true);
+    toast({ title: "Muvaffaqiyatli", description: "Kinescope sozlamalari saqlandi" });
   };
 
   const saveFooterLinks = async () => {
@@ -801,6 +822,69 @@ export default function AdminCMSPage() {
                 >
                   <Save className="w-4 h-4 mr-2" />
                   {updateSettingMutation.isPending ? "Saqlanmoqda..." : "Saqlash"}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Kinescope API Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1.5 14.5v-9l7 4.5-7 4.5z"/></svg>
+                  Kinescope API Sozlamalari
+                </CardTitle>
+                <CardDescription>
+                  Kinescope API kalitini kiriting. O'qituvchilar dars yaratishda video yuklash imkoniga ega bo'ladi.
+                  {kinescopeConfigured && <span className="ml-2 text-green-600 dark:text-green-400 font-medium">✓ API kalit saqlangan</span>}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="kinescope-api-key">
+                    API Kalit {kinescopeConfigured && <span className="text-xs text-muted-foreground">(o'zgartirish uchun yangi kalit kiriting)</span>}
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="kinescope-api-key"
+                      type={kinescopeKeyVisible ? "text" : "password"}
+                      value={kinescopeApiKey}
+                      onChange={(e) => setKinescopeApiKey(e.target.value)}
+                      placeholder={kinescopeConfigured ? "••••••••••••••••••••••••" : "Kinescope API kalitini kiriting..."}
+                      data-testid="input-kinescope-api-key"
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setKinescopeKeyVisible(!kinescopeKeyVisible)}
+                      data-testid="button-toggle-kinescope-key"
+                    >
+                      {kinescopeKeyVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Kinescope dashboard → API → Token bo'limidan oling
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="kinescope-project-id">Papka/Kanal ID (ixtiyoriy)</Label>
+                  <Input
+                    id="kinescope-project-id"
+                    value={kinescopeProjectId}
+                    onChange={(e) => setKinescopeProjectId(e.target.value)}
+                    placeholder="Masalan: abc123def456"
+                    data-testid="input-kinescope-project-id"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Videolar shu papkaga joylashadi. Bo'sh qolsa, asosiy kanalga yuklanadi.
+                  </p>
+                </div>
+                <Button
+                  onClick={saveKinescopeSettings}
+                  disabled={updateSettingMutation.isPending || (!kinescopeApiKey.trim() && !kinescopeProjectId.trim())}
+                  data-testid="button-save-kinescope"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Kinescope Sozlamalarini Saqlash
                 </Button>
               </CardContent>
             </Card>

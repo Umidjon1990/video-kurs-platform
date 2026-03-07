@@ -154,6 +154,10 @@ export default function InstructorDashboard() {
   const [textImportTab, setTextImportTab] = useState<"text" | "word">("text");
   const [wordImportFile, setWordImportFile] = useState<File | null>(null);
 
+  // Kinescope upload state
+  const [kinescopeUploading, setKinescopeUploading] = useState(false);
+  const [kinescopeProgress, setKinescopeProgress] = useState(0);
+
   const [isAnnouncementOpen, setIsAnnouncementOpen] = useState(false);
   const [announcementForm, setAnnouncementForm] = useState({
     title: "",
@@ -224,6 +228,48 @@ export default function InstructorDashboard() {
     queryKey: ["/api/subscription-plans"],
     enabled: isAuthenticated,
   });
+
+  const { data: kinescopeStatus } = useQuery<{ configured: boolean; hasProjectId: boolean }>({
+    queryKey: ["/api/kinescope/status"],
+    enabled: isAuthenticated,
+  });
+
+  const handleKinescopeUpload = async (file: File, title?: string) => {
+    setKinescopeUploading(true);
+    setKinescopeProgress(0);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      if (title) formData.append("title", title);
+
+      const xhr = new XMLHttpRequest();
+      await new Promise<void>((resolve, reject) => {
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) setKinescopeProgress(Math.round((e.loaded / e.total) * 100));
+        };
+        xhr.onload = () => {
+          if (xhr.status === 200) {
+            const data = JSON.parse(xhr.responseText);
+            setLessonForm(prev => ({ ...prev, videoUrl: data.embedUrl }));
+            toast({ title: "Video yuklandi!", description: `Kinescope ID: ${data.videoId}` });
+            resolve();
+          } else {
+            const err = JSON.parse(xhr.responseText);
+            reject(new Error(err.message || "Yuklash xatosi"));
+          }
+        };
+        xhr.onerror = () => reject(new Error("Tarmoq xatosi"));
+        xhr.open("POST", "/api/instructor/kinescope/upload");
+        xhr.withCredentials = true;
+        xhr.send(formData);
+      });
+    } catch (err: any) {
+      toast({ title: "Kinescope xatosi", description: err.message, variant: "destructive" });
+    } finally {
+      setKinescopeUploading(false);
+      setKinescopeProgress(0);
+    }
+  };
 
   const { data: unreadCount } = useQuery<{ count: number }>({
     queryKey: ["/api/chat/unread-count"],
@@ -2791,6 +2837,53 @@ Kinescope: https://kinescope.io/watch/...'
               <p className="text-xs text-muted-foreground">
                 Google Drive, YouTube, Kinescope yoki boshqa video platformalardan linkni kiriting. Tizim avtomatik embed qiladi.
               </p>
+              {/* Kinescope direct upload */}
+              {kinescopeStatus?.configured && (
+                <div className="mt-2 p-3 rounded-md border bg-muted/40 space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Kinescope-ga to'g'ridan yuklash</Label>
+                  <div className="flex gap-2 flex-wrap items-center">
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        accept="video/*"
+                        className="hidden"
+                        data-testid="input-kinescope-video-file"
+                        disabled={kinescopeUploading}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleKinescopeUpload(file, lessonForm.title || undefined);
+                          e.target.value = "";
+                        }}
+                      />
+                      <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-md border text-sm font-medium cursor-pointer ${kinescopeUploading ? "opacity-60 pointer-events-none" : "hover-elevate active-elevate-2"} bg-background`}>
+                        {kinescopeUploading ? (
+                          <>
+                            <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                            Yuklanmoqda... {kinescopeProgress > 0 && `${kinescopeProgress}%`}
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-4 h-4" />
+                            Kinescope-ga video yuklash
+                          </>
+                        )}
+                      </span>
+                    </label>
+                    {kinescopeUploading && kinescopeProgress > 0 && (
+                      <div className="flex-1 min-w-[120px]">
+                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-violet-500 rounded-full transition-all"
+                            style={{ width: `${kinescopeProgress}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-muted-foreground">{kinescopeProgress}% yuklandi</span>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Video Kinescope-ga yuklanib, URL avtomatik to'ldiriladi.</p>
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="lesson-description">Izoh (ixtiyoriy)</Label>
