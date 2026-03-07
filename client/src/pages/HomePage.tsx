@@ -1784,13 +1784,13 @@ export default function HomePage() {
                   const hasArabic = isArabicText(question.questionText);
                   return (
                   <div key={question.id} className="space-y-3">
-                    <div className={`flex items-start gap-3 ${hasArabic ? 'flex-row-reverse' : ''}`}>
+                    <div className="flex items-start gap-3">
                       <span className="shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary text-sm font-bold flex items-center justify-center">{qIdx + 1}</span>
                       <div className="flex-1">
                         <p
-                          className={`font-medium leading-relaxed ${hasArabic ? 'text-right' : ''}`}
-                          dir={hasArabic ? 'rtl' : 'ltr'}
-                          style={{ fontFamily: hasArabic ? '"Amiri", "Noto Naskh Arabic", "Traditional Arabic", serif' : undefined, fontSize: hasArabic ? '1.1rem' : undefined, lineHeight: hasArabic ? '2' : undefined }}
+                          className="font-medium leading-relaxed"
+                          dir="ltr"
+                          style={hasArabic ? { fontFamily: '"Amiri", "Noto Naskh Arabic", "Traditional Arabic", serif', fontSize: '1.05rem', lineHeight: '2' } : undefined}
                           data-testid={`demo-question-text-${question.id}`}
                         >
                           {question.questionText}
@@ -2586,18 +2586,17 @@ function DemoTestQuestionInput({
     return (
       <div className="space-y-2">
         {displayOptions.map((opt: any) => {
-          const rtl = isArabicText(opt.optionText);
+          const hasAr = isArabicText(opt.optionText);
           return (
-            <label key={opt.id} className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover-elevate" dir={rtl ? 'rtl' : 'ltr'}>
+            <label key={opt.id} className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover-elevate" dir="ltr">
               <Checkbox
                 checked={Array.isArray(value) && value.includes(opt.id)}
                 onCheckedChange={(checked) => {
                   const current = Array.isArray(value) ? value : [];
                   onChange(checked ? [...current, opt.id] : current.filter((id: string) => id !== opt.id));
                 }}
-                className={rtl ? 'order-last' : ''}
               />
-              <span className={`flex-1 text-sm ${rtl ? 'text-right' : ''}`} style={{ fontFamily: rtl ? '"Amiri", "Noto Naskh Arabic", "Traditional Arabic", serif' : undefined, fontSize: rtl ? '1rem' : undefined, lineHeight: rtl ? '1.8' : undefined }}>
+              <span className="flex-1 text-sm" style={hasAr ? { fontFamily: '"Amiri", "Noto Naskh Arabic", "Traditional Arabic", serif', fontSize: '1rem', lineHeight: '1.8' } : undefined}>
                 {opt.optionText}
               </span>
             </label>
@@ -2629,10 +2628,10 @@ function DemoTestQuestionInput({
     return (
       <div className="space-y-3">
         {leftColumn.map((left: string, idx: number) => {
-          const rtl = isArabicText(left);
+          const hasAr = isArabicText(left);
           return (
-            <div key={idx} className="flex items-center gap-3 flex-wrap" dir={rtl ? 'rtl' : 'ltr'}>
-              <span className="text-sm font-medium min-w-[80px]" style={{ fontFamily: rtl ? 'serif' : undefined }}>{left}</span>
+            <div key={idx} className="flex items-center gap-3 flex-wrap" dir="ltr">
+              <span className="text-sm font-medium min-w-[80px]" style={hasAr ? { fontFamily: '"Amiri", "Noto Naskh Arabic", serif' } : undefined}>{left}</span>
               <select
                 className="flex-1 border rounded-md p-2 text-sm bg-background"
                 value={currentMatches[left] || ""}
@@ -2652,24 +2651,24 @@ function DemoTestQuestionInput({
       </div>
     );
   } else if (question.type === "fill_blanks" || question.type === "short_answer") {
-    const rtl = isArabicText(value || "");
     return (
       <Input
         value={value || ""}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Javob yozing..."
-        dir={rtl ? 'rtl' : 'ltr'}
+        dir="ltr"
+        style={isArabicText(question.questionText) ? { fontFamily: '"Amiri", "Noto Naskh Arabic", serif', fontSize: '1rem' } : undefined}
       />
     );
   } else if (question.type === "essay") {
-    const rtl = isArabicText(value || "");
     return (
       <Textarea
         value={value || ""}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Insho yozing..."
         rows={5}
-        dir={rtl ? 'rtl' : 'ltr'}
+        dir="ltr"
+        style={isArabicText(question.questionText) ? { fontFamily: '"Amiri", "Noto Naskh Arabic", serif', fontSize: '1rem' } : undefined}
       />
     );
   }
