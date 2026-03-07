@@ -2093,10 +2093,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      const tests = await storage.getTestsByCourse(courseId);
-      res.json(tests);
+      const testsData = await storage.getTestsByCourse(courseId);
+      const testsWithCounts = await Promise.all(
+        testsData.map(async (test) => {
+          const qs = await storage.getQuestionsByTest(test.id);
+          return { ...test, questionCount: qs.length };
+        })
+      );
+      res.json(testsWithCounts);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/instructor/courses/:courseId/tests/bulk', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { courseId } = req.params;
+      const instructorId = req.user.claims.sub;
+      const course = await storage.getCourse(courseId);
+      if (!course) return res.status(404).json({ message: "Course not found" });
+      if (course.instructorId !== instructorId) {
+        const user = await storage.getUser(instructorId);
+        if (user?.role !== 'admin') return res.status(403).json({ message: "Forbidden" });
+      }
+      const { lessonIds, titlePattern, passingScore, randomOrder, shuffleAnswers } = req.body;
+      if (!lessonIds || !Array.isArray(lessonIds) || lessonIds.length === 0) {
+        return res.status(400).json({ message: "Kamida bitta dars tanlash kerak" });
+      }
+      const lessons = await storage.getLessonsByCourse(courseId);
+      const createdTests = [];
+      const testInstructorId = course.instructorId || instructorId;
+      for (const lessonId of lessonIds) {
+        const lesson = lessons.find(l => l.id === lessonId);
+        if (!lesson) continue;
+        const title = titlePattern ? titlePattern.replace('{dars}', lesson.title) : `${lesson.title} - Test`;
+        const testData = insertTestSchema.parse({
+          courseId,
+          instructorId: testInstructorId,
+          lessonId,
+          title,
+          passingScore: passingScore || 70,
+          randomOrder: randomOrder || false,
+          shuffleAnswers: shuffleAnswers || false,
+        });
+        const test = await storage.createTest(testData);
+        createdTests.push(test);
+      }
+      res.json({ created: createdTests.length, tests: createdTests });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
     }
   });
 

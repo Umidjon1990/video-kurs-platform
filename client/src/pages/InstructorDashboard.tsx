@@ -28,7 +28,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
-import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, EyeOff, Download, Megaphone, Users, User, MessageCircle, TrendingUp, Award, Activity, Settings, UserCheck, Upload, FileSpreadsheet, Mic, PenTool, Radio, PhoneOff, Monitor, Copy, Volume2, Calendar, Lock, Unlock } from "lucide-react";
+import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, EyeOff, Download, Megaphone, Users, User, MessageCircle, TrendingUp, Award, Activity, Settings, UserCheck, Upload, FileSpreadsheet, Mic, PenTool, Radio, PhoneOff, Monitor, Copy, Volume2, Calendar, Lock, Unlock, Layers, ListChecks } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NotificationBell } from "@/components/NotificationBell";
 import { StarRating } from "@/components/StarRating";
@@ -141,6 +141,14 @@ export default function InstructorDashboard() {
   });
 
   const [isAddTestOpen, setIsAddTestOpen] = useState(false);
+  const [isBulkTestOpen, setIsBulkTestOpen] = useState(false);
+  const [bulkTestForm, setBulkTestForm] = useState({
+    selectedLessons: [] as string[],
+    titlePattern: "{dars} - Test",
+    passingScore: "70",
+    randomOrder: false,
+    shuffleAnswers: false,
+  });
   const [editingTest, setEditingTest] = useState<Test | null>(null);
   const [testForm, setTestForm] = useState({
     title: "",
@@ -864,6 +872,29 @@ export default function InstructorDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/instructor/courses", selectedCourse?.id, "tests"] });
       toast({ title: "Muvaffaqiyatli", description: "Test o'chirildi" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const bulkTestMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedCourse) return;
+      const res = await apiRequest("POST", `/api/instructor/courses/${selectedCourse.id}/tests/bulk`, {
+        lessonIds: bulkTestForm.selectedLessons,
+        titlePattern: bulkTestForm.titlePattern,
+        passingScore: parseInt(bulkTestForm.passingScore) || 70,
+        randomOrder: bulkTestForm.randomOrder,
+        shuffleAnswers: bulkTestForm.shuffleAnswers,
+      });
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/instructor/courses", selectedCourse?.id, "tests"] });
+      setIsBulkTestOpen(false);
+      setBulkTestForm({ selectedLessons: [], titlePattern: "{dars} - Test", passingScore: "70", randomOrder: false, shuffleAnswers: false });
+      toast({ title: "Muvaffaqiyatli", description: `${data?.created || 0} ta test yaratildi` });
     },
     onError: (error: Error) => {
       toast({ title: "Xatolik", description: error.message, variant: "destructive" });
@@ -1834,7 +1865,7 @@ export default function InstructorDashboard() {
       {/* Course Management Dialog with Tabs */}
       {selectedCourse && (
         <Dialog open={!!selectedCourse} onOpenChange={() => setSelectedCourse(null)}>
-          <DialogContent className="max-w-5xl max-h-[80vh]" data-testid="dialog-course-management">
+          <DialogContent className="max-w-7xl max-h-[90vh]" data-testid="dialog-course-management">
             <DialogHeader>
               <DialogTitle>{selectedCourse.title} - Kursni Boshqarish</DialogTitle>
               <DialogDescription>Darslar, vazifalar va testlarni boshqarish</DialogDescription>
@@ -2107,164 +2138,162 @@ export default function InstructorDashboard() {
               </TabsContent>
 
               <TabsContent value="tests" className="space-y-4">
-                <div className="max-h-96 overflow-y-auto space-y-4">
+                <div className="flex items-center justify-end gap-2 mb-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setBulkTestForm({ selectedLessons: [], titlePattern: "{dars} - Test", passingScore: "70", randomOrder: false, shuffleAnswers: false });
+                      setIsBulkTestOpen(true);
+                    }}
+                    data-testid="button-bulk-add-tests"
+                  >
+                    <ListChecks className="w-4 h-4 mr-2" />
+                    Ommaviy Test Qo'shish
+                  </Button>
+                </div>
+                <div className="max-h-[60vh] overflow-y-auto space-y-4">
                   {lessons && lessons.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8">Avval dars yarating</p>
-                  ) : (
-                    lessons?.map((lesson) => (
-                      <Card key={lesson.id} data-testid={`lesson-tests-${lesson.id}`}>
-                        <CardHeader className="pb-3">
-                          <div className="flex items-center justify-between gap-4">
-                            <div className="flex-1 min-w-0">
-                              <CardTitle className="text-base">{lesson.title}</CardTitle>
-                              <p className="text-sm text-muted-foreground">
-                                {lesson.duration ? `${lesson.duration} daqiqa` : 'Davomiylik ko\'rsatilmagan'}
-                              </p>
+                    <p className="text-center text-muted-foreground py-8" data-testid="text-no-lessons-for-tests">Avval dars yarating</p>
+                  ) : (() => {
+                    const modulesExist = courseModules && courseModules.length > 0;
+                    const renderTestItem = (test: any) => (
+                      <Collapsible
+                        key={test.id}
+                        open={expandedTests.has(test.id)}
+                        onOpenChange={(open) => {
+                          const newExpanded = new Set(expandedTests);
+                          if (open) newExpanded.add(test.id);
+                          else newExpanded.delete(test.id);
+                          setExpandedTests(newExpanded);
+                        }}
+                      >
+                        <div className="border rounded-md" data-testid={`test-${test.id}`}>
+                          <div className="flex items-center justify-between p-3 gap-4">
+                            <CollapsibleTrigger className="flex items-center gap-2 flex-1 min-w-0 text-left">
+                              <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${expandedTests.has(test.id) ? 'rotate-180' : ''}`} />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h4 className="font-semibold text-sm">{test.title}</h4>
+                                  <Badge variant="secondary" data-testid={`badge-question-count-${test.id}`}>
+                                    {(test as any).questionCount ?? 0} savol
+                                  </Badge>
+                                </div>
+                                <span className="text-xs text-muted-foreground">
+                                  O'tish bali: {test.passingScore || 'Ko\'rsatilmagan'}
+                                </span>
+                              </div>
+                            </CollapsibleTrigger>
+                            <div className="flex items-center gap-1 flex-wrap">
+                              <Button variant="outline" size="sm" onClick={() => { setSelectedTest(test); setQuestionForm({ type: "multiple_choice", questionText: "", points: "1", correctAnswer: "" }); setMcOptions([{ text: "", isCorrect: false }]); setMatchingPairs([{ left: "", right: "" }]); setIsAddQuestionOpen(true); }} data-testid={`button-add-question-${test.id}`}>
+                                <Plus className="w-3 h-3 mr-1" />Savol
+                              </Button>
+                              <Button variant="outline" size="sm" onClick={() => { setImportTestId(test.id); setImportFile(null); setImportResult(null); setIsImportDialogOpen(true); }} data-testid={`button-import-questions-${test.id}`}>
+                                <Upload className="w-3 h-3 mr-1" />Excel
+                              </Button>
+                              <Button variant="outline" size="sm" onClick={() => { setTextImportTestId(test.id); setTextImportContent(""); setIsTextImportOpen(true); }} data-testid={`button-text-import-${test.id}`}>
+                                <FileText className="w-3 h-3 mr-1" />Matn
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => { setEditingTest(test); setTestForm({ title: test.title, passingScore: test.passingScore?.toString() || "", lessonId: test.lessonId || "", randomOrder: test.randomOrder || false, shuffleAnswers: test.shuffleAnswers || false }); setIsAddTestOpen(true); }} data-testid={`button-edit-test-${test.id}`}>
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => { if (confirm("Testni o'chirishga ishonchingiz komilmi?")) deleteTestMutation.mutate(test.id); }} data-testid={`button-delete-test-${test.id}`}>
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
                             </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setTestForm({ title: "", passingScore: "", lessonId: lesson.id });
-                                setEditingTest(null);
-                                setIsAddTestOpen(true);
-                              }}
-                              data-testid={`button-add-test-for-lesson-${lesson.id}`}
-                            >
-                              <Plus className="w-4 h-4 mr-2" />
-                              Test Qo'shish
+                          </div>
+                          <CollapsibleContent>
+                            <div className="px-3 pb-3 border-t pt-3">
+                              <QuestionsList testId={test.id} setEditingQuestion={setEditingQuestion} setQuestionForm={setQuestionForm} setMcOptions={setMcOptions} setMatchingPairs={setMatchingPairs} setIsAddQuestionOpen={setIsAddQuestionOpen} />
+                            </div>
+                          </CollapsibleContent>
+                        </div>
+                      </Collapsible>
+                    );
+
+                    const renderLessonTests = (lesson: any) => {
+                      const lessonTests = tests?.filter(t => t.lessonId === lesson.id) || [];
+                      return (
+                        <div key={lesson.id} className="space-y-2" data-testid={`lesson-tests-${lesson.id}`}>
+                          <div className="flex items-center justify-between gap-4 py-2 px-1">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <Video className="w-4 h-4 shrink-0 text-muted-foreground" />
+                              <span className="font-medium text-sm truncate">{lesson.title}</span>
+                              {lessonTests.length > 0 && (
+                                <Badge variant="outline" data-testid={`badge-lesson-test-count-${lesson.id}`}>
+                                  {lessonTests.length} test
+                                </Badge>
+                              )}
+                            </div>
+                            <Button variant="outline" size="sm" onClick={() => { setTestForm({ title: "", passingScore: "", lessonId: lesson.id }); setEditingTest(null); setIsAddTestOpen(true); }} data-testid={`button-add-test-for-lesson-${lesson.id}`}>
+                              <Plus className="w-4 h-4 mr-2" />Test Qo'shish
                             </Button>
                           </div>
-                        </CardHeader>
-                        <CardContent className="pt-0 space-y-3">
-                          {tests?.filter(t => t.lessonId === lesson.id).length === 0 ? (
-                            <p className="text-sm text-muted-foreground text-center py-2">Bu darsda hali test yo'q</p>
+                          {lessonTests.length === 0 ? (
+                            <p className="text-xs text-muted-foreground text-center py-1 pl-6">Bu darsda hali test yo'q</p>
                           ) : (
-                            tests?.filter(t => t.lessonId === lesson.id).map((test) => (
-                              <Collapsible
-                                key={test.id}
-                                open={expandedTests.has(test.id)}
-                                onOpenChange={(open) => {
-                                  const newExpanded = new Set(expandedTests);
-                                  if (open) {
-                                    newExpanded.add(test.id);
-                                  } else {
-                                    newExpanded.delete(test.id);
-                                  }
-                                  setExpandedTests(newExpanded);
-                                }}
-                              >
-                                <div className="border rounded-lg" data-testid={`test-${test.id}`}>
-                                  <div className="flex items-center justify-between p-3 gap-4">
-                                    <CollapsibleTrigger className="flex items-center gap-2 flex-1 min-w-0 text-left">
-                                      <ChevronDown className={`w-4 h-4 transition-transform ${expandedTests.has(test.id) ? 'rotate-180' : ''}`} />
-                                      <div className="flex-1 min-w-0">
-                                        <h4 className="font-semibold text-sm">{test.title}</h4>
-                                        <span className="text-xs text-muted-foreground">
-                                          O'tish bali: {test.passingScore || 'Ko\'rsatilmagan'}
-                                        </span>
-                                      </div>
-                                    </CollapsibleTrigger>
-                                    <div className="flex items-center gap-2">
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => {
-                                          setSelectedTest(test);
-                                          setQuestionForm({
-                                            type: "multiple_choice",
-                                            questionText: "",
-                                            points: "1",
-                                            correctAnswer: "",
-                                          });
-                                          setMcOptions([{ text: "", isCorrect: false }]);
-                                          setMatchingPairs([{ left: "", right: "" }]);
-                                          setIsAddQuestionOpen(true);
-                                        }}
-                                        data-testid={`button-add-question-${test.id}`}
-                                      >
-                                        <Plus className="w-3 h-3 mr-1" />
-                                        Savol
-                                      </Button>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => {
-                                          setImportTestId(test.id);
-                                          setImportFile(null);
-                                          setImportResult(null);
-                                          setIsImportDialogOpen(true);
-                                        }}
-                                        data-testid={`button-import-questions-${test.id}`}
-                                      >
-                                        <Upload className="w-3 h-3 mr-1" />
-                                        Excel
-                                      </Button>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => {
-                                          setTextImportTestId(test.id);
-                                          setTextImportContent("");
-                                          setIsTextImportOpen(true);
-                                        }}
-                                        data-testid={`button-text-import-${test.id}`}
-                                      >
-                                        <FileText className="w-3 h-3 mr-1" />
-                                        Matn
-                                      </Button>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => {
-                                          setEditingTest(test);
-                                          setTestForm({
-                                            title: test.title,
-                                            passingScore: test.passingScore?.toString() || "",
-                                            lessonId: test.lessonId || "",
-                                            randomOrder: test.randomOrder || false,
-                                            shuffleAnswers: test.shuffleAnswers || false,
-                                          });
-                                          setIsAddTestOpen(true);
-                                        }}
-                                        data-testid={`button-edit-test-${test.id}`}
-                                      >
-                                        <Edit className="w-4 h-4" />
-                                      </Button>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => {
-                                          if (confirm("Testni o'chirishga ishonchingiz komilmi?")) {
-                                            deleteTestMutation.mutate(test.id);
-                                          }
-                                        }}
-                                        data-testid={`button-delete-test-${test.id}`}
-                                      >
-                                        <Trash2 className="w-4 h-4 text-destructive" />
-                                      </Button>
-                                    </div>
-                                  </div>
-                                  <CollapsibleContent>
-                                    <div className="px-3 pb-3 border-t pt-3">
-                                      <QuestionsList 
-                                        testId={test.id}
-                                        setEditingQuestion={setEditingQuestion}
-                                        setQuestionForm={setQuestionForm}
-                                        setMcOptions={setMcOptions}
-                                        setMatchingPairs={setMatchingPairs}
-                                        setIsAddQuestionOpen={setIsAddQuestionOpen}
-                                      />
-                                    </div>
-                                  </CollapsibleContent>
-                                </div>
-                              </Collapsible>
-                            ))
+                            <div className="space-y-2 pl-6">
+                              {lessonTests.map(renderTestItem)}
+                            </div>
                           )}
-                        </CardContent>
-                      </Card>
-                    ))
-                  )}
+                        </div>
+                      );
+                    };
+
+                    if (modulesExist) {
+                      const sortedModules = [...courseModules].sort((a: any, b: any) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+                      const moduleLessons = (moduleId: string) => lessons?.filter((l: any) => l.moduleId === moduleId) || [];
+                      const unassignedLessons = lessons?.filter((l: any) => !l.moduleId) || [];
+
+                      return (
+                        <>
+                          {sortedModules.map((mod: any) => (
+                            <Collapsible key={mod.id} defaultOpen>
+                              <Card data-testid={`module-tests-${mod.id}`}>
+                                <CollapsibleTrigger asChild>
+                                  <CardHeader className="cursor-pointer pb-2">
+                                    <div className="flex items-center gap-3 flex-wrap">
+                                      <Layers className="w-5 h-5 text-primary shrink-0" />
+                                      <CardTitle className="text-base flex-1">{mod.title}</CardTitle>
+                                      <Badge variant="secondary">
+                                        {moduleLessons(mod.id).length} dars
+                                      </Badge>
+                                      <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                                    </div>
+                                  </CardHeader>
+                                </CollapsibleTrigger>
+                                <CollapsibleContent>
+                                  <CardContent className="pt-0 space-y-3">
+                                    {moduleLessons(mod.id).length === 0 ? (
+                                      <p className="text-sm text-muted-foreground text-center py-2">Bu modulda dars yo'q</p>
+                                    ) : (
+                                      moduleLessons(mod.id).map(renderLessonTests)
+                                    )}
+                                  </CardContent>
+                                </CollapsibleContent>
+                              </Card>
+                            </Collapsible>
+                          ))}
+                          {unassignedLessons.length > 0 && (
+                            <Card data-testid="unassigned-lessons-tests">
+                              <CardHeader className="pb-2">
+                                <div className="flex items-center gap-3 flex-wrap">
+                                  <BookOpen className="w-5 h-5 text-muted-foreground shrink-0" />
+                                  <CardTitle className="text-base flex-1">Modulsiz Darslar</CardTitle>
+                                  <Badge variant="outline">{unassignedLessons.length} dars</Badge>
+                                </div>
+                              </CardHeader>
+                              <CardContent className="pt-0 space-y-3">
+                                {unassignedLessons.map(renderLessonTests)}
+                              </CardContent>
+                            </Card>
+                          )}
+                        </>
+                      );
+                    } else {
+                      return lessons?.map(renderLessonTests);
+                    }
+                  })()}
                 </div>
               </TabsContent>
 
@@ -3480,6 +3509,103 @@ Bunny.net: https://iframe.mediadelivery.net/embed/...'
       </Dialog>
 
       {/* Add Test Dialog */}
+      <Dialog open={isBulkTestOpen} onOpenChange={setIsBulkTestOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" data-testid="dialog-bulk-test">
+          <DialogHeader>
+            <DialogTitle>Ommaviy Test Qo'shish</DialogTitle>
+            <DialogDescription>Bir nechta darsga birdaniga test yarating</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Darslarni Tanlang</Label>
+              <div className="border rounded-md max-h-48 overflow-y-auto p-3 space-y-2">
+                {(() => {
+                  const allLessonIds = lessons?.map((l: any) => l.id) || [];
+                  const allSelected = allLessonIds.length > 0 && allLessonIds.every((id: string) => bulkTestForm.selectedLessons.includes(id));
+                  return (
+                    <>
+                      <div className="flex items-center gap-2 pb-2 border-b mb-2">
+                        <Checkbox
+                          checked={allSelected}
+                          onCheckedChange={(checked) => {
+                            setBulkTestForm({
+                              ...bulkTestForm,
+                              selectedLessons: checked ? allLessonIds : [],
+                            });
+                          }}
+                          data-testid="checkbox-select-all-lessons"
+                        />
+                        <span className="text-sm font-medium">Barchasini tanlash ({allLessonIds.length} dars)</span>
+                      </div>
+                      {lessons?.map((lesson: any) => {
+                        const hasTest = tests?.some(t => t.lessonId === lesson.id);
+                        return (
+                          <div key={lesson.id} className="flex items-center gap-2">
+                            <Checkbox
+                              checked={bulkTestForm.selectedLessons.includes(lesson.id)}
+                              onCheckedChange={(checked) => {
+                                setBulkTestForm({
+                                  ...bulkTestForm,
+                                  selectedLessons: checked
+                                    ? [...bulkTestForm.selectedLessons, lesson.id]
+                                    : bulkTestForm.selectedLessons.filter(id => id !== lesson.id),
+                                });
+                              }}
+                              data-testid={`checkbox-bulk-lesson-${lesson.id}`}
+                            />
+                            <span className="text-sm flex-1">{lesson.title}</span>
+                            {hasTest && <Badge variant="outline">test bor</Badge>}
+                          </div>
+                        );
+                      })}
+                    </>
+                  );
+                })()}
+              </div>
+              <p className="text-xs text-muted-foreground">{bulkTestForm.selectedLessons.length} ta dars tanlandi</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Test Nomi Shabloni</Label>
+              <Input
+                value={bulkTestForm.titlePattern}
+                onChange={(e) => setBulkTestForm({ ...bulkTestForm, titlePattern: e.target.value })}
+                placeholder="{dars} - Test"
+                data-testid="input-bulk-title-pattern"
+              />
+              <p className="text-xs text-muted-foreground">{"{dars}"} — dars nomi bilan almashtiriladi</p>
+            </div>
+            <div className="space-y-2">
+              <Label>O'tish Bali (%)</Label>
+              <Input
+                type="number"
+                value={bulkTestForm.passingScore}
+                onChange={(e) => setBulkTestForm({ ...bulkTestForm, passingScore: e.target.value })}
+                placeholder="70"
+                data-testid="input-bulk-passing-score"
+              />
+            </div>
+            <div className="flex items-center gap-6 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Switch checked={bulkTestForm.randomOrder} onCheckedChange={(checked) => setBulkTestForm({ ...bulkTestForm, randomOrder: checked })} data-testid="switch-bulk-random-order" />
+                <Label>Savollar tartibini aralashtirish</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={bulkTestForm.shuffleAnswers} onCheckedChange={(checked) => setBulkTestForm({ ...bulkTestForm, shuffleAnswers: checked })} data-testid="switch-bulk-shuffle-answers" />
+                <Label>Javoblar tartibini aralashtirish</Label>
+              </div>
+            </div>
+            <Button
+              onClick={() => bulkTestMutation.mutate()}
+              disabled={bulkTestForm.selectedLessons.length === 0 || bulkTestMutation.isPending}
+              className="w-full"
+              data-testid="button-submit-bulk-tests"
+            >
+              {bulkTestMutation.isPending ? "Yaratilmoqda..." : `${bulkTestForm.selectedLessons.length} ta Test Yaratish`}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isAddTestOpen} onOpenChange={(open) => {
         setIsAddTestOpen(open);
         if (!open) {
