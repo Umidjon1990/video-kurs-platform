@@ -3009,7 +3009,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Bunny.net Stream: return TUS auth info for direct browser upload (no pre-created video)
+  // Bunny.net Stream: create video via REST API + return TUS auth for direct browser upload
   app.post('/api/instructor/bunny/create-upload', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
       const apiKeySetting = await db.select().from(siteSettings).where(eq(siteSettings.key, 'bunny_api_key')).limit(1);
@@ -3021,20 +3021,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const apiKey = apiKeySetting[0].value;
       const libraryId = libSetting[0].value;
+      const title = req.body.title || 'Untitled Video';
 
-      // Generate TUS authorization signature without VideoId (Bunny creates video via TUS)
-      // Signature = SHA256(libraryId + apiKey + expiry)
+      // Step 1: Create video entry via Bunny REST API
+      const axios = (await import('axios')).default;
+      const createRes = await axios.post(
+        `https://video.bunnycdn.com/library/${libraryId}/videos`,
+        { title },
+        { headers: { AccessKey: apiKey, 'Content-Type': 'application/json' } }
+      );
+      const videoId: string = createRes.data.guid;
+      if (!videoId) return res.status(500).json({ message: 'Bunny.net video ID olinmadi' });
+
+      // Step 2: Generate TUS authorization signature
+      // Signature = SHA256(libraryId + apiKey + expirationTime + videoId)
       const crypto = await import('crypto');
       const expiry = Math.floor(Date.now() / 1000) + 7200; // 2 hours
       const signature = crypto.createHash('sha256')
-        .update(libraryId + apiKey + expiry)
+        .update(libraryId + apiKey + expiry + videoId)
         .digest('hex');
 
       res.json({
+        videoId,
         libraryId,
         expiry,
         signature,
-        tusEndpoint: `https://video.bunnycdn.com/${libraryId}/`,
+        tusEndpoint: 'https://video.bunnycdn.com/tusupload',
+        embedUrl: `https://iframe.mediadelivery.net/embed/${libraryId}/${videoId}`,
       });
     } catch (error: any) {
       const msg = error.response?.data?.Message || error.response?.data?.message || error.message;

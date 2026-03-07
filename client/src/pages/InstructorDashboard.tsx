@@ -309,21 +309,22 @@ export default function InstructorDashboard() {
         throw new Error(err.message || "Bunny auth xatosi");
       }
       const data = await authRes.json();
-      const { libraryId, expiry, signature, tusEndpoint } = data;
+      const { videoId, libraryId, expiry, signature, tusEndpoint, embedUrl } = data;
 
-      if (!tusEndpoint || !libraryId || !signature) {
+      if (!tusEndpoint || !videoId || !libraryId || !signature) {
         throw new Error(`Server xatosi: kerakli maydonlar yetishmayapti (${JSON.stringify(Object.keys(data))})`);
       }
 
-      // Step 2: Direct TUS upload from browser to Bunny.net (Bunny creates videoId automatically)
+      // Step 2: Direct TUS upload to Bunny.net /tusupload endpoint
       await new Promise<void>((resolve, reject) => {
         const upload = new tus.Upload(file, {
-          endpoint: tusEndpoint, // https://video.bunnycdn.com/{libraryId}/
+          endpoint: tusEndpoint, // https://video.bunnycdn.com/tusupload
           retryDelays: [0, 1000, 3000, 5000, 10000],
           chunkSize: 5 * 1024 * 1024, // 5MB chunks
           headers: {
             AuthorizationSignature: signature,
             AuthorizationExpire: String(expiry),
+            VideoId: videoId,
             LibraryId: String(libraryId),
           },
           metadata: {
@@ -339,9 +340,6 @@ export default function InstructorDashboard() {
             setBunnyProgress(pct);
           },
           onSuccess() {
-            // Extract videoId from the upload URL: https://video.bunnycdn.com/{libraryId}/{videoId}
-            const videoId = upload.url?.split("/").pop() || "";
-            const embedUrl = `https://iframe.mediadelivery.net/embed/${libraryId}/${videoId}`;
             setLessonForm(prev => ({ ...prev, videoUrl: embedUrl }));
             toast({ title: "Video yuklandi!", description: `Bunny.net ID: ${videoId}` });
             resolve();
