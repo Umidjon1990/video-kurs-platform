@@ -1601,6 +1601,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }).partial();
       
       const updateData = editableFields.parse(req.body);
+
+      // Ensure unlockWeekDays is a proper array (not a string)
+      if (updateData.unlockWeekDays !== undefined) {
+        if (typeof updateData.unlockWeekDays === 'string') {
+          try { updateData.unlockWeekDays = JSON.parse(updateData.unlockWeekDays); } catch { updateData.unlockWeekDays = []; }
+        }
+        if (!Array.isArray(updateData.unlockWeekDays)) {
+          updateData.unlockWeekDays = [];
+        }
+      }
       
       // If course is being marked as free, force price to 0 and delete plan pricing
       if (updateData.isFree === true) {
