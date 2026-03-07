@@ -2588,21 +2588,32 @@ function DemoTestQuestionInput({
 
   const optionLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
+  const isMultiAnswer = (question.correctCount || 1) > 1;
+
   if (question.type === "multiple_choice") {
     return (
       <div className="space-y-2">
+        {isMultiAnswer && (
+          <p className="text-xs text-muted-foreground italic mb-1">Bir nechta to'g'ri javob bor</p>
+        )}
         {displayOptions.map((opt: any, optIdx: number) => {
           const hasAr = isArabicText(opt.optionText);
-          const isSelected = Array.isArray(value) && value.includes(opt.id);
+          const isSelected = isMultiAnswer
+            ? (Array.isArray(value) && value.includes(opt.id))
+            : value === opt.id;
           return (
             <label key={opt.id} className={`test-option-card flex items-center gap-3 p-3 cursor-pointer ${isSelected ? 'selected' : ''}`} dir="ltr">
-              <Checkbox
-                checked={isSelected}
-                onCheckedChange={(checked) => {
-                  const current = Array.isArray(value) ? value : [];
-                  onChange(checked ? [...current, opt.id] : current.filter((id: string) => id !== opt.id));
-                }}
-              />
+              {isMultiAnswer ? (
+                <Checkbox
+                  checked={Array.isArray(value) && value.includes(opt.id)}
+                  onCheckedChange={(checked) => {
+                    const current = Array.isArray(value) ? value : [];
+                    onChange(checked ? [...current, opt.id] : current.filter((id: string) => id !== opt.id));
+                  }}
+                />
+              ) : (
+                <input type="radio" className="accent-primary w-4 h-4 shrink-0" checked={value === opt.id} onChange={() => onChange(opt.id)} />
+              )}
               <span className="shrink-0 w-6 h-6 rounded-full bg-muted text-muted-foreground text-xs font-bold flex items-center justify-center">{optionLetters[optIdx]}</span>
               <span className={`flex-1 test-option-font ${hasAr ? 'arabic-text' : ''}`}>
                 {opt.optionText}

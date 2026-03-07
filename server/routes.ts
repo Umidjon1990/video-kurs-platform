@@ -150,11 +150,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const lesson = await storage.getLesson(test.lessonId);
       if (!lesson || !lesson.isDemo) return res.status(403).json({ message: "Bu test demo emas" });
       const questions = await storage.getQuestionsByTest(testId);
-      const sanitizedQuestions = questions.map((q: any) => ({
-        id: q.id, testId: q.testId, type: q.type, questionText: q.questionText, points: q.points, order: q.order, mediaUrl: q.mediaUrl,
-        config: q.type === 'matching' ? { leftColumn: (q.config as any)?.leftColumn || [], rightColumn: (q.config as any)?.rightColumn || [] } : (q.config || {}),
+      const enriched = await Promise.all(questions.map(async (q: any) => {
+        let correctCount = 1;
+        if (q.type === 'multiple_choice') {
+          const opts = await storage.getQuestionOptionsByQuestion(q.id);
+          correctCount = opts.filter((o: any) => o.isCorrect).length;
+        }
+        return {
+          id: q.id, testId: q.testId, type: q.type, questionText: q.questionText, points: q.points, order: q.order, mediaUrl: q.mediaUrl,
+          correctCount: q.type === 'multiple_choice' ? correctCount : undefined,
+          config: q.type === 'matching' ? { leftColumn: (q.config as any)?.leftColumn || [], rightColumn: (q.config as any)?.rightColumn || [] } : (q.config || {}),
+        };
       }));
-      res.json(sanitizedQuestions);
+      res.json(enriched);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -4044,25 +4052,29 @@ So'zlar soni: ${submission.wordCount}`;
       const { testId } = req.params;
       const questions = await storage.getQuestionsByTest(testId);
       
-      // Remove correct answers and sensitive config
-      const sanitizedQuestions = questions.map((q: any) => ({
-        id: q.id,
-        testId: q.testId,
-        type: q.type,
-        questionText: q.questionText,
-        points: q.points,
-        order: q.order,
-        mediaUrl: q.mediaUrl,
-        // Remove correctAnswer
-        // Sanitize config for matching (remove correctPairs)
-        config: q.type === 'matching' ? {
-          leftColumn: (q.config as any)?.leftColumn || [],
-          rightColumn: (q.config as any)?.rightColumn || [],
-          // correctPairs removed
-        } : (q.config || {}),
+      const enriched = await Promise.all(questions.map(async (q: any) => {
+        let correctCount = 1;
+        if (q.type === 'multiple_choice') {
+          const opts = await storage.getQuestionOptionsByQuestion(q.id);
+          correctCount = opts.filter((o: any) => o.isCorrect).length;
+        }
+        return {
+          id: q.id,
+          testId: q.testId,
+          type: q.type,
+          questionText: q.questionText,
+          points: q.points,
+          order: q.order,
+          mediaUrl: q.mediaUrl,
+          correctCount: q.type === 'multiple_choice' ? correctCount : undefined,
+          config: q.type === 'matching' ? {
+            leftColumn: (q.config as any)?.leftColumn || [],
+            rightColumn: (q.config as any)?.rightColumn || [],
+          } : (q.config || {}),
+        };
       }));
       
-      res.json(sanitizedQuestions);
+      res.json(enriched);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
