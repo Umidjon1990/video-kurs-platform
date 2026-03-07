@@ -1372,6 +1372,7 @@ export const groupCourseSettings = pgTable("group_course_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   groupId: varchar("group_id").notNull().references(() => studentGroups.id, { onDelete: 'cascade' }),
   courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: 'cascade' }),
+  subscriptionDays: integer("subscription_days").default(30),
   // Test gate settings
   testGateEnabled: boolean("test_gate_enabled").default(false),
   minPassScore: integer("min_pass_score").default(70),

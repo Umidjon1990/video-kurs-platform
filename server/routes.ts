@@ -6663,20 +6663,33 @@ So'zlar soni: ${submission.wordCount}`;
           .from(enrollments)
           .where(eq(enrollments.groupId, m.groupId))
           .groupBy(enrollments.courseId);
-        const settingsCourseIds = await db.select({ courseId: groupCourseSettings.courseId })
+        const settingsCourseIds = await db.select({
+          courseId: groupCourseSettings.courseId,
+          subscriptionDays: groupCourseSettings.subscriptionDays,
+        })
           .from(groupCourseSettings)
           .where(eq(groupCourseSettings.groupId, m.groupId));
         const courseIdSet = new Set<string>();
+        const daysMap: Record<string, number> = {};
         for (const e of enrollmentCourseIds) { if (e.courseId) courseIdSet.add(e.courseId); }
-        for (const s of settingsCourseIds) { if (s.courseId) courseIdSet.add(s.courseId); }
+        for (const s of settingsCourseIds) {
+          if (s.courseId) {
+            courseIdSet.add(s.courseId);
+            daysMap[s.courseId] = s.subscriptionDays || 30;
+          }
+        }
         const courseIds = Array.from(courseIdSet);
         let groupCourses: any[] = [];
         if (courseIds.length > 0) {
-          groupCourses = await db.select({
+          const courseRows = await db.select({
             id: courses.id,
             title: courses.title,
             thumbnailUrl: courses.thumbnailUrl,
           }).from(courses).where(inArray(courses.id, courseIds));
+          groupCourses = courseRows.map(c => ({
+            ...c,
+            subscriptionDays: daysMap[c.id] || 30,
+          }));
         }
         return { ...group, memberCount: members.length, members, courses: groupCourses, addedAt: m.addedAt };
       }));
@@ -6748,12 +6761,21 @@ So'zlar soni: ${submission.wordCount}`;
       .from(enrollments)
       .where(eq(enrollments.groupId, groupId))
       .groupBy(enrollments.courseId);
-    const settingsCourses = await db.select({ courseId: groupCourseSettings.courseId })
+    const settingsCourses = await db.select({
+      courseId: groupCourseSettings.courseId,
+      subscriptionDays: groupCourseSettings.subscriptionDays,
+    })
       .from(groupCourseSettings)
       .where(eq(groupCourseSettings.groupId, groupId));
     const courseIdSet = new Set<string>();
+    const daysMap: Record<string, number> = {};
     for (const e of groupCourseEnrollments) { if (e.courseId) courseIdSet.add(e.courseId); }
-    for (const s of settingsCourses) { if (s.courseId) courseIdSet.add(s.courseId); }
+    for (const s of settingsCourses) {
+      if (s.courseId) {
+        courseIdSet.add(s.courseId);
+        daysMap[s.courseId] = s.subscriptionDays || 30;
+      }
+    }
     const courseIds = Array.from(courseIdSet);
     if (courseIds.length === 0) return;
     const plans = await storage.getSubscriptionPlans();
@@ -6761,13 +6783,14 @@ So'zlar soni: ${submission.wordCount}`;
     for (const courseId of courseIds) {
       const existing = await storage.getEnrollmentByCourseAndUser(courseId, userId);
       if (existing) continue;
+      const days = daysMap[courseId] || 30;
       const enrollment = await storage.createEnrollment({
         userId, courseId, planId: plan?.id || null,
         paymentMethod: 'manual', paymentStatus: 'approved', groupId,
       });
       const startDate = new Date();
       const endDate = new Date();
-      endDate.setDate(endDate.getDate() + 30);
+      endDate.setDate(endDate.getDate() + days);
       await db.insert(userSubscriptions).values({
         userId, courseId, planId: plan?.id || null,
         enrollmentId: enrollment.id, startDate, endDate, status: 'active',
@@ -6908,6 +6931,17 @@ So'zlar soni: ${submission.wordCount}`;
       const { courseId, subscriptionDays } = req.body;
       if (!courseId) return res.status(400).json({ message: "courseId majburiy" });
       const days = parseInt(subscriptionDays) || 30;
+
+      const existingSettings = await storage.getGroupCourseSettings(groupId, courseId);
+      if (existingSettings) {
+        await db.update(groupCourseSettings)
+          .set({ subscriptionDays: days, updatedAt: new Date() })
+          .where(eq(groupCourseSettings.id, existingSettings.id));
+      } else {
+        await db.insert(groupCourseSettings).values({
+          groupId, courseId, subscriptionDays: days,
+        });
+      }
 
       const members = await storage.getGroupMembers(groupId);
       const plans = await storage.getSubscriptionPlans();

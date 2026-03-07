@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Users, Calendar, BookOpen } from "lucide-react";
+import { Users, Calendar, BookOpen, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
 
@@ -100,7 +100,15 @@ export default function StudentGroups() {
                                 <BookOpen className="w-5 h-5 text-primary" />
                               </div>
                             )}
-                            <p className="text-sm font-medium truncate">{course.title}</p>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium truncate">{course.title}</p>
+                              {course.subscriptionDays && (
+                                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                  <Clock className="w-3 h-3" />
+                                  {course.subscriptionDays} kunlik obuna
+                                </p>
+                              )}
+                            </div>
                           </div>
                         </Link>
                       ))}
