@@ -163,6 +163,7 @@ export default function InstructorDashboard() {
   // Bunny.net upload state
   const [bunnyUploading, setBunnyUploading] = useState(false);
   const [bunnyProgress, setBunnyProgress] = useState(0);
+  const [bunnyLastUrl, setBunnyLastUrl] = useState("");
   const bunnyUploadRef = useRef<tus.Upload | null>(null);
 
   const [isAnnouncementOpen, setIsAnnouncementOpen] = useState(false);
@@ -341,6 +342,7 @@ export default function InstructorDashboard() {
           },
           onSuccess() {
             setLessonForm(prev => ({ ...prev, videoUrl: embedUrl }));
+            setBunnyLastUrl(embedUrl);
             toast({ title: "Video yuklandi!", description: `Bunny.net ID: ${videoId}` });
             resolve();
           },
@@ -3038,6 +3040,28 @@ Kinescope: https://kinescope.io/watch/...'
                     )}
                   </div>
                   <p className="text-xs text-orange-700 dark:text-orange-400">Server orqali o'tmaydi — to'g'ridan Bunny.net ga yuklanadi. URL avtomatik to'ldiriladi.</p>
+                  {bunnyLastUrl && !bunnyUploading && (
+                    <div className="flex items-center gap-2 mt-1 p-2 rounded border bg-background">
+                      <Input
+                        readOnly
+                        value={bunnyLastUrl}
+                        className="text-xs h-8 flex-1 font-mono"
+                        data-testid="input-bunny-last-url"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="shrink-0"
+                        data-testid="button-copy-bunny-url"
+                        onClick={() => {
+                          navigator.clipboard.writeText(bunnyLastUrl);
+                          toast({ title: "URL nusxalandi!" });
+                        }}
+                      >
+                        <Copy className="w-3 h-3 mr-1" /> Nusxalash
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
