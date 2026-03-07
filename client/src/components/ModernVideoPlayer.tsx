@@ -135,9 +135,15 @@ export function ModernVideoPlayer({ videoUrl, title, onError }: ModernVideoPlaye
       }
     }
 
-    // Kinescope, Bunny.net, Vimeo and other platforms
+    // Bunny.net Stream — disable autoplay
+    if (content.includes('mediadelivery.net')) {
+      const separator = content.includes('?') ? '&' : '?';
+      const bunnyUrl = `${content}${separator}autoplay=false&preload=true`;
+      return { type: 'other', embedUrl: bunnyUrl };
+    }
+
+    // Kinescope, Vimeo and other platforms
     if (content.includes('kinescope.io') ||
-        content.includes('mediadelivery.net') ||
         content.includes('vimeo.com') ||
         content.includes('player.vimeo.com') ||
         content.includes('dailymotion.com') ||
