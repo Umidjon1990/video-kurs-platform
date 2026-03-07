@@ -25,7 +25,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, MessageSquare, Save, Trash2, Plus, Star, Edit, ArrowLeft, Upload, X, Link2, ExternalLink, Filter, BookOpen, Layers, Eye, EyeOff } from "lucide-react";
+import { Settings, MessageSquare, Save, Trash2, Plus, Star, Edit, ArrowLeft, Upload, X, Link2, ExternalLink, Filter, BookOpen, Layers, Eye, EyeOff, FileText, Phone, Award } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import type { SiteSetting, Testimonial, LanguageLevel, ResourceType } from "@shared/schema";
 import { useLocation } from "wouter";
@@ -699,29 +700,51 @@ export default function AdminCMSPage() {
 
           {/* Site Settings Tab */}
           <TabsContent value="settings">
-            <Card>
-              <CardHeader>
-                <CardTitle>Sayt Sozlamalari</CardTitle>
-                <CardDescription>
-                  Bosh sahifa uchun ma'lumotlarni tahrirlang
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="about-us">Biz haqimizda</Label>
-                  <Textarea
-                    id="about-us"
-                    data-testid="input-about-us"
-                    placeholder="Platformamiz haqida qisqacha..."
-                    value={aboutUs}
-                    onChange={(e) => setAboutUs(e.target.value)}
-                    rows={6}
-                  />
-                </div>
+            <div className="space-y-6">
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Biz haqimizda */}
+            <Card>
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <FileText className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Biz haqimizda</CardTitle>
+                    <CardDescription>Bosh sahifada ko'rsatiladigan platforma tavsifi</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  id="about-us"
+                  data-testid="input-about-us"
+                  placeholder="Platformamiz haqida qisqacha yozing..."
+                  value={aboutUs}
+                  onChange={(e) => setAboutUs(e.target.value)}
+                  rows={5}
+                  className="text-base"
+                />
+              </CardContent>
+            </Card>
+
+            {/* Aloqa ma'lumotlari */}
+            <Card>
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-blue-500/10">
+                    <Phone className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Aloqa Ma'lumotlari</CardTitle>
+                    <CardDescription>Foydalanuvchilar bilan bog'lanish uchun kontakt ma'lumotlar</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-2">
-                    <Label htmlFor="contact-email">Email</Label>
+                    <Label htmlFor="contact-email" className="text-sm font-semibold">Email manzil</Label>
                     <Input
                       id="contact-email"
                       data-testid="input-contact-email"
@@ -729,11 +752,11 @@ export default function AdminCMSPage() {
                       placeholder="info@example.com"
                       value={contactEmail}
                       onChange={(e) => setContactEmail(e.target.value)}
+                      className="text-base"
                     />
                   </div>
-
                   <div className="space-y-2">
-                    <Label htmlFor="contact-phone">Telefon</Label>
+                    <Label htmlFor="contact-phone" className="text-sm font-semibold">Telefon raqam</Label>
                     <Input
                       id="contact-phone"
                       data-testid="input-contact-phone"
@@ -741,130 +764,150 @@ export default function AdminCMSPage() {
                       placeholder="+998 90 123 45 67"
                       value={contactPhone}
                       onChange={(e) => setContactPhone(e.target.value)}
+                      className="text-base"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="contact-address">Manzil</Label>
+                  <Label htmlFor="contact-address" className="text-sm font-semibold">Manzil</Label>
                   <Input
                     id="contact-address"
                     data-testid="input-contact-address"
                     placeholder="Toshkent, O'zbekiston"
                     value={contactAddress}
                     onChange={(e) => setContactAddress(e.target.value)}
+                    className="text-base"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="contact-telegram">Telegram</Label>
+                  <Label htmlFor="contact-telegram" className="text-sm font-semibold">Telegram kanal/guruh</Label>
                   <Input
                     id="contact-telegram"
                     data-testid="input-contact-telegram"
                     placeholder="https://t.me/username"
                     value={contactTelegram}
                     onChange={(e) => setContactTelegram(e.target.value)}
+                    className="text-base"
                   />
                   <p className="text-sm text-muted-foreground">
                     Telegram kanal yoki guruh havolasi (masalan: https://t.me/your_channel)
                   </p>
                 </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Label>Guvohnoma va Litsenziya Rasmlari</Label>
-                    <div>
-                      <input
-                        type="file"
-                        id="certificate-upload"
-                        className="hidden"
-                        accept="image/*"
-                        onChange={handleCertificateUpload}
-                        data-testid="input-upload-certificate"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => document.getElementById('certificate-upload')?.click()}
-                        disabled={uploadingCertificate}
-                        data-testid="button-upload-certificate"
-                      >
-                        <Upload className="w-4 h-4 mr-2" />
-                        {uploadingCertificate ? "Yuklanmoqda..." : "Rasm Yuklash"}
-                      </Button>
-                    </div>
-                  </div>
-
-                  {uploadedCertificates.length > 0 && (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {uploadedCertificates.map((url, index) => (
-                        <div
-                          key={index}
-                          className="relative group rounded-lg overflow-hidden border bg-card aspect-[4/5]"
-                          data-testid={`preview-certificate-${index}`}
-                        >
-                          <img
-                            src={url}
-                            alt={`Sertifikat ${index + 1}`}
-                            className="w-full h-full object-contain"
-                          />
-                          <Button
-                            variant="destructive"
-                            size="icon"
-                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => handleRemoveCertificate(index)}
-                            data-testid={`button-remove-certificate-${index}`}
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <p className="text-sm text-muted-foreground">
-                    Rasm yuklang yoki quyida URL kiriting. Rasmlar bosh sahifada carousel ko'rinishida ko'rsatiladi.
-                  </p>
-
-                  <Textarea
-                    id="certificate-urls"
-                    data-testid="input-certificate-urls"
-                    placeholder="Yoki qo'lda URL kiriting (har bir qatorda bitta)&#10;https://example.com/certificate1.jpg"
-                    value={certificateUrls}
-                    onChange={(e) => setCertificateUrls(e.target.value)}
-                    rows={3}
-                  />
-                </div>
-
-                <Button
-                  onClick={saveSiteSettings}
-                  disabled={updateSettingMutation.isPending}
-                  data-testid="button-save-settings"
-                  className="w-full md:w-auto"
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  {updateSettingMutation.isPending ? "Saqlanmoqda..." : "Saqlash"}
-                </Button>
               </CardContent>
             </Card>
 
-            {/* Kinescope API Settings */}
+            {/* Guvohnoma va Litsenziya Rasmlari */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1.5 14.5v-9l7 4.5-7 4.5z"/></svg>
-                  Kinescope API Sozlamalari
-                </CardTitle>
-                <CardDescription>
-                  Kinescope API kalitini kiriting. O'qituvchilar dars yaratishda video yuklash imkoniga ega bo'ladi.
-                  {kinescopeConfigured && <span className="ml-2 text-green-600 dark:text-green-400 font-medium">✓ API kalit saqlangan</span>}
-                </CardDescription>
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-amber-500/10">
+                      <Award className="w-5 h-5 text-amber-500" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">Guvohnoma va Litsenziyalar</CardTitle>
+                      <CardDescription>Bosh sahifada carousel ko'rinishida ko'rsatiladi</CardDescription>
+                    </div>
+                  </div>
+                  <div>
+                    <input
+                      type="file"
+                      id="certificate-upload"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleCertificateUpload}
+                      data-testid="input-upload-certificate"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => document.getElementById('certificate-upload')?.click()}
+                      disabled={uploadingCertificate}
+                      data-testid="button-upload-certificate"
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      {uploadingCertificate ? "Yuklanmoqda..." : "Rasm Yuklash"}
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
+                {uploadedCertificates.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {uploadedCertificates.map((url, index) => (
+                      <div
+                        key={index}
+                        className="relative group rounded-lg overflow-hidden border bg-card aspect-[4/5]"
+                        data-testid={`preview-certificate-${index}`}
+                      >
+                        <img
+                          src={url}
+                          alt={`Sertifikat ${index + 1}`}
+                          className="w-full h-full object-contain"
+                        />
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => handleRemoveCertificate(index)}
+                          data-testid={`button-remove-certificate-${index}`}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div className="space-y-2">
-                  <Label htmlFor="kinescope-api-key">
-                    API Kalit {kinescopeConfigured && <span className="text-xs text-muted-foreground">(o'zgartirish uchun yangi kalit kiriting)</span>}
+                  <Label className="text-sm font-semibold">URL orqali qo'shish</Label>
+                  <Textarea
+                    id="certificate-urls"
+                    data-testid="input-certificate-urls"
+                    placeholder="Har bir qatorda bitta URL kiriting&#10;https://example.com/certificate1.jpg"
+                    value={certificateUrls}
+                    onChange={(e) => setCertificateUrls(e.target.value)}
+                    rows={3}
+                    className="text-base"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Saqlash tugmasi */}
+            <Button
+              onClick={saveSiteSettings}
+              disabled={updateSettingMutation.isPending}
+              data-testid="button-save-settings"
+              size="lg"
+              className="w-full md:w-auto"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              {updateSettingMutation.isPending ? "Saqlanmoqda..." : "Barcha Sozlamalarni Saqlash"}
+            </Button>
+
+            {/* Kinescope API Settings */}
+            <Card>
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-violet-500/10">
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 text-violet-500" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1.5 14.5v-9l7 4.5-7 4.5z"/></svg>
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg flex items-center gap-2 flex-wrap">
+                      Kinescope API Sozlamalari
+                      {kinescopeConfigured && <Badge variant="outline" className="text-green-600 dark:text-green-400 border-green-300 dark:border-green-700 no-default-hover-elevate no-default-active-elevate">Sozlangan</Badge>}
+                    </CardTitle>
+                    <CardDescription>O'qituvchilar dars yaratishda video yuklash imkoniga ega bo'ladi</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="kinescope-api-key" className="text-sm font-semibold">
+                    API Kalit {kinescopeConfigured && <span className="text-xs text-muted-foreground font-normal">(o'zgartirish uchun yangi kalit kiriting)</span>}
                   </Label>
                   <div className="flex gap-2">
                     <Input
@@ -874,6 +917,7 @@ export default function AdminCMSPage() {
                       onChange={(e) => setKinescopeApiKey(e.target.value)}
                       placeholder={kinescopeConfigured ? "••••••••••••••••••••••••" : "Kinescope API kalitini kiriting..."}
                       data-testid="input-kinescope-api-key"
+                      className="text-base"
                     />
                     <Button
                       variant="outline"
@@ -884,20 +928,21 @@ export default function AdminCMSPage() {
                       {kinescopeKeyVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     Kinescope dashboard → API → Token bo'limidan oling
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="kinescope-project-id">Papka/Kanal ID (ixtiyoriy)</Label>
+                  <Label htmlFor="kinescope-project-id" className="text-sm font-semibold">Papka/Kanal ID (ixtiyoriy)</Label>
                   <Input
                     id="kinescope-project-id"
                     value={kinescopeProjectId}
                     onChange={(e) => setKinescopeProjectId(e.target.value)}
                     placeholder="Masalan: abc123def456"
                     data-testid="input-kinescope-project-id"
+                    className="text-base"
                   />
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     Videolar shu papkaga joylashadi. Bo'sh qolsa, asosiy kanalga yuklanadi.
                   </p>
                 </div>
@@ -914,33 +959,38 @@ export default function AdminCMSPage() {
 
             {/* Bunny.net Stream Settings */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <svg viewBox="0 0 24 24" className="w-5 h-5 text-orange-500" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
-                  Bunny.net Stream Sozlamalari
-                </CardTitle>
-                <CardDescription>
-                  Bunny.net Stream API kaliti bilan o'qituvchilar to'g'ridan brauzerdan video yuklaydi — server orqali o'tmaydi, juda tez.
-                  {bunnyConfigured && <span className="ml-2 text-green-600 dark:text-green-400 font-medium">✓ Sozlangan</span>}
-                </CardDescription>
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-orange-500/10">
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 text-orange-500" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg flex items-center gap-2 flex-wrap">
+                      Bunny.net Stream Sozlamalari
+                      {bunnyConfigured && <Badge variant="outline" className="text-green-600 dark:text-green-400 border-green-300 dark:border-green-700 no-default-hover-elevate no-default-active-elevate">Sozlangan</Badge>}
+                    </CardTitle>
+                    <CardDescription>Brauzerdan to'g'ridan video yuklash — server orqali o'tmaydi, juda tez</CardDescription>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="bunny-library-id">Library ID <span className="text-destructive">*</span></Label>
+                  <Label htmlFor="bunny-library-id" className="text-sm font-semibold">Library ID <span className="text-destructive">*</span></Label>
                   <Input
                     id="bunny-library-id"
                     value={bunnyLibraryId}
                     onChange={(e) => setBunnyLibraryId(e.target.value)}
                     placeholder="Masalan: 123456"
                     data-testid="input-bunny-library-id"
+                    className="text-base"
                   />
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     Bunny dashboard → Stream → Library tanlab oching → yuqorida Library ID ko'rinadi
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="bunny-api-key">
-                    Stream API Kalit {bunnyConfigured && <span className="text-xs text-muted-foreground">(o'zgartirish uchun yangi kalit kiriting)</span>}
+                  <Label htmlFor="bunny-api-key" className="text-sm font-semibold">
+                    Stream API Kalit {bunnyConfigured && <span className="text-xs text-muted-foreground font-normal">(o'zgartirish uchun yangi kalit kiriting)</span>}
                   </Label>
                   <div className="flex gap-2">
                     <Input
@@ -950,6 +1000,7 @@ export default function AdminCMSPage() {
                       onChange={(e) => setBunnyApiKey(e.target.value)}
                       placeholder={bunnyConfigured ? "••••••••••••••••••••••••" : "Stream API kalitini kiriting..."}
                       data-testid="input-bunny-api-key"
+                      className="text-base"
                     />
                     <Button
                       variant="outline"
@@ -960,12 +1011,12 @@ export default function AdminCMSPage() {
                       {bunnyKeyVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     Bunny dashboard → Stream → Library → API tab → Stream API Key
                   </p>
                 </div>
-                <div className="p-3 rounded-md bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 text-xs text-orange-800 dark:text-orange-300">
-                  <p className="font-medium mb-1">To'g'ridan yuklash — server orqali o'tmaydi</p>
+                <div className="p-4 rounded-md bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 text-sm text-orange-800 dark:text-orange-300">
+                  <p className="font-semibold mb-1">To'g'ridan yuklash — server orqali o'tmaydi</p>
                   <p>Bunny.net brauzerdan to'g'ridan yuklashga ruxsat beradi. Kinescope kabi ikki marta yuklash muammosi yo'q.</p>
                 </div>
                 <Button
@@ -978,6 +1029,8 @@ export default function AdminCMSPage() {
                 </Button>
               </CardContent>
             </Card>
+
+            </div>
           </TabsContent>
 
           {/* Footer Links Tab */}
