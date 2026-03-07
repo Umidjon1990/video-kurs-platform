@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import * as tus from "tus-js-client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -158,7 +157,7 @@ export default function InstructorDashboard() {
   // Kinescope upload state
   const [kinescopeUploading, setKinescopeUploading] = useState(false);
   const [kinescopeProgress, setKinescopeProgress] = useState(0);
-  const kinescopeUploadRef = useRef<tus.Upload | null>(null);
+  const kinescopeUploadRef = useRef<XMLHttpRequest | null>(null);
 
   const [isAnnouncementOpen, setIsAnnouncementOpen] = useState(false);
   const [announcementForm, setAnnouncementForm] = useState({
@@ -240,56 +239,42 @@ export default function InstructorDashboard() {
     setKinescopeUploading(true);
     setKinescopeProgress(0);
     try {
-      // Fetch API key from our backend (authenticated endpoint)
-      const tokenRes = await fetch("/api/instructor/kinescope/token", { credentials: "include" });
-      if (!tokenRes.ok) {
-        const err = await tokenRes.json();
-        throw new Error(err.message || "Token olishda xato");
-      }
-      const { apiKey, projectId } = await tokenRes.json();
+      const formData = new FormData();
+      formData.append("file", file);
+      if (title) formData.append("title", title);
 
       await new Promise<void>((resolve, reject) => {
-        const metadata: Record<string, string> = {
-          filename: file.name,
-          filetype: file.type || "video/mp4",
-          title: title || file.name.replace(/\.[^/.]+$/, ""),
+        const xhr = new XMLHttpRequest();
+        kinescopeUploadRef.current = xhr;
+
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) setKinescopeProgress(Math.round((e.loaded / e.total) * 100));
         };
-        if (projectId) metadata.parent_id = projectId;
-
-        const upload = new tus.Upload(file, {
-          endpoint: "https://uploader.kinescope.io/tus/",
-          retryDelays: [0, 1000, 3000, 5000, 10000],
-          chunkSize: 10 * 1024 * 1024, // 10MB chunks
-          metadata,
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-          },
-          onError(error) {
-            reject(new Error(error.message || "TUS yuklash xatosi"));
-          },
-          onProgress(bytesUploaded, bytesTotal) {
-            const pct = bytesTotal > 0 ? Math.round((bytesUploaded / bytesTotal) * 100) : 0;
-            setKinescopeProgress(pct);
-          },
-          onSuccess() {
-            // Extract video ID from the upload URL
-            const uploadUrl = upload.url ?? "";
-            const videoId = uploadUrl.split("/").pop() || "";
-            if (videoId) {
-              setLessonForm(prev => ({ ...prev, videoUrl: `https://kinescope.io/${videoId}` }));
-              toast({ title: "Video yuklandi!", description: `Kinescope ID: ${videoId}` });
-            } else {
-              toast({ title: "Video yuklandi!", description: "URL avtomatik to'ldirilmadi, qo'lda kiriting" });
-            }
+        xhr.onload = () => {
+          if (xhr.status === 200) {
+            const data = JSON.parse(xhr.responseText);
+            setLessonForm(prev => ({ ...prev, videoUrl: data.embedUrl }));
+            toast({ title: "Video yuklandi!", description: `Kinescope ID: ${data.videoId}` });
             resolve();
-          },
-        });
-
-        kinescopeUploadRef.current = upload;
-        upload.start();
+          } else {
+            try {
+              const err = JSON.parse(xhr.responseText);
+              reject(new Error(err.message || "Yuklash xatosi"));
+            } catch {
+              reject(new Error(`Server xatosi: ${xhr.status}`));
+            }
+          }
+        };
+        xhr.onerror = () => reject(new Error("Tarmoq xatosi yuz berdi"));
+        xhr.onabort = () => reject(new Error("Yuklash bekor qilindi"));
+        xhr.open("POST", "/api/instructor/kinescope/upload");
+        xhr.withCredentials = true;
+        xhr.send(formData);
       });
     } catch (err: any) {
-      toast({ title: "Kinescope xatosi", description: err.message, variant: "destructive" });
+      if (err.message !== "Yuklash bekor qilindi") {
+        toast({ title: "Kinescope xatosi", description: err.message, variant: "destructive" });
+      }
     } finally {
       kinescopeUploadRef.current = null;
       setKinescopeUploading(false);
@@ -2911,9 +2896,6 @@ Kinescope: https://kinescope.io/watch/...'
                           variant="outline"
                           onClick={() => {
                             kinescopeUploadRef.current?.abort();
-                            setKinescopeUploading(false);
-                            setKinescopeProgress(0);
-                            kinescopeUploadRef.current = null;
                           }}
                           data-testid="button-cancel-kinescope"
                         >

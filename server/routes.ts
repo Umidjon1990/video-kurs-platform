@@ -52,6 +52,15 @@ const upload = multer({
   }
 });
 
+// Disk-based upload for large video files — avoids buffering 500MB in RAM
+const videoUpload = multer({
+  storage: multer.diskStorage({
+    destination: '/tmp',
+    filename: (_req, file, cb) => cb(null, `ks_${Date.now()}_${file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_')}`),
+  }),
+  limits: { fileSize: 500 * 1024 * 1024 },
+});
+
 
 // Object Storage setup
 const objectStorage = new ObjectStorageService();
@@ -3000,23 +3009,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Kinescope: return API token for direct TUS upload from browser (instructor only)
-  app.get('/api/instructor/kinescope/token', isAuthenticated, isInstructor, async (_req, res) => {
-    try {
-      const apiKeySetting = await db.select().from(siteSettings).where(eq(siteSettings.key, 'kinescope_api_key')).limit(1);
-      const projectSetting = await db.select().from(siteSettings).where(eq(siteSettings.key, 'kinescope_project_id')).limit(1);
+  // Kinescope: stream-upload video to Kinescope via server proxy (instructor only)
+  // Uses disk storage so large files never fill RAM; file is streamed to Kinescope then deleted
+  app.post('/api/instructor/kinescope/upload', isAuthenticated, isInstructor, (req: any, res: any) => {
+    videoUpload.single('file')(req, res, async (err: any) => {
+      if (err) return res.status(400).json({ message: err.message });
+      const fs = await import('fs');
+      const tmpPath: string | undefined = req.file?.path;
+      try {
+        if (!req.file || !tmpPath) return res.status(400).json({ message: 'Video fayl yuklanmadi' });
 
-      if (!apiKeySetting[0]?.value) {
-        return res.status(400).json({ message: 'Kinescope API kaliti sozlanmagan. Admin CMS ga kiring.' });
+        const apiKeySetting = await db.select().from(siteSettings).where(eq(siteSettings.key, 'kinescope_api_key')).limit(1);
+        const projectSetting = await db.select().from(siteSettings).where(eq(siteSettings.key, 'kinescope_project_id')).limit(1);
+
+        if (!apiKeySetting[0]?.value) {
+          fs.unlinkSync(tmpPath);
+          return res.status(400).json({ message: 'Kinescope API kaliti sozlanmagan. Admin CMS ga kiring.' });
+        }
+
+        const apiKey = apiKeySetting[0].value;
+        const projectId = projectSetting[0]?.value || '';
+        const videoTitle = req.body.title || req.file.originalname.replace(/\.[^/.]+$/, '');
+
+        const FormDataModule = await import('form-data');
+        const formData = new FormDataModule.default();
+        // Stream from disk — no RAM buffering
+        formData.append('file', fs.createReadStream(tmpPath), {
+          filename: req.file.originalname,
+          contentType: req.file.mimetype || 'video/mp4',
+          knownLength: req.file.size,
+        });
+
+        const headers: Record<string, string> = {
+          ...formData.getHeaders(),
+          'Authorization': `Bearer ${apiKey}`,
+          'X-Video-Title': videoTitle,
+        };
+        if (projectId) headers['X-Parent-ID'] = projectId;
+
+        const axios = (await import('axios')).default;
+        const response = await axios.post('https://uploader.kinescope.io/v2/video', formData, {
+          headers,
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity,
+          timeout: 15 * 60 * 1000, // 15 minutes
+        });
+
+        const videoId = response.data?.data?.id || response.data?.id;
+        if (!videoId) {
+          return res.status(500).json({ message: 'Kinescope javobida video ID topilmadi', raw: response.data });
+        }
+
+        res.json({ videoId, embedUrl: `https://kinescope.io/${videoId}`, title: videoTitle });
+      } catch (error: any) {
+        const msg = error.response?.data?.message || error.response?.data?.error || error.message;
+        res.status(500).json({ message: `Kinescope xatosi: ${msg}` });
+      } finally {
+        // Always clean up temp file
+        if (tmpPath) {
+          try { (await import('fs')).unlinkSync(tmpPath); } catch {}
+        }
       }
-
-      res.json({
-        apiKey: apiKeySetting[0].value,
-        projectId: projectSetting[0]?.value || '',
-      });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
+    });
   });
 
   // Word (.docx) file question import — extracts text and reuses same parser
