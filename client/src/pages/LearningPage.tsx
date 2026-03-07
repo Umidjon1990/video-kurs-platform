@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PlayCircle, CheckCircle, FileText, ClipboardCheck, Lock, Home, MessageCircle, Download, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Clock, Volume2, List, X } from "lucide-react";
+import { PlayCircle, CheckCircle, CheckCircle2, XCircle, FileText, ClipboardCheck, Lock, Home, MessageCircle, Download, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Clock, Volume2, List, X } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { NotificationBell } from "@/components/NotificationBell";
 import { StarRating } from "@/components/StarRating";
@@ -137,8 +137,11 @@ export default function LearningPage() {
 
   // Seeded random for consistent shuffle within a session
   const seededRandom = (seed: number, idx: number) => {
-    const x = Math.sin(seed * 9301 + idx * 49297) * 49289;
-    return x - Math.floor(x);
+    let h = seed ^ (idx * 2654435761);
+    h = Math.imul(h ^ (h >>> 16), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    h = (h ^ (h >>> 16)) >>> 0;
+    return h / 4294967296;
   };
 
   const shuffledTestQuestions = useMemo(() => {
@@ -146,8 +149,9 @@ export default function LearningPage() {
     const t = testDialog.test;
     if (!t?.randomOrder) return testQuestions;
     const arr = [...testQuestions];
+    const qSeed = shuffleSeed * 2654435761 + 12345;
     for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(seededRandom(shuffleSeed, i) * (i + 1));
+      const j = Math.floor(seededRandom(qSeed, i * 13 + 7) * (i + 1));
       [arr[i], arr[j]] = [arr[j], arr[i]];
     }
     return arr;
@@ -858,7 +862,7 @@ export default function LearningPage() {
             /* Result screen */
             <div className="space-y-6 py-4">
               <div className={`p-6 rounded-xl text-center ${testResult.isPassed ? 'bg-green-500/10 border-2 border-green-500/30' : 'bg-destructive/10 border-2 border-destructive/30'}`}>
-                <div className="text-4xl mb-2">{testResult.isPassed ? '✅' : '❌'}</div>
+                <div className="text-4xl mb-2">{testResult.isPassed ? <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto" /> : <XCircle className="w-12 h-12 text-destructive mx-auto" />}</div>
                 <h3 className="text-2xl font-bold mb-1">{testResult.percentage?.toFixed(1)}%</h3>
                 <p className="text-lg font-semibold">{testResult.isPassed ? "Test muvaffaqiyatli o'tildi!" : "Test o'tilmadi"}</p>
                 <p className="text-sm text-muted-foreground mt-1">
@@ -872,21 +876,21 @@ export default function LearningPage() {
               </div>
               <div className="flex gap-3">
                 {!testResult.isPassed && (
-                  <Button className="flex-1" onClick={() => {
+                  <button className="btn-3d-danger flex-1" onClick={() => {
                     setTestResult(null);
                     setTestAnswers({});
                     setShuffleSeed(Date.now());
                   }} data-testid="button-retake-test">
                     Qayta Topshirish
-                  </Button>
+                  </button>
                 )}
-                <Button variant="outline" className="flex-1" onClick={() => {
+                <button className="btn-3d-outline flex-1" onClick={() => {
                   setTestDialog({ open: false, testId: null });
                   setTestAnswers({});
                   setTestResult(null);
                 }}>
                   {testResult.isPassed ? "Yopish" : "Keyinroq"}
-                </Button>
+                </button>
               </div>
             </div>
           ) : (
@@ -899,15 +903,16 @@ export default function LearningPage() {
               ) : shuffledTestQuestions.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">Bu testda savollar yo'q</p>
               ) : (
-                shuffledTestQuestions.map((question: any, qIdx: number) => (
+                shuffledTestQuestions.map((question: any, qIdx: number) => {
+                  const hasArabic = isArabic(question.questionText);
+                  return (
                   <div key={question.id} className="space-y-3">
                     <div className="flex items-start gap-3">
-                      <span className="shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary text-sm font-bold flex items-center justify-center">{qIdx + 1}</span>
+                      <span className="question-number-badge shrink-0 w-8 h-8 rounded-full bg-primary/15 text-primary text-sm font-bold flex items-center justify-center">{qIdx + 1}</span>
                       <div className="flex-1">
                         <p
-                          className="font-medium leading-relaxed"
-                          dir={/[\u0600-\u06FF]/.test(question.questionText) ? 'rtl' : 'ltr'}
-                          style={{ fontFamily: /[\u0600-\u06FF]/.test(question.questionText) ? 'serif' : undefined }}
+                          className={`font-semibold test-question-font ${hasArabic ? 'arabic-text' : ''}`}
+                          dir="ltr"
                           data-testid={`question-text-${question.id}`}
                         >
                           {question.questionText}
@@ -926,21 +931,22 @@ export default function LearningPage() {
                     </div>
                     {qIdx < shuffledTestQuestions.length - 1 && <hr className="border-border/50" />}
                   </div>
-                ))
+                  );
+                })
               )}
               {shuffledTestQuestions.length > 0 && (
                 <div className="flex gap-3 pt-4 border-t">
-                  <Button variant="outline" onClick={() => setTestDialog({ open: false, testId: null })} className="flex-1">
+                  <button className="btn-3d-outline flex-1" onClick={() => setTestDialog({ open: false, testId: null })}>
                     Bekor qilish
-                  </Button>
-                  <Button
+                  </button>
+                  <button
+                    className="btn-3d-primary flex-1"
                     onClick={() => submitTestMutation.mutate()}
                     disabled={submitTestMutation.isPending}
-                    className="flex-1"
                     data-testid="button-submit-test"
                   >
                     {submitTestMutation.isPending ? "Topshirilmoqda..." : "Topshirish"}
-                  </Button>
+                  </button>
                 </div>
               )}
             </div>
@@ -973,36 +979,37 @@ function TestQuestionInput({
   const displayOptions = useMemo(() => {
     if (!mcOptions || !shuffleAnswers || !seededRandom) return mcOptions || [];
     const arr = [...mcOptions];
+    const combinedSeed = shuffleSeed * 2654435761 + question.id.charCodeAt(0) * 31;
     for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(seededRandom(shuffleSeed, i) * (i + 1));
+      const j = Math.floor(seededRandom(combinedSeed, i * 7 + 3) * (i + 1));
       [arr[i], arr[j]] = [arr[j], arr[i]];
     }
     return arr;
-  }, [mcOptions, shuffleAnswers, shuffleSeed, seededRandom]);
+  }, [mcOptions, shuffleAnswers, shuffleSeed, seededRandom, question.id]);
+
+  const optionLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
   if (question.type === "multiple_choice") {
     return (
       <div className="space-y-2">
-        {displayOptions.map((opt: any) => {
-          const rtl = isArabic(opt.optionText);
+        {displayOptions.map((opt: any, optIdx: number) => {
+          const hasAr = isArabic(opt.optionText);
+          const isSelected = Array.isArray(value) && value.includes(opt.id);
           return (
             <label
               key={opt.id}
-              className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover-elevate"
-              dir={rtl ? 'rtl' : 'ltr'}
+              className={`test-option-card flex items-center gap-3 p-3 cursor-pointer ${isSelected ? 'selected' : ''}`}
+              dir="ltr"
             >
               <Checkbox
-                checked={Array.isArray(value) && value.includes(opt.id)}
+                checked={isSelected}
                 onCheckedChange={(checked) => {
                   const current = Array.isArray(value) ? value : [];
                   onChange(checked ? [...current, opt.id] : current.filter((id: string) => id !== opt.id));
                 }}
-                className={rtl ? 'order-last' : ''}
               />
-              <span
-                className={`flex-1 text-sm ${rtl ? 'text-right' : ''}`}
-                style={{ fontFamily: rtl ? 'serif' : undefined }}
-              >
+              <span className="shrink-0 w-6 h-6 rounded-full bg-muted text-muted-foreground text-xs font-bold flex items-center justify-center">{optionLetters[optIdx]}</span>
+              <span className={`flex-1 test-option-font ${hasAr ? 'arabic-text' : ''}`}>
                 {opt.optionText}
               </span>
             </label>
@@ -1014,35 +1021,36 @@ function TestQuestionInput({
     return (
       <div className="space-y-2">
         {[
-          { val: "true", label: "To'g'ri (Ha)" },
-          { val: "false", label: "Noto'g'ri (Yo'q)" },
-        ].map(({ val, label }) => (
-          <label key={val} className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover-elevate">
+          { val: "true", label: "To'g'ri (Ha)", letter: "A" },
+          { val: "false", label: "Noto'g'ri (Yo'q)", letter: "B" },
+        ].map(({ val, label, letter }) => (
+          <label key={val} className={`test-option-card flex items-center gap-3 p-3 cursor-pointer ${value === val ? 'selected' : ''}`}>
             <input type="radio" className="accent-primary" checked={value === val} onChange={() => onChange(val)} />
-            <span className="text-sm">{label}</span>
+            <span className="shrink-0 w-6 h-6 rounded-full bg-muted text-muted-foreground text-xs font-bold flex items-center justify-center">{letter}</span>
+            <span className="test-option-font">{label}</span>
           </label>
         ))}
       </div>
     );
   } else if (question.type === "fill_blanks" || question.type === "short_answer") {
-    const rtl = isArabic(value || "");
     return (
       <Input
         value={value || ""}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Javob yozing..."
-        dir={rtl ? 'rtl' : 'ltr'}
+        dir="ltr"
+        className={`test-option-font ${isArabic(question.questionText) ? 'arabic-text' : ''}`}
       />
     );
   } else if (question.type === "essay") {
-    const rtl = isArabic(value || "");
     return (
       <Textarea
         value={value || ""}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Insho yozing..."
         rows={5}
-        dir={rtl ? 'rtl' : 'ltr'}
+        dir="ltr"
+        className={`test-option-font ${isArabic(question.questionText) ? 'arabic-text' : ''}`}
       />
     );
   }

@@ -232,8 +232,11 @@ export default function HomePage() {
   });
 
   const seededRandom = (seed: number, idx: number) => {
-    let x = Math.sin(seed + idx * 9301 + 49297) * 233280;
-    return x - Math.floor(x);
+    let h = seed ^ (idx * 2654435761);
+    h = Math.imul(h ^ (h >>> 16), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    h = (h ^ (h >>> 16)) >>> 0;
+    return h / 4294967296;
   };
 
   const shuffledDemoQuestions = useMemo(() => {
@@ -241,8 +244,9 @@ export default function HomePage() {
     const t = demoTestDialog.test;
     if (!t?.randomOrder) return demoTestQuestions;
     const arr = [...demoTestQuestions];
+    const qSeed = demoShuffleSeed * 2654435761 + 12345;
     for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(seededRandom(demoShuffleSeed, i) * (i + 1));
+      const j = Math.floor(seededRandom(qSeed, i * 13 + 7) * (i + 1));
       [arr[i], arr[j]] = [arr[j], arr[i]];
     }
     return arr;
@@ -1762,13 +1766,13 @@ export default function HomePage() {
               </Card>
               <div className="flex gap-3">
                 {!demoTestResult.isPassed && (
-                  <Button className="flex-1" onClick={() => { setDemoTestResult(null); setDemoTestAnswers({}); setDemoShuffleSeed(Date.now()); }} data-testid="button-retake-demo-test">
+                  <button className="btn-3d-danger flex-1" onClick={() => { setDemoTestResult(null); setDemoTestAnswers({}); setDemoShuffleSeed(Date.now()); }} data-testid="button-retake-demo-test">
                     Qayta Topshirish
-                  </Button>
+                  </button>
                 )}
-                <Button variant="outline" className="flex-1" onClick={() => { setDemoTestDialog({ open: false, testId: null }); setDemoTestAnswers({}); setDemoTestResult(null); }}>
+                <button className="btn-3d-outline flex-1" onClick={() => { setDemoTestDialog({ open: false, testId: null }); setDemoTestAnswers({}); setDemoTestResult(null); }}>
                   {demoTestResult.isPassed ? "Yopish" : "Keyinroq"}
-                </Button>
+                </button>
               </div>
             </div>
           ) : (
@@ -1785,12 +1789,11 @@ export default function HomePage() {
                   return (
                   <div key={question.id} className="space-y-3">
                     <div className="flex items-start gap-3">
-                      <span className="shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary text-sm font-bold flex items-center justify-center">{qIdx + 1}</span>
+                      <span className="question-number-badge shrink-0 w-8 h-8 rounded-full bg-primary/15 text-primary text-sm font-bold flex items-center justify-center">{qIdx + 1}</span>
                       <div className="flex-1">
                         <p
-                          className="font-medium leading-relaxed"
+                          className={`font-semibold test-question-font ${hasArabic ? 'arabic-text' : ''}`}
                           dir="ltr"
-                          style={hasArabic ? { fontFamily: '"Amiri", "Noto Naskh Arabic", "Traditional Arabic", serif', fontSize: '1.05rem', lineHeight: '2' } : undefined}
                           data-testid={`demo-question-text-${question.id}`}
                         >
                           {question.questionText}
@@ -1814,17 +1817,17 @@ export default function HomePage() {
               )}
               {shuffledDemoQuestions.length > 0 && (
                 <div className="flex gap-3 pt-4 border-t">
-                  <Button variant="outline" onClick={() => { setDemoTestDialog({ open: false, testId: null }); setDemoTestAnswers({}); }} className="flex-1">
+                  <button className="btn-3d-outline flex-1" onClick={() => { setDemoTestDialog({ open: false, testId: null }); setDemoTestAnswers({}); }}>
                     Bekor qilish
-                  </Button>
-                  <Button
+                  </button>
+                  <button
+                    className="btn-3d-primary flex-1"
                     onClick={() => submitDemoTestMutation.mutate()}
                     disabled={submitDemoTestMutation.isPending}
-                    className="flex-1"
                     data-testid="button-submit-demo-test"
                   >
                     {submitDemoTestMutation.isPending ? "Tekshirilmoqda..." : "Topshirish"}
-                  </Button>
+                  </button>
                 </div>
               )}
             </div>
@@ -2575,28 +2578,33 @@ function DemoTestQuestionInput({
   const displayOptions = useMemo(() => {
     if (!mcOptions || !shuffleAnswers || !seededRandom) return mcOptions || [];
     const arr = [...mcOptions];
+    const combinedSeed = shuffleSeed * 2654435761 + question.id.charCodeAt(0) * 31;
     for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(seededRandom(shuffleSeed, i) * (i + 1));
+      const j = Math.floor(seededRandom(combinedSeed, i * 7 + 3) * (i + 1));
       [arr[i], arr[j]] = [arr[j], arr[i]];
     }
     return arr;
-  }, [mcOptions, shuffleAnswers, shuffleSeed, seededRandom]);
+  }, [mcOptions, shuffleAnswers, shuffleSeed, seededRandom, question.id]);
+
+  const optionLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
   if (question.type === "multiple_choice") {
     return (
       <div className="space-y-2">
-        {displayOptions.map((opt: any) => {
+        {displayOptions.map((opt: any, optIdx: number) => {
           const hasAr = isArabicText(opt.optionText);
+          const isSelected = Array.isArray(value) && value.includes(opt.id);
           return (
-            <label key={opt.id} className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover-elevate" dir="ltr">
+            <label key={opt.id} className={`test-option-card flex items-center gap-3 p-3 cursor-pointer ${isSelected ? 'selected' : ''}`} dir="ltr">
               <Checkbox
-                checked={Array.isArray(value) && value.includes(opt.id)}
+                checked={isSelected}
                 onCheckedChange={(checked) => {
                   const current = Array.isArray(value) ? value : [];
                   onChange(checked ? [...current, opt.id] : current.filter((id: string) => id !== opt.id));
                 }}
               />
-              <span className="flex-1 text-sm" style={hasAr ? { fontFamily: '"Amiri", "Noto Naskh Arabic", "Traditional Arabic", serif', fontSize: '1rem', lineHeight: '1.8' } : undefined}>
+              <span className="shrink-0 w-6 h-6 rounded-full bg-muted text-muted-foreground text-xs font-bold flex items-center justify-center">{optionLetters[optIdx]}</span>
+              <span className={`flex-1 test-option-font ${hasAr ? 'arabic-text' : ''}`}>
                 {opt.optionText}
               </span>
             </label>
@@ -2608,12 +2616,13 @@ function DemoTestQuestionInput({
     return (
       <div className="space-y-2">
         {[
-          { val: "true", label: "To'g'ri (Ha)" },
-          { val: "false", label: "Noto'g'ri (Yo'q)" },
-        ].map(({ val, label }) => (
-          <label key={val} className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover-elevate">
+          { val: "true", label: "To'g'ri (Ha)", letter: "A" },
+          { val: "false", label: "Noto'g'ri (Yo'q)", letter: "B" },
+        ].map(({ val, label, letter }) => (
+          <label key={val} className={`test-option-card flex items-center gap-3 p-3 cursor-pointer ${value === val ? 'selected' : ''}`}>
             <input type="radio" className="accent-primary" checked={value === val} onChange={() => onChange(val)} />
-            <span className="text-sm">{label}</span>
+            <span className="shrink-0 w-6 h-6 rounded-full bg-muted text-muted-foreground text-xs font-bold flex items-center justify-center">{letter}</span>
+            <span className="test-option-font">{label}</span>
           </label>
         ))}
       </div>
@@ -2631,9 +2640,9 @@ function DemoTestQuestionInput({
           const hasAr = isArabicText(left);
           return (
             <div key={idx} className="flex items-center gap-3 flex-wrap" dir="ltr">
-              <span className="text-sm font-medium min-w-[80px]" style={hasAr ? { fontFamily: '"Amiri", "Noto Naskh Arabic", serif' } : undefined}>{left}</span>
+              <span className={`test-option-font font-medium min-w-[80px] ${hasAr ? 'arabic-text' : ''}`}>{left}</span>
               <select
-                className="flex-1 border rounded-md p-2 text-sm bg-background"
+                className="flex-1 border rounded-md p-2 test-option-font bg-background"
                 value={currentMatches[left] || ""}
                 onChange={(e) => {
                   const newMatches = { ...currentMatches, [left]: e.target.value };
@@ -2657,7 +2666,7 @@ function DemoTestQuestionInput({
         onChange={(e) => onChange(e.target.value)}
         placeholder="Javob yozing..."
         dir="ltr"
-        style={isArabicText(question.questionText) ? { fontFamily: '"Amiri", "Noto Naskh Arabic", serif', fontSize: '1rem' } : undefined}
+        className={`test-option-font ${isArabicText(question.questionText) ? 'arabic-text' : ''}`}
       />
     );
   } else if (question.type === "essay") {
@@ -2668,7 +2677,7 @@ function DemoTestQuestionInput({
         placeholder="Insho yozing..."
         rows={5}
         dir="ltr"
-        style={isArabicText(question.questionText) ? { fontFamily: '"Amiri", "Noto Naskh Arabic", serif', fontSize: '1rem' } : undefined}
+        className={`test-option-font ${isArabicText(question.questionText) ? 'arabic-text' : ''}`}
       />
     );
   }
