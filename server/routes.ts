@@ -6577,18 +6577,26 @@ So'zlar soni: ${submission.wordCount}`;
     try {
       const { groupId } = req.params;
 
-      // Get all enrollments for this group
+      // Get course IDs from both enrollments AND group_course_settings
       const groupEnrollments = await db
-        .select({
-          courseId: enrollments.courseId,
-        })
+        .select({ courseId: enrollments.courseId })
         .from(enrollments)
         .where(eq(enrollments.groupId, groupId))
         .groupBy(enrollments.courseId);
 
-      if (groupEnrollments.length === 0) return res.json([]);
+      const allSettings = await storage.getGroupCourseSettingsByGroup(groupId);
 
-      const courseIds = groupEnrollments.map(e => e.courseId).filter(Boolean) as string[];
+      // Merge course IDs from both sources
+      const courseIdSet = new Set<string>();
+      for (const e of groupEnrollments) {
+        if (e.courseId) courseIdSet.add(e.courseId);
+      }
+      for (const s of allSettings) {
+        if (s.courseId) courseIdSet.add(s.courseId);
+      }
+
+      const courseIds = Array.from(courseIdSet);
+      if (courseIds.length === 0) return res.json([]);
 
       // Get course details
       const courseDetails = await db
@@ -6615,8 +6623,6 @@ So'zlar soni: ${submission.wordCount}`;
         if (e.courseId) countMap[e.courseId] = Number(e.count);
       }
 
-      // Get groupCourseSettings for each course
-      const allSettings = await storage.getGroupCourseSettingsByGroup(groupId);
       const settingsMap: Record<string, any> = {};
       for (const s of allSettings) {
         settingsMap[s.courseId] = s;
