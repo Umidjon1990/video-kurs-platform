@@ -1780,15 +1780,17 @@ export default function HomePage() {
               ) : shuffledDemoQuestions.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">Bu testda savollar yo'q</p>
               ) : (
-                shuffledDemoQuestions.map((question: any, qIdx: number) => (
+                shuffledDemoQuestions.map((question: any, qIdx: number) => {
+                  const hasArabic = isArabicText(question.questionText);
+                  return (
                   <div key={question.id} className="space-y-3">
-                    <div className="flex items-start gap-3">
+                    <div className={`flex items-start gap-3 ${hasArabic ? 'flex-row-reverse' : ''}`}>
                       <span className="shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary text-sm font-bold flex items-center justify-center">{qIdx + 1}</span>
                       <div className="flex-1">
                         <p
-                          className="font-medium leading-relaxed"
-                          dir={/[\u0600-\u06FF]/.test(question.questionText) ? 'rtl' : 'ltr'}
-                          style={{ fontFamily: /[\u0600-\u06FF]/.test(question.questionText) ? 'serif' : undefined }}
+                          className={`font-medium leading-relaxed ${hasArabic ? 'text-right' : ''}`}
+                          dir={hasArabic ? 'rtl' : 'ltr'}
+                          style={{ fontFamily: hasArabic ? '"Amiri", "Noto Naskh Arabic", "Traditional Arabic", serif' : undefined, fontSize: hasArabic ? '1.1rem' : undefined, lineHeight: hasArabic ? '2' : undefined }}
                           data-testid={`demo-question-text-${question.id}`}
                         >
                           {question.questionText}
@@ -1807,7 +1809,8 @@ export default function HomePage() {
                     </div>
                     {qIdx < shuffledDemoQuestions.length - 1 && <hr className="border-border/50" />}
                   </div>
-                ))
+                  );
+                })
               )}
               {shuffledDemoQuestions.length > 0 && (
                 <div className="flex gap-3 pt-4 border-t">
@@ -2594,7 +2597,7 @@ function DemoTestQuestionInput({
                 }}
                 className={rtl ? 'order-last' : ''}
               />
-              <span className={`flex-1 text-sm ${rtl ? 'text-right' : ''}`} style={{ fontFamily: rtl ? 'serif' : undefined }}>
+              <span className={`flex-1 text-sm ${rtl ? 'text-right' : ''}`} style={{ fontFamily: rtl ? '"Amiri", "Noto Naskh Arabic", "Traditional Arabic", serif' : undefined, fontSize: rtl ? '1rem' : undefined, lineHeight: rtl ? '1.8' : undefined }}>
                 {opt.optionText}
               </span>
             </label>
