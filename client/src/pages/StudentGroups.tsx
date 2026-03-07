@@ -7,6 +7,15 @@ import { Users, Calendar, BookOpen, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
 
+function getDisplayThumbnail(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const driveMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (driveMatch) {
+    return `https://drive.google.com/thumbnail?id=${driveMatch[1]}&sz=w200`;
+  }
+  return url;
+}
+
 export default function StudentGroups() {
   const { user } = useAuth();
 
@@ -89,9 +98,9 @@ export default function StudentGroups() {
                             className="flex items-center gap-3 p-2.5 rounded-lg bg-primary/5 border border-primary/10 hover-elevate cursor-pointer"
                             data-testid={`course-link-${course.id}`}
                           >
-                            {course.thumbnailUrl ? (
+                            {getDisplayThumbnail(course.thumbnailUrl) ? (
                               <img
-                                src={course.thumbnailUrl}
+                                src={getDisplayThumbnail(course.thumbnailUrl)!}
                                 alt={course.title}
                                 className="w-10 h-10 rounded object-cover shrink-0"
                               />

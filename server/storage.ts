@@ -1050,10 +1050,13 @@ export class DatabaseStorage implements IStorage {
     return enrollment || null;
   }
 
-  async getEnrolledCourses(userId: string): Promise<Course[]> {
+  async getEnrolledCourses(userId: string): Promise<any[]> {
     console.log('[Storage] getEnrolledCourses called for userId:', userId);
     const result = await db
-      .select({ course: courses })
+      .select({
+        course: courses,
+        groupId: enrollments.groupId,
+      })
       .from(enrollments)
       .innerJoin(courses, eq(enrollments.courseId, courses.id))
       .where(and(
@@ -1063,7 +1066,15 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(enrollments.enrolledAt));
     
     console.log('[Storage] getEnrolledCourses found', result.length, 'results');
-    return result.map(r => r.course);
+    const enriched = await Promise.all(result.map(async (r) => {
+      let groupName: string | null = null;
+      if (r.groupId) {
+        const [group] = await db.select({ name: studentGroups.name }).from(studentGroups).where(eq(studentGroups.id, r.groupId));
+        groupName = group?.name || null;
+      }
+      return { ...r.course, groupId: r.groupId, groupName };
+    }));
+    return enriched;
   }
 
   async getPendingPayments(): Promise<any[]> {
@@ -1894,10 +1905,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Student Progress Tracking (Optimized - batched queries)
-  async getStudentProgress(userId: string): Promise<StudentCourseProgress[]> {
+  async getStudentProgress(userId: string): Promise<any[]> {
     // 1. Get all enrolled courses
     const enrolledCourses = await db
-      .select({ course: courses })
+      .select({ course: courses, groupId: enrollments.groupId })
       .from(enrollments)
       .innerJoin(courses, eq(enrollments.courseId, courses.id))
       .where(
@@ -1980,8 +1991,17 @@ export class DatabaseStorage implements IStorage {
           )
       : [];
 
+    // 6b. Batch fetch group names for enrolled courses
+    const groupIds = enrolledCourses.map(e => e.groupId).filter(Boolean) as string[];
+    const uniqueGroupIds = [...new Set(groupIds)];
+    let groupNameMap: Record<string, string> = {};
+    if (uniqueGroupIds.length > 0) {
+      const groups = await db.select({ id: studentGroups.id, name: studentGroups.name }).from(studentGroups).where(inArray(studentGroups.id, uniqueGroupIds));
+      for (const g of groups) { groupNameMap[g.id] = g.name; }
+    }
+
     // 7. Combine data in memory for each course
-    const progressData: StudentCourseProgress[] = enrolledCourses.map(({ course }) => {
+    const progressData = enrolledCourses.map(({ course, groupId }) => {
       const courseLessons = allLessons.filter(l => l.courseId === course.id);
       const courseAssignments = allAssignments.filter(a => a.courseId === course.id);
       const courseAssignmentIds = courseAssignments.map(a => a.id);
@@ -2012,8 +2032,9 @@ export class DatabaseStorage implements IStorage {
 
       const nextLesson = courseLessons.sort((a, b) => (a.order || 0) - (b.order || 0))[0];
 
+      const enrichedCourse = { ...course, groupId: groupId || null, groupName: groupId ? (groupNameMap[groupId] || null) : null };
       return {
-        course,
+        course: enrichedCourse,
         totalLessons: courseLessons.length,
         totalAssignments: courseAssignments.length,
         submittedAssignments: courseSubmissions.length,

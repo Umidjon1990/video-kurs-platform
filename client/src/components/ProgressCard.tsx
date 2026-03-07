@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BookOpen, CheckCircle2, FileText, GraduationCap, ArrowRight, Trophy } from "lucide-react";
+import { BookOpen, CheckCircle2, FileText, GraduationCap, ArrowRight, Trophy, Users } from "lucide-react";
 import type { StudentCourseProgress } from "@shared/schema";
 import { motion, useInView } from "framer-motion";
 import { useRef, useEffect, useState } from "react";
@@ -132,6 +132,12 @@ export function ProgressCard({ progress, onContinue }: ProgressCardProps) {
                   </Badge>
                 )}
               </div>
+              {(course as any).groupName && (
+                <Badge variant="outline" className="mt-1 text-[10px]">
+                  <Users className="w-3 h-3 mr-1" />
+                  {(course as any).groupName}
+                </Badge>
+              )}
               <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                 {course.description}
               </p>
