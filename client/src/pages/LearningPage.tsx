@@ -589,6 +589,7 @@ export default function LearningPage() {
                     ) : (
                       <ModernVideoPlayer 
                         videoUrl={currentLesson.videoUrl || ""} 
+                        paused={testDialog.open}
                         lessonId={currentLesson.id}
                         onComplete={() => saveProgressMutation.mutate({ lessonId: currentLesson.id, completed: true })}
                       />

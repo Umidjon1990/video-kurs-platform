@@ -4,10 +4,12 @@ import { Play, Maximize2, Minimize2 } from "lucide-react";
 interface ModernVideoPlayerProps {
   videoUrl: string;
   title?: string;
+  paused?: boolean;
   onError?: () => void;
+  [key: string]: any;
 }
 
-export function ModernVideoPlayer({ videoUrl, title, onError }: ModernVideoPlayerProps) {
+export function ModernVideoPlayer({ videoUrl, title, paused, onError }: ModernVideoPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [isNativeFullscreen, setIsNativeFullscreen] = useState(false);
@@ -15,6 +17,22 @@ export function ModernVideoPlayer({ videoUrl, title, onError }: ModernVideoPlaye
   const isFullscreen = isNativeFullscreen || isCssFullscreen;
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (paused && iframeRef.current?.contentWindow) {
+      const iframe = iframeRef.current;
+      const src = iframe.src || '';
+      iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+      iframe.contentWindow.postMessage(JSON.stringify({ method: 'pause' }), '*');
+      iframe.contentWindow.postMessage(JSON.stringify({ command: 'pause' }), '*');
+      if (src.includes('kinescope')) {
+        iframe.contentWindow.postMessage(JSON.stringify({ type: 'player:call', data: { method: 'pause' } }), '*');
+      }
+      if (src.includes('mediadelivery.net')) {
+        iframe.contentWindow.postMessage(JSON.stringify({ event: 'pause' }), '*');
+      }
+    }
+  }, [paused]);
 
   useEffect(() => {
     const handleFsChange = () => {
@@ -95,7 +113,8 @@ export function ModernVideoPlayer({ videoUrl, title, onError }: ModernVideoPlaye
         if (iframeSrc.includes('youtube.com/embed/')) {
           const ytId = iframeSrc.split('youtube.com/embed/')[1]?.split(/[?&]/)[0];
           if (ytId) {
-            return { type: 'youtube', embedUrl: `https://www.youtube.com/embed/${ytId}?rel=0&modestbranding=1&playsinline=1&fs=1` };
+            const origin = encodeURIComponent(window.location.origin);
+            return { type: 'youtube', embedUrl: `https://www.youtube.com/embed/${ytId}?rel=0&modestbranding=1&playsinline=1&enablejsapi=1&origin=${origin}&fs=1` };
           }
         }
         return { type: 'iframe', embedUrl: iframeSrc };
