@@ -91,10 +91,17 @@ function StudentGroupSection({ user, location }: { user: any; location: string }
     enabled: user?.role === "student",
   });
 
+  const { data: myCurator } = useQuery<{ curator: { id: string; firstName: string; lastName: string | null } | null }>({
+    queryKey: ["/api/student/my-curator"],
+    enabled: user?.role === "student",
+  });
+
   if (user?.role !== "student") return null;
 
   const contactTelegram = siteSettingsArr.find(s => s.key === "contact_telegram")?.value || "";
-  if (myGroups.length === 0 && !contactTelegram) return null;
+  const hasCurator = !!myCurator?.curator;
+
+  if (myGroups.length === 0 && !contactTelegram && !hasCurator) return null;
 
   const telegramLink = contactTelegram
     ? (contactTelegram.startsWith("http")
@@ -104,9 +111,29 @@ function StudentGroupSection({ user, location }: { user: any; location: string }
 
   const items: { title: string; url: string; icon: any; external?: boolean; activeColor: string; glowColor: string }[] = [];
 
+  for (const g of myGroups) {
+    items.push({
+      title: `${g.name} savol javoblar`,
+      url: `/group-chat/${g.id}`,
+      icon: MessagesSquare,
+      activeColor: "#c084fc",
+      glowColor: "rgba(192,132,252,0.6)",
+    });
+  }
+
+  if (hasCurator) {
+    items.push({
+      title: "Kuratorga savollar",
+      url: "/chat",
+      icon: UserCheck,
+      activeColor: "#a78bfa",
+      glowColor: "rgba(167,139,250,0.6)",
+    });
+  }
+
   if (telegramLink) {
     items.push({
-      title: "Admin bilan bog'lanish",
+      title: "Admin bilan aloqa",
       url: telegramLink,
       icon: Send,
       external: true,
@@ -115,15 +142,7 @@ function StudentGroupSection({ user, location }: { user: any; location: string }
     });
   }
 
-  for (const g of myGroups) {
-    items.push({
-      title: g.name,
-      url: `/group-chat/${g.id}`,
-      icon: MessagesSquare,
-      activeColor: "#c084fc",
-      glowColor: "rgba(192,132,252,0.6)",
-    });
-  }
+  if (items.length === 0) return null;
 
   return (
     <SidebarGroup>
@@ -133,10 +152,10 @@ function StudentGroupSection({ user, location }: { user: any; location: string }
       </SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu className="space-y-0.5">
-          {items.map((item, i) => {
+          {items.map((item) => {
             const isActive = !item.external && (location === item.url || location.startsWith(item.url + "/"));
             return (
-              <SidebarMenuItem key={item.url}>
+              <SidebarMenuItem key={item.title + item.url}>
                 <SidebarMenuButton
                   asChild
                   isActive={isActive}

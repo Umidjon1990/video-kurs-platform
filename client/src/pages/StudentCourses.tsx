@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -7,16 +7,20 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CourseCard } from "@/components/CourseCard";
 import { ProgressCard } from "@/components/ProgressCard";
 import { StatsCard } from "@/components/StatsCard";
 import { ModernVideoPlayer } from "@/components/ModernVideoPlayer";
+import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import {
   BookOpen, Trophy, GraduationCap, PlayCircle, CheckCircle, Star, Sparkles,
   ArrowRight, Target, Zap, Radio, Video, Clock, LayoutGrid, Rocket, Flame, Crown,
   X, ChevronLeft, ChevronRight, Lock, Play, Layers, FileText, ClipboardCheck,
-  ExternalLink, Info
+  ExternalLink, Info, CheckCircle2, XCircle, ArrowLeft, Loader2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Course, StudentCourseProgress } from "@shared/schema";
@@ -81,6 +85,14 @@ interface VideoLessonModalProps {
 function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
   const [activeLessonId, setActiveLessonId] = useState(state.lessonId);
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
+
+  const [activeTestId, setActiveTestId] = useState<string | null>(null);
+  const [activeTest, setActiveTest] = useState<any>(null);
+  const [testAnswers, setTestAnswers] = useState<Record<string, any>>({});
+  const [testResult, setTestResult] = useState<any>(null);
+  const [isSubmittingTest, setIsSubmittingTest] = useState(false);
+  const [shuffleSeed, setShuffleSeed] = useState(0);
 
   const { data: lessons } = useQuery<any[]>({
     queryKey: ["/api/courses", state.courseId, "lessons"],
@@ -138,6 +150,53 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
     (tests || []).filter((t: any) => t.lessonId === activeLessonId),
     [tests, activeLessonId]
   );
+
+  const { data: testQuestions } = useQuery<any[]>({
+    queryKey: ["/api/tests", activeTestId, "questions"],
+    queryFn: () => fetch(`/api/tests/${activeTestId}/questions`, { credentials: 'include' }).then(r => r.json()),
+    enabled: !!activeTestId,
+  });
+
+  const shuffledQuestions = useMemo(() => {
+    if (!testQuestions) return [];
+    if (!activeTest?.shuffleQuestions) return testQuestions;
+    const seed = shuffleSeed || 1;
+    const arr = [...testQuestions];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.abs(((seed * (i + 1) * 2654435761) >> 0) % (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }, [testQuestions, activeTest?.shuffleQuestions, shuffleSeed]);
+
+  const openTest = (t: any) => {
+    setActiveTestId(t.id);
+    setActiveTest(t);
+    setTestAnswers({});
+    setTestResult(null);
+    setShuffleSeed(Date.now());
+  };
+
+  const closeTest = () => {
+    setActiveTestId(null);
+    setActiveTest(null);
+    setTestAnswers({});
+    setTestResult(null);
+  };
+
+  const submitTest = async () => {
+    if (!activeTestId) return;
+    setIsSubmittingTest(true);
+    try {
+      const res = await apiRequest("POST", `/api/tests/${activeTestId}/submit`, { answers: testAnswers });
+      const result = await res.json();
+      setTestResult(result);
+    } catch (err: any) {
+      toast({ title: "Xatolik", description: err.message || "Test topshirishda xatolik", variant: "destructive" });
+    } finally {
+      setIsSubmittingTest(false);
+    }
+  };
 
   const goToLearningPage = () => {
     onClose();
@@ -452,10 +511,11 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={goToLearningPage}
-                              className="shrink-0 text-xs border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 gap-1"
+                              onClick={() => openTest(t)}
+                              className="shrink-0 text-xs border-cyan-500/30 text-cyan-400 gap-1"
+                              data-testid={`button-start-test-${t.id}`}
                             >
-                              <ExternalLink className="w-3 h-3" />
+                              <ClipboardCheck className="w-3 h-3" />
                               Boshlash
                             </Button>
                           </div>
@@ -535,6 +595,167 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
 
             </div>
           </div>
+
+          {activeTestId && (
+            <div className="absolute inset-0 z-[20] flex flex-col rounded-3xl overflow-hidden"
+              style={{ background: "linear-gradient(135deg, rgba(6,2,18,0.99) 0%, rgba(12,4,32,0.99) 50%, rgba(6,2,18,0.99) 100%)" }}>
+              <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 shrink-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Button size="icon" variant="ghost" onClick={closeTest} className="rounded-xl text-slate-400 shrink-0">
+                    <ArrowLeft className="w-4 h-4" />
+                  </Button>
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">Test</p>
+                    <h3 className="text-sm font-bold text-slate-100 truncate">{activeTest?.title}</h3>
+                  </div>
+                </div>
+                {activeTest?.passingScore && !testResult && (
+                  <Badge variant="secondary" className="shrink-0 text-[10px]">
+                    O'tish bali: {activeTest.passingScore}%
+                  </Badge>
+                )}
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-5 space-y-6">
+                {testResult ? (
+                  <div className="flex flex-col items-center gap-5 py-8">
+                    <div className={`w-20 h-20 rounded-full flex items-center justify-center ${testResult.isPassed ? 'bg-green-500/20 border-2 border-green-500/40' : 'bg-red-500/20 border-2 border-red-500/40'}`}>
+                      {testResult.isPassed ? <CheckCircle2 className="w-10 h-10 text-green-400" /> : <XCircle className="w-10 h-10 text-red-400" />}
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-white">{testResult.totalPoints ? ((testResult.score / testResult.totalPoints) * 100).toFixed(0) : 0}%</p>
+                      <p className={`text-sm font-medium mt-1 ${testResult.isPassed ? 'text-green-400' : 'text-red-400'}`}>
+                        {testResult.isPassed ? "Tabriklaymiz! Test o'tildi" : "Test o'tilmadi"}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">{testResult.score} / {testResult.totalPoints} ball</p>
+                    </div>
+                    <div className="flex gap-3">
+                      <Button variant="outline" onClick={() => { setTestResult(null); setTestAnswers({}); setShuffleSeed(Date.now()); }} data-testid="button-retake-test">
+                        Qayta topshirish
+                      </Button>
+                      <Button onClick={closeTest} data-testid="button-close-test-result">Yopish</Button>
+                    </div>
+
+                    {testResult.results && (
+                      <div className="w-full space-y-3 mt-4">
+                        {testResult.results.map((r: any, i: number) => (
+                          <div key={i} className={`p-3 rounded-xl border ${r.isCorrect ? 'border-green-500/20 bg-green-500/5' : 'border-red-500/20 bg-red-500/5'}`}>
+                            <div className="flex items-start gap-2">
+                              {r.isCorrect ? <CheckCircle2 className="w-4 h-4 text-green-400 mt-0.5 shrink-0" /> : <XCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />}
+                              <div>
+                                <p className="text-sm text-slate-200">{r.questionText || `Savol ${i + 1}`}</p>
+                                <p className="text-xs text-slate-500 mt-1">{r.points} / {r.maxPoints} ball</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : !testQuestions ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <>
+                    {shuffledQuestions.map((q: any, qIdx: number) => (
+                      <div key={q.id} className="p-4 rounded-xl border border-white/8 bg-white/[0.02] space-y-3">
+                        <div className="flex items-start gap-2">
+                          <span className="text-xs font-bold text-primary bg-primary/10 rounded-lg px-2 py-1 shrink-0">{qIdx + 1}</span>
+                          <p className="text-sm text-slate-200 leading-relaxed">{q.questionText}</p>
+                        </div>
+                        {q.questionType === "multiple_choice" && q.options && (
+                          <RadioGroup value={testAnswers[q.id] || ""} onValueChange={(v) => setTestAnswers(prev => ({ ...prev, [q.id]: v }))}>
+                            {(q.options as string[]).map((opt: string, oi: number) => (
+                              <div key={oi} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 transition-colors">
+                                <RadioGroupItem value={opt} id={`q-${q.id}-o-${oi}`} />
+                                <Label htmlFor={`q-${q.id}-o-${oi}`} className="text-sm text-slate-300 cursor-pointer flex-1">{opt}</Label>
+                              </div>
+                            ))}
+                          </RadioGroup>
+                        )}
+                        {q.questionType === "multiple_select" && q.options && (
+                          <div className="space-y-1">
+                            {(q.options as string[]).map((opt: string, oi: number) => {
+                              const selected = Array.isArray(testAnswers[q.id]) ? testAnswers[q.id] : [];
+                              return (
+                                <div key={oi} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 transition-colors">
+                                  <Checkbox
+                                    id={`q-${q.id}-ms-${oi}`}
+                                    checked={selected.includes(opt)}
+                                    onCheckedChange={(checked) => {
+                                      setTestAnswers(prev => {
+                                        const cur = Array.isArray(prev[q.id]) ? [...prev[q.id]] : [];
+                                        if (checked) cur.push(opt); else { const idx = cur.indexOf(opt); if (idx >= 0) cur.splice(idx, 1); }
+                                        return { ...prev, [q.id]: cur };
+                                      });
+                                    }}
+                                  />
+                                  <Label htmlFor={`q-${q.id}-ms-${oi}`} className="text-sm text-slate-300 cursor-pointer flex-1">{opt}</Label>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                        {q.questionType === "true_false" && (
+                          <RadioGroup value={testAnswers[q.id] || ""} onValueChange={(v) => setTestAnswers(prev => ({ ...prev, [q.id]: v }))}>
+                            <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/5">
+                              <RadioGroupItem value="true" id={`q-${q.id}-true`} />
+                              <Label htmlFor={`q-${q.id}-true`} className="text-sm text-slate-300 cursor-pointer">To'g'ri</Label>
+                            </div>
+                            <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/5">
+                              <RadioGroupItem value="false" id={`q-${q.id}-false`} />
+                              <Label htmlFor={`q-${q.id}-false`} className="text-sm text-slate-300 cursor-pointer">Noto'g'ri</Label>
+                            </div>
+                          </RadioGroup>
+                        )}
+                        {q.questionType === "fill_in_blank" && (
+                          <input
+                            type="text"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-primary/50"
+                            placeholder="Javobingizni kiriting..."
+                            value={testAnswers[q.id] || ""}
+                            onChange={(e) => setTestAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+                          />
+                        )}
+                        {q.questionType === "matching" && q.options && q.matchingPairs && (
+                          <div className="space-y-2">
+                            {(q.matchingPairs as { left: string }[]).map((pair, pi: number) => (
+                              <div key={pi} className="flex items-center gap-2 flex-wrap">
+                                <span className="text-sm text-slate-300 min-w-[100px]">{pair.left}</span>
+                                <select
+                                  className="flex-1 bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-sm text-slate-200"
+                                  value={(testAnswers[q.id] as Record<string, string>)?.[pair.left] || ""}
+                                  onChange={(e) => setTestAnswers(prev => ({ ...prev, [q.id]: { ...(prev[q.id] as Record<string, string> || {}), [pair.left]: e.target.value } }))}
+                                >
+                                  <option value="">Tanlang...</option>
+                                  {(q.options as string[]).map((opt, oi) => (
+                                    <option key={oi} value={opt}>{opt}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    <div className="sticky bottom-0 pt-3 pb-1 bg-[rgba(6,2,18,0.95)] backdrop-blur-sm">
+                      <Button
+                        onClick={submitTest}
+                        disabled={isSubmittingTest || Object.keys(testAnswers).length === 0}
+                        className="w-full"
+                        data-testid="button-submit-modal-test"
+                      >
+                        {isSubmittingTest ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Tekshirilmoqda...</> : "Testni Topshirish"}
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
         </div>
         </motion.div>
       </motion.div>
