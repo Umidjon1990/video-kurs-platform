@@ -8,8 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CourseCard } from "@/components/CourseCard";
 import { ProgressCard } from "@/components/ProgressCard";
 import { StatsCard } from "@/components/StatsCard";
@@ -664,79 +662,13 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                           <span className="text-xs font-bold text-primary bg-primary/10 rounded-lg px-2 py-1 shrink-0">{qIdx + 1}</span>
                           <p className="text-sm text-slate-200 leading-relaxed">{q.questionText}</p>
                         </div>
-                        {q.questionType === "multiple_choice" && q.options && (
-                          <RadioGroup value={testAnswers[q.id] || ""} onValueChange={(v) => setTestAnswers(prev => ({ ...prev, [q.id]: v }))}>
-                            {(q.options as string[]).map((opt: string, oi: number) => (
-                              <div key={oi} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 transition-colors">
-                                <RadioGroupItem value={opt} id={`q-${q.id}-o-${oi}`} />
-                                <Label htmlFor={`q-${q.id}-o-${oi}`} className="text-sm text-slate-300 cursor-pointer flex-1">{opt}</Label>
-                              </div>
-                            ))}
-                          </RadioGroup>
-                        )}
-                        {q.questionType === "multiple_select" && q.options && (
-                          <div className="space-y-1">
-                            {(q.options as string[]).map((opt: string, oi: number) => {
-                              const selected = Array.isArray(testAnswers[q.id]) ? testAnswers[q.id] : [];
-                              return (
-                                <div key={oi} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 transition-colors">
-                                  <Checkbox
-                                    id={`q-${q.id}-ms-${oi}`}
-                                    checked={selected.includes(opt)}
-                                    onCheckedChange={(checked) => {
-                                      setTestAnswers(prev => {
-                                        const cur = Array.isArray(prev[q.id]) ? [...prev[q.id]] : [];
-                                        if (checked) cur.push(opt); else { const idx = cur.indexOf(opt); if (idx >= 0) cur.splice(idx, 1); }
-                                        return { ...prev, [q.id]: cur };
-                                      });
-                                    }}
-                                  />
-                                  <Label htmlFor={`q-${q.id}-ms-${oi}`} className="text-sm text-slate-300 cursor-pointer flex-1">{opt}</Label>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                        {q.questionType === "true_false" && (
-                          <RadioGroup value={testAnswers[q.id] || ""} onValueChange={(v) => setTestAnswers(prev => ({ ...prev, [q.id]: v }))}>
-                            <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/5">
-                              <RadioGroupItem value="true" id={`q-${q.id}-true`} />
-                              <Label htmlFor={`q-${q.id}-true`} className="text-sm text-slate-300 cursor-pointer">To'g'ri</Label>
-                            </div>
-                            <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/5">
-                              <RadioGroupItem value="false" id={`q-${q.id}-false`} />
-                              <Label htmlFor={`q-${q.id}-false`} className="text-sm text-slate-300 cursor-pointer">Noto'g'ri</Label>
-                            </div>
-                          </RadioGroup>
-                        )}
-                        {q.questionType === "fill_in_blank" && (
-                          <input
-                            type="text"
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-primary/50"
-                            placeholder="Javobingizni kiriting..."
-                            value={testAnswers[q.id] || ""}
-                            onChange={(e) => setTestAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
-                          />
-                        )}
-                        {q.questionType === "matching" && q.options && q.matchingPairs && (
-                          <div className="space-y-2">
-                            {(q.matchingPairs as { left: string }[]).map((pair, pi: number) => (
-                              <div key={pi} className="flex items-center gap-2 flex-wrap">
-                                <span className="text-sm text-slate-300 min-w-[100px]">{pair.left}</span>
-                                <select
-                                  className="flex-1 bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-sm text-slate-200"
-                                  value={(testAnswers[q.id] as Record<string, string>)?.[pair.left] || ""}
-                                  onChange={(e) => setTestAnswers(prev => ({ ...prev, [q.id]: { ...(prev[q.id] as Record<string, string> || {}), [pair.left]: e.target.value } }))}
-                                >
-                                  <option value="">Tanlang...</option>
-                                  {(q.options as string[]).map((opt, oi) => (
-                                    <option key={oi} value={opt}>{opt}</option>
-                                  ))}
-                                </select>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                        <ModalTestQuestionInput
+                          question={q}
+                          value={testAnswers[q.id]}
+                          onChange={(v) => setTestAnswers(prev => ({ ...prev, [q.id]: v }))}
+                          shuffleAnswers={activeTest?.shuffleAnswers || false}
+                          shuffleSeed={shuffleSeed}
+                        />
                       </div>
                     ))}
 
@@ -1121,4 +1053,135 @@ export default function StudentCourses() {
       </div>
     </>
   );
+}
+
+function ModalTestQuestionInput({
+  question, value, onChange, shuffleAnswers = false, shuffleSeed = 0
+}: {
+  question: any;
+  value: any;
+  onChange: (value: any) => void;
+  shuffleAnswers?: boolean;
+  shuffleSeed?: number;
+}) {
+  const { data: mcOptions } = useQuery<any[]>({
+    queryKey: ["/api/questions", question.id, "options"],
+    enabled: question.type === "multiple_choice",
+  });
+
+  const displayOptions = useMemo(() => {
+    if (!mcOptions || !shuffleAnswers) return mcOptions || [];
+    const arr = [...mcOptions];
+    const combinedSeed = (shuffleSeed * 2654435761 + (question.id?.charCodeAt(0) || 0) * 31) >>> 0;
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.abs(((combinedSeed * (i + 1) * 2654435761) >> 0) % (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }, [mcOptions, shuffleAnswers, shuffleSeed, question.id]);
+
+  const optionLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+  const isMultiAnswer = (question.correctCount || 1) > 1;
+
+  if (question.type === "multiple_choice") {
+    if (!mcOptions || mcOptions.length === 0) {
+      return <div className="flex items-center gap-2 py-2"><Loader2 className="w-4 h-4 animate-spin text-slate-500" /><span className="text-xs text-slate-500">Variantlar yuklanmoqda...</span></div>;
+    }
+    return (
+      <div className="space-y-2">
+        {isMultiAnswer && (
+          <p className="text-xs text-slate-500 italic mb-1">Bir nechta to'g'ri javob bor</p>
+        )}
+        {displayOptions.map((opt: any, optIdx: number) => {
+          const isSelected = isMultiAnswer
+            ? (Array.isArray(value) && value.includes(opt.id))
+            : value === opt.id;
+          return (
+            <label
+              key={opt.id}
+              className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all duration-200 ${isSelected ? 'border-primary/50 bg-primary/10' : 'border-white/8 bg-white/[0.02] hover:bg-white/[0.05]'}`}
+              dir="ltr"
+            >
+              {isMultiAnswer ? (
+                <Checkbox
+                  checked={Array.isArray(value) && value.includes(opt.id)}
+                  onCheckedChange={(checked) => {
+                    const current = Array.isArray(value) ? value : [];
+                    onChange(checked ? [...current, opt.id] : current.filter((id: string) => id !== opt.id));
+                  }}
+                />
+              ) : (
+                <input type="radio" className="accent-primary w-4 h-4 shrink-0" checked={value === opt.id} onChange={() => onChange(opt.id)} />
+              )}
+              <span className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${isSelected ? 'bg-primary text-white' : 'bg-white/10 text-slate-400'}`}>{optionLetters[optIdx]}</span>
+              <span className="flex-1 text-sm text-slate-200">{opt.optionText}</span>
+            </label>
+          );
+        })}
+      </div>
+    );
+  } else if (question.type === "true_false") {
+    return (
+      <div className="space-y-2">
+        {[
+          { val: "true", label: "To'g'ri (Ha)", letter: "A" },
+          { val: "false", label: "Noto'g'ri (Yo'q)", letter: "B" },
+        ].map(({ val, label, letter }) => {
+          const isSelected = value === val;
+          return (
+            <label key={val} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all duration-200 ${isSelected ? 'border-primary/50 bg-primary/10' : 'border-white/8 bg-white/[0.02] hover:bg-white/[0.05]'}`}>
+              <input type="radio" className="accent-primary w-4 h-4" checked={isSelected} onChange={() => onChange(val)} />
+              <span className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${isSelected ? 'bg-primary text-white' : 'bg-white/10 text-slate-400'}`}>{letter}</span>
+              <span className="text-sm text-slate-200">{label}</span>
+            </label>
+          );
+        })}
+      </div>
+    );
+  } else if (question.type === "fill_blanks" || question.type === "short_answer") {
+    return (
+      <input
+        type="text"
+        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-primary/50 transition-colors"
+        placeholder="Javob yozing..."
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+        dir="ltr"
+      />
+    );
+  } else if (question.type === "essay") {
+    return (
+      <textarea
+        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-primary/50 transition-colors resize-none"
+        placeholder="Insho yozing..."
+        rows={4}
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+        dir="ltr"
+      />
+    );
+  } else if (question.type === "matching" && question.config) {
+    const leftItems = question.config?.leftColumn || [];
+    const rightItems = question.config?.rightColumn || [];
+    return (
+      <div className="space-y-2">
+        {leftItems.map((left: string, pi: number) => (
+          <div key={pi} className="flex items-center gap-3 flex-wrap">
+            <span className="text-sm text-slate-300 min-w-[120px] shrink-0">{left}</span>
+            <select
+              className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-slate-200 min-w-[140px]"
+              value={(value as Record<string, string>)?.[left] || ""}
+              onChange={(e) => onChange({ ...(value || {}), [left]: e.target.value })}
+            >
+              <option value="">Tanlang...</option>
+              {rightItems.map((right: string, ri: number) => (
+                <option key={ri} value={right}>{right}</option>
+              ))}
+            </select>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
 }

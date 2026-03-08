@@ -121,10 +121,10 @@ function StudentGroupSection({ user, location }: { user: any; location: string }
     });
   }
 
-  if (hasCurator) {
+  if (hasCurator && myCurator?.curator?.id) {
     items.push({
       title: "Kuratorga savollar",
-      url: "/chat",
+      url: `/chat?userId=${myCurator.curator.id}`,
       icon: UserCheck,
       activeColor: "#a78bfa",
       glowColor: "rgba(167,139,250,0.6)",
@@ -153,7 +153,8 @@ function StudentGroupSection({ user, location }: { user: any; location: string }
       <SidebarGroupContent>
         <SidebarMenu className="space-y-0.5">
           {items.map((item) => {
-            const isActive = !item.external && (location === item.url || location.startsWith(item.url + "/"));
+            const itemPath = item.url.split("?")[0];
+            const isActive = !item.external && (location === item.url || location === itemPath || location.startsWith(itemPath + "/"));
             return (
               <SidebarMenuItem key={item.title + item.url}>
                 <SidebarMenuButton
