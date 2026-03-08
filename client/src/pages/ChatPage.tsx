@@ -4,14 +4,40 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { MessageCircle, Send, ArrowLeft } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { MessageCircle, Send, ArrowLeft, User, Clock, ChevronLeft } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { formatDistanceToNow } from "date-fns";
+
+function timeAgo(dateStr: string) {
+  const now = new Date();
+  const d = new Date(dateStr);
+  const diffMs = now.getTime() - d.getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "Hozir";
+  if (mins < 60) return `${mins}d`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}s`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}k`;
+  return d.toLocaleDateString("uz", { day: "numeric", month: "short" });
+}
+
+function formatTime(dateStr: string) {
+  const d = new Date(dateStr);
+  return d.toLocaleTimeString("uz", { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatDateSeparator(dateStr: string) {
+  const d = new Date(dateStr);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return "Bugun";
+  if (d.toDateString() === yesterday.toDateString()) return "Kecha";
+  return d.toLocaleDateString("uz", { day: "numeric", month: "long", year: "numeric" });
+}
 
 export default function ChatPage() {
   const { user } = useAuth();
@@ -21,115 +47,79 @@ export default function ChatPage() {
   const [messageContent, setMessageContent] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [hasTriedToCreate, setHasTriedToCreate] = useState(false);
-  
-  // Extract userId from URL query parameters (use window.location.search for query params)
+  const [mobileShowChat, setMobileShowChat] = useState(false);
+
   const searchParams = new URLSearchParams(window.location.search);
-  const userIdParam = searchParams.get('userId') || searchParams.get('userid');
-  
-  console.log('ChatPage loaded - location:', location, 'window.location.search:', window.location.search, 'userIdParam:', userIdParam, 'conversationId:', conversationId);
+  const userIdParam = searchParams.get("userId") || searchParams.get("userid");
 
-  // Fetch conversations
-  const { data: conversations, isLoading: isLoadingConversations } = useQuery<any[]>({
-    queryKey: ['/api/chat/conversations'],
-    refetchInterval: 10000, // Poll every 10 seconds
+  const { data: conversations = [], isLoading: isLoadingConversations } = useQuery<any[]>({
+    queryKey: ["/api/chat/conversations"],
+    refetchInterval: 8000,
   });
 
-  // Fetch messages for selected conversation
-  const { data: messages, isLoading: isLoadingMessages } = useQuery<any[]>({
-    queryKey: ['/api/chat/conversations', conversationId, 'messages'],
+  const { data: messages = [], isLoading: isLoadingMessages } = useQuery<any[]>({
+    queryKey: ["/api/chat/conversations", conversationId, "messages"],
     enabled: !!conversationId,
-    refetchInterval: 5000, // Poll every 5 seconds for real-time feel
+    refetchInterval: 4000,
   });
 
-  // Create or get conversation mutation
   const createConversationMutation = useMutation({
     mutationFn: async (userId: string) => {
-      // Determine which parameter to send based on current user role
-      const params = user?.role === 'student' 
+      const params = user?.role === "student"
         ? { instructorId: userId }
         : { studentId: userId };
-      
-      console.log('Creating conversation with params:', params);
-      const response = await apiRequest('POST', '/api/chat/conversations', params);
+      const response = await apiRequest("POST", "/api/chat/conversations", params);
       return await response.json();
     },
     onSuccess: (conversation: any) => {
-      console.log('Conversation created successfully:', conversation);
-      console.log('Conversation ID:', conversation?.id);
-      console.log('Navigating to:', `/chat/${conversation?.id}`);
-      queryClient.invalidateQueries({ queryKey: ['/api/chat/conversations'] });
-      
-      if (conversation && conversation.id) {
+      queryClient.invalidateQueries({ queryKey: ["/api/chat/conversations"] });
+      if (conversation?.id) {
         navigate(`/chat/${conversation.id}`);
-      } else {
-        console.error('Conversation created but no ID returned:', conversation);
-        toast({
-          title: "Xatolik",
-          description: "Suhbat yaratildi, lekin ID topilmadi",
-          variant: "destructive",
-        });
+        setMobileShowChat(true);
       }
       setHasTriedToCreate(false);
     },
     onError: (error: any) => {
-      console.error('Error creating conversation:', error);
-      toast({
-        title: "Xatolik",
-        description: error.message || "Suhbat yaratishda xatolik yuz berdi",
-        variant: "destructive",
-      });
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
       setHasTriedToCreate(false);
     },
   });
 
-  // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
       if (!conversationId) return;
-      return apiRequest('POST', `/api/chat/conversations/${conversationId}/messages`, { content });
+      return apiRequest("POST", `/api/chat/conversations/${conversationId}/messages`, { content });
     },
     onSuccess: () => {
       setMessageContent("");
-      queryClient.invalidateQueries({ queryKey: ['/api/chat/conversations', conversationId, 'messages'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/chat/conversations'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/chat/conversations", conversationId, "messages"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/chat/conversations"] });
     },
     onError: (error: any) => {
-      toast({
-        title: "Xatolik",
-        description: error.message || "Xabar yuborishda xatolik yuz berdi",
-        variant: "destructive",
-      });
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
     },
   });
 
-  // Handle userId parameter - create or get conversation
   useEffect(() => {
-    console.log('useEffect check:', {
-      userIdParam,
-      userId: user?.id,
-      conversationId,
-      hasTriedToCreate,
-      isPending: createConversationMutation.isPending
-    });
-    
     if (userIdParam && user && !conversationId && !hasTriedToCreate && !createConversationMutation.isPending) {
-      console.log('Attempting to create conversation for userId:', userIdParam);
       setHasTriedToCreate(true);
       createConversationMutation.mutate(userIdParam);
     }
   }, [userIdParam, user, conversationId, hasTriedToCreate]);
 
-  // Mark messages as read when conversation is opened
   useEffect(() => {
     if (conversationId && Array.isArray(messages) && messages.length > 0) {
-      apiRequest('PATCH', `/api/chat/conversations/${conversationId}/read`, {});
+      apiRequest("PATCH", `/api/chat/conversations/${conversationId}/read`, {});
     }
   }, [conversationId, messages]);
 
-  // Auto scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    if (conversationId) setMobileShowChat(true);
+  }, [conversationId]);
 
   const handleSendMessage = () => {
     if (!messageContent.trim()) return;
@@ -137,186 +127,267 @@ export default function ChatPage() {
   };
 
   const getInitials = (firstName?: string, lastName?: string) => {
-    return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase() || '?';
+    return `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase() || "?";
   };
 
-  const selectedConversation = conversations?.find((c: any) => c.id === conversationId);
-  const otherUser = selectedConversation 
-    ? (user?.role === 'student' 
-        ? {
-            firstName: selectedConversation.instructorFirstName,
-            lastName: selectedConversation.instructorLastName,
-            email: selectedConversation.instructorEmail,
-            profileImageUrl: selectedConversation.instructorProfileImageUrl,
-          }
-        : {
-            firstName: selectedConversation.studentFirstName,
-            lastName: selectedConversation.studentLastName,
-            email: selectedConversation.studentEmail,
-            profileImageUrl: selectedConversation.studentProfileImageUrl,
-          })
-    : null;
+  const selectedConversation = conversations.find((c: any) => c.id === conversationId);
+  const isStudent = user?.role === "student";
+
+  const getOtherUser = (conv: any) => {
+    if (isStudent) {
+      return {
+        firstName: conv.instructorFirstName,
+        lastName: conv.instructorLastName,
+        email: conv.instructorEmail,
+        profileImageUrl: conv.instructorProfileImageUrl,
+      };
+    }
+    return {
+      firstName: conv.studentFirstName,
+      lastName: conv.studentLastName,
+      email: conv.studentEmail,
+      profileImageUrl: conv.studentProfileImageUrl,
+    };
+  };
+
+  const otherUser = selectedConversation ? getOtherUser(selectedConversation) : null;
+
+  const isCuratorOrInstructor = user?.role === "curator" || user?.role === "instructor";
+
+  let groupedMessages: { date: string; msgs: any[] }[] = [];
+  if (messages.length > 0) {
+    let currentDate = "";
+    for (const msg of messages) {
+      const msgDate = new Date(msg.createdAt).toDateString();
+      if (msgDate !== currentDate) {
+        currentDate = msgDate;
+        groupedMessages.push({ date: msg.createdAt, msgs: [] });
+      }
+      groupedMessages[groupedMessages.length - 1].msgs.push(msg);
+    }
+  }
 
   return (
-    <div className="flex h-screen bg-background">
-      {/* Conversations Sidebar */}
-      <div className="w-80 border-r flex flex-col">
-        <div className="p-4 border-b">
-          <div className="flex items-center justify-between mb-2">
-            <Link href={user?.role === 'instructor' ? '/' : '/'}>
-              <Button variant="ghost" size="icon" data-testid="button-back">
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            </Link>
-            <h2 className="text-lg font-semibold">Xabarlar</h2>
-            <div className="w-10" />
+    <div className="flex h-full" style={{ background: "#0d0521" }}>
+      {/* Conversations List */}
+      <div
+        className={`w-full sm:w-80 lg:w-96 shrink-0 flex flex-col border-r ${mobileShowChat && conversationId ? "hidden sm:flex" : "flex"}`}
+        style={{ borderColor: "rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.01)" }}
+      >
+        <div className="px-4 py-4 shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg,#7c3aed,#2563eb)" }}>
+              <MessageCircle className="w-4.5 h-4.5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold" style={{ color: "#e2e8f0" }} data-testid="text-chat-title">
+                {isCuratorOrInstructor ? "O'quvchilar Xabarlari" : "Xabarlar"}
+              </h2>
+              {isCuratorOrInstructor && (
+                <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  Har bir o'quvchi bilan alohida yozishma
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
-        <ScrollArea className="flex-1">
+        <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1">
           {isLoadingConversations ? (
-            <div className="p-4 text-center text-muted-foreground">
-              Yuklanmoqda...
+            <div className="flex justify-center py-12">
+              <div className="w-7 h-7 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
             </div>
-          ) : conversations?.length === 0 ? (
-            <div className="p-4 text-center text-muted-foreground">
-              <MessageCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
-              <p>Hali xabarlar yo'q</p>
+          ) : conversations.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-3" style={{ color: "rgba(255,255,255,0.2)" }}>
+              <MessageCircle className="w-12 h-12" />
+              <p className="text-sm">Hali xabarlar yo'q</p>
+              {isCuratorOrInstructor && (
+                <p className="text-xs text-center px-4" style={{ color: "rgba(255,255,255,0.15)" }}>
+                  O'quvchilar sizga xabar yuborganda bu yerda ko'rinadi
+                </p>
+              )}
             </div>
           ) : (
-            <div className="p-2">
-              {conversations?.map((conv: any) => {
-                const otherUserInfo = user?.role === 'student'
-                  ? {
-                      firstName: conv.instructorFirstName,
-                      lastName: conv.instructorLastName,
-                      email: conv.instructorEmail,
-                      profileImageUrl: conv.instructorProfileImageUrl,
-                    }
-                  : {
-                      firstName: conv.studentFirstName,
-                      lastName: conv.studentLastName,
-                      email: conv.studentEmail,
-                      profileImageUrl: conv.studentProfileImageUrl,
-                    };
+            conversations.map((conv: any) => {
+              const other = getOtherUser(conv);
+              const isSelected = conversationId === conv.id;
+              const hasUnread = (conv.unreadCount || 0) > 0;
 
-                return (
-                  <Card
-                    key={conv.id}
-                    className={`p-3 mb-2 cursor-pointer hover-elevate ${
-                      conversationId === conv.id ? 'bg-accent' : ''
-                    }`}
-                    onClick={() => navigate(`/chat/${conv.id}`)}
-                    data-testid={`conversation-${conv.id}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarImage src={otherUserInfo.profileImageUrl} />
-                        <AvatarFallback>
-                          {getInitials(otherUserInfo.firstName, otherUserInfo.lastName)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">
-                          {otherUserInfo.firstName} {otherUserInfo.lastName}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {otherUserInfo.email}
-                        </p>
+              return (
+                <button
+                  key={conv.id}
+                  onClick={() => {
+                    navigate(`/chat/${conv.id}`);
+                    setMobileShowChat(true);
+                  }}
+                  data-testid={`conversation-${conv.id}`}
+                  className="w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 text-left"
+                  style={{
+                    background: isSelected
+                      ? "linear-gradient(135deg,rgba(124,58,237,0.2),rgba(37,99,235,0.12))"
+                      : hasUnread
+                        ? "rgba(124,58,237,0.06)"
+                        : "transparent",
+                    border: isSelected
+                      ? "1px solid rgba(124,58,237,0.35)"
+                      : "1px solid transparent",
+                    boxShadow: isSelected ? "0 0 16px rgba(124,58,237,0.12)" : "none",
+                  }}
+                >
+                  <div className="relative shrink-0">
+                    <Avatar className="w-10 h-10">
+                      <AvatarImage src={other.profileImageUrl} />
+                      <AvatarFallback
+                        className="text-xs font-bold"
+                        style={{
+                          background: isSelected ? "rgba(124,58,237,0.3)" : "rgba(255,255,255,0.08)",
+                          color: isSelected ? "#c084fc" : "rgba(255,255,255,0.5)",
+                        }}
+                      >
+                        {getInitials(other.firstName, other.lastName)}
+                      </AvatarFallback>
+                    </Avatar>
+                    {hasUnread && (
+                      <div className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
+                        style={{ background: "linear-gradient(135deg,#7c3aed,#2563eb)", boxShadow: "0 0 8px rgba(124,58,237,0.5)" }}>
+                        {conv.unreadCount > 9 ? "9+" : conv.unreadCount}
                       </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-semibold truncate" style={{ color: hasUnread ? "#e2e8f0" : "rgba(255,255,255,0.7)" }}>
+                        {other.firstName} {other.lastName}
+                      </span>
+                      {conv.lastMessageAt && (
+                        <span className="text-[10px] shrink-0" style={{ color: hasUnread ? "#a78bfa" : "rgba(255,255,255,0.2)" }}>
+                          {timeAgo(conv.lastMessageAt)}
+                        </span>
+                      )}
                     </div>
-                  </Card>
-                );
-              })}
-            </div>
+                    {conv.lastMessage && (
+                      <p className="text-xs truncate mt-0.5" style={{ color: hasUnread ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.25)" }}>
+                        {conv.lastMessageSenderId === user?.id ? "Siz: " : ""}{conv.lastMessage}
+                      </p>
+                    )}
+                  </div>
+                </button>
+              );
+            })
           )}
-        </ScrollArea>
+        </div>
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 flex flex-col">
-        {conversationId ? (
+      <div className={`flex-1 flex flex-col min-w-0 ${!mobileShowChat && conversationId ? "" : !conversationId ? "hidden sm:flex" : "flex"}`}>
+        {conversationId && otherUser ? (
           <>
             {/* Chat Header */}
-            <div className="p-4 border-b">
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarImage src={otherUser?.profileImageUrl} />
-                  <AvatarFallback>
-                    {getInitials(otherUser?.firstName, otherUser?.lastName)}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-semibold">
-                    {otherUser?.firstName} {otherUser?.lastName}
-                  </p>
-                  <p className="text-sm text-muted-foreground">{otherUser?.email}</p>
-                </div>
+            <div className="shrink-0 px-4 py-3 flex items-center gap-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)" }}>
+              <button
+                onClick={() => { setMobileShowChat(false); navigate("/chat"); }}
+                className="sm:hidden p-1.5 rounded-lg transition-colors"
+                style={{ color: "rgba(255,255,255,0.4)" }}
+                data-testid="button-back-to-list"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <Avatar className="w-9 h-9">
+                <AvatarImage src={otherUser.profileImageUrl} />
+                <AvatarFallback className="text-xs font-bold" style={{ background: "rgba(124,58,237,0.2)", color: "#c084fc" }}>
+                  {getInitials(otherUser.firstName, otherUser.lastName)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold truncate" style={{ color: "#e2e8f0" }} data-testid="text-chat-partner-name">
+                  {otherUser.firstName} {otherUser.lastName}
+                </p>
+                <p className="text-[11px] truncate" style={{ color: "rgba(255,255,255,0.3)" }}>{otherUser.email}</p>
               </div>
             </div>
 
-            {/* Messages */}
-            <ScrollArea className="flex-1 p-4">
+            {/* Messages Area */}
+            <div className="flex-1 overflow-y-auto px-4 py-4">
               {isLoadingMessages ? (
-                <div className="text-center text-muted-foreground">
-                  Yuklanmoqda...
+                <div className="flex justify-center py-12">
+                  <div className="w-7 h-7 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
                 </div>
-              ) : messages?.length === 0 ? (
-                <div className="text-center text-muted-foreground">
-                  <MessageCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>Hali xabarlar yo'q. Birinchi xabarni yuboring!</p>
+              ) : messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full gap-3" style={{ color: "rgba(255,255,255,0.15)" }}>
+                  <MessageCircle className="w-14 h-14" />
+                  <p className="text-sm">Hali xabarlar yo'q</p>
+                  <p className="text-xs">Birinchi xabarni yuboring</p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {messages?.map((msg: any) => {
-                    const isMine = msg.senderId === user?.id;
-                    return (
-                      <div
-                        key={msg.id}
-                        className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
-                        data-testid={`message-${msg.id}`}
-                      >
-                        <div className={`max-w-[70%] ${isMine ? 'order-2' : 'order-1'}`}>
-                          <div
-                            className={`p-3 rounded-lg ${
-                              isMine
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-muted'
-                            }`}
-                          >
-                            <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1 px-1">
-                            {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
-                          </p>
-                        </div>
+                <div className="space-y-1">
+                  {groupedMessages.map((group, gi) => (
+                    <div key={gi}>
+                      <div className="flex items-center justify-center py-3">
+                        <span className="text-[10px] font-medium px-3 py-1 rounded-full" style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.3)" }}>
+                          {formatDateSeparator(group.date)}
+                        </span>
                       </div>
-                    );
-                  })}
+                      {group.msgs.map((msg: any) => {
+                        const isMine = msg.senderId === user?.id;
+                        return (
+                          <div
+                            key={msg.id}
+                            className={`flex mb-2 ${isMine ? "justify-end" : "justify-start"}`}
+                            data-testid={`message-${msg.id}`}
+                          >
+                            <div className={`max-w-[75%] ${isMine ? "items-end" : "items-start"} flex flex-col`}>
+                              <div
+                                className="px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap"
+                                style={isMine ? {
+                                  background: "linear-gradient(135deg,#7c3aed,#2563eb)",
+                                  color: "#fff",
+                                  borderBottomRightRadius: "6px",
+                                } : {
+                                  background: "rgba(255,255,255,0.06)",
+                                  color: "#e2e8f0",
+                                  border: "1px solid rgba(255,255,255,0.06)",
+                                  borderBottomLeftRadius: "6px",
+                                }}
+                              >
+                                {msg.content}
+                              </div>
+                              <span className="text-[10px] mt-1 px-1" style={{ color: "rgba(255,255,255,0.2)" }}>
+                                {formatTime(msg.createdAt)}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
                   <div ref={messagesEndRef} />
                 </div>
               )}
-            </ScrollArea>
+            </div>
 
             {/* Message Input */}
-            <div className="p-4 border-t">
+            <div className="shrink-0 px-4 py-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)" }}>
               <div className="flex gap-2">
                 <Input
                   placeholder="Xabar yozing..."
                   value={messageContent}
                   onChange={(e) => setMessageContent(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
                       handleSendMessage();
                     }
                   }}
                   data-testid="input-message"
+                  className="flex-1 border-0 text-sm"
+                  style={{ background: "rgba(255,255,255,0.05)", color: "#e2e8f0" }}
                 />
                 <Button
                   onClick={handleSendMessage}
                   disabled={!messageContent.trim() || sendMessageMutation.isPending}
+                  size="icon"
                   data-testid="button-send-message"
+                  style={{ background: "linear-gradient(135deg,#7c3aed,#2563eb)" }}
                 >
                   <Send className="w-4 h-4" />
                 </Button>
@@ -324,11 +395,17 @@ export default function ChatPage() {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground">
-            <div className="text-center">
-              <MessageCircle className="w-16 h-16 mx-auto mb-4 opacity-50" />
-              <p className="text-lg">Suhbatni tanlang</p>
-              <p className="text-sm">Xabarlarni ko'rish uchun suhbatni tanlang</p>
+          <div className="flex-1 flex items-center justify-center" style={{ color: "rgba(255,255,255,0.12)" }}>
+            <div className="text-center space-y-3">
+              <MessageCircle className="w-16 h-16 mx-auto" />
+              <p className="text-base font-medium" style={{ color: "rgba(255,255,255,0.3)" }}>
+                {isCuratorOrInstructor ? "O'quvchini tanlang" : "Suhbatni tanlang"}
+              </p>
+              <p className="text-xs" style={{ color: "rgba(255,255,255,0.15)" }}>
+                {isCuratorOrInstructor
+                  ? "Chap tarafdan o'quvchini tanlang - har bir o'quvchi bilan alohida yozishma"
+                  : "Xabarlarni ko'rish uchun suhbatni tanlang"}
+              </p>
             </div>
           </div>
         )}

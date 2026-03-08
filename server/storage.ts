@@ -1456,7 +1456,6 @@ export class DatabaseStorage implements IStorage {
   async getConversations(userId: string, role: string): Promise<any[]> {
     console.log('[STORAGE] getConversations called - userId:', userId, 'role:', role);
     
-    // Get conversations with last message and user info
     if (role === 'student') {
       const result = await db
         .select({
@@ -1475,8 +1474,14 @@ export class DatabaseStorage implements IStorage {
         .where(eq(conversations.studentId, userId))
         .orderBy(desc(conversations.lastMessageAt));
       
-      console.log('[STORAGE] Student conversations found:', result.length);
-      return result;
+      const enriched = await Promise.all(result.map(async (conv) => {
+        const lastMsg = await db.select({ content: messages.content, senderId: messages.senderId, createdAt: messages.createdAt })
+          .from(messages).where(eq(messages.conversationId, conv.id)).orderBy(desc(messages.createdAt)).limit(1);
+        const unreadCount = await db.select({ count: sql<number>`count(*)::int` })
+          .from(messages).where(and(eq(messages.conversationId, conv.id), eq(messages.isRead, false), sql`${messages.senderId} != ${userId}`));
+        return { ...conv, lastMessage: lastMsg[0]?.content || null, lastMessageSenderId: lastMsg[0]?.senderId || null, unreadCount: unreadCount[0]?.count || 0 };
+      }));
+      return enriched;
     } else {
       const result = await db
         .select({
@@ -1494,7 +1499,15 @@ export class DatabaseStorage implements IStorage {
         .leftJoin(users, eq(conversations.studentId, users.id))
         .where(eq(conversations.instructorId, userId))
         .orderBy(desc(conversations.lastMessageAt));
-      return result;
+      
+      const enriched = await Promise.all(result.map(async (conv) => {
+        const lastMsg = await db.select({ content: messages.content, senderId: messages.senderId, createdAt: messages.createdAt })
+          .from(messages).where(eq(messages.conversationId, conv.id)).orderBy(desc(messages.createdAt)).limit(1);
+        const unreadCount = await db.select({ count: sql<number>`count(*)::int` })
+          .from(messages).where(and(eq(messages.conversationId, conv.id), eq(messages.isRead, false), sql`${messages.senderId} != ${userId}`));
+        return { ...conv, lastMessage: lastMsg[0]?.content || null, lastMessageSenderId: lastMsg[0]?.senderId || null, unreadCount: unreadCount[0]?.count || 0 };
+      }));
+      return enriched;
     }
   }
 
