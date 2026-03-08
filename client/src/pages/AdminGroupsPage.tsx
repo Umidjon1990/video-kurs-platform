@@ -758,7 +758,7 @@ export default function AdminGroupsPage() {
                 data-testid="input-member-start-date"
               />
               <p className="text-xs text-muted-foreground">
-                Belgilansa, darslar shu sanadan boshlab ochiladi. Bo'sh qoldirilsa, qo'shilgan sana hisoblanadi.
+                Bo'sh qoldirilsa, darslar bugundan boshlab guruh jadvali bo'yicha ochiladi. Boshqa sana belgilasangiz, o'sha kundan boshlanadi.
               </p>
             </div>
             <ScrollArea className="max-h-[300px] border rounded-md">
@@ -1100,16 +1100,16 @@ export default function AdminGroupsPage() {
                     </Select>
                   </div>
 
-                  {/* Individual start date toggle */}
+                  {/* Individual vs Group-wide start date */}
                   {(settingsForm.unlockType === "daily" || settingsForm.unlockType === "weekly") && (
-                    <div className="rounded-md border p-4 space-y-3">
+                    <div className="rounded-md border-2 border-blue-400/30 bg-blue-500/5 p-4 space-y-3">
                       <div className="flex items-center justify-between gap-2">
                         <div>
                           <p className="font-medium text-sm flex items-center gap-1.5">
-                            <Users className="w-4 h-4 text-blue-500" /> Individual boshlanish sanasi
+                            <Users className="w-4 h-4 text-blue-500" /> Har bir o'quvchi uchun alohida jadval
                           </p>
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            Har bir o'quvchi uchun alohida boshlanish sanasi belgilanadi
+                            O'quvchi guruhga qo'shilgan kunidan boshlab darslar ochiladi
                           </p>
                         </div>
                         <Switch
@@ -1118,21 +1118,35 @@ export default function AdminGroupsPage() {
                           data-testid="switch-individual-start-date"
                         />
                       </div>
-                      {settingsForm.useIndividualStartDate && (
-                        <div className="pt-1 border-t text-xs text-muted-foreground space-y-1">
-                          <p>Yoqilganda: har bir o'quvchi uchun darslar o'zi guruhga qo'shilgan sanadan (yoki belgilangan alohida sanadan) boshlab ochiladi.</p>
-                          <p>O'quvchilarning individual sanalarini "A'zolar" bo'limida sozlashingiz mumkin.</p>
+                      {settingsForm.useIndividualStartDate ? (
+                        <div className="pt-2 border-t border-blue-400/20 text-xs space-y-2">
+                          <div className="rounded-md bg-blue-500/10 p-3 space-y-1.5">
+                            <p className="font-medium text-blue-700 dark:text-blue-300">Qanday ishlaydi:</p>
+                            <p className="text-muted-foreground">1. O'quvchi guruhga qo'shiladi</p>
+                            <p className="text-muted-foreground">2. Shu kuni 1-dars (demo) avtomatik ochiq bo'ladi</p>
+                            <p className="text-muted-foreground">3. Keyingi darslar belgilangan jadval bo'yicha ochiladi</p>
+                            {settingsForm.unlockType === "daily" && (
+                              <p className="text-muted-foreground mt-1">
+                                Masalan: o'quvchi bugun qo'shilsa, {settingsForm.unlockIntervalDays || 1} kundan keyin 2-dars, {(settingsForm.unlockIntervalDays || 1) * 2} kundan keyin 3-dars ochiladi
+                              </p>
+                            )}
+                            {settingsForm.unlockType === "weekly" && (settingsForm.unlockWeekDays?.length ?? 0) > 0 && (
+                              <p className="text-muted-foreground mt-1">
+                                Masalan: o'quvchi bugun qo'shilsa, keyingi {(settingsForm.unlockWeekDays ?? []).map(d => WEEK_DAYS.find(w => w.key === d)?.label).filter(Boolean).join(", ")} kunlarida navbatdagi darslar ochiladi
+                              </p>
+                            )}
+                          </div>
+                          <p className="text-muted-foreground">Ixtiyoriy: "A'zolar" bo'limida alohida o'quvchiga boshqa sana belgilash mumkin.</p>
+                        </div>
+                      ) : (
+                        <div className="pt-2 border-t border-blue-400/20 space-y-2">
+                          <div className="space-y-2">
+                            <Label className="text-sm">Barcha o'quvchilar uchun boshlanish sanasi</Label>
+                            <Input type="datetime-local" value={settingsForm.unlockStartDate} onChange={e => setSettingsForm(prev => ({ ...prev, unlockStartDate: e.target.value }))} data-testid="input-unlock-start-date" />
+                            <p className="text-xs text-muted-foreground">Barcha o'quvchilar uchun 1-dars shu sanadan boshlab ochiladi (qachon qo'shilganidan qat'i nazar)</p>
+                          </div>
                         </div>
                       )}
-                    </div>
-                  )}
-
-                  {/* Start date (only when individual dates are off) */}
-                  {(settingsForm.unlockType === "daily" || settingsForm.unlockType === "weekly") && !settingsForm.useIndividualStartDate && (
-                    <div className="space-y-2">
-                      <Label>Boshlanish sanasi va vaqti</Label>
-                      <Input type="datetime-local" value={settingsForm.unlockStartDate} onChange={e => setSettingsForm(prev => ({ ...prev, unlockStartDate: e.target.value }))} data-testid="input-unlock-start-date" />
-                      <p className="text-xs text-muted-foreground">1-dars shu sanadan boshlab barcha o'quvchilar uchun ochiladi</p>
                     </div>
                   )}
 

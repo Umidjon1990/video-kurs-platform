@@ -7258,7 +7258,10 @@ So'zlar soni: ${submission.wordCount}`;
         return res.json({ settings: settings || null, lockedLessons: {} });
       }
 
-      // Individual start date: if enabled, use student's personal start date
+      // Individual start date logic:
+      // When useIndividualStartDate is enabled, each student's schedule starts
+      // from their personalStartDate (if set) or addedAt date (when they joined the group).
+      // This means admin doesn't need to set dates per student - it's automatic.
       if (settings.useIndividualStartDate && groupId) {
         const membership = await db.select()
           .from(studentGroupMembers)
@@ -7301,7 +7304,9 @@ So'zlar soni: ${submission.wordCount}`;
       // Calculate lock status for each lesson
       const lockedLessons: Record<string, { locked: boolean; unlockDate?: string; reason: string }> = {};
 
+      // Normalize to start-of-day for fair date-only comparison
       const now = new Date();
+      now.setHours(23, 59, 59, 999);
 
       // Helper: get the unlock date for the Nth lesson in weekly batch mode.
       // Each session (unlock event) corresponds to one occurrence of a selected weekday.
@@ -7343,23 +7348,24 @@ So'zlar soni: ${submission.wordCount}`;
         let unlockDate: string | undefined;
         let reason = '';
 
-        // First lesson is always available (unless schedule says no)
-        if (i === 0 && !settings.unlockStartDate) {
+        // First lesson (demo/1-dars) is ALWAYS unlocked - o'quvchi kirgan kuni 1-dars ochiq
+        if (i === 0) {
           lockedLessons[lesson.id] = { locked: false, reason: '' };
           continue;
         }
 
-        // Schedule check
+        // Schedule check for lessons 2+
         if (settings.unlockType === 'daily' && settings.unlockStartDate) {
           const startD = new Date(settings.unlockStartDate);
+          // Use date-only comparison to avoid time-of-day issues
+          startD.setHours(0, 0, 0, 0);
           const targetDate = new Date(startD);
           targetDate.setDate(targetDate.getDate() + i * (settings.unlockIntervalDays || 1));
           unlockDate = targetDate.toISOString();
           if (now < targetDate) { locked = true; reason = 'schedule'; }
         } else if (settings.unlockType === 'weekly' && settings.unlockStartDate && settings.unlockWeekDays?.length) {
-          // Each lesson gets its own unlock date based on cycling through selected weekdays
-          // e.g. Du, Chor, Ju selected: lesson1=nextDu, lesson2=nextChor, lesson3=nextJu, lesson4=Du+1week...
           const startD = new Date(settings.unlockStartDate);
+          startD.setHours(0, 0, 0, 0);
           const targetDate = getWeeklyBatchUnlockDate(startD, settings.unlockWeekDays as string[], i);
           unlockDate = targetDate.toISOString();
           if (now < targetDate) { locked = true; reason = 'schedule'; }
