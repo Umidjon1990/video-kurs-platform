@@ -4499,6 +4499,103 @@ So'zlar soni: ${submission.wordCount}`;
     }
   });
 
+  // ==================== ADMIN ANNOUNCEMENTS ====================
+
+  app.get('/api/admin/announcements', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const allAnnouncements = await storage.getAllAnnouncements();
+      const enriched = await Promise.all(allAnnouncements.map(async (a) => {
+        const sender = await storage.getUser(a.instructorId);
+        return { ...a, senderName: sender ? `${sender.firstName} ${sender.lastName || ''}`.trim() : 'Noma\'lum' };
+      }));
+      res.json(enriched);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/admin/announcements', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const adminId = req.user.claims.sub;
+      const { title, message, priority } = req.body;
+      if (!title || !message) return res.status(400).json({ message: "Sarlavha va xabar majburiy" });
+
+      const announcementData = insertAnnouncementSchema.parse({
+        instructorId: adminId,
+        title,
+        message,
+        priority: priority || 'normal',
+        targetType: 'all',
+        targetId: null,
+      });
+
+      const announcement = await storage.createAnnouncement(announcementData);
+
+      const students = await storage.getUsersByRole('student');
+      const instructors = await storage.getUsersByRole('instructor');
+      const curators = await storage.getUsersByRole('curator');
+      const allUsers = [...students, ...instructors, ...curators];
+
+      const notificationPromises = allUsers.map(u => {
+        return storage.createNotification(insertNotificationSchema.parse({
+          userId: u.id,
+          type: 'announcement',
+          title: `${priority === 'urgent' ? 'MUHIM: ' : ''}${title}`,
+          message,
+          relatedId: announcement.id,
+          isRead: false,
+        }));
+      });
+      await Promise.all(notificationPromises);
+
+      res.json({ ...announcement, recipientCount: allUsers.length });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete('/api/admin/announcements/:id', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const announcement = await storage.getAnnouncement(id);
+      if (!announcement) return res.status(404).json({ message: "E'lon topilmadi" });
+      await storage.deleteAnnouncement(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/announcements', isAuthenticated, async (req: any, res) => {
+    try {
+      const allAnnouncements = await storage.getAllAnnouncements();
+      const enriched = await Promise.all(allAnnouncements.map(async (a) => {
+        const sender = await storage.getUser(a.instructorId);
+        return { ...a, senderName: sender ? `${sender.firstName} ${sender.lastName || ''}`.trim() : 'Admin' };
+      }));
+      res.json(enriched);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/announcements/urgent', isAuthenticated, async (req: any, res) => {
+    try {
+      const allAnnouncements = await storage.getAllAnnouncements();
+      const now = new Date();
+      const urgent = allAnnouncements.filter(a => {
+        if (a.priority !== 'urgent') return false;
+        if (!a.createdAt) return false;
+        const created = new Date(a.createdAt);
+        const hoursSince = (now.getTime() - created.getTime()) / (1000 * 60 * 60);
+        return hoursSince < 72;
+      });
+      res.json(urgent);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ==================== COURSE ANALYTICS ====================
   
   // Get course analytics (enrollment trends, completion rate, scores)

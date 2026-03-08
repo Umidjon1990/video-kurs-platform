@@ -33,7 +33,9 @@ import LiveRoom from "@/pages/LiveRoom";
 import GroupChat from "@/pages/GroupChat";
 import CuratorDashboard from "@/pages/CuratorDashboard";
 import CuratorRegister from "@/pages/CuratorRegister";
+import AnnouncementsPage from "@/pages/AnnouncementsPage";
 import NotFound from "@/pages/not-found";
+import { UrgentBanner } from "@/components/UrgentBanner";
 
 const PUBLIC_PATHS = ["/explore", "/login", "/register", "/checkout", "/curator/register"];
 
@@ -110,6 +112,7 @@ function Router() {
             />
             <div className="flex-1" />
           </header>
+          <UrgentBanner />
           <main className="flex-1 overflow-auto overscroll-none">
             <Switch>
               {/* Admin Routes */}
@@ -123,6 +126,7 @@ function Router() {
                   <Route path="/admin/subscription-plans" component={AdminSubscriptionPlansPage} />
                   <Route path="/admin/subscriptions" component={AdminSubscriptions} />
                   <Route path="/admin/groups" component={AdminGroupsPage} />
+                  <Route path="/admin/announcements" component={AnnouncementsPage} />
                 </>
               )}
 
@@ -135,6 +139,7 @@ function Router() {
                   <Route path="/instructor/speaking-tests/:testId" component={SpeakingTestEdit} />
                   <Route path="/chat" component={ChatPage} />
                   <Route path="/chat/:conversationId" component={ChatPage} />
+                  <Route path="/announcements" component={AnnouncementsPage} />
                 </>
               )}
 
@@ -145,6 +150,7 @@ function Router() {
                   <Route path="/group-chat/:groupId" component={GroupChat} />
                   <Route path="/chat" component={ChatPage} />
                   <Route path="/chat/:conversationId" component={ChatPage} />
+                  <Route path="/announcements" component={AnnouncementsPage} />
                 </>
               )}
 
@@ -158,6 +164,7 @@ function Router() {
                   <Route path="/chat" component={ChatPage} />
                   <Route path="/chat/:conversationId" component={ChatPage} />
                   <Route path="/group-chat/:groupId" component={GroupChat} />
+                  <Route path="/announcements" component={AnnouncementsPage} />
                 </>
               )}
               <Route component={NotFound} />

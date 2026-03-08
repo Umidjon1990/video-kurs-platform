@@ -19,6 +19,7 @@ import {
   Send,
   UserCheck,
   ExternalLink,
+  Megaphone,
 } from "lucide-react";
 import {
   Sidebar,
@@ -53,6 +54,7 @@ const adminMenuItems: MenuItem[] = [
   { title: "To'lovlar", url: "/admin/payments", icon: CreditCard, activeColor: "#34d399", glowColor: "rgba(52,211,153,0.6)" },
   { title: "Obunalar", url: "/admin/subscriptions", icon: Wallet, activeColor: "#fbbf24", glowColor: "rgba(251,191,36,0.6)" },
   { title: "Obuna Rejalari", url: "/admin/subscription-plans", icon: ListChecks, activeColor: "#f472b6", glowColor: "rgba(244,114,182,0.6)" },
+  { title: "E'lonlar", url: "/admin/announcements", icon: Megaphone, activeColor: "#f87171", glowColor: "rgba(248,113,113,0.6)" },
   { title: "CMS", url: "/admin/cms", icon: FileText, activeColor: "#fb923c", glowColor: "rgba(251,146,60,0.6)" },
 ];
 
@@ -60,17 +62,20 @@ const instructorMenuItems: MenuItem[] = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard, activeColor: "#a78bfa", glowColor: "rgba(167,139,250,0.6)" },
   { title: "Obunalar", url: "/instructor/subscriptions", icon: Wallet, activeColor: "#fbbf24", glowColor: "rgba(251,191,36,0.6)" },
   { title: "Xabarlar", url: "/chat", icon: MessageSquare, activeColor: "#22d3ee", glowColor: "rgba(34,211,238,0.6)" },
+  { title: "E'lonlar", url: "/announcements", icon: Megaphone, activeColor: "#f87171", glowColor: "rgba(248,113,113,0.6)" },
 ];
 
 const studentMenuItems: MenuItem[] = [
   { title: "Mening Kurslarim", url: "/", icon: BookOpen, activeColor: "#60a5fa", glowColor: "rgba(96,165,250,0.6)" },
   { title: "Natijalarim", url: "/results", icon: Award, activeColor: "#fbbf24", glowColor: "rgba(251,191,36,0.6)" },
+  { title: "E'lonlar", url: "/announcements", icon: Megaphone, activeColor: "#f87171", glowColor: "rgba(248,113,113,0.6)" },
   { title: "Xabarlar", url: "/chat", icon: MessageSquare, activeColor: "#22d3ee", glowColor: "rgba(34,211,238,0.6)" },
 ];
 
 const curatorMenuItems: MenuItem[] = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard, activeColor: "#a78bfa", glowColor: "rgba(167,139,250,0.6)" },
   { title: "Xabarlar", url: "/chat", icon: MessageSquare, activeColor: "#22d3ee", glowColor: "rgba(34,211,238,0.6)" },
+  { title: "E'lonlar", url: "/announcements", icon: Megaphone, activeColor: "#f87171", glowColor: "rgba(248,113,113,0.6)" },
 ];
 
 const roleConfig: Record<string, { label: string; color: string; bg: string; border: string }> = {
