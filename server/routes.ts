@@ -977,7 +977,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   userId: createdUser.id,
                   courseId: courseId,
                   planId: defaultPlan.id,
-                  paymentStatus: 'approved', // Admin-created enrollments are immediately approved
+                  paymentStatus: 'approved',
+                  groupId: validatedData.groupId || null,
                 })
                 .returning();
               
@@ -1125,6 +1126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     courseId,
                     planId: defaultPlan.id,
                     paymentStatus: 'approved',
+                    groupId: validated.groupId || null,
                   })
                   .returning();
 
@@ -6907,7 +6909,14 @@ So'zlar soni: ${submission.wordCount}`;
     const plan = plans[0];
     for (const courseId of courseIds) {
       const existing = await storage.getEnrollmentByCourseAndUser(courseId, userId);
-      if (existing) continue;
+      if (existing) {
+        if (!existing.groupId && groupId) {
+          await db.update(enrollments)
+            .set({ groupId })
+            .where(eq(enrollments.id, existing.id));
+        }
+        continue;
+      }
       const days = daysMap[courseId] || 30;
       const enrollment = await storage.createEnrollment({
         userId, courseId, planId: plan?.id || null,
