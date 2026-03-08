@@ -268,19 +268,17 @@ export default function AdminGroupsPage() {
     }) => {
       const res = await apiRequest("POST", `/api/admin/student-groups/${groupId}/assign-course`, { courseId, subscriptionDays });
       const data = await res.json();
-      // Also save schedule settings if not free
-      if (unlockType !== "free" || true) {
-        await apiRequest("POST", "/api/group-course-settings", {
-          groupId,
-          courseId,
-          unlockType,
-          unlockStartDate: unlockStartDate || null,
-          unlockIntervalDays: parseInt(unlockIntervalDays) || 1,
-          unlockWeekDays,
-          testGateEnabled: false,
-          minPassScore: 70,
-        });
-      }
+      const effectiveStartDate = unlockStartDate || (unlockType !== "free" ? new Date().toISOString() : null);
+      await apiRequest("POST", "/api/group-course-settings", {
+        groupId,
+        courseId,
+        unlockType,
+        unlockStartDate: effectiveStartDate,
+        unlockIntervalDays: parseInt(unlockIntervalDays) || 1,
+        unlockWeekDays,
+        testGateEnabled: false,
+        minPassScore: 70,
+      });
       return data;
     },
     onSuccess: (data: any) => {
@@ -303,7 +301,7 @@ export default function AdminGroupsPage() {
         unlockType: data.unlockType,
         unlockIntervalDays: data.unlockIntervalDays,
         unlockWeekDays: data.unlockWeekDays,
-        unlockStartDate: data.unlockStartDate || null,
+        unlockStartDate: data.unlockStartDate || (data.unlockType !== "free" ? new Date().toISOString() : null),
       });
       return res.json();
     },

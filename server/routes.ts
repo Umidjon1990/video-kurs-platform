@@ -7023,15 +7023,20 @@ So'zlar soni: ${submission.wordCount}`;
         return res.status(400).json({ message: 'groupId va courseId majburiy' });
       }
 
+      const effectiveUnlockType = unlockType ?? 'free';
+      const effectiveStartDate = unlockStartDate
+        ? new Date(unlockStartDate)
+        : (effectiveUnlockType !== 'free' ? new Date() : null);
+
       const settings = await storage.upsertGroupCourseSettings({
         groupId,
         courseId,
         testGateEnabled: testGateEnabled ?? false,
         minPassScore: minPassScore ?? 70,
-        unlockType: unlockType ?? 'free',
+        unlockType: effectiveUnlockType,
         unlockIntervalDays: unlockIntervalDays ?? 1,
         unlockWeekDays: unlockWeekDays ?? [],
-        unlockStartDate: unlockStartDate ? new Date(unlockStartDate) : null,
+        unlockStartDate: effectiveStartDate,
       });
 
       res.json(settings);
@@ -7074,6 +7079,10 @@ So'zlar soni: ${submission.wordCount}`;
 
       if (!settings || settings.unlockType === 'free') {
         return res.json({ settings: settings || null, lockedLessons: {} });
+      }
+
+      if (!settings.unlockStartDate && settings.unlockType !== 'free') {
+        settings.unlockStartDate = new Date();
       }
 
       // Get all lessons ordered
