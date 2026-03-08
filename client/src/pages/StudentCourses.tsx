@@ -109,8 +109,7 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
 
   const lockedLessons = lockStatusData?.lockedLessons || {};
 
-  const isLessonLocked = (lessonId: string, lesson: any): boolean => {
-    if (lesson?.isDemo) return false;
+  const isLessonLocked = (lessonId: string, _lesson: any): boolean => {
     const status = lockedLessons[lessonId];
     if (!status) return false;
     return status.locked === true;
