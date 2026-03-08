@@ -354,3 +354,16 @@ export const isInstructor: RequestHandler = async (req, res, next) => {
   user.claims.role = dbUser.role;
   next();
 };
+
+export const isCurator: RequestHandler = async (req, res, next) => {
+  const user = req.user as any;
+  if (!user?.claims) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  const dbUser = await storage.getUser(user.claims.sub);
+  if (!dbUser || (dbUser.role !== 'curator' && dbUser.role !== 'admin')) {
+    return res.status(403).json({ message: "Forbidden" });
+  }
+  user.claims.role = dbUser.role;
+  next();
+};

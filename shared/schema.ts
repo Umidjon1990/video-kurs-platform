@@ -33,7 +33,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
-  role: varchar("role", { length: 20 }).notNull().default('student'), // admin, instructor, student
+  role: varchar("role", { length: 20 }).notNull().default('student'), // admin, instructor, student, curator
   status: varchar("status", { length: 20 }).notNull().default('active'), // pending, active, rejected
   // Dual-auth fields
   phone: varchar("phone").unique(), // Telefon raqam (login uchun)
@@ -1331,6 +1331,7 @@ export const studentGroups = pgTable("student_groups", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name", { length: 100 }).notNull(),
   description: text("description"),
+  curatorId: varchar("curator_id").references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -1398,3 +1399,46 @@ export const insertGroupCourseSettingsSchema = createInsertSchema(groupCourseSet
 
 export type InsertGroupCourseSettings = z.infer<typeof insertGroupCourseSettingsSchema>;
 export type GroupCourseSettings = typeof groupCourseSettings.$inferSelect;
+
+// Curator Invites - Kurator taklif havolalari
+export const curatorInvites = pgTable("curator_invites", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  groupId: varchar("group_id").notNull().references(() => studentGroups.id, { onDelete: 'cascade' }),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  usedBy: varchar("used_by").references(() => users.id),
+  usedAt: timestamp("used_at"),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertCuratorInviteSchema = createInsertSchema(curatorInvites).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertCuratorInvite = z.infer<typeof insertCuratorInviteSchema>;
+export type CuratorInvite = typeof curatorInvites.$inferSelect;
+
+// Group Messages - Guruh xabarlari (savol-javob)
+export const groupMessages = pgTable("group_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  groupId: varchar("group_id").notNull().references(() => studentGroups.id, { onDelete: 'cascade' }),
+  senderId: varchar("sender_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  content: text("content").notNull(),
+  replyToId: varchar("reply_to_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const groupMessagesRelations = relations(groupMessages, ({ one }) => ({
+  group: one(studentGroups, { fields: [groupMessages.groupId], references: [studentGroups.id] }),
+  sender: one(users, { fields: [groupMessages.senderId], references: [users.id] }),
+}));
+
+export const insertGroupMessageSchema = createInsertSchema(groupMessages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertGroupMessage = z.infer<typeof insertGroupMessageSchema>;
+export type GroupMessage = typeof groupMessages.$inferSelect;

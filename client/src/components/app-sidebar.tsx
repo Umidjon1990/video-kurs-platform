@@ -5,6 +5,7 @@ import {
   BookOpen,
   CreditCard,
   MessageSquare,
+  MessagesSquare,
   Award,
   FileText,
   Wallet,
@@ -15,6 +16,9 @@ import {
   GraduationCap,
   ChevronRight,
   Users,
+  Send,
+  UserCheck,
+  ExternalLink,
 } from "lucide-react";
 import {
   Sidebar,
@@ -31,6 +35,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 
 type MenuItem = {
@@ -59,16 +64,159 @@ const instructorMenuItems: MenuItem[] = [
 
 const studentMenuItems: MenuItem[] = [
   { title: "Mening Kurslarim", url: "/", icon: BookOpen, activeColor: "#60a5fa", glowColor: "rgba(96,165,250,0.6)" },
-
   { title: "Natijalarim", url: "/results", icon: Award, activeColor: "#fbbf24", glowColor: "rgba(251,191,36,0.6)" },
   { title: "Xabarlar", url: "/chat", icon: MessageSquare, activeColor: "#22d3ee", glowColor: "rgba(34,211,238,0.6)" },
 ];
 
-const roleConfig = {
+const curatorMenuItems: MenuItem[] = [
+  { title: "Dashboard", url: "/", icon: LayoutDashboard, activeColor: "#a78bfa", glowColor: "rgba(167,139,250,0.6)" },
+  { title: "Xabarlar", url: "/chat", icon: MessageSquare, activeColor: "#22d3ee", glowColor: "rgba(34,211,238,0.6)" },
+];
+
+const roleConfig: Record<string, { label: string; color: string; bg: string; border: string }> = {
   admin:      { label: "Administrator", color: "#fca5a5", bg: "rgba(239,68,68,0.12)",  border: "rgba(239,68,68,0.3)"  },
   instructor: { label: "O'qituvchi",    color: "#fcd34d", bg: "rgba(251,191,36,0.12)", border: "rgba(251,191,36,0.3)" },
   student:    { label: "Talaba",        color: "#67e8f9", bg: "rgba(34,211,238,0.12)", border: "rgba(34,211,238,0.3)" },
+  curator:    { label: "Kurator",       color: "#c084fc", bg: "rgba(192,132,252,0.12)", border: "rgba(192,132,252,0.3)" },
 };
+
+function StudentGroupSection({ user, location }: { user: any; location: string }) {
+  const { data: myGroups = [] } = useQuery<{ id: string; name: string; curatorId: string | null }[]>({
+    queryKey: ["/api/student/my-groups"],
+    enabled: user?.role === "student",
+  });
+
+  const { data: siteSettingsArr = [] } = useQuery<{ key: string; value: string | null }[]>({
+    queryKey: ["/api/site-settings"],
+    enabled: user?.role === "student",
+  });
+
+  if (user?.role !== "student") return null;
+
+  const contactTelegram = siteSettingsArr.find(s => s.key === "contact_telegram")?.value || "";
+  if (myGroups.length === 0 && !contactTelegram) return null;
+
+  const telegramLink = contactTelegram
+    ? (contactTelegram.startsWith("http")
+      ? contactTelegram
+      : `https://t.me/${contactTelegram.replace("@", "")}`)
+    : null;
+
+  const items: { title: string; url: string; icon: any; external?: boolean; activeColor: string; glowColor: string }[] = [];
+
+  if (telegramLink) {
+    items.push({
+      title: "Admin bilan bog'lanish",
+      url: telegramLink,
+      icon: Send,
+      external: true,
+      activeColor: "#34d399",
+      glowColor: "rgba(52,211,153,0.6)",
+    });
+  }
+
+  for (const g of myGroups) {
+    items.push({
+      title: g.name,
+      url: `/group-chat/${g.id}`,
+      icon: MessagesSquare,
+      activeColor: "#c084fc",
+      glowColor: "rgba(192,132,252,0.6)",
+    });
+  }
+
+  return (
+    <SidebarGroup>
+      <SidebarGroupLabel className="text-[9px] font-bold tracking-[0.22em] uppercase px-2 mb-1.5 group-data-[collapsible=icon]:hidden"
+        style={{ color: "rgba(255,255,255,0.2)" }}>
+        Aloqa
+      </SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu className="space-y-0.5">
+          {items.map((item, i) => {
+            const isActive = !item.external && (location === item.url || location.startsWith(item.url + "/"));
+            return (
+              <SidebarMenuItem key={item.url}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive}
+                  tooltip={item.title}
+                  data-testid={`nav-${item.title.toLowerCase().replace(/\s+/g, "-")}`}
+                  className="relative h-9 rounded-xl border transition-all duration-200"
+                  style={isActive ? {
+                    background: "linear-gradient(135deg,rgba(124,58,237,0.22),rgba(37,99,235,0.14))",
+                    border: "1px solid rgba(124,58,237,0.4)",
+                    boxShadow: "0 0 12px rgba(124,58,237,0.18)",
+                    color: "#fff",
+                  } : { background: "transparent", border: "1px solid transparent", color: "rgba(255,255,255,0.45)" }}
+                >
+                  {item.external ? (
+                    <a href={item.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 w-full px-2">
+                      <item.icon className="h-4 w-4 shrink-0" style={isActive ? { color: item.activeColor } : {}} />
+                      <span className="text-[13px] font-semibold truncate group-data-[collapsible=icon]:hidden flex-1">{item.title}</span>
+                      <ExternalLink className="h-3 w-3 shrink-0 group-data-[collapsible=icon]:hidden" style={{ color: "rgba(255,255,255,0.2)" }} />
+                    </a>
+                  ) : (
+                    <Link href={item.url} className="flex items-center gap-2.5 w-full px-2">
+                      <item.icon className="h-4 w-4 shrink-0" style={isActive ? { color: item.activeColor, filter: `drop-shadow(0 0 5px ${item.glowColor})` } : {}} />
+                      <span className="text-[13px] font-semibold truncate group-data-[collapsible=icon]:hidden flex-1">{item.title}</span>
+                    </Link>
+                  )}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  );
+}
+
+function CuratorGroupSection({ user, location }: { user: any; location: string }) {
+  const { data: curatorGroups = [] } = useQuery<{ id: string; name: string }[]>({
+    queryKey: ["/api/curator/groups"],
+    enabled: user?.role === "curator",
+  });
+
+  if (user?.role !== "curator" || curatorGroups.length === 0) return null;
+
+  return (
+    <SidebarGroup>
+      <SidebarGroupLabel className="text-[9px] font-bold tracking-[0.22em] uppercase px-2 mb-1.5 group-data-[collapsible=icon]:hidden"
+        style={{ color: "rgba(255,255,255,0.2)" }}>
+        Guruh Chatlar
+      </SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu className="space-y-0.5">
+          {curatorGroups.map(g => {
+            const url = `/group-chat/${g.id}`;
+            const isActive = location === url || location.startsWith(url + "/");
+            return (
+              <SidebarMenuItem key={g.id}>
+                <SidebarMenuButton
+                  asChild isActive={isActive} tooltip={g.name}
+                  data-testid={`nav-curator-group-${g.id}`}
+                  className="relative h-9 rounded-xl border transition-all duration-200"
+                  style={isActive ? {
+                    background: "linear-gradient(135deg,rgba(124,58,237,0.22),rgba(37,99,235,0.14))",
+                    border: "1px solid rgba(124,58,237,0.4)",
+                    boxShadow: "0 0 12px rgba(124,58,237,0.18)",
+                    color: "#fff",
+                  } : { background: "transparent", border: "1px solid transparent", color: "rgba(255,255,255,0.45)" }}
+                >
+                  <Link href={url} className="flex items-center gap-2.5 w-full px-2">
+                    <MessagesSquare className="h-4 w-4 shrink-0" style={isActive ? { color: "#c084fc", filter: "drop-shadow(0 0 5px rgba(192,132,252,0.6))" } : {}} />
+                    <span className="text-[13px] font-semibold truncate group-data-[collapsible=icon]:hidden flex-1">{g.name}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  );
+}
 
 export function AppSidebar() {
   const { user } = useAuth();
@@ -80,9 +228,10 @@ export function AppSidebar() {
   const menuItems =
     user.role === "admin" ? adminMenuItems
     : user.role === "instructor" ? instructorMenuItems
+    : user.role === "curator" ? curatorMenuItems
     : studentMenuItems;
 
-  const role = roleConfig[user.role as keyof typeof roleConfig] ?? roleConfig.student;
+  const role = roleConfig[user.role] ?? roleConfig.student;
 
   const handleLogout = () => { window.location.href = "/api/logout"; };
 
@@ -160,7 +309,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel className="text-[9px] font-bold tracking-[0.22em] uppercase px-2 mb-1.5 group-data-[collapsible=icon]:hidden"
             style={{ color: "rgba(255,255,255,0.2)" }}>
-            Navigatsiya
+            {user.role === "curator" ? "Kurator Panel" : "Navigatsiya"}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-0.5">
@@ -225,6 +374,9 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        <StudentGroupSection user={user} location={location} />
+        <CuratorGroupSection user={user} location={location} />
       </SidebarContent>
 
       {/* ── FOOTER ── */}

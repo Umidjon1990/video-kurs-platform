@@ -61,6 +61,8 @@ interface StudentGroup {
   description: string | null;
   createdAt: string;
   memberCount: number;
+  curatorId?: string | null;
+  curatorName?: string | null;
 }
 
 interface GroupMember {
@@ -148,6 +150,10 @@ export default function AdminGroupsPage() {
   const [isAssignCourseOpen, setIsAssignCourseOpen] = useState(false);
   const [isGroupCoursesOpen, setIsGroupCoursesOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isCuratorCreateOpen, setIsCuratorCreateOpen] = useState(false);
+  const [isCuratorAssignOpen, setIsCuratorAssignOpen] = useState(false);
+  const [inviteLink, setInviteLink] = useState("");
+  const [curatorForm, setCuratorForm] = useState({ firstName: "", lastName: "", phone: "", password: "" });
 
   const [selectedGroup, setSelectedGroup] = useState<StudentGroup | null>(null);
   const [groupForm, setGroupForm] = useState({ name: "", description: "" });
@@ -174,6 +180,10 @@ export default function AdminGroupsPage() {
 
   const { data: allCourses = [] } = useQuery<{ id: string; title: string; thumbnail?: string; status?: string; isFree?: boolean }[]>({
     queryKey: ["/api/admin/all-courses"],
+  });
+
+  const { data: curators = [] } = useQuery<User[]>({
+    queryKey: ["/api/admin/curators"],
   });
 
   const { data: groupMembers = [], isLoading: membersLoading } = useQuery<GroupMember[]>({
@@ -315,6 +325,45 @@ export default function AdminGroupsPage() {
     onError: (error: any) => toast({ title: "Xatolik", description: error.message, variant: "destructive" }),
   });
 
+  const createCuratorMutation = useMutation({
+    mutationFn: async (data: typeof curatorForm) => {
+      const res = await apiRequest("POST", "/api/admin/curators", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/curators"] });
+      setIsCuratorCreateOpen(false);
+      setCuratorForm({ firstName: "", lastName: "", phone: "", password: "" });
+      toast({ title: "Kurator yaratildi" });
+    },
+    onError: (error: any) => toast({ title: "Xatolik", description: error.message, variant: "destructive" }),
+  });
+
+  const assignCuratorMutation = useMutation({
+    mutationFn: async ({ groupId, curatorId }: { groupId: string; curatorId: string }) => {
+      const res = await apiRequest("POST", `/api/admin/groups/${groupId}/assign-curator`, { curatorId });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/student-groups"] });
+      setIsCuratorAssignOpen(false);
+      toast({ title: "Kurator biriktirildi" });
+    },
+    onError: (error: any) => toast({ title: "Xatolik", description: error.message, variant: "destructive" }),
+  });
+
+  const generateInviteMutation = useMutation({
+    mutationFn: async (groupId: string) => {
+      const res = await apiRequest("POST", `/api/admin/groups/${groupId}/invite-link`);
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      setInviteLink(data.link);
+      toast({ title: "Havola yaratildi" });
+    },
+    onError: (error: any) => toast({ title: "Xatolik", description: error.message, variant: "destructive" }),
+  });
+
   // ─── Helpers ──────────────────────────────────────────────────────────────
   const downloadPdf = () => {
     const groupName = selectedGroup?.name || "Guruh";
@@ -418,9 +467,14 @@ export default function AdminGroupsPage() {
           <h1 className="text-2xl font-bold" data-testid="text-page-title">O'quvchi Guruhlari</h1>
           <p className="text-muted-foreground text-sm">Guruhlarni boshqaring va o'quvchilarni guruhlarga biriktiring</p>
         </div>
-        <Button onClick={() => { setGroupForm({ name: "", description: "" }); setIsCreateOpen(true); }} data-testid="button-create-group">
-          <Plus className="w-4 h-4 mr-2" /> Yangi Guruh
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" onClick={() => { setCuratorForm({ firstName: "", lastName: "", phone: "", password: "" }); setIsCuratorCreateOpen(true); }} data-testid="button-create-curator">
+            <GraduationCap className="w-4 h-4 mr-2" /> Kurator Yaratish
+          </Button>
+          <Button onClick={() => { setGroupForm({ name: "", description: "" }); setIsCreateOpen(true); }} data-testid="button-create-group">
+            <Plus className="w-4 h-4 mr-2" /> Yangi Guruh
+          </Button>
+        </div>
       </div>
 
       {/* Groups grid */}
@@ -454,7 +508,18 @@ export default function AdminGroupsPage() {
                 </Badge>
               </CardHeader>
               <CardContent className="pt-0 space-y-3">
-                {/* Primary actions */}
+                {group.curatorId ? (
+                  <div className="flex items-center gap-2 text-xs" data-testid={`curator-info-${group.id}`}>
+                    <GraduationCap className="w-3.5 h-3.5 text-purple-400" />
+                    <span className="text-white/60">Kurator:</span>
+                    <span className="text-purple-300 font-medium">{group.curatorName || "Tayinlangan"}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-xs text-white/30">
+                    <GraduationCap className="w-3.5 h-3.5" />
+                    <span>Kurator tayinlanmagan</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2 flex-wrap">
                   <Button size="sm" variant="outline" onClick={() => { setSelectedGroup(group); setIsMembersOpen(true); }} data-testid={`button-view-members-${group.id}`}>
                     <UsersRound className="w-4 h-4 mr-1" /> A'zolar
@@ -464,6 +529,12 @@ export default function AdminGroupsPage() {
                     data-testid={`button-group-courses-${group.id}`}
                   >
                     <BookOpen className="w-4 h-4 mr-1" /> Kurslar
+                  </Button>
+                  <Button size="sm" variant="outline"
+                    onClick={() => { setSelectedGroup(group); setIsCuratorAssignOpen(true); }}
+                    data-testid={`button-assign-curator-${group.id}`}
+                  >
+                    <GraduationCap className="w-4 h-4 mr-1" /> Kurator
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => { setSelectedGroup(group); setGroupForm({ name: group.name, description: group.description || "" }); setIsEditOpen(true); }} data-testid={`button-edit-group-${group.id}`}>
                     <Pencil className="w-4 h-4" />
@@ -1032,6 +1103,110 @@ export default function AdminGroupsPage() {
               {saveSettingsMutation.isPending ? "Saqlanmoqda..." : "Saqlash"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Create Curator Dialog ── */}
+      <Dialog open={isCuratorCreateOpen} onOpenChange={setIsCuratorCreateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Yangi Kurator Yaratish</DialogTitle>
+            <DialogDescription>Kurator uchun hisob yarating</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Ism *</Label>
+                <Input data-testid="input-curator-first-name" value={curatorForm.firstName} onChange={e => setCuratorForm({ ...curatorForm, firstName: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Familiya</Label>
+                <Input data-testid="input-curator-last-name" value={curatorForm.lastName} onChange={e => setCuratorForm({ ...curatorForm, lastName: e.target.value })} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Telefon *</Label>
+              <Input data-testid="input-curator-phone" value={curatorForm.phone} onChange={e => setCuratorForm({ ...curatorForm, phone: e.target.value })} placeholder="+998901234567" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Parol *</Label>
+              <Input data-testid="input-curator-password" type="password" value={curatorForm.password} onChange={e => setCuratorForm({ ...curatorForm, password: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCuratorCreateOpen(false)}>Bekor qilish</Button>
+            <Button
+              onClick={() => createCuratorMutation.mutate(curatorForm)}
+              disabled={!curatorForm.firstName || !curatorForm.phone || !curatorForm.password || createCuratorMutation.isPending}
+              data-testid="button-submit-curator"
+            >
+              {createCuratorMutation.isPending ? "Yaratilmoqda..." : "Yaratish"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Assign Curator / Invite Link Dialog ── */}
+      <Dialog open={isCuratorAssignOpen} onOpenChange={v => { setIsCuratorAssignOpen(v); if (!v) setInviteLink(""); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Kurator Biriktirish — {selectedGroup?.name}</DialogTitle>
+            <DialogDescription>Mavjud kuratorni tanlang yoki taklifnoma havolasi yarating</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Mavjud Kuratorlar</Label>
+              {curators.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Hali kurator yaratilmagan</p>
+              ) : (
+                <Select
+                  value=""
+                  onValueChange={val => {
+                    if (selectedGroup) assignCuratorMutation.mutate({ groupId: selectedGroup.id, curatorId: val });
+                  }}
+                >
+                  <SelectTrigger data-testid="select-curator">
+                    <SelectValue placeholder="Kurator tanlang..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {curators.map(c => (
+                      <SelectItem key={c.id} value={c.id} data-testid={`option-curator-${c.id}`}>
+                        {c.firstName} {c.lastName || ""} ({c.phone})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+            <div className="border-t pt-3 space-y-2">
+              <Label>Taklifnoma Havolasi</Label>
+              <p className="text-xs text-muted-foreground">
+                Bu havola orqali yangi kurator ro'yxatdan o'tib, avtomatik guruhga biriktiriladi
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => selectedGroup && generateInviteMutation.mutate(selectedGroup.id)}
+                disabled={generateInviteMutation.isPending}
+                data-testid="button-generate-invite"
+              >
+                {generateInviteMutation.isPending ? "Yaratilmoqda..." : "Havola Yaratish"}
+              </Button>
+              {inviteLink && (
+                <div className="mt-2 p-2 rounded-lg bg-muted">
+                  <p className="text-xs font-mono break-all" data-testid="text-invite-link">{inviteLink}</p>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="mt-1"
+                    onClick={() => { navigator.clipboard.writeText(inviteLink); toast({ title: "Nusxa olindi!" }); }}
+                    data-testid="button-copy-invite"
+                  >
+                    Nusxa olish
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

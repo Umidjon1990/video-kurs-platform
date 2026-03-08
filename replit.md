@@ -15,7 +15,7 @@ The frontend, built with React, TypeScript, and Vite, utilizes Radix UI and Shad
 The frontend uses Wouter for routing and TanStack Query for state management. Authentication relies on local phone/email and password. The backend is an Express.js application in TypeScript, offering a RESTful API with role-based protection. It employs session-based `express-session` with a PostgreSQL store and Passport.js for authentication. Drizzle ORM with PostgreSQL (Neon Serverless) is used for type-safe database operations. Automatic default subscription plan creation ensures immediate functionality in new environments. The platform integrates a sophisticated assessment system with various question types, secure server-side grading, and advanced features like question/answer shuffling, RTL support for Arabic, and text import. Video content is supported from multiple platforms, and a robust notification system provides real-time updates.
 
 ### Feature Specifications
-*   **Role-Based Access Control**: Strict access for Admin, Instructor, and Student roles.
+*   **Role-Based Access Control**: Strict access for Admin, Instructor, Student, and Curator roles.
 *   **Multi-Device Login**: Allows concurrent logins from multiple devices.
 *   **Assessment System**: Supports six question types, auto/manual grading, question banks, and secure server-side grading, with features like question/answer shuffling, RTL Arabic support, and retake enforcement.
 *   **Assignment Submission**: Multi-file upload with server-side validation.
@@ -50,6 +50,9 @@ The frontend uses Wouter for routing and TanStack Query for state management. Au
 *   **Student Group Management**: Admins can create and manage student groups for organizational purposes and bulk assignments. Group courses appear directly in "Mening Kurslarim" (no separate "Guruhlarim" page). Group course restrictions (schedule-based unlock, test gates) are enforced in the VideoLessonModal via the `lesson-lock-status` API.
 *   **Demo Lesson Test Taking**: Public (no auth) test-taking on demo lessons. Visitors can take tests on free demo lessons and see results immediately — serves as marketing to demonstrate the platform's assessment capabilities. Public API endpoints: `GET /api/public/lessons/:id/tests`, `GET /api/public/tests/:id/questions`, `POST /api/public/tests/:id/submit`. Results are graded server-side but not saved to DB.
 *   **Bulk Test Creation**: Instructors can create tests for multiple lessons at once via "Ommaviy Test Qo'shish" dialog with shared settings (passing score, shuffle options). Backend: `POST /api/instructor/courses/:id/tests/bulk`.
+*   **Curator System**: Admins create curators, assign them to student groups, or generate invite links for curator self-registration. Curators have their own dashboard showing assigned groups, can access group Q&A chats, and communicate privately with students via the existing messaging system. Tables: `curator_invites` (token-based registration), `group_messages` (group Q&A chat with reply-to). Pages: CuratorDashboard, CuratorRegister, GroupChat. Middleware: `isCurator`.
+*   **Group Q&A Chat**: Real-time group messaging per student group. Students and their assigned curator (and admins) can chat with reply-to functionality. Polling-based updates (4s). Messages show sender role badges for curators/admins.
+*   **Student Communication Hub**: Student sidebar shows dynamic "Aloqa" section with: admin Telegram link (from site_settings `contact_telegram` key), group chat links for each enrolled group. Curators see assigned group chat links in sidebar.
 
 ## External Dependencies
 

@@ -2,7 +2,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated, isAdmin, isInstructor } from "./replitAuth";
+import { setupAuth, isAuthenticated, isAdmin, isInstructor, isCurator } from "./replitAuth";
 import multer from "multer";
 import { writeFile } from "fs/promises";
 import { join } from "path";
@@ -10,7 +10,7 @@ import { ObjectStorageService } from "./objectStorage";
 import { db } from "./db";
 import bcrypt from "bcryptjs";
 import passport from "passport";
-import { users, courses, lessons, assignments, tests, questions, questionOptions, enrollments, submissions, testAttempts, notifications, conversations, messages, siteSettings, testimonials, subscriptionPlans, coursePlanPricing, userSubscriptions, passwordResetRequests, speakingTests, speakingTestSections, speakingQuestions, speakingSubmissions, speakingAnswers, speakingEvaluations, essaySubmissions, courseRatings, courseLikes, lessonProgress, announcements, liveRooms, courseGroupChats, userPresence, courseModules, lessonSections, courseResourceTypes, lessonEssayQuestions, studentGroups, studentGroupMembers, groupCourseSettings } from "@shared/schema";
+import { users, courses, lessons, assignments, tests, questions, questionOptions, enrollments, submissions, testAttempts, notifications, conversations, messages, siteSettings, testimonials, subscriptionPlans, coursePlanPricing, userSubscriptions, passwordResetRequests, speakingTests, speakingTestSections, speakingQuestions, speakingSubmissions, speakingAnswers, speakingEvaluations, essaySubmissions, courseRatings, courseLikes, lessonProgress, announcements, liveRooms, courseGroupChats, userPresence, courseModules, lessonSections, courseResourceTypes, lessonEssayQuestions, studentGroups, studentGroupMembers, groupCourseSettings, curatorInvites, groupMessages } from "@shared/schema";
 import { eq, and, or, desc, sql, count, avg, inArray } from "drizzle-orm";
 import {
   insertCourseSchema,
@@ -4547,9 +4547,12 @@ So'zlar soni: ${submission.wordCount}`;
       if (currentUser.role === 'student') {
         finalStudentId = userId;
         finalInstructorId = instructorId;
-      } else if (currentUser.role === 'instructor') {
+      } else if (currentUser.role === 'instructor' || currentUser.role === 'curator') {
         finalStudentId = studentId;
         finalInstructorId = userId;
+      } else if (currentUser.role === 'admin') {
+        finalStudentId = studentId || userId;
+        finalInstructorId = instructorId || userId;
       } else {
         return res.status(400).json({ message: "Invalid role for chat" });
       }
@@ -6705,7 +6708,12 @@ So'zlar soni: ${submission.wordCount}`;
       const groups = await storage.getStudentGroups();
       const groupsWithCounts = await Promise.all(groups.map(async (group) => {
         const members = await storage.getGroupMembers(group.id);
-        return { ...group, memberCount: members.length };
+        let curatorName: string | null = null;
+        if ((group as any).curatorId) {
+          const curator = await storage.getUser((group as any).curatorId);
+          if (curator) curatorName = `${curator.firstName} ${curator.lastName || ""}`.trim();
+        }
+        return { ...group, memberCount: members.length, curatorName };
       }));
       res.json(groupsWithCounts);
     } catch (error: any) {
@@ -7190,6 +7198,291 @@ So'zlar soni: ${submission.wordCount}`;
       }
 
       res.json({ settings, lockedLessons });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CURATOR MANAGEMENT (Admin)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  app.get('/api/admin/curators', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const curators = await db.select().from(users).where(eq(users.role, 'curator'));
+      res.json(curators.map(c => ({ ...c, passwordHash: undefined })));
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/admin/curators', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { firstName, lastName, phone, email, password } = req.body;
+      if (!firstName || !phone || !password) {
+        return res.status(400).json({ message: "Ism, telefon va parol majburiy" });
+      }
+      const existing = await storage.getUserByPhoneOrEmail(phone);
+      if (existing) return res.status(400).json({ message: "Bu telefon raqam allaqachon ro'yxatdan o'tgan" });
+      if (email) {
+        const existingEmail = await storage.getUserByPhoneOrEmail(email);
+        if (existingEmail) return res.status(400).json({ message: "Bu email allaqachon ro'yxatdan o'tgan" });
+      }
+      const passwordHash = await bcrypt.hash(password, 10);
+      const [curator] = await db.insert(users).values({
+        firstName, lastName, phone, email: email || null,
+        passwordHash, role: 'curator', status: 'active',
+      }).returning();
+      res.json({ ...curator, passwordHash: undefined });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/admin/groups/:groupId/assign-curator', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { groupId } = req.params;
+      const { curatorId } = req.body;
+      if (!curatorId) return res.status(400).json({ message: "curatorId majburiy" });
+      const [group] = await db.select().from(studentGroups).where(eq(studentGroups.id, groupId));
+      if (!group) return res.status(404).json({ message: "Guruh topilmadi" });
+      const curator = await storage.getUser(curatorId);
+      if (!curator || curator.role !== 'curator') return res.status(400).json({ message: "Kurator topilmadi" });
+      await db.update(studentGroups).set({ curatorId }).where(eq(studentGroups.id, groupId));
+      res.json({ message: "Kurator biriktirildi" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/admin/groups/:groupId/invite-link', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { groupId } = req.params;
+      const userId = req.user?.id || req.user?.claims?.sub;
+      const crypto = await import('crypto');
+      const token = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+      await db.insert(curatorInvites).values({
+        token, groupId, createdBy: userId, expiresAt,
+      });
+      const baseUrl = req.headers.origin || `${req.protocol}://${req.headers.host}`;
+      res.json({ link: `${baseUrl}/curator/register/${token}`, token, expiresAt });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/curator/invite/:token', async (req, res) => {
+    try {
+      const { token } = req.params;
+      const [invite] = await db.select().from(curatorInvites).where(eq(curatorInvites.token, token));
+      if (!invite) return res.status(404).json({ message: "Havola topilmadi" });
+      if (invite.usedBy) return res.status(400).json({ message: "Bu havola allaqachon ishlatilgan" });
+      if (new Date() > invite.expiresAt) return res.status(400).json({ message: "Havola muddati tugagan" });
+      const [group] = await db.select().from(studentGroups).where(eq(studentGroups.id, invite.groupId));
+      res.json({ valid: true, groupName: group?.name || "Noma'lum guruh" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/curator/register/:token', async (req, res) => {
+    try {
+      const { token } = req.params;
+      const { firstName, lastName, phone, password } = req.body;
+      if (!firstName || !phone || !password) return res.status(400).json({ message: "Ism, telefon va parol majburiy" });
+      const [invite] = await db.select().from(curatorInvites).where(eq(curatorInvites.token, token));
+      if (!invite) return res.status(404).json({ message: "Havola topilmadi" });
+      if (invite.usedBy) return res.status(400).json({ message: "Bu havola allaqachon ishlatilgan" });
+      if (new Date() > invite.expiresAt) return res.status(400).json({ message: "Havola muddati tugagan" });
+      const existing = await storage.getUserByPhoneOrEmail(phone);
+      if (existing) return res.status(400).json({ message: "Bu telefon raqam allaqachon ro'yxatdan o'tgan" });
+      const passwordHash = await bcrypt.hash(password, 10);
+      const [curator] = await db.insert(users).values({
+        firstName, lastName, phone, passwordHash, role: 'curator', status: 'active',
+      }).returning();
+      await db.update(curatorInvites).set({ usedBy: curator.id, usedAt: new Date() }).where(eq(curatorInvites.id, invite.id));
+      await db.update(studentGroups).set({ curatorId: curator.id }).where(eq(studentGroups.id, invite.groupId));
+      res.json({ message: "Kurator muvaffaqiyatli ro'yxatdan o'tdi", curatorId: curator.id });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CURATOR ROUTES
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  app.get('/api/curator/groups', isAuthenticated, isCurator, async (req: any, res) => {
+    try {
+      const userId = req.user?.id || req.user?.claims?.sub;
+      const groups = await db.select().from(studentGroups).where(eq(studentGroups.curatorId, userId));
+      const result = [];
+      for (const group of groups) {
+        const members = await db.select({
+          id: studentGroupMembers.id,
+          userId: studentGroupMembers.userId,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          phone: users.phone,
+        }).from(studentGroupMembers)
+          .innerJoin(users, eq(studentGroupMembers.userId, users.id))
+          .where(eq(studentGroupMembers.groupId, group.id));
+        result.push({ ...group, members, memberCount: members.length });
+      }
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GROUP CHAT (savol-javob)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  app.get('/api/groups/:groupId/messages', isAuthenticated, async (req: any, res) => {
+    try {
+      const { groupId } = req.params;
+      const userId = req.user?.id || req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "Unauthorized" });
+
+      if (user.role === 'student') {
+        const [membership] = await db.select().from(studentGroupMembers)
+          .where(and(eq(studentGroupMembers.groupId, groupId), eq(studentGroupMembers.userId, userId)));
+        if (!membership) return res.status(403).json({ message: "Siz bu guruh a'zosi emassiz" });
+      } else if (user.role === 'curator') {
+        const [group] = await db.select().from(studentGroups)
+          .where(and(eq(studentGroups.id, groupId), eq(studentGroups.curatorId, userId)));
+        if (!group) return res.status(403).json({ message: "Siz bu guruh kuratori emassiz" });
+      } else if (user.role !== 'admin') {
+        return res.status(403).json({ message: "Ruxsat yo'q" });
+      }
+
+      const msgs = await db.select({
+        id: groupMessages.id,
+        groupId: groupMessages.groupId,
+        senderId: groupMessages.senderId,
+        content: groupMessages.content,
+        replyToId: groupMessages.replyToId,
+        createdAt: groupMessages.createdAt,
+        senderFirstName: users.firstName,
+        senderLastName: users.lastName,
+        senderRole: users.role,
+      }).from(groupMessages)
+        .innerJoin(users, eq(groupMessages.senderId, users.id))
+        .where(eq(groupMessages.groupId, groupId))
+        .orderBy(groupMessages.createdAt);
+
+      const replyIds = msgs.filter(m => m.replyToId).map(m => m.replyToId!);
+      let replyMap: Record<string, any> = {};
+      if (replyIds.length > 0) {
+        const replies = await db.select({
+          id: groupMessages.id,
+          content: groupMessages.content,
+          senderFirstName: users.firstName,
+        }).from(groupMessages)
+          .innerJoin(users, eq(groupMessages.senderId, users.id))
+          .where(inArray(groupMessages.id, replyIds));
+        for (const r of replies) {
+          replyMap[r.id] = r;
+        }
+      }
+
+      res.json(msgs.map(m => ({
+        ...m,
+        replyTo: m.replyToId ? replyMap[m.replyToId] || null : null,
+      })));
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/groups/:groupId/messages', isAuthenticated, async (req: any, res) => {
+    try {
+      const { groupId } = req.params;
+      const userId = req.user?.id || req.user?.claims?.sub;
+      const { content, replyToId } = req.body;
+      if (!content?.trim()) return res.status(400).json({ message: "Xabar matni majburiy" });
+
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "Unauthorized" });
+
+      if (user.role === 'student') {
+        const [membership] = await db.select().from(studentGroupMembers)
+          .where(and(eq(studentGroupMembers.groupId, groupId), eq(studentGroupMembers.userId, userId)));
+        if (!membership) return res.status(403).json({ message: "Siz bu guruh a'zosi emassiz" });
+      } else if (user.role === 'curator') {
+        const [group] = await db.select().from(studentGroups)
+          .where(and(eq(studentGroups.id, groupId), eq(studentGroups.curatorId, userId)));
+        if (!group) return res.status(403).json({ message: "Siz bu guruh kuratori emassiz" });
+      } else if (user.role !== 'admin') {
+        return res.status(403).json({ message: "Ruxsat yo'q" });
+      }
+
+      const [msg] = await db.insert(groupMessages).values({
+        groupId, senderId: userId, content: content.trim(), replyToId: replyToId || null,
+      }).returning();
+
+      res.json({
+        ...msg,
+        senderFirstName: user.firstName,
+        senderLastName: user.lastName,
+        senderRole: user.role,
+        replyTo: null,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // STUDENT-CURATOR CHAT
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  app.get('/api/student/my-curator', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id || req.user?.claims?.sub;
+      const memberships = await db.select({
+        groupId: studentGroupMembers.groupId,
+        curatorId: studentGroups.curatorId,
+        groupName: studentGroups.name,
+      }).from(studentGroupMembers)
+        .innerJoin(studentGroups, eq(studentGroupMembers.groupId, studentGroups.id))
+        .where(eq(studentGroupMembers.userId, userId));
+
+      const withCurator = memberships.filter(m => m.curatorId);
+      if (withCurator.length === 0) return res.json({ curator: null });
+
+      const curator = await storage.getUser(withCurator[0].curatorId!);
+      if (!curator) return res.json({ curator: null });
+
+      res.json({
+        curator: {
+          id: curator.id,
+          firstName: curator.firstName,
+          lastName: curator.lastName,
+          phone: curator.phone,
+          groupName: withCurator[0].groupName,
+        },
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/student/my-groups', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id || req.user?.claims?.sub;
+      const groups = await db.select({
+        id: studentGroups.id,
+        name: studentGroups.name,
+        curatorId: studentGroups.curatorId,
+      }).from(studentGroupMembers)
+        .innerJoin(studentGroups, eq(studentGroupMembers.groupId, studentGroups.id))
+        .where(eq(studentGroupMembers.userId, userId));
+      res.json(groups);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

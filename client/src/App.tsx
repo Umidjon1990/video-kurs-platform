@@ -30,10 +30,12 @@ import LearningPage from "@/pages/LearningPage";
 import Checkout from "@/pages/Checkout";
 import ChatPage from "@/pages/ChatPage";
 import LiveRoom from "@/pages/LiveRoom";
+import GroupChat from "@/pages/GroupChat";
+import CuratorDashboard from "@/pages/CuratorDashboard";
+import CuratorRegister from "@/pages/CuratorRegister";
 import NotFound from "@/pages/not-found";
 
-// Public routes that don't require auth
-const PUBLIC_PATHS = ["/explore", "/login", "/register", "/checkout"];
+const PUBLIC_PATHS = ["/explore", "/login", "/register", "/checkout", "/curator/register"];
 
 function Router() {
   const [location] = useLocation();
@@ -52,6 +54,7 @@ function Router() {
         <Route path="/login" component={Login} />
         <Route path="/register" component={Register} />
         <Route path="/checkout/:courseId" component={Checkout} />
+        <Route path="/curator/register/:token" component={CuratorRegister} />
         <Route component={NotFound} />
       </Switch>
     );
@@ -135,16 +138,26 @@ function Router() {
                 </>
               )}
 
+              {/* Curator Routes */}
+              {user?.role === 'curator' && (
+                <>
+                  <Route path="/" component={CuratorDashboard} />
+                  <Route path="/group-chat/:groupId" component={GroupChat} />
+                  <Route path="/chat" component={ChatPage} />
+                  <Route path="/chat/:conversationId" component={ChatPage} />
+                </>
+              )}
+
               {/* Student Routes */}
               {user?.role === 'student' && (
                 <>
                   <Route path="/" component={StudentCourses} />
-
                   <Route path="/results" component={StudentResults} />
                   <Route path="/checkout/:courseId" component={Checkout} />
                   <Route path="/student/speaking-test/:testId" component={StudentSpeakingTest} />
                   <Route path="/chat" component={ChatPage} />
                   <Route path="/chat/:conversationId" component={ChatPage} />
+                  <Route path="/group-chat/:groupId" component={GroupChat} />
                 </>
               )}
               <Route component={NotFound} />
