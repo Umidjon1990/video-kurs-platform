@@ -102,22 +102,22 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
     queryFn: () => fetch(`/api/courses/${state.courseId}/tests`, { credentials: 'include' }).then(r => r.json()),
   });
 
-  const { data: lockStatus } = useQuery<Record<string, any>>({
+  const { data: lockStatusData } = useQuery<{ settings: any; lockedLessons: Record<string, { locked: boolean; unlockDate?: string; reason: string }> }>({
     queryKey: ["/api/courses", state.courseId, "lesson-lock-status"],
     queryFn: () => fetch(`/api/courses/${state.courseId}/lesson-lock-status`, { credentials: 'include' }).then(r => r.json()),
   });
 
+  const lockedLessons = lockStatusData?.lockedLessons || {};
+
   const isLessonLocked = (lessonId: string, lesson: any): boolean => {
     if (lesson?.isDemo) return false;
-    if (!lockStatus) return false;
-    const status = lockStatus[lessonId];
+    const status = lockedLessons[lessonId];
     if (!status) return false;
     return status.locked === true;
   };
 
   const getLockReason = (lessonId: string): string | null => {
-    if (!lockStatus) return null;
-    const status = lockStatus[lessonId];
+    const status = lockedLessons[lessonId];
     if (!status || !status.locked) return null;
     if (status.reason === 'test_gate') return 'Oldingi dars testidan o\'ting';
     if (status.reason === 'schedule') {
@@ -157,13 +157,23 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
       if (!isLessonLocked(sortedLessons[i].id, sortedLessons[i])) return sortedLessons[i];
     }
     return null;
-  }, [currentIdx, sortedLessons, lockStatus]);
+  }, [currentIdx, sortedLessons, lockedLessons]);
   const nextLesson = useMemo(() => {
     for (let i = currentIdx + 1; i < sortedLessons.length; i++) {
       if (!isLessonLocked(sortedLessons[i].id, sortedLessons[i])) return sortedLessons[i];
     }
     return null;
-  }, [currentIdx, sortedLessons, lockStatus]);
+  }, [currentIdx, sortedLessons, lockedLessons]);
+
+  useEffect(() => {
+    if (sortedLessons.length > 0 && Object.keys(lockedLessons).length > 0) {
+      const currentIsLocked = isLessonLocked(activeLessonId, sortedLessons.find(l => l.id === activeLessonId));
+      if (currentIsLocked) {
+        const firstUnlocked = sortedLessons.find(l => !isLessonLocked(l.id, l));
+        if (firstUnlocked) setActiveLessonId(firstUnlocked.id);
+      }
+    }
+  }, [lockedLessons, sortedLessons]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
