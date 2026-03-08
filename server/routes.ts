@@ -1021,6 +1021,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return { user: createdUser, enrollmentsCreated };
       });
       
+      if (validatedData.groupId && newUser.user?.id) {
+        await autoEnrollMemberInGroupCourses(validatedData.groupId, newUser.user.id);
+      }
+      
       // Remove password from response
       const { passwordHash: _pwd, ...userWithoutPassword } = newUser.user;
       
@@ -1096,6 +1100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           const passwordHash = await bcrypt.hash(student.phone, 10);
 
+          let newUserId: string = '';
           await db.transaction(async (tx: any) => {
             const [createdUser] = await tx
               .insert(users)
@@ -1108,6 +1113,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 status: 'active',
               })
               .returning();
+
+            newUserId = createdUser.id;
 
             if (validated.courseIds && validated.courseIds.length > 0 && defaultPlan) {
               for (const courseId of validated.courseIds) {
@@ -1144,6 +1151,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               });
             }
           });
+
+          if (validated.groupId && newUserId) {
+            await autoEnrollMemberInGroupCourses(validated.groupId, newUserId);
+          }
 
           created++;
         } catch (err: any) {
