@@ -3066,6 +3066,7 @@ export class DatabaseStorage implements IStorage {
       groupId: studentGroupMembers.groupId,
       userId: studentGroupMembers.userId,
       addedAt: studentGroupMembers.addedAt,
+      personalStartDate: studentGroupMembers.personalStartDate,
       firstName: users.firstName,
       lastName: users.lastName,
       phone: users.phone,

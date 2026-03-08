@@ -1354,6 +1354,7 @@ export const studentGroupMembers = pgTable("student_group_members", {
   groupId: varchar("group_id").notNull().references(() => studentGroups.id, { onDelete: 'cascade' }),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   addedAt: timestamp("added_at").defaultNow(),
+  personalStartDate: timestamp("personal_start_date"),
 });
 
 export const studentGroupMembersRelations = relations(studentGroupMembers, ({ one }) => ({
@@ -1383,6 +1384,7 @@ export const groupCourseSettings = pgTable("group_course_settings", {
   unlockIntervalDays: integer("unlock_interval_days").default(1),
   unlockWeekDays: jsonb("unlock_week_days").$type<string[]>().default([]),
   unlockStartDate: timestamp("unlock_start_date"),
+  useIndividualStartDate: boolean("use_individual_start_date").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

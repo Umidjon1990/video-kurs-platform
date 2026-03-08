@@ -6939,10 +6939,25 @@ So'zlar soni: ${submission.wordCount}`;
   // Add multiple students to group
   app.post('/api/admin/student-groups/:id/members/bulk', isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const { userIds } = req.body;
+      const { userIds, personalStartDate } = req.body;
       if (!userIds || !Array.isArray(userIds)) return res.status(400).json({ message: "O'quvchilar ro'yxati kerak" });
+      let parsedDate: Date | null = null;
+      if (personalStartDate) {
+        parsedDate = new Date(personalStartDate);
+        if (isNaN(parsedDate.getTime())) {
+          return res.status(400).json({ message: "Noto'g'ri sana formati" });
+        }
+      }
       const results = await Promise.all(userIds.map(async (uid: string) => {
         const member = await storage.addStudentToGroup(req.params.id, uid);
+        if (parsedDate) {
+          await db.update(studentGroupMembers)
+            .set({ personalStartDate: parsedDate })
+            .where(and(
+              eq(studentGroupMembers.groupId, req.params.id),
+              eq(studentGroupMembers.userId, uid)
+            ));
+        }
         await autoEnrollMemberInGroupCourses(req.params.id, uid);
         return member;
       }));
@@ -6956,6 +6971,41 @@ So'zlar soni: ${submission.wordCount}`;
   app.delete('/api/admin/student-groups/:groupId/members/:userId', isAuthenticated, isAdmin, async (req, res) => {
     try {
       await storage.removeStudentFromGroup(req.params.groupId, req.params.userId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Update member's personal start date
+  app.patch('/api/admin/student-groups/:groupId/members/:userId/start-date', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { groupId, userId } = req.params;
+      const { personalStartDate } = req.body;
+
+      const [membership] = await db.select({ id: studentGroupMembers.id })
+        .from(studentGroupMembers)
+        .where(and(
+          eq(studentGroupMembers.groupId, groupId),
+          eq(studentGroupMembers.userId, userId)
+        ))
+        .limit(1);
+
+      if (!membership) {
+        return res.status(404).json({ message: "Bu o'quvchi guruhda topilmadi" });
+      }
+
+      let parsedDate: Date | null = null;
+      if (personalStartDate) {
+        parsedDate = new Date(personalStartDate);
+        if (isNaN(parsedDate.getTime())) {
+          return res.status(400).json({ message: "Noto'g'ri sana formati" });
+        }
+      }
+
+      await db.update(studentGroupMembers)
+        .set({ personalStartDate: parsedDate })
+        .where(eq(studentGroupMembers.id, membership.id));
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -7142,6 +7192,7 @@ So'zlar soni: ${submission.wordCount}`;
         testGateEnabled, minPassScore,
         unlockType, unlockIntervalDays,
         unlockWeekDays, unlockStartDate,
+        useIndividualStartDate,
       } = req.body;
 
       if (!groupId || !courseId) {
@@ -7162,6 +7213,7 @@ So'zlar soni: ${submission.wordCount}`;
         unlockIntervalDays: unlockIntervalDays ?? 1,
         unlockWeekDays: unlockWeekDays ?? [],
         unlockStartDate: effectiveStartDate,
+        useIndividualStartDate: useIndividualStartDate ?? false,
       });
 
       res.json(settings);
@@ -7204,6 +7256,23 @@ So'zlar soni: ${submission.wordCount}`;
 
       if (!settings || settings.unlockType === 'free') {
         return res.json({ settings: settings || null, lockedLessons: {} });
+      }
+
+      // Individual start date: if enabled, use student's personal start date
+      if (settings.useIndividualStartDate && groupId) {
+        const membership = await db.select()
+          .from(studentGroupMembers)
+          .where(and(
+            eq(studentGroupMembers.groupId, groupId),
+            eq(studentGroupMembers.userId, userId)
+          ))
+          .limit(1);
+        if (membership[0]) {
+          const personalDate = membership[0].personalStartDate || membership[0].addedAt;
+          if (personalDate) {
+            settings.unlockStartDate = new Date(personalDate);
+          }
+        }
       }
 
       if (!settings.unlockStartDate && settings.unlockType !== 'free') {

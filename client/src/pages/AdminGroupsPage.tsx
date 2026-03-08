@@ -70,6 +70,7 @@ interface GroupMember {
   groupId: string;
   userId: string;
   addedAt: string;
+  personalStartDate: string | null;
   firstName: string;
   lastName: string;
   phone: string | null;
@@ -88,6 +89,7 @@ interface GroupCourseItem {
     unlockIntervalDays: number;
     unlockWeekDays: string[];
     unlockStartDate: string | null;
+    useIndividualStartDate: boolean;
   } | null;
 }
 
@@ -109,6 +111,7 @@ const defaultSettingsForm = {
   unlockIntervalDays: 1,
   unlockWeekDays: [] as string[],
   unlockStartDate: "",
+  useIndividualStartDate: false,
 };
 
 function UnlockTypeBadge({ settings }: { settings: GroupCourseItem["settings"] }) {
@@ -119,10 +122,11 @@ function UnlockTypeBadge({ settings }: { settings: GroupCourseItem["settings"] }
       </Badge>
     );
   }
+  const individualLabel = settings.useIndividualStartDate ? " (individual)" : "";
   if (settings.unlockType === "daily") {
     return (
       <Badge variant="outline" className="text-[10px] gap-1 border-blue-400 text-blue-600 dark:text-blue-400">
-        <Clock className="w-3 h-3" /> Har {settings.unlockIntervalDays} kunda
+        <Clock className="w-3 h-3" /> Har {settings.unlockIntervalDays} kunda{individualLabel}
       </Badge>
     );
   }
@@ -132,7 +136,7 @@ function UnlockTypeBadge({ settings }: { settings: GroupCourseItem["settings"] }
       .join(", ");
     return (
       <Badge variant="outline" className="text-[10px] gap-1 border-purple-400 text-purple-600 dark:text-purple-400">
-        <Calendar className="w-3 h-3" /> Haftalik ({days || "—"})
+        <Calendar className="w-3 h-3" /> Haftalik ({days || "—"}){individualLabel}
       </Badge>
     );
   }
@@ -159,6 +163,8 @@ export default function AdminGroupsPage() {
   const [groupForm, setGroupForm] = useState({ name: "", description: "" });
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+  const [memberAddStartDate, setMemberAddStartDate] = useState("");
+  const [editingMemberDate, setEditingMemberDate] = useState<{ userId: string; date: string } | null>(null);
   const [assignCourseData, setAssignCourseData] = useState({
     courseId: "",
     subscriptionDays: "30",
@@ -244,8 +250,11 @@ export default function AdminGroupsPage() {
   });
 
   const addMembersMutation = useMutation({
-    mutationFn: async ({ groupId, userIds }: { groupId: string; userIds: string[] }) => {
-      const res = await apiRequest("POST", `/api/admin/student-groups/${groupId}/members/bulk`, { userIds });
+    mutationFn: async ({ groupId, userIds, personalStartDate }: { groupId: string; userIds: string[]; personalStartDate?: string }) => {
+      const res = await apiRequest("POST", `/api/admin/student-groups/${groupId}/members/bulk`, {
+        userIds,
+        personalStartDate: personalStartDate || null,
+      });
       return res.json();
     },
     onSuccess: () => {
@@ -254,7 +263,21 @@ export default function AdminGroupsPage() {
       setIsAddMembersOpen(false);
       setSelectedStudentIds([]);
       setSearchTerm("");
+      setMemberAddStartDate("");
       toast({ title: "O'quvchilar guruhga qo'shildi" });
+    },
+    onError: (error: any) => toast({ title: "Xatolik", description: error.message, variant: "destructive" }),
+  });
+
+  const updateMemberStartDateMutation = useMutation({
+    mutationFn: async ({ groupId, userId, personalStartDate }: { groupId: string; userId: string; personalStartDate: string | null }) => {
+      const res = await apiRequest("PATCH", `/api/admin/student-groups/${groupId}/members/${userId}/start-date`, { personalStartDate });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/student-groups", selectedGroup?.id, "members"] });
+      setEditingMemberDate(null);
+      toast({ title: "Boshlanish sanasi yangilandi" });
     },
     onError: (error: any) => toast({ title: "Xatolik", description: error.message, variant: "destructive" }),
   });
@@ -312,6 +335,7 @@ export default function AdminGroupsPage() {
         unlockIntervalDays: data.unlockIntervalDays,
         unlockWeekDays: data.unlockWeekDays,
         unlockStartDate: data.unlockStartDate || (data.unlockType !== "free" ? new Date().toISOString() : null),
+        useIndividualStartDate: data.useIndividualStartDate,
       });
       return res.json();
     },
@@ -401,6 +425,7 @@ export default function AdminGroupsPage() {
       unlockStartDate: s?.unlockStartDate
         ? new Date(s.unlockStartDate).toISOString().slice(0, 16)
         : "",
+      useIndividualStartDate: s?.useIndividualStartDate ?? false,
     });
     setIsSettingsOpen(true);
   };
@@ -423,6 +448,7 @@ export default function AdminGroupsPage() {
               unlockStartDate: data.unlockStartDate
                 ? new Date(data.unlockStartDate).toISOString().slice(0, 16)
                 : "",
+              useIndividualStartDate: data.useIndividualStartDate ?? false,
             });
           }
         }
@@ -635,7 +661,7 @@ export default function AdminGroupsPage() {
                       <TableHead>Ism</TableHead>
                       <TableHead>Telefon/Email</TableHead>
                       <TableHead>Qo'shilgan</TableHead>
-                      <TableHead>Qurilma</TableHead>
+                      <TableHead>Dars boshlanishi</TableHead>
                       <TableHead>Amal</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -645,11 +671,48 @@ export default function AdminGroupsPage() {
                         <TableCell className="text-muted-foreground text-sm font-mono">{index + 1}</TableCell>
                         <TableCell>{member.firstName} {member.lastName}</TableCell>
                         <TableCell>{member.phone || member.email || "-"}</TableCell>
-                        <TableCell>{member.addedAt ? new Date(member.addedAt).toLocaleDateString("uz-UZ") : "-"}</TableCell>
+                        <TableCell className="text-sm">{member.addedAt ? new Date(member.addedAt).toLocaleDateString("uz-UZ") : "-"}</TableCell>
                         <TableCell>
-                          {(sessionCounts[member.userId] ?? 0) > 0
-                            ? <Badge variant="secondary">{sessionCounts[member.userId]} ta</Badge>
-                            : <span className="text-muted-foreground text-sm">-</span>}
+                          {editingMemberDate?.userId === member.userId ? (
+                            <div className="flex items-center gap-1">
+                              <Input
+                                type="datetime-local"
+                                value={editingMemberDate.date}
+                                onChange={e => setEditingMemberDate({ userId: member.userId, date: e.target.value })}
+                                className="h-8 text-xs w-44"
+                                data-testid={`input-member-date-${member.userId}`}
+                              />
+                              <Button size="icon" variant="ghost" className="h-8 w-8"
+                                onClick={() => selectedGroup && updateMemberStartDateMutation.mutate({
+                                  groupId: selectedGroup.id,
+                                  userId: member.userId,
+                                  personalStartDate: editingMemberDate.date || null,
+                                })}
+                                data-testid={`button-save-date-${member.userId}`}
+                              >
+                                <ChevronRight className="w-4 h-4 text-green-600" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <button
+                              className="text-sm hover:underline cursor-pointer text-left"
+                              onClick={() => setEditingMemberDate({
+                                userId: member.userId,
+                                date: member.personalStartDate
+                                  ? new Date(member.personalStartDate).toISOString().slice(0, 16)
+                                  : "",
+                              })}
+                              data-testid={`button-edit-date-${member.userId}`}
+                            >
+                              {member.personalStartDate ? (
+                                <span className="text-blue-600 dark:text-blue-400">
+                                  {new Date(member.personalStartDate).toLocaleDateString("uz-UZ")}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground">Umumiy</span>
+                              )}
+                            </button>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Button size="icon" variant="ghost"
@@ -684,6 +747,20 @@ export default function AdminGroupsPage() {
             {selectedStudentIds.length > 0 && (
               <Badge variant="secondary">{selectedStudentIds.length} ta o'quvchi tanlandi</Badge>
             )}
+            <div className="space-y-2">
+              <Label className="text-sm flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5" /> Dars boshlanish sanasi (ixtiyoriy)
+              </Label>
+              <Input
+                type="datetime-local"
+                value={memberAddStartDate}
+                onChange={e => setMemberAddStartDate(e.target.value)}
+                data-testid="input-member-start-date"
+              />
+              <p className="text-xs text-muted-foreground">
+                Belgilansa, darslar shu sanadan boshlab ochiladi. Bo'sh qoldirilsa, qo'shilgan sana hisoblanadi.
+              </p>
+            </div>
             <ScrollArea className="max-h-[300px] border rounded-md">
               {filteredStudents.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground text-sm">{searchTerm ? "Natija topilmadi" : "Qo'shish uchun o'quvchi yo'q"}</div>
@@ -705,7 +782,11 @@ export default function AdminGroupsPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddMembersOpen(false)}>Bekor qilish</Button>
             <Button
-              onClick={() => selectedGroup && addMembersMutation.mutate({ groupId: selectedGroup.id, userIds: selectedStudentIds })}
+              onClick={() => selectedGroup && addMembersMutation.mutate({
+                groupId: selectedGroup.id,
+                userIds: selectedStudentIds,
+                personalStartDate: memberAddStartDate || undefined,
+              })}
               disabled={selectedStudentIds.length === 0 || addMembersMutation.isPending}
               data-testid="button-confirm-add-members"
             >
@@ -1019,12 +1100,39 @@ export default function AdminGroupsPage() {
                     </Select>
                   </div>
 
-                  {/* Start date */}
+                  {/* Individual start date toggle */}
                   {(settingsForm.unlockType === "daily" || settingsForm.unlockType === "weekly") && (
+                    <div className="rounded-md border p-4 space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <p className="font-medium text-sm flex items-center gap-1.5">
+                            <Users className="w-4 h-4 text-blue-500" /> Individual boshlanish sanasi
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Har bir o'quvchi uchun alohida boshlanish sanasi belgilanadi
+                          </p>
+                        </div>
+                        <Switch
+                          checked={settingsForm.useIndividualStartDate}
+                          onCheckedChange={v => setSettingsForm(prev => ({ ...prev, useIndividualStartDate: v }))}
+                          data-testid="switch-individual-start-date"
+                        />
+                      </div>
+                      {settingsForm.useIndividualStartDate && (
+                        <div className="pt-1 border-t text-xs text-muted-foreground space-y-1">
+                          <p>Yoqilganda: har bir o'quvchi uchun darslar o'zi guruhga qo'shilgan sanadan (yoki belgilangan alohida sanadan) boshlab ochiladi.</p>
+                          <p>O'quvchilarning individual sanalarini "A'zolar" bo'limida sozlashingiz mumkin.</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Start date (only when individual dates are off) */}
+                  {(settingsForm.unlockType === "daily" || settingsForm.unlockType === "weekly") && !settingsForm.useIndividualStartDate && (
                     <div className="space-y-2">
                       <Label>Boshlanish sanasi va vaqti</Label>
                       <Input type="datetime-local" value={settingsForm.unlockStartDate} onChange={e => setSettingsForm(prev => ({ ...prev, unlockStartDate: e.target.value }))} data-testid="input-unlock-start-date" />
-                      <p className="text-xs text-muted-foreground">1-dars shu sanadan boshlab ochiladi</p>
+                      <p className="text-xs text-muted-foreground">1-dars shu sanadan boshlab barcha o'quvchilar uchun ochiladi</p>
                     </div>
                   )}
 
