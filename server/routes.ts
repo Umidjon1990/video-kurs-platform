@@ -3267,7 +3267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const projectSetting = await db.select().from(siteSettings).where(eq(siteSettings.key, 'kinescope_project_id')).limit(1);
 
         if (!apiKeySetting[0]?.value) {
-          fs.unlinkSync(tmpPath);
+          try { fs.unlinkSync(tmpPath); } catch {}
           return res.status(400).json({ message: 'Kinescope API kaliti sozlanmagan. Admin CMS ga kiring.' });
         }
 
@@ -7584,22 +7584,6 @@ So'zlar soni: ${submission.wordCount}`;
           groupName: withCurator[0].groupName,
         },
       });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.get('/api/student/my-groups', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.id || req.user?.claims?.sub;
-      const groups = await db.select({
-        id: studentGroups.id,
-        name: studentGroups.name,
-        curatorId: studentGroups.curatorId,
-      }).from(studentGroupMembers)
-        .innerJoin(studentGroups, eq(studentGroupMembers.groupId, studentGroups.id))
-        .where(eq(studentGroupMembers.userId, userId));
-      res.json(groups);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

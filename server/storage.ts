@@ -1549,7 +1549,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async markMessagesAsRead(conversationId: string, userId: string): Promise<void> {
-    // Mark all messages in conversation as read where receiver is userId
     await db
       .update(messages)
       .set({ isRead: true })
@@ -1557,8 +1556,7 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(messages.conversationId, conversationId),
           eq(messages.isRead, false),
-          // Only mark messages NOT sent by current user
-          eq(messages.senderId, userId) // This should be NOT equal, but we'll use a different approach
+          sql`${messages.senderId} != ${userId}`
         )
       );
   }
@@ -1580,24 +1578,22 @@ export class DatabaseStorage implements IStorage {
     }
     
     const conversationIds = userConversations.map(c => c.id);
+    if (conversationIds.length === 0) {
+      return 0;
+    }
     
-    // Count unread messages in these conversations that were NOT sent by current user
-    const unreadMessages = await db
-      .select()
+    const result = await db
+      .select({ count: sql<number>`count(*)::int` })
       .from(messages)
       .where(
         and(
+          inArray(messages.conversationId, conversationIds),
           eq(messages.isRead, false),
-          // Message is NOT from current user (they sent it to someone else)
+          sql`${messages.senderId} != ${userId}`
         )
       );
     
-    // Filter manually to exclude messages sent by current user
-    const filteredUnread = unreadMessages.filter(m => 
-      conversationIds.includes(m.conversationId) && m.senderId !== userId
-    );
-    
-    return filteredUnread.length;
+    return result[0]?.count ?? 0;
   }
 
   // Get enrollment and revenue trends (last 7 days) - optimized single query
@@ -3017,7 +3013,8 @@ export class DatabaseStorage implements IStorage {
   
   async getCourseOnlineStatus(courseId: string): Promise<{ userId: string; isOnline: boolean; lastActiveAt: Date }[]> {
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    const presences = await db.select().from(userPresence);
+    const presences = await db.select().from(userPresence)
+      .where(eq(userPresence.courseId, courseId));
     
     return presences.map(p => ({
       userId: p.userId,
