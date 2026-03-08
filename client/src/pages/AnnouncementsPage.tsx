@@ -42,6 +42,7 @@ export default function AnnouncementsPage() {
   const [createDialog, setCreateDialog] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newMessage, setNewMessage] = useState("");
+  const [newSenderName, setNewSenderName] = useState("");
   const [newPriority, setNewPriority] = useState<"normal" | "urgent">("normal");
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
@@ -52,7 +53,7 @@ export default function AnnouncementsPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data: { title: string; message: string; priority: string }) => {
+    mutationFn: async (data: { title: string; message: string; priority: string; senderName: string }) => {
       const res = await apiRequest("POST", "/api/admin/announcements", data);
       return res.json();
     },
@@ -62,6 +63,7 @@ export default function AnnouncementsPage() {
       setCreateDialog(false);
       setNewTitle("");
       setNewMessage("");
+      setNewSenderName("");
       setNewPriority("normal");
       toast({ title: "E'lon yuborildi", description: `${data.recipientCount} kishiga yuborildi` });
     },
@@ -177,17 +179,17 @@ export default function AnnouncementsPage() {
                           </Button>
                         )}
                       </div>
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: "rgba(255,255,255,0.7)" }}>{a.message}</p>
-                      <div className="flex items-center gap-4 pt-1 flex-wrap">
-                        <div className="flex items-center gap-1.5">
-                          <User className="w-3 h-3" style={{ color: "rgba(255,255,255,0.25)" }} />
-                          <span className="text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>{a.senderName || "Admin"}</span>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md" style={{ background: "rgba(124,58,237,0.12)", border: "1px solid rgba(124,58,237,0.2)" }}>
+                          <User className="w-3 h-3" style={{ color: "#a78bfa" }} />
+                          <span className="text-[11px] font-semibold" style={{ color: "#c084fc" }} data-testid={`text-sender-${a.id}`}>{a.senderName || "Admin"}</span>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <Clock className="w-3 h-3" style={{ color: "rgba(255,255,255,0.25)" }} />
-                          <span className="text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>{timeAgo(a.createdAt)}</span>
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" style={{ color: "rgba(255,255,255,0.2)" }} />
+                          <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.3)" }}>{timeAgo(a.createdAt)}</span>
                         </div>
                       </div>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: "rgba(255,255,255,0.7)" }}>{a.message}</p>
                     </div>
                   </div>
                 </div>
@@ -212,6 +214,19 @@ export default function AnnouncementsPage() {
                 placeholder="E'lon sarlavhasi..."
                 className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
               />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.6)" }}>Muallif (kimdan)</label>
+              <Input
+                data-testid="input-announcement-sender"
+                value={newSenderName}
+                onChange={e => setNewSenderName(e.target.value)}
+                placeholder="Masalan: Admin, O'qituvchi Anvar, Zamonaviy EDU..."
+                className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
+              />
+              <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.25)" }}>
+                Bo'sh qoldirilsa, sizning ismingiz ko'rsatiladi
+              </p>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.6)" }}>Xabar matni</label>
@@ -265,7 +280,7 @@ export default function AnnouncementsPage() {
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setCreateDialog(false)} data-testid="button-cancel-announcement">Bekor qilish</Button>
             <Button
-              onClick={() => createMutation.mutate({ title: newTitle, message: newMessage, priority: newPriority })}
+              onClick={() => createMutation.mutate({ title: newTitle, message: newMessage, priority: newPriority, senderName: newSenderName })}
               disabled={!newTitle.trim() || !newMessage.trim() || createMutation.isPending}
               data-testid="button-submit-announcement"
               style={{ background: newPriority === "urgent" ? "linear-gradient(135deg,#dc2626,#ea580c)" : "linear-gradient(135deg,#7c3aed,#2563eb)" }}

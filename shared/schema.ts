@@ -582,9 +582,10 @@ export const announcements = pgTable("announcements", {
   instructorId: varchar("instructor_id").notNull().references(() => users.id),
   title: varchar("title", { length: 255 }).notNull(),
   message: text("message").notNull(),
-  priority: varchar("priority", { length: 20 }).notNull().default('normal'), // normal, urgent
-  targetType: varchar("target_type", { length: 20 }).notNull(), // individual, course, all
-  targetId: varchar("target_id"), // userId or courseId (null if targetType is 'all')
+  priority: varchar("priority", { length: 20 }).notNull().default('normal'),
+  targetType: varchar("target_type", { length: 20 }).notNull(),
+  targetId: varchar("target_id"),
+  senderName: varchar("sender_name", { length: 255 }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

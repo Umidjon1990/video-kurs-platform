@@ -4505,8 +4505,9 @@ So'zlar soni: ${submission.wordCount}`;
     try {
       const allAnnouncements = await storage.getAllAnnouncements();
       const enriched = await Promise.all(allAnnouncements.map(async (a) => {
+        if (a.senderName) return a;
         const sender = await storage.getUser(a.instructorId);
-        return { ...a, senderName: sender ? `${sender.firstName} ${sender.lastName || ''}`.trim() : 'Noma\'lum' };
+        return { ...a, senderName: sender ? `${sender.firstName} ${sender.lastName || ''}`.trim() : 'Admin' };
       }));
       res.json(enriched);
     } catch (error: any) {
@@ -4517,8 +4518,14 @@ So'zlar soni: ${submission.wordCount}`;
   app.post('/api/admin/announcements', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const adminId = req.user.claims.sub;
-      const { title, message, priority } = req.body;
+      const { title, message, priority, senderName } = req.body;
       if (!title || !message) return res.status(400).json({ message: "Sarlavha va xabar majburiy" });
+
+      let finalSenderName = senderName?.trim();
+      if (!finalSenderName) {
+        const adminUser = await storage.getUser(adminId);
+        finalSenderName = adminUser ? `${adminUser.firstName} ${adminUser.lastName || ''}`.trim() : 'Admin';
+      }
 
       const announcementData = insertAnnouncementSchema.parse({
         instructorId: adminId,
@@ -4527,6 +4534,7 @@ So'zlar soni: ${submission.wordCount}`;
         priority: priority || 'normal',
         targetType: 'all',
         targetId: null,
+        senderName: finalSenderName,
       });
 
       const announcement = await storage.createAnnouncement(announcementData);
@@ -4570,6 +4578,7 @@ So'zlar soni: ${submission.wordCount}`;
     try {
       const allAnnouncements = await storage.getAllAnnouncements();
       const enriched = await Promise.all(allAnnouncements.map(async (a) => {
+        if (a.senderName) return a;
         const sender = await storage.getUser(a.instructorId);
         return { ...a, senderName: sender ? `${sender.firstName} ${sender.lastName || ''}`.trim() : 'Admin' };
       }));
