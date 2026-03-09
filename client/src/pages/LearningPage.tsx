@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PlayCircle, CheckCircle, CheckCircle2, XCircle, FileText, ClipboardCheck, Lock, Home, MessageCircle, Download, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Clock, Volume2, List, X } from "lucide-react";
+import { PlayCircle, CheckCircle, CheckCircle2, XCircle, FileText, ClipboardCheck, Lock, Home, MessageCircle, Download, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Clock, Volume2, List, X, Loader2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { NotificationBell } from "@/components/NotificationBell";
 import { StarRating } from "@/components/StarRating";
@@ -249,7 +249,7 @@ export default function LearningPage() {
     }
   }, [userCourseRating]);
 
-  // Essay submission mutation
+  // Essay submission mutation — auto-triggers AI check after submit
   const submitEssayMutation = useMutation({
     mutationFn: async () => {
       if (!currentLessonId) return;
@@ -259,12 +259,12 @@ export default function LearningPage() {
       });
       return await response.json();
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/lessons", currentLessonId, "essay-submission"] });
-      toast({
-        title: "Insho yuborildi",
-        description: "Inshongiz muvaffaqiyatli saqlandi. Endi AI tekshiruvini boshlashingiz mumkin.",
-      });
+      toast({ title: "Insho yuborildi", description: "AI tekshiruvi boshlanmoqda..." });
+      if (data?.id) {
+        checkEssayMutation.mutate(data.id);
+      }
     },
     onError: (error: Error) => {
       toast({ title: "Xatolik", description: error.message, variant: "destructive" });
@@ -671,8 +671,9 @@ export default function LearningPage() {
                                     value={essayText}
                                     onChange={handleEssayChange}
                                   />
-                                  <Button className="w-full" onClick={() => submitEssayMutation.mutate()} disabled={!essayText.trim() || submitEssayMutation.isPending}>
-                                    Yuborish ({essayWordCount} so'z)
+                                  <Button className="w-full gap-2" onClick={() => submitEssayMutation.mutate()} disabled={!essayText.trim() || submitEssayMutation.isPending || isCheckingEssay}>
+                                    {(submitEssayMutation.isPending || isCheckingEssay) && <Loader2 className="w-4 h-4 animate-spin" />}
+                                    {isCheckingEssay ? "AI tekshirmoqda..." : submitEssayMutation.isPending ? "Yuborilmoqda..." : `Yuborish va AI tekshirish (${essayWordCount} so'z)`}
                                   </Button>
                                 </div>
                               ) : (

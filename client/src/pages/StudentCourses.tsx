@@ -151,9 +151,12 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
       });
       return await response.json();
     },
-    onSuccess: (_data, lessonId) => {
+    onSuccess: async (data, lessonId) => {
       queryClient.invalidateQueries({ queryKey: ["/api/lessons", lessonId, "essay-submission"] });
-      toast({ title: "Insho yuborildi", description: "Inshongiz saqlandi. AI tekshiruvini boshlashingiz mumkin." });
+      toast({ title: "Insho yuborildi", description: "AI tekshiruvi boshlanmoqda..." });
+      if (data?.id) {
+        checkEssayMutation.mutate({ submissionId: data.id, lessonId });
+      }
     },
     onError: (error: Error) => {
       toast({ title: "Xatolik", description: error.message, variant: "destructive" });
@@ -577,12 +580,12 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                                   <Button
                                     size="sm"
                                     onClick={() => activeLessonId && submitEssayMutation.mutate(activeLessonId)}
-                                    disabled={!essayText.trim() || submitEssayMutation.isPending || (essayQuestion.minWords && essayWordCount < essayQuestion.minWords)}
+                                    disabled={!essayText.trim() || submitEssayMutation.isPending || isCheckingEssay || (essayQuestion.minWords && essayWordCount < essayQuestion.minWords)}
                                     className="gap-1.5 text-xs"
                                     data-testid="button-submit-essay-modal"
                                   >
-                                    {submitEssayMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
-                                    Yuborish
+                                    {(submitEssayMutation.isPending || isCheckingEssay) ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                                    {isCheckingEssay ? "AI tekshirmoqda..." : submitEssayMutation.isPending ? "Yuborilmoqda..." : "Yuborish va AI tekshirish"}
                                   </Button>
                                 </div>
                               </div>
