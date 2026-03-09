@@ -489,17 +489,17 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
               {/* ── Lesson Tabs: Umumiy / Vazifalar / Testlar + Darslar (mobile) ── */}
               <div className="border-t border-white/8">
                 <Tabs defaultValue="umumiy" className="w-full">
-                  <TabsList className="w-full rounded-none bg-black/30 border-b border-white/8 h-11 px-2 gap-1 justify-start flex-wrap">
+                  <TabsList className="w-full rounded-none bg-black/60 backdrop-blur-sm border-b border-white/8 h-11 px-2 gap-1 justify-start overflow-x-auto flex-nowrap">
                     <TabsTrigger
                       value="umumiy"
-                      className="rounded-lg text-sm gap-1.5 data-[state=active]:bg-white/10 data-[state=active]:text-white text-slate-500"
+                      className="rounded-lg text-[13px] gap-1.5 data-[state=active]:bg-white/10 data-[state=active]:text-white text-slate-500 shrink-0"
                     >
                       <Info className="w-4 h-4" />
                       Umumiy
                     </TabsTrigger>
                     <TabsTrigger
                       value="vazifalar"
-                      className="rounded-lg text-sm gap-1.5 data-[state=active]:bg-white/10 data-[state=active]:text-white text-slate-500"
+                      className="rounded-lg text-[13px] gap-1.5 data-[state=active]:bg-white/10 data-[state=active]:text-white text-slate-500 shrink-0"
                     >
                       <FileText className="w-4 h-4" />
                       Vazifalar
@@ -510,8 +510,18 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                       )}
                     </TabsTrigger>
                     <TabsTrigger
+                      value="darslar-mobile"
+                      className="rounded-lg text-[13px] gap-1.5 data-[state=active]:bg-white/10 data-[state=active]:text-white text-slate-500 lg:hidden shrink-0"
+                    >
+                      <Layers className="w-4 h-4" />
+                      Darslar
+                      <Badge className="bg-white/10 text-slate-400 border-white/10 text-[10px] px-1.5 py-0 ml-0.5 min-w-5 h-5">
+                        {sortedLessons.length}
+                      </Badge>
+                    </TabsTrigger>
+                    <TabsTrigger
                       value="testlar"
-                      className="rounded-lg text-sm gap-1.5 data-[state=active]:bg-white/10 data-[state=active]:text-white text-slate-500"
+                      className="rounded-lg text-[13px] gap-1.5 data-[state=active]:bg-white/10 data-[state=active]:text-white text-slate-500 shrink-0"
                     >
                       <ClipboardCheck className="w-4 h-4" />
                       Testlar
@@ -520,16 +530,6 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                           {lessonTests.length}
                         </Badge>
                       )}
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="darslar-mobile"
-                      className="rounded-lg text-sm gap-1.5 data-[state=active]:bg-white/10 data-[state=active]:text-white text-slate-500 lg:hidden"
-                    >
-                      <Layers className="w-4 h-4" />
-                      Darslar
-                      <Badge className="bg-white/10 text-slate-400 border-white/10 text-[10px] px-1.5 py-0 ml-0.5 min-w-5 h-5">
-                        {sortedLessons.length}
-                      </Badge>
                     </TabsTrigger>
                   </TabsList>
 
