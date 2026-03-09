@@ -92,7 +92,7 @@ export function ProgressCard({ progress, onContinue }: ProgressCardProps) {
 
   const statItems = [
     { icon: BookOpen, label: "Darslar", testKey: "lessons", value: `${totalLessons}`, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-500/10" },
-    { icon: FileText, label: "Vazifalar", testKey: "assignments", value: `${submittedAssignments}/${totalAssignments}`, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10" },
+    { icon: FileText, label: "Yozma vazifa", testKey: "assignments", value: `${submittedAssignments}/${totalAssignments}`, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10" },
     { icon: CheckCircle2, label: "Testlar", testKey: "tests", value: `${completedTests}/${totalTests}`, color: "text-green-600 dark:text-green-400", bg: "bg-green-500/10" },
     { icon: GraduationCap, label: "O'rtacha", testKey: "avg-score", value: `${Math.round(((averageTestScore + averageAssignmentScore) / 2) * 10) / 10}%`, color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-500/10" },
   ];
