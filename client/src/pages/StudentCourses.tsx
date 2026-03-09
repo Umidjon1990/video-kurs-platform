@@ -409,9 +409,9 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
 
           {/* Body: video + sidebar */}
           <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden">
-            {/* Video Area */}
-            <div className="flex-1 flex flex-col min-h-0 bg-black/40">
-              <div className="aspect-video w-full bg-black relative">
+            {/* Video Area — scrollable so assignments/tabs are always reachable */}
+            <div className="flex-1 flex flex-col min-h-0 bg-black/40 overflow-y-auto">
+              <div className="aspect-video w-full bg-black relative shrink-0">
                 {currentLesson && isLessonLocked(currentLesson.id, currentLesson) ? (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/60">
                     <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
@@ -483,7 +483,7 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
               </div>
 
               {/* ── Lesson Tabs: Umumiy / Vazifalar / Testlar ── */}
-              <div className="border-t border-white/8 shrink-0">
+              <div className="border-t border-white/8">
                 <Tabs defaultValue="umumiy" className="w-full">
                   <TabsList className="w-full rounded-none bg-black/30 border-b border-white/8 h-10 px-2 gap-1 justify-start">
                     <TabsTrigger
@@ -520,7 +520,7 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                   </TabsList>
 
                   {/* Umumiy */}
-                  <TabsContent value="umumiy" className="m-0 px-4 py-3 max-h-36 overflow-y-auto overscroll-none">
+                  <TabsContent value="umumiy" className="m-0 px-4 py-3">
                     {currentLesson?.description ? (
                       <p className="text-sm text-slate-400 leading-relaxed">{currentLesson.description}</p>
                     ) : (
@@ -537,7 +537,7 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                   </TabsContent>
 
                   {/* Vazifalar */}
-                  <TabsContent value="vazifalar" className="m-0 max-h-[320px] overflow-y-auto overscroll-none">
+                  <TabsContent value="vazifalar" className="m-0">
                     {!essayQuestion && lessonAssignments.length === 0 ? (
                       <div className="px-4 py-3 text-xs text-slate-600 italic">Bu darsda vazifa yo'q</div>
                     ) : (
@@ -645,7 +645,7 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                   </TabsContent>
 
                   {/* Testlar */}
-                  <TabsContent value="testlar" className="m-0 max-h-48 overflow-y-auto overscroll-none">
+                  <TabsContent value="testlar" className="m-0">
                     {lessonTests.length === 0 ? (
                       <div className="px-4 py-3 text-xs text-slate-600 italic">Bu darsda test yo'q</div>
                     ) : (
