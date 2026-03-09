@@ -20,7 +20,6 @@ import {
   Bell,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import type { User as UserType } from "@shared/schema";
 
 export function ModernHeader() {
@@ -167,7 +166,6 @@ export function ModernHeader() {
 
           {/* Right Section */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            <ThemeToggle />
 
             {user ? (
               <>

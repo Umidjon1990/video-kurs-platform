@@ -96,6 +96,7 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
   const [essayText, setEssayText] = useState("");
   const [essayWordCount, setEssayWordCount] = useState(0);
   const [isCheckingEssay, setIsCheckingEssay] = useState(false);
+  const [mobileLessonsOpen, setMobileLessonsOpen] = useState(false);
 
   const countArabicWords = (text: string) => {
     if (!text.trim()) return 0;
@@ -320,7 +321,7 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6"
+        className="fixed inset-0 z-[9999] flex items-center justify-center p-0 sm:p-6"
         onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       >
         {/* Backdrop */}
@@ -341,8 +342,8 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.88, y: 40 }}
           transition={{ type: "spring", stiffness: 260, damping: 24 }}
-          className="relative z-10 w-full max-w-6xl rounded-3xl p-[2px] video-modal-7d"
-          style={{ maxHeight: '92vh' }}
+          className="relative z-10 w-full max-w-6xl sm:rounded-3xl p-[2px] video-modal-7d"
+          style={{ maxHeight: '100vh' }}
         >
           {/* Corner spark glows */}
           <div className="modal-corner-spark absolute -top-1 -left-1 w-6 h-6 rounded-full pointer-events-none"
@@ -356,10 +357,10 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
 
         {/* Modal inner */}
         <div
-          className="relative w-full flex flex-col rounded-3xl overflow-hidden"
+          className="relative w-full flex flex-col sm:rounded-3xl overflow-hidden"
           style={{
             background: "linear-gradient(135deg, rgba(6,2,18,0.99) 0%, rgba(12,4,32,0.99) 50%, rgba(6,2,18,0.99) 100%)",
-            maxHeight: 'calc(92vh - 4px)',
+            maxHeight: 'calc(100vh - 4px)',
           }}
         >
           {/* Scanline overlay */}
@@ -680,18 +681,22 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
               </div>
             </div>
 
-            {/* Lesson Sidebar */}
-            <div className="w-full lg:w-72 xl:w-80 border-t lg:border-t-0 lg:border-l border-white/8 flex flex-col min-h-0">
-              <div className="px-4 py-3 border-b border-white/8 shrink-0">
+            {/* Lesson Sidebar — on mobile: collapsible; on desktop: always visible */}
+            <div className="w-full lg:w-72 xl:w-80 border-t lg:border-t-0 lg:border-l border-white/8 flex flex-col min-h-0 shrink-0 lg:shrink">
+              <button
+                className="px-4 py-3 border-b border-white/8 shrink-0 flex items-center justify-between w-full lg:cursor-default"
+                onClick={() => setMobileLessonsOpen(!mobileLessonsOpen)}
+              >
                 <div className="flex items-center gap-2">
                   <Layers className="w-4 h-4 text-primary" />
                   <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
                     Darslar ({sortedLessons.length})
                   </span>
                 </div>
-              </div>
+                <ChevronRight className={`w-4 h-4 text-slate-500 lg:hidden transition-transform ${mobileLessonsOpen ? 'rotate-90' : ''}`} />
+              </button>
 
-              <div className="flex-1 overflow-y-auto overscroll-none py-2">
+              <div className={`flex-1 overflow-y-auto overscroll-none py-2 max-h-[40vh] lg:max-h-none ${mobileLessonsOpen ? '' : 'hidden lg:block'}`}>
                 {sortedLessons.map((lesson, idx) => {
                   const isActive = lesson.id === activeLessonId;
                   const moduleTitle = getModuleTitle(lesson.moduleId);
@@ -699,7 +704,7 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                   return (
                     <button
                       key={lesson.id}
-                      onClick={() => !locked && setActiveLessonId(lesson.id)}
+                      onClick={() => { if (!locked) { setActiveLessonId(lesson.id); setMobileLessonsOpen(false); } }}
                       disabled={locked}
                       className={`w-full text-left px-4 py-3 flex items-start gap-3 transition-all duration-200 group
                         ${locked
