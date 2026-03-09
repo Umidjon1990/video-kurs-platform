@@ -2,23 +2,24 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import { CourseCard } from "@/components/CourseCard";
 import { ProgressCard } from "@/components/ProgressCard";
 import { StatsCard } from "@/components/StatsCard";
 import { ModernVideoPlayer } from "@/components/ModernVideoPlayer";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import {
   BookOpen, Trophy, GraduationCap, PlayCircle, CheckCircle, Star, Sparkles,
   ArrowRight, Target, Zap, Radio, Video, Clock, LayoutGrid, Rocket, Flame, Crown,
   X, ChevronLeft, ChevronRight, Lock, Play, Layers, FileText, ClipboardCheck,
-  ExternalLink, Info, CheckCircle2, XCircle, ArrowLeft, Loader2
+  ExternalLink, Info, CheckCircle2, XCircle, ArrowLeft, Loader2, PenLine, Send, Bot
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Course, StudentCourseProgress } from "@shared/schema";
@@ -92,6 +93,21 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
   const [isSubmittingTest, setIsSubmittingTest] = useState(false);
   const [shuffleSeed, setShuffleSeed] = useState(0);
 
+  const [essayText, setEssayText] = useState("");
+  const [essayWordCount, setEssayWordCount] = useState(0);
+  const [isCheckingEssay, setIsCheckingEssay] = useState(false);
+
+  const countArabicWords = (text: string) => {
+    if (!text.trim()) return 0;
+    return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+  };
+
+  const handleEssayChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value;
+    setEssayText(text);
+    setEssayWordCount(countArabicWords(text));
+  };
+
   const { data: lessons } = useQuery<any[]>({
     queryKey: ["/api/courses", state.courseId, "lessons"],
     queryFn: () => fetch(`/api/courses/${state.courseId}/lessons`).then(r => r.json()),
@@ -110,6 +126,55 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
   const { data: tests } = useQuery<any[]>({
     queryKey: ["/api/courses", state.courseId, "tests"],
     queryFn: () => fetch(`/api/courses/${state.courseId}/tests`, { credentials: 'include' }).then(r => r.json()),
+  });
+
+  const { data: essayQuestion } = useQuery<any>({
+    queryKey: ["/api/lessons", activeLessonId, "essay-question"],
+    enabled: !!activeLessonId,
+  });
+
+  const { data: essaySubmission } = useQuery<any>({
+    queryKey: ["/api/lessons", activeLessonId, "essay-submission"],
+    enabled: !!activeLessonId,
+  });
+
+  useEffect(() => {
+    setEssayText("");
+    setEssayWordCount(0);
+  }, [activeLessonId]);
+
+  const submitEssayMutation = useMutation({
+    mutationFn: async (lessonId: string) => {
+      const response = await apiRequest("POST", `/api/lessons/${lessonId}/essay-submission`, {
+        essayText,
+        wordCount: essayWordCount,
+      });
+      return await response.json();
+    },
+    onSuccess: (_data, lessonId) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/lessons", lessonId, "essay-submission"] });
+      toast({ title: "Insho yuborildi", description: "Inshongiz saqlandi. AI tekshiruvini boshlashingiz mumkin." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const checkEssayMutation = useMutation({
+    mutationFn: async ({ submissionId, lessonId }: { submissionId: string; lessonId: string }) => {
+      setIsCheckingEssay(true);
+      const response = await apiRequest("POST", `/api/essay-submissions/${submissionId}/check`, {});
+      return await response.json();
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/lessons", variables.lessonId, "essay-submission"] });
+      setIsCheckingEssay(false);
+      toast({ title: "Tekshirish tugadi", description: "AI tekshiruvi tugadi." });
+    },
+    onError: (error: Error) => {
+      setIsCheckingEssay(false);
+      toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
   });
 
   const { data: lockStatusData } = useQuery<{ settings: any; lockedLessons: Record<string, { locked: boolean; unlockDate?: string; reason: string }> }>({
@@ -434,9 +499,9 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                     >
                       <FileText className="w-3.5 h-3.5" />
                       Vazifalar
-                      {lessonAssignments.length > 0 && (
+                      {(lessonAssignments.length > 0 || essayQuestion) && (
                         <Badge className="bg-primary/20 text-primary border-primary/30 text-[9px] px-1 py-0 ml-0.5 min-w-4 h-4">
-                          {lessonAssignments.length}
+                          {lessonAssignments.length + (essayQuestion ? 1 : 0)}
                         </Badge>
                       )}
                     </TabsTrigger>
@@ -461,33 +526,120 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                     ) : (
                       <p className="text-xs text-slate-600 italic">Bu dars uchun tavsif yo'q</p>
                     )}
+                    {essayQuestion && (
+                      <div className="mt-2 flex items-center gap-2 px-2.5 py-2 rounded-lg bg-amber-500/8 border border-amber-500/15">
+                        <PenLine className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <p className="text-[11px] text-amber-300/80">
+                          Bu darsda insho vazifasi bor — "Vazifalar" bo'limiga o'ting
+                        </p>
+                      </div>
+                    )}
                   </TabsContent>
 
                   {/* Vazifalar */}
-                  <TabsContent value="vazifalar" className="m-0 max-h-48 overflow-y-auto overscroll-none">
-                    {lessonAssignments.length === 0 ? (
+                  <TabsContent value="vazifalar" className="m-0 max-h-[320px] overflow-y-auto overscroll-none">
+                    {!essayQuestion && lessonAssignments.length === 0 ? (
                       <div className="px-4 py-3 text-xs text-slate-600 italic">Bu darsda vazifa yo'q</div>
                     ) : (
-                      <div className="divide-y divide-white/5">
-                        {lessonAssignments.map((a: any) => (
-                          <div key={a.id} className="px-4 py-3 flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium text-slate-200 truncate">{a.title}</p>
-                              {a.description && (
-                                <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{a.description}</p>
+                      <div className="space-y-0">
+                        {essayQuestion && (
+                          <div className="px-4 py-3 border-b border-white/5">
+                            <div className="flex items-center gap-2 mb-2">
+                              <PenLine className="w-4 h-4 text-amber-400" />
+                              <p className="text-sm font-semibold text-slate-200">Insho vazifasi</p>
+                              {essayQuestion.minWords && (
+                                <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/30 text-[9px] px-1.5 py-0">
+                                  {essayQuestion.minWords}–{essayQuestion.maxWords || '∞'} so'z
+                                </Badge>
                               )}
                             </div>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={goToLearningPage}
-                              className="shrink-0 text-xs border-primary/30 text-primary hover:bg-primary/10 gap-1"
-                            >
-                              <ExternalLink className="w-3 h-3" />
-                              Topshirish
-                            </Button>
+                            <p className="text-xs text-slate-400 mb-3 leading-relaxed">{essayQuestion.questionText}</p>
+                            {essayQuestion.essayInstructions && (
+                              <p className="text-[11px] text-slate-500 mb-3 italic">{essayQuestion.essayInstructions}</p>
+                            )}
+
+                            {!essaySubmission ? (
+                              <div className="space-y-2">
+                                <Textarea
+                                  placeholder="Inshoni yozing..."
+                                  className="min-h-[120px] rounded-lg bg-black/30 border-white/10 text-slate-200 text-sm placeholder:text-slate-600 focus:border-primary/40"
+                                  value={essayText}
+                                  onChange={handleEssayChange}
+                                  data-testid="textarea-essay-modal"
+                                />
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-[11px] text-slate-500">
+                                    {essayWordCount} so'z
+                                    {essayQuestion.minWords && essayWordCount < essayQuestion.minWords && (
+                                      <span className="text-amber-500 ml-1">(kamida {essayQuestion.minWords})</span>
+                                    )}
+                                  </span>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => activeLessonId && submitEssayMutation.mutate(activeLessonId)}
+                                    disabled={!essayText.trim() || submitEssayMutation.isPending || (essayQuestion.minWords && essayWordCount < essayQuestion.minWords)}
+                                    className="gap-1.5 text-xs"
+                                    data-testid="button-submit-essay-modal"
+                                  >
+                                    {submitEssayMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                                    Yuborish
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                <div className="p-3 bg-black/20 rounded-lg border border-white/5">
+                                  <p className="text-xs text-slate-300 leading-relaxed">{essaySubmission.essayText}</p>
+                                  <p className="text-[10px] text-slate-600 mt-1">{countArabicWords(essaySubmission.essayText || '')} so'z</p>
+                                </div>
+                                {essaySubmission.aiFeedback ? (
+                                  <div className="p-3 bg-emerald-500/5 rounded-lg border border-emerald-500/15">
+                                    <div className="flex items-center gap-1.5 mb-1.5">
+                                      <Bot className="w-3.5 h-3.5 text-emerald-400" />
+                                      <span className="text-[11px] font-medium text-emerald-400">AI Natija</span>
+                                    </div>
+                                    <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap">{essaySubmission.aiFeedback}</p>
+                                  </div>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => activeLessonId && checkEssayMutation.mutate({ submissionId: essaySubmission.id, lessonId: activeLessonId })}
+                                    disabled={isCheckingEssay}
+                                    className="w-full gap-1.5 text-xs border-emerald-500/30 text-emerald-400"
+                                    data-testid="button-check-essay-ai-modal"
+                                  >
+                                    {isCheckingEssay ? <Loader2 className="w-3 h-3 animate-spin" /> : <Bot className="w-3 h-3" />}
+                                    AI tekshirish
+                                  </Button>
+                                )}
+                              </div>
+                            )}
                           </div>
-                        ))}
+                        )}
+                        {lessonAssignments.length > 0 && (
+                          <div className="divide-y divide-white/5">
+                            {lessonAssignments.map((a: any) => (
+                              <div key={a.id} className="px-4 py-3 flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium text-slate-200 truncate">{a.title}</p>
+                                  {a.description && (
+                                    <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{a.description}</p>
+                                  )}
+                                </div>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={goToLearningPage}
+                                  className="shrink-0 text-xs border-primary/30 text-primary gap-1"
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                  Topshirish
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                   </TabsContent>
