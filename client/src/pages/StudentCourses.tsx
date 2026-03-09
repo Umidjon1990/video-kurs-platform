@@ -489,45 +489,45 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
               {/* ── Lesson Tabs: Umumiy / Vazifalar / Testlar + Darslar (mobile) ── */}
               <div className="border-t border-white/8">
                 <Tabs defaultValue="umumiy" className="w-full">
-                  <TabsList className="w-full rounded-none bg-black/30 border-b border-white/8 h-10 px-2 gap-1 justify-start flex-wrap">
+                  <TabsList className="w-full rounded-none bg-black/30 border-b border-white/8 h-11 px-2 gap-1 justify-start flex-wrap">
                     <TabsTrigger
                       value="umumiy"
-                      className="rounded-lg text-xs gap-1.5 data-[state=active]:bg-white/10 data-[state=active]:text-white text-slate-500"
+                      className="rounded-lg text-sm gap-1.5 data-[state=active]:bg-white/10 data-[state=active]:text-white text-slate-500"
                     >
-                      <Info className="w-3.5 h-3.5" />
+                      <Info className="w-4 h-4" />
                       Umumiy
                     </TabsTrigger>
                     <TabsTrigger
                       value="vazifalar"
-                      className="rounded-lg text-xs gap-1.5 data-[state=active]:bg-white/10 data-[state=active]:text-white text-slate-500"
+                      className="rounded-lg text-sm gap-1.5 data-[state=active]:bg-white/10 data-[state=active]:text-white text-slate-500"
                     >
-                      <FileText className="w-3.5 h-3.5" />
+                      <FileText className="w-4 h-4" />
                       Vazifalar
                       {(lessonAssignments.length > 0 || essayQuestion) && (
-                        <Badge className="bg-primary/20 text-primary border-primary/30 text-[9px] px-1 py-0 ml-0.5 min-w-4 h-4">
+                        <Badge className="bg-primary/20 text-primary border-primary/30 text-[10px] px-1.5 py-0 ml-0.5 min-w-5 h-5">
                           {lessonAssignments.length + (essayQuestion ? 1 : 0)}
                         </Badge>
                       )}
                     </TabsTrigger>
                     <TabsTrigger
                       value="testlar"
-                      className="rounded-lg text-xs gap-1.5 data-[state=active]:bg-white/10 data-[state=active]:text-white text-slate-500"
+                      className="rounded-lg text-sm gap-1.5 data-[state=active]:bg-white/10 data-[state=active]:text-white text-slate-500"
                     >
-                      <ClipboardCheck className="w-3.5 h-3.5" />
+                      <ClipboardCheck className="w-4 h-4" />
                       Testlar
                       {lessonTests.length > 0 && (
-                        <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 text-[9px] px-1 py-0 ml-0.5 min-w-4 h-4">
+                        <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 text-[10px] px-1.5 py-0 ml-0.5 min-w-5 h-5">
                           {lessonTests.length}
                         </Badge>
                       )}
                     </TabsTrigger>
                     <TabsTrigger
                       value="darslar-mobile"
-                      className="rounded-lg text-xs gap-1.5 data-[state=active]:bg-white/10 data-[state=active]:text-white text-slate-500 lg:hidden"
+                      className="rounded-lg text-sm gap-1.5 data-[state=active]:bg-white/10 data-[state=active]:text-white text-slate-500 lg:hidden"
                     >
-                      <Layers className="w-3.5 h-3.5" />
+                      <Layers className="w-4 h-4" />
                       Darslar
-                      <Badge className="bg-white/10 text-slate-400 border-white/10 text-[9px] px-1 py-0 ml-0.5 min-w-4 h-4">
+                      <Badge className="bg-white/10 text-slate-400 border-white/10 text-[10px] px-1.5 py-0 ml-0.5 min-w-5 h-5">
                         {sortedLessons.length}
                       </Badge>
                     </TabsTrigger>
@@ -721,13 +721,16 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                             </div>
                             <div className="flex-1 min-w-0">
                               {moduleTitle && (
-                                <p className="text-[9px] text-primary/60 font-medium uppercase tracking-wider mb-0.5 truncate">
+                                <p className="text-[10px] text-primary/60 font-medium uppercase tracking-wider mb-0.5 truncate">
                                   {moduleTitle}
                                 </p>
                               )}
-                              <p className={`text-xs font-medium leading-snug line-clamp-1 ${locked ? 'text-slate-600' : isActive ? 'text-slate-100' : 'text-slate-400 group-hover:text-slate-300'}`}>
+                              <p className={`text-sm font-medium leading-snug line-clamp-1 ${locked ? 'text-slate-600' : isActive ? 'text-slate-100' : 'text-slate-400 group-hover:text-slate-300'}`}>
                                 {lesson.title}
                               </p>
+                              {locked && getLockReason(lesson.id) && (
+                                <p className="text-xs text-red-400/80 font-medium mt-0.5">{getLockReason(lesson.id)}</p>
+                              )}
                             </div>
                             {isActive && !locked && (
                               <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2 shrink-0" />
@@ -782,18 +785,18 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                       </div>
                       <div className="flex-1 min-w-0">
                         {moduleTitle && (
-                          <p className="text-[9px] text-primary/60 font-medium uppercase tracking-wider mb-0.5 truncate">
+                          <p className="text-[10px] text-primary/60 font-medium uppercase tracking-wider mb-0.5 truncate">
                             {moduleTitle}
                           </p>
                         )}
-                        <p className={`text-xs font-medium leading-snug line-clamp-2 ${locked ? 'text-slate-600' : isActive ? 'text-slate-100' : 'text-slate-400 group-hover:text-slate-300'}`}>
+                        <p className={`text-sm font-medium leading-snug line-clamp-2 ${locked ? 'text-slate-600' : isActive ? 'text-slate-100' : 'text-slate-400 group-hover:text-slate-300'}`}>
                           {lesson.title}
                         </p>
                         {lesson.isDemo && !locked && (
-                          <span className="text-[9px] text-orange-400/70 font-medium">Demo</span>
+                          <span className="text-[10px] text-orange-400/70 font-medium">Demo</span>
                         )}
                         {locked && getLockReason(lesson.id) && (
-                          <span className="text-[9px] text-red-400/70 font-medium">{getLockReason(lesson.id)}</span>
+                          <p className="text-xs text-red-400/80 font-medium mt-0.5">{getLockReason(lesson.id)}</p>
                         )}
                       </div>
                       {isActive && !locked && (
