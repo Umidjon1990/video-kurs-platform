@@ -2000,6 +2000,41 @@ export class DatabaseStorage implements IStorage {
           )
       : [];
 
+    // 6a. Batch fetch essay questions for all lessons in enrolled courses
+    const allLessonIds = allLessons.map(l => l.id);
+    const allEssayQuestions = allLessonIds.length > 0
+      ? await db
+          .select({
+            id: lessonEssayQuestions.id,
+            lessonId: lessonEssayQuestions.lessonId,
+          })
+          .from(lessonEssayQuestions)
+          .where(
+            and(
+              inArray(lessonEssayQuestions.lessonId, allLessonIds),
+              eq(lessonEssayQuestions.isActive, true)
+            )
+          )
+      : [];
+
+    const allEssayQuestionIds = allEssayQuestions.map(eq => eq.id);
+
+    // 6a2. Batch fetch essay submissions by this user
+    const allEssaySubmissions = allEssayQuestionIds.length > 0
+      ? await db
+          .select({
+            essayQuestionId: essaySubmissions.essayQuestionId,
+            overallScore: essaySubmissions.overallScore,
+          })
+          .from(essaySubmissions)
+          .where(
+            and(
+              inArray(essaySubmissions.essayQuestionId, allEssayQuestionIds),
+              eq(essaySubmissions.studentId, userId)
+            )
+          )
+      : [];
+
     // 6b. Batch fetch group names for enrolled courses
     const groupIds = enrolledCourses.map(e => e.groupId).filter(Boolean) as string[];
     const uniqueGroupIds = [...new Set(groupIds)];
@@ -2012,9 +2047,18 @@ export class DatabaseStorage implements IStorage {
     // 7. Combine data in memory for each course
     const progressData = enrolledCourses.map(({ course, groupId }) => {
       const courseLessons = allLessons.filter(l => l.courseId === course.id);
+      const courseLessonIds = courseLessons.map(l => l.id);
+
       const courseAssignments = allAssignments.filter(a => a.courseId === course.id);
       const courseAssignmentIds = courseAssignments.map(a => a.id);
       const courseSubmissions = allSubmissions.filter(s => courseAssignmentIds.includes(s.assignmentId));
+
+      const courseEssayQuestions = allEssayQuestions.filter(eq => courseLessonIds.includes(eq.lessonId));
+      const courseEssayQuestionIds = courseEssayQuestions.map(eq => eq.id);
+      const courseEssaySubmissions = allEssaySubmissions.filter(es => courseEssayQuestionIds.includes(es.essayQuestionId));
+
+      const totalAssignmentCount = courseAssignments.length + courseEssayQuestions.length;
+      const submittedAssignmentCount = courseSubmissions.length + courseEssaySubmissions.length;
       
       const courseTests = allTests.filter(t => t.courseId === course.id);
       const courseTestIds = courseTests.map(t => t.id);
@@ -2029,14 +2073,19 @@ export class DatabaseStorage implements IStorage {
         : 0;
 
       const gradedSubmissions = courseSubmissions.filter(s => s.grade !== null);
-      const averageAssignmentScore = gradedSubmissions.length > 0
+      const essayScores = courseEssaySubmissions.filter(es => es.overallScore !== null).map(es => es.overallScore as number);
+      const allGradedScores = [
+        ...gradedSubmissions.map(s => s.grade || 0),
+        ...essayScores,
+      ];
+      const averageAssignmentScore = allGradedScores.length > 0
         ? Math.round(
-            (gradedSubmissions.reduce((sum, s) => sum + (s.grade || 0), 0) / gradedSubmissions.length) * 10
+            (allGradedScores.reduce((sum, s) => sum + s, 0) / allGradedScores.length) * 10
           ) / 10
         : 0;
 
-      const totalItems = courseLessons.length + courseAssignments.length + courseTests.length;
-      const completedItems = courseSubmissions.length + completedTests;
+      const totalItems = courseLessons.length + totalAssignmentCount + courseTests.length;
+      const completedItems = submittedAssignmentCount + completedTests;
       const progressPercentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
       const nextLesson = courseLessons.sort((a, b) => (a.order || 0) - (b.order || 0))[0];
@@ -2045,8 +2094,8 @@ export class DatabaseStorage implements IStorage {
       return {
         course: enrichedCourse,
         totalLessons: courseLessons.length,
-        totalAssignments: courseAssignments.length,
-        submittedAssignments: courseSubmissions.length,
+        totalAssignments: totalAssignmentCount,
+        submittedAssignments: submittedAssignmentCount,
         totalTests: courseTests.length,
         completedTests,
         averageTestScore,
