@@ -7492,6 +7492,49 @@ So'zlar soni: ${submission.wordCount}`;
     }
   });
 
+  app.put('/api/admin/curators/:id', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { firstName, lastName, phone, password } = req.body;
+      const curator = await storage.getUser(id);
+      if (!curator || curator.role !== 'curator') {
+        return res.status(404).json({ message: "Kurator topilmadi" });
+      }
+      const updateData: any = {};
+      if (firstName !== undefined) updateData.firstName = firstName;
+      if (lastName !== undefined) updateData.lastName = lastName;
+      if (phone !== undefined) {
+        const existingPhone = await storage.getUserByPhoneOrEmail(phone);
+        if (existingPhone && existingPhone.id !== id) {
+          return res.status(400).json({ message: "Bu telefon raqam allaqachon ro'yxatdan o'tgan" });
+        }
+        updateData.phone = phone;
+      }
+      if (password) {
+        updateData.passwordHash = await bcrypt.hash(password, 10);
+      }
+      const [updated] = await db.update(users).set(updateData).where(eq(users.id, id)).returning();
+      res.json({ ...updated, passwordHash: undefined });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete('/api/admin/curators/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const curator = await storage.getUser(id);
+      if (!curator || curator.role !== 'curator') {
+        return res.status(404).json({ message: "Kurator topilmadi" });
+      }
+      await db.update(studentGroups).set({ curatorId: null }).where(eq(studentGroups.curatorId, id));
+      await db.delete(users).where(eq(users.id, id));
+      res.json({ message: "Kurator o'chirildi" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.post('/api/admin/groups/:groupId/assign-curator', isAuthenticated, isAdmin, async (req, res) => {
     try {
       const { groupId } = req.params;

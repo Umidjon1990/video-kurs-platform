@@ -156,8 +156,12 @@ export default function AdminGroupsPage() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isCuratorCreateOpen, setIsCuratorCreateOpen] = useState(false);
   const [isCuratorAssignOpen, setIsCuratorAssignOpen] = useState(false);
+  const [isCuratorEditOpen, setIsCuratorEditOpen] = useState(false);
+  const [isCuratorListOpen, setIsCuratorListOpen] = useState(false);
   const [inviteLink, setInviteLink] = useState("");
   const [curatorForm, setCuratorForm] = useState({ firstName: "", lastName: "", phone: "", password: "" });
+  const [editingCurator, setEditingCurator] = useState<User | null>(null);
+  const [curatorEditForm, setCuratorEditForm] = useState({ firstName: "", lastName: "", phone: "", password: "" });
 
   const [selectedGroup, setSelectedGroup] = useState<StudentGroup | null>(null);
   const [groupForm, setGroupForm] = useState({ name: "", description: "" });
@@ -363,6 +367,34 @@ export default function AdminGroupsPage() {
     onError: (error: any) => toast({ title: "Xatolik", description: error.message, variant: "destructive" }),
   });
 
+  const updateCuratorMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: typeof curatorEditForm }) => {
+      const res = await apiRequest("PUT", `/api/admin/curators/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/curators"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/student-groups"] });
+      setIsCuratorEditOpen(false);
+      setEditingCurator(null);
+      toast({ title: "Kurator ma'lumotlari yangilandi" });
+    },
+    onError: (error: any) => toast({ title: "Xatolik", description: error.message, variant: "destructive" }),
+  });
+
+  const deleteCuratorMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("DELETE", `/api/admin/curators/${id}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/curators"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/student-groups"] });
+      toast({ title: "Kurator o'chirildi" });
+    },
+    onError: (error: any) => toast({ title: "Xatolik", description: error.message, variant: "destructive" }),
+  });
+
   const assignCuratorMutation = useMutation({
     mutationFn: async ({ groupId, curatorId }: { groupId: string; curatorId: string }) => {
       const res = await apiRequest("POST", `/api/admin/groups/${groupId}/assign-curator`, { curatorId });
@@ -494,8 +526,11 @@ export default function AdminGroupsPage() {
           <p className="text-muted-foreground text-sm">Guruhlarni boshqaring va o'quvchilarni guruhlarga biriktiring</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" onClick={() => setIsCuratorListOpen(true)} data-testid="button-curator-list">
+            <GraduationCap className="w-4 h-4 mr-2" /> Kuratorlar ({curators.length})
+          </Button>
           <Button variant="outline" onClick={() => { setCuratorForm({ firstName: "", lastName: "", phone: "", password: "" }); setIsCuratorCreateOpen(true); }} data-testid="button-create-curator">
-            <GraduationCap className="w-4 h-4 mr-2" /> Kurator Yaratish
+            <UserPlus className="w-4 h-4 mr-2" /> Kurator Yaratish
           </Button>
           <Button onClick={() => { setGroupForm({ name: "", description: "" }); setIsCreateOpen(true); }} data-testid="button-create-group">
             <Plus className="w-4 h-4 mr-2" /> Yangi Guruh
@@ -1329,6 +1364,186 @@ export default function AdminGroupsPage() {
               )}
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Curator List Dialog ── */}
+      <Dialog open={isCuratorListOpen} onOpenChange={setIsCuratorListOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <GraduationCap className="w-5 h-5 text-purple-400" />
+              Kuratorlar Ro'yxati
+            </DialogTitle>
+            <DialogDescription>Barcha kuratorlar va ularning ma'lumotlari</DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="flex-1 -mx-6 px-6">
+            {curators.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <GraduationCap className="w-12 h-12 text-muted-foreground" />
+                <p className="text-muted-foreground">Hali kurator yaratilmagan</p>
+                <Button onClick={() => { setIsCuratorListOpen(false); setCuratorForm({ firstName: "", lastName: "", phone: "", password: "" }); setIsCuratorCreateOpen(true); }}>
+                  <UserPlus className="w-4 h-4 mr-2" /> Kurator Yaratish
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {curators.map(curator => {
+                  const assignedGroups = groups.filter(g => g.curatorId === curator.id);
+                  return (
+                    <div
+                      key={curator.id}
+                      className="border rounded-lg p-4 space-y-3"
+                      data-testid={`curator-list-item-${curator.id}`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-full bg-purple-500/20 border border-purple-500/30 flex items-center justify-center shrink-0">
+                            <span className="text-sm font-bold text-purple-300">
+                              {(curator.firstName || '?')[0].toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-sm truncate" data-testid={`curator-name-${curator.id}`}>
+                              {curator.firstName} {curator.lastName || ''}
+                            </p>
+                            <p className="text-xs text-muted-foreground font-mono" data-testid={`curator-phone-${curator.id}`}>
+                              {curator.phone || '—'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditingCurator(curator);
+                              setCuratorEditForm({
+                                firstName: curator.firstName || '',
+                                lastName: curator.lastName || '',
+                                phone: curator.phone || '',
+                                password: '',
+                              });
+                              setIsCuratorEditOpen(true);
+                            }}
+                            data-testid={`button-edit-curator-${curator.id}`}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => {
+                              if (confirm(`"${curator.firstName} ${curator.lastName || ''}" kuratorni o'chirishni xohlaysizmi?`)) {
+                                deleteCuratorMutation.mutate(curator.id);
+                              }
+                            }}
+                            data-testid={`button-delete-curator-${curator.id}`}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">Biriktirilgan Guruhlar</p>
+                        {assignedGroups.length === 0 ? (
+                          <p className="text-xs text-muted-foreground/60">Hali guruhga biriktirilmagan</p>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5">
+                            {assignedGroups.map(g => (
+                              <Badge key={g.id} variant="secondary" className="text-xs" data-testid={`curator-group-badge-${g.id}`}>
+                                <UsersRound className="w-3 h-3 mr-1" />
+                                {g.name}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {curator.createdAt && (
+                        <p className="text-[10px] text-muted-foreground/50">
+                          Yaratilgan: {new Date(curator.createdAt).toLocaleDateString('uz-UZ')}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </ScrollArea>
+          <DialogFooter className="pt-3 border-t">
+            <Button variant="outline" onClick={() => setIsCuratorListOpen(false)}>Yopish</Button>
+            <Button onClick={() => { setIsCuratorListOpen(false); setCuratorForm({ firstName: "", lastName: "", phone: "", password: "" }); setIsCuratorCreateOpen(true); }}>
+              <UserPlus className="w-4 h-4 mr-2" /> Yangi Kurator
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Edit Curator Dialog ── */}
+      <Dialog open={isCuratorEditOpen} onOpenChange={v => { setIsCuratorEditOpen(v); if (!v) setEditingCurator(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Kuratorni Tahrirlash</DialogTitle>
+            <DialogDescription>
+              {editingCurator ? `${editingCurator.firstName} ${editingCurator.lastName || ''} ma'lumotlarini yangilang` : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Ism *</Label>
+                <Input
+                  data-testid="input-edit-curator-first-name"
+                  value={curatorEditForm.firstName}
+                  onChange={e => setCuratorEditForm({ ...curatorEditForm, firstName: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Familiya</Label>
+                <Input
+                  data-testid="input-edit-curator-last-name"
+                  value={curatorEditForm.lastName}
+                  onChange={e => setCuratorEditForm({ ...curatorEditForm, lastName: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Telefon *</Label>
+              <Input
+                data-testid="input-edit-curator-phone"
+                value={curatorEditForm.phone}
+                onChange={e => setCuratorEditForm({ ...curatorEditForm, phone: e.target.value })}
+                placeholder="+998901234567"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Yangi Parol</Label>
+              <Input
+                data-testid="input-edit-curator-password"
+                type="password"
+                value={curatorEditForm.password}
+                onChange={e => setCuratorEditForm({ ...curatorEditForm, password: e.target.value })}
+                placeholder="Bo'sh qoldiring — o'zgarmaydi"
+              />
+              <p className="text-[11px] text-muted-foreground">Parolni yangilash uchun kiriting. Bo'sh qoldirsa, eski parol saqlanadi.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setIsCuratorEditOpen(false); setEditingCurator(null); }}>Bekor qilish</Button>
+            <Button
+              onClick={() => {
+                if (editingCurator) {
+                  updateCuratorMutation.mutate({ id: editingCurator.id, data: curatorEditForm });
+                }
+              }}
+              disabled={!curatorEditForm.firstName || !curatorEditForm.phone || updateCuratorMutation.isPending}
+              data-testid="button-submit-edit-curator"
+            >
+              {updateCuratorMutation.isPending ? "Saqlanmoqda..." : "Saqlash"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
