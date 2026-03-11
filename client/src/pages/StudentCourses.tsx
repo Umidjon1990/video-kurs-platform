@@ -19,7 +19,8 @@ import {
   BookOpen, Trophy, GraduationCap, PlayCircle, CheckCircle, Star, Sparkles,
   ArrowRight, Target, Zap, Radio, Video, Clock, LayoutGrid, Rocket, Flame, Crown,
   X, ChevronLeft, ChevronRight, Lock, Play, Layers, FileText, ClipboardCheck,
-  ExternalLink, Info, CheckCircle2, XCircle, ArrowLeft, Loader2, PenLine, Send, Bot
+  ExternalLink, Info, CheckCircle2, XCircle, ArrowLeft, Loader2, PenLine, Send, Bot,
+  CalendarDays, Timer, AlertTriangle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Course, StudentCourseProgress } from "@shared/schema";
@@ -958,6 +959,11 @@ export default function StudentCourses() {
     refetchInterval: 15000,
   });
 
+  const { data: studentSubscriptions } = useQuery<any[]>({
+    queryKey: ["/api/student/subscriptions"],
+    enabled: isAuthenticated,
+  });
+
   const enrolledCourseIds = useMemo(() => new Set(enrolledCourses?.map(c => c.id) || []), [enrolledCourses]);
 
   const handleEnroll = (courseId: string) => setLocation(`/checkout/${courseId}`);
@@ -1167,6 +1173,121 @@ export default function StudentCourses() {
                         </Button>
                       </motion.div>
                     ))}
+                  </div>
+                </motion.section>
+              )}
+
+              {/* Subscription Status Cards */}
+              {studentSubscriptions && studentSubscriptions.filter((s: any) => s.subscription?.status === 'active').length > 0 && (
+                <motion.section
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center border border-cyan-500/30">
+                      <CalendarDays className="w-4 h-4 text-cyan-400" />
+                    </div>
+                    <h2 className="text-lg font-bold text-slate-100">Obuna Holati</h2>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {studentSubscriptions
+                      .filter((s: any) => s.subscription?.status === 'active')
+                      .map((item: any) => {
+                        const sub = item.subscription;
+                        const course = item.course;
+                        const startDate = new Date(sub.startDate);
+                        const endDate = new Date(sub.endDate);
+                        const now = new Date();
+                        const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+                        const remainingDays = Math.max(0, Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+                        const usedDays = totalDays - remainingDays;
+                        const progressPercent = totalDays > 0 ? Math.min(100, Math.round((usedDays / totalDays) * 100)) : 0;
+                        const isExpiringSoon = remainingDays <= 7;
+                        const isExpiringSoonUrgent = remainingDays <= 3;
+
+                        const formatDate = (d: Date) => {
+                          const dd = d.getDate().toString().padStart(2, '0');
+                          const mm = (d.getMonth() + 1).toString().padStart(2, '0');
+                          const yyyy = d.getFullYear();
+                          return `${dd}.${mm}.${yyyy}`;
+                        };
+
+                        return (
+                          <motion.div
+                            key={sub.id}
+                            whileHover={{ y: -4 }}
+                            className={`relative overflow-hidden rounded-2xl border backdrop-blur-xl p-5
+                              ${isExpiringSoonUrgent
+                                ? 'border-red-500/40 bg-red-500/5'
+                                : isExpiringSoon
+                                  ? 'border-amber-500/30 bg-amber-500/5'
+                                  : 'border-white/10 bg-white/5'
+                              }`}
+                            data-testid={`subscription-card-${sub.id}`}
+                          >
+                            {isExpiringSoon && (
+                              <div className={`absolute top-0 left-0 right-0 h-0.5 ${isExpiringSoonUrgent ? 'bg-red-500' : 'bg-amber-500'}`} />
+                            )}
+
+                            <div className="flex items-start justify-between gap-3 mb-4">
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-bold text-[15px] text-slate-100 truncate" data-testid={`subscription-course-${sub.id}`}>
+                                  {course?.title || 'Kurs'}
+                                </h3>
+                                <p className="text-xs text-slate-500 mt-0.5">{item.plan?.name || 'Tarif'}</p>
+                              </div>
+                              {isExpiringSoon ? (
+                                <div className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center ${isExpiringSoonUrgent ? 'bg-red-500/20 border border-red-500/30' : 'bg-amber-500/20 border border-amber-500/30'}`}>
+                                  <AlertTriangle className={`w-4 h-4 ${isExpiringSoonUrgent ? 'text-red-400' : 'text-amber-400'}`} />
+                                </div>
+                              ) : (
+                                <div className="shrink-0 w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-slate-400 flex items-center gap-1.5">
+                                  <Timer className="w-3.5 h-3.5" />
+                                  Qolgan kunlar
+                                </span>
+                                <span className={`font-bold text-base ${isExpiringSoonUrgent ? 'text-red-400' : isExpiringSoon ? 'text-amber-400' : 'text-emerald-400'}`}
+                                  data-testid={`subscription-remaining-${sub.id}`}>
+                                  {remainingDays} kun
+                                </span>
+                              </div>
+
+                              <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+                                <motion.div
+                                  className={`h-full rounded-full ${isExpiringSoonUrgent ? 'bg-red-500' : isExpiringSoon ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${progressPercent}%` }}
+                                  transition={{ duration: 1, delay: 0.3, ease: "easeOut" }}
+                                />
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-3 pt-1">
+                                <div className="bg-white/5 rounded-xl px-3 py-2">
+                                  <p className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">Boshlangan</p>
+                                  <p className="text-[13px] font-semibold text-slate-300 mt-0.5" data-testid={`subscription-start-${sub.id}`}>
+                                    {formatDate(startDate)}
+                                  </p>
+                                </div>
+                                <div className="bg-white/5 rounded-xl px-3 py-2">
+                                  <p className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">Tugaydi</p>
+                                  <p className={`text-[13px] font-semibold mt-0.5 ${isExpiringSoonUrgent ? 'text-red-400' : isExpiringSoon ? 'text-amber-400' : 'text-slate-300'}`}
+                                    data-testid={`subscription-end-${sub.id}`}>
+                                    {formatDate(endDate)}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
                   </div>
                 </motion.section>
               )}
