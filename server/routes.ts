@@ -7351,31 +7351,63 @@ So'zlar soni: ${submission.wordCount}`;
         return date;
       }
 
+      // Build module-based unlock index: lessons in the same module share the same unlock day.
+      // moduleId → moduleUnlockIndex mapping. Lessons without moduleId get their own index.
+      const moduleUnlockIndexMap = new Map<string, number>();
+      let currentModuleIndex = 0;
+      for (let i = 0; i < sorted.length; i++) {
+        const lesson = sorted[i];
+        if (lesson.moduleId) {
+          if (!moduleUnlockIndexMap.has(lesson.moduleId)) {
+            moduleUnlockIndexMap.set(lesson.moduleId, currentModuleIndex);
+            currentModuleIndex++;
+          }
+        } else {
+          currentModuleIndex++;
+        }
+      }
+
+      function getLessonUnlockIndex(lesson: any, lessonArrayIndex: number): number {
+        if (lesson.moduleId && moduleUnlockIndexMap.has(lesson.moduleId)) {
+          return moduleUnlockIndexMap.get(lesson.moduleId)!;
+        }
+        // No module — count distinct modules before this lesson + standalone lessons before it
+        let idx = 0;
+        const seenModules = new Set<string>();
+        for (let j = 0; j < lessonArrayIndex; j++) {
+          const prev = sorted[j];
+          if (prev.moduleId) {
+            if (!seenModules.has(prev.moduleId)) {
+              seenModules.add(prev.moduleId);
+              idx++;
+            }
+          } else {
+            idx++;
+          }
+        }
+        return idx;
+      }
+
       for (let i = 0; i < sorted.length; i++) {
         const lesson = sorted[i];
         let locked = false;
         let unlockDate: string | undefined;
         let reason = '';
 
-        // First lesson (demo/1-dars) is ALWAYS unlocked - o'quvchi kirgan kuni 1-dars ochiq
-        if (i === 0) {
-          lockedLessons[lesson.id] = { locked: false, reason: '' };
-          continue;
-        }
+        const unlockIdx = getLessonUnlockIndex(lesson, i);
 
-        // Schedule check for lessons 2+
-        if (settings.unlockType === 'daily' && settings.unlockStartDate) {
+        // Schedule check: first module/lesson (index 0) is always unlocked by schedule
+        if (settings.unlockType === 'daily' && settings.unlockStartDate && unlockIdx > 0) {
           const startD = new Date(settings.unlockStartDate);
-          // Use date-only comparison to avoid time-of-day issues
           startD.setHours(0, 0, 0, 0);
           const targetDate = new Date(startD);
-          targetDate.setDate(targetDate.getDate() + i * (settings.unlockIntervalDays || 1));
+          targetDate.setDate(targetDate.getDate() + unlockIdx * (settings.unlockIntervalDays || 1));
           unlockDate = targetDate.toISOString();
           if (now < targetDate) { locked = true; reason = 'schedule'; }
-        } else if (settings.unlockType === 'weekly' && settings.unlockStartDate && settings.unlockWeekDays?.length) {
+        } else if (settings.unlockType === 'weekly' && settings.unlockStartDate && settings.unlockWeekDays?.length && unlockIdx > 0) {
           const startD = new Date(settings.unlockStartDate);
           startD.setHours(0, 0, 0, 0);
-          const targetDate = getWeeklyBatchUnlockDate(startD, settings.unlockWeekDays as string[], i);
+          const targetDate = getWeeklyBatchUnlockDate(startD, settings.unlockWeekDays as string[], unlockIdx);
           unlockDate = targetDate.toISOString();
           if (now < targetDate) { locked = true; reason = 'schedule'; }
         }
