@@ -7413,16 +7413,36 @@ So'zlar soni: ${submission.wordCount}`;
         }
 
         // Test gate check (stacks with schedule)
+        // For module-based lessons: only check test gate when crossing module boundaries.
+        // Lessons within the same module should NOT block each other via test gate.
         if (settings.testGateEnabled && i > 0 && !locked) {
+          const currentModuleId = lesson.moduleId;
           const prevLesson = sorted[i - 1];
-          const prevTestId = testByLesson[prevLesson.id];
-          if (prevTestId) {
-            const passed = attempts.some(
-              a => a.testId === prevTestId && (a.score ?? 0) >= (settings.minPassScore ?? 70)
-            );
-            if (!passed) {
-              locked = true;
-              reason = 'test_gate';
+
+          // Skip test gate if this lesson is in the same module as the previous lesson
+          const sameModule = currentModuleId && prevLesson.moduleId && currentModuleId === prevLesson.moduleId;
+
+          if (!sameModule) {
+            // Find the last lesson of the previous module/standalone to check its test
+            let gateLesson = prevLesson;
+            if (prevLesson.moduleId) {
+              // Find the last lesson in the previous module (check all lessons with that moduleId)
+              for (let k = i - 1; k >= 0; k--) {
+                if (sorted[k].moduleId === prevLesson.moduleId) {
+                  const tid = testByLesson[sorted[k].id];
+                  if (tid) { gateLesson = sorted[k]; break; }
+                }
+              }
+            }
+            const gateTestId = testByLesson[gateLesson.id];
+            if (gateTestId) {
+              const passed = attempts.some(
+                a => a.testId === gateTestId && (a.score ?? 0) >= (settings.minPassScore ?? 70)
+              );
+              if (!passed) {
+                locked = true;
+                reason = 'test_gate';
+              }
             }
           }
         }

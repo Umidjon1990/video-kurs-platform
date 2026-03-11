@@ -201,7 +201,10 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
     if (status.reason === 'schedule') {
       if (status.unlockDate) {
         const d = new Date(status.unlockDate);
-        return `${d.toLocaleDateString('uz-UZ')} da ochiladi`;
+        const day = d.getDate().toString().padStart(2, '0');
+        const month = (d.getMonth() + 1).toString().padStart(2, '0');
+        const year = d.getFullYear();
+        return `${year}-${month}-${day} da ochiladi`;
       }
       return 'Hali ochilmagan';
     }
@@ -703,14 +706,14 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                             data-testid={`mobile-lesson-${lesson.id}`}
                             className={`w-full text-left px-4 py-2.5 flex items-start gap-3 transition-all duration-200 group
                               ${locked
-                                ? 'opacity-40 cursor-not-allowed border-l-2 border-transparent'
+                                ? 'opacity-60 cursor-not-allowed border-l-2 border-red-500/30'
                                 : isActive
                                   ? 'bg-primary/15 border-l-2 border-primary'
                                   : 'hover:bg-white/5 border-l-2 border-transparent'
                               }`}
                           >
                             <div className={`shrink-0 w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold mt-0.5
-                              ${locked ? 'bg-red-500/10 text-red-400' : isActive ? 'bg-primary text-white' : 'bg-white/8 text-slate-500 group-hover:bg-white/12'}`}>
+                              ${locked ? 'bg-red-500/15 text-red-400' : isActive ? 'bg-primary text-white' : 'bg-white/8 text-slate-500 group-hover:bg-white/12'}`}>
                               {locked ? (
                                 <Lock className="w-3 h-3" />
                               ) : lesson.isDemo ? (
@@ -721,15 +724,18 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                             </div>
                             <div className="flex-1 min-w-0">
                               {moduleTitle && (
-                                <p className="text-[10px] text-primary/60 font-medium uppercase tracking-wider mb-0.5 truncate">
+                                <p className={`text-[10px] font-semibold uppercase tracking-wider mb-0.5 truncate ${locked ? 'text-slate-500' : isActive ? 'text-primary' : 'text-primary/70'}`}>
                                   {moduleTitle}
                                 </p>
                               )}
-                              <p className={`text-sm font-medium leading-snug line-clamp-1 ${locked ? 'text-slate-600' : isActive ? 'text-slate-100' : 'text-slate-400 group-hover:text-slate-300'}`}>
+                              <p className={`text-[13px] font-medium leading-snug line-clamp-1 ${locked ? 'text-slate-400' : isActive ? 'text-white' : 'text-slate-300 group-hover:text-slate-200'}`}>
                                 {lesson.title}
                               </p>
                               {locked && getLockReason(lesson.id) && (
-                                <p className="text-xs text-red-400/80 font-medium mt-0.5">{getLockReason(lesson.id)}</p>
+                                <p className="text-[11px] text-red-400 font-semibold mt-1 flex items-center gap-1">
+                                  <span className="inline-block w-1 h-1 rounded-full bg-red-400 shrink-0" />
+                                  {getLockReason(lesson.id)}
+                                </p>
                               )}
                             </div>
                             {isActive && !locked && (
@@ -767,16 +773,16 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                       disabled={locked}
                       className={`w-full text-left px-4 py-3 flex items-start gap-3 transition-all duration-200 group
                         ${locked
-                          ? 'opacity-40 cursor-not-allowed border-l-2 border-transparent'
+                          ? 'opacity-60 cursor-not-allowed border-l-2 border-red-500/30'
                           : isActive
                             ? 'bg-primary/15 border-l-2 border-primary'
                             : 'hover:bg-white/5 border-l-2 border-transparent'
                         }`}
                     >
                       <div className={`shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold mt-0.5
-                        ${locked ? 'bg-red-500/10 text-red-400' : isActive ? 'bg-primary text-white' : 'bg-white/8 text-slate-500 group-hover:bg-white/12'}`}>
+                        ${locked ? 'bg-red-500/15 text-red-400' : isActive ? 'bg-primary text-white' : 'bg-white/8 text-slate-500 group-hover:bg-white/12'}`}>
                         {locked ? (
-                          <Lock className="w-3 h-3" />
+                          <Lock className="w-3.5 h-3.5" />
                         ) : lesson.isDemo ? (
                           <Play className="w-3 h-3" />
                         ) : (
@@ -785,18 +791,21 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                       </div>
                       <div className="flex-1 min-w-0">
                         {moduleTitle && (
-                          <p className="text-[10px] text-primary/60 font-medium uppercase tracking-wider mb-0.5 truncate">
+                          <p className={`text-[11px] font-semibold uppercase tracking-wider mb-0.5 truncate ${locked ? 'text-slate-500' : isActive ? 'text-primary' : 'text-primary/70'}`}>
                             {moduleTitle}
                           </p>
                         )}
-                        <p className={`text-sm font-medium leading-snug line-clamp-2 ${locked ? 'text-slate-600' : isActive ? 'text-slate-100' : 'text-slate-400 group-hover:text-slate-300'}`}>
+                        <p className={`text-[13px] font-medium leading-snug line-clamp-2 ${locked ? 'text-slate-400' : isActive ? 'text-white' : 'text-slate-300 group-hover:text-slate-200'}`}>
                           {lesson.title}
                         </p>
                         {lesson.isDemo && !locked && (
-                          <span className="text-[10px] text-orange-400/70 font-medium">Demo</span>
+                          <span className="inline-block mt-0.5 text-[10px] text-orange-400 font-semibold bg-orange-400/10 px-1.5 py-0.5 rounded">Demo</span>
                         )}
                         {locked && getLockReason(lesson.id) && (
-                          <p className="text-xs text-red-400/80 font-medium mt-0.5">{getLockReason(lesson.id)}</p>
+                          <p className="text-[11px] text-red-400 font-semibold mt-1 flex items-center gap-1">
+                            <span className="inline-block w-1 h-1 rounded-full bg-red-400 shrink-0" />
+                            {getLockReason(lesson.id)}
+                          </p>
                         )}
                       </div>
                       {isActive && !locked && (
