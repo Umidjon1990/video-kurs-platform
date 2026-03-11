@@ -7528,6 +7528,12 @@ So'zlar soni: ${submission.wordCount}`;
         return res.status(404).json({ message: "Kurator topilmadi" });
       }
       await db.update(studentGroups).set({ curatorId: null }).where(eq(studentGroups.curatorId, id));
+      await db.delete(groupMessages).where(eq(groupMessages.senderId, id));
+      await db.delete(messages).where(eq(messages.senderId, id));
+      await db.delete(notifications).where(eq(notifications.userId, id));
+      await db.execute(sql`DELETE FROM conversations WHERE student_id = ${id} OR instructor_id = ${id}`);
+      await db.execute(sql`DELETE FROM user_presence WHERE user_id = ${id}`);
+      await db.execute(sql`DELETE FROM curator_invites WHERE used_by = ${id} OR created_by = ${id}`);
       await db.delete(users).where(eq(users.id, id));
       res.json({ message: "Kurator o'chirildi" });
     } catch (error: any) {
