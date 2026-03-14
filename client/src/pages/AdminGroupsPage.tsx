@@ -395,6 +395,18 @@ export default function AdminGroupsPage() {
     onError: (error: any) => toast({ title: "Xatolik", description: error.message, variant: "destructive" }),
   });
 
+  const removeCourseFromGroupMutation = useMutation({
+    mutationFn: async ({ groupId, courseId }: { groupId: string; courseId: string }) => {
+      const res = await apiRequest("DELETE", `/api/admin/student-groups/${groupId}/courses/${courseId}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/student-groups", selectedGroup?.id, "courses"] });
+      toast({ title: "Kurs guruhdan olib tashlandi" });
+    },
+    onError: (error: any) => toast({ title: "Xatolik", description: error.message, variant: "destructive" }),
+  });
+
   const assignCuratorMutation = useMutation({
     mutationFn: async ({ groupId, curatorId }: { groupId: string; curatorId: string }) => {
       const res = await apiRequest("POST", `/api/admin/groups/${groupId}/assign-curator`, { curatorId });
@@ -906,15 +918,29 @@ export default function AdminGroupsPage() {
                       </div>
                     </div>
 
-                    {/* Jadval sozla button */}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openSettingsForCourse(course)}
-                      data-testid={`button-settings-course-${course.id}`}
-                    >
-                      <Settings2 className="w-3.5 h-3.5 mr-1" /> Jadval
-                    </Button>
+                    {/* Actions */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openSettingsForCourse(course)}
+                        data-testid={`button-settings-course-${course.id}`}
+                      >
+                        <Settings2 className="w-3.5 h-3.5 mr-1" /> Jadval
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => {
+                          if (selectedGroup && confirm(`"${course.title}" kursini guruhdan olib tashlamoqchimisiz?`)) {
+                            removeCourseFromGroupMutation.mutate({ groupId: selectedGroup.id, courseId: course.id });
+                          }
+                        }}
+                        data-testid={`button-remove-course-${course.id}`}
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>

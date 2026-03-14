@@ -7169,6 +7169,17 @@ So'zlar soni: ${submission.wordCount}`;
     }
   });
 
+  app.delete('/api/admin/student-groups/:groupId/courses/:courseId', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { groupId, courseId } = req.params;
+      await db.delete(groupCourseSettings)
+        .where(and(eq(groupCourseSettings.groupId, groupId), eq(groupCourseSettings.courseId, courseId)));
+      res.json({ message: "Kurs guruhdan olib tashlandi" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ============ GROUP COURSE SETTINGS ============
 
   // Get settings for a group+course pair
