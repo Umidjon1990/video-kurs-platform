@@ -7174,6 +7174,9 @@ So'zlar soni: ${submission.wordCount}`;
       const { groupId, courseId } = req.params;
       await db.delete(groupCourseSettings)
         .where(and(eq(groupCourseSettings.groupId, groupId), eq(groupCourseSettings.courseId, courseId)));
+      await db.update(enrollments)
+        .set({ groupId: null })
+        .where(and(eq(enrollments.groupId, groupId), eq(enrollments.courseId, courseId)));
       res.json({ message: "Kurs guruhdan olib tashlandi" });
     } catch (error: any) {
       res.status(500).json({ message: error.message });

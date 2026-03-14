@@ -400,8 +400,9 @@ export default function AdminGroupsPage() {
       const res = await apiRequest("DELETE", `/api/admin/student-groups/${groupId}/courses/${courseId}`);
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/student-groups", selectedGroup?.id, "courses"] });
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/student-groups", variables.groupId, "courses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/student-groups"] });
       toast({ title: "Kurs guruhdan olib tashlandi" });
     },
     onError: (error: any) => toast({ title: "Xatolik", description: error.message, variant: "destructive" }),
