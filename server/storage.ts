@@ -8,6 +8,7 @@ import {
   lessonProgress,
   assignments,
   tests,
+  testSections,
   enrollments,
   submissions,
   testAttempts,
@@ -49,6 +50,8 @@ import {
   type InsertAssignment,
   type Test,
   type InsertTest,
+  type TestSection,
+  type InsertTestSection,
   type Enrollment,
   type InsertEnrollment,
   type Submission,
@@ -171,6 +174,13 @@ export interface IStorage {
   updateTest(id: string, data: Partial<InsertTest>): Promise<Test>;
   deleteTest(id: string): Promise<void>;
   
+  // Test Section operations
+  createTestSection(section: InsertTestSection): Promise<TestSection>;
+  getTestSectionsByTest(testId: string): Promise<TestSection[]>;
+  getTestSection(id: string): Promise<TestSection | undefined>;
+  updateTestSection(id: string, data: Partial<InsertTestSection>): Promise<TestSection>;
+  deleteTestSection(id: string): Promise<void>;
+
   // Question operations
   createQuestion(question: InsertQuestion): Promise<Question>;
   getQuestionsByTest(testId: string): Promise<Question[]>;
@@ -950,6 +960,35 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTest(id: string): Promise<void> {
     await db.delete(tests).where(eq(tests.id, id));
+  }
+
+  // Test Section operations
+  async createTestSection(sectionData: InsertTestSection): Promise<TestSection> {
+    const [section] = await db.insert(testSections).values(sectionData).returning();
+    return section;
+  }
+
+  async getTestSectionsByTest(testId: string): Promise<TestSection[]> {
+    return await db
+      .select()
+      .from(testSections)
+      .where(eq(testSections.testId, testId))
+      .orderBy(testSections.orderIndex);
+  }
+
+  async getTestSection(id: string): Promise<TestSection | undefined> {
+    const [section] = await db.select().from(testSections).where(eq(testSections.id, id));
+    return section;
+  }
+
+  async updateTestSection(id: string, data: Partial<InsertTestSection>): Promise<TestSection> {
+    const [section] = await db.update(testSections).set(data).where(eq(testSections.id, id)).returning();
+    return section;
+  }
+
+  async deleteTestSection(id: string): Promise<void> {
+    await db.update(questions).set({ sectionId: null }).where(eq(questions.sectionId, id));
+    await db.delete(testSections).where(eq(testSections.id, id));
   }
 
   // Question operations

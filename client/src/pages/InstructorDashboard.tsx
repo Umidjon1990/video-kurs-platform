@@ -28,7 +28,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
-import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, EyeOff, Download, Megaphone, Users, User, MessageCircle, TrendingUp, Award, Activity, Settings, UserCheck, Upload, FileSpreadsheet, Mic, PenTool, Radio, PhoneOff, Monitor, Copy, Volume2, Calendar, Lock, Unlock, Layers, ListChecks } from "lucide-react";
+import { BookOpen, Plus, Edit, Trash2, FileText, ClipboardCheck, Video, ChevronDown, Eye, EyeOff, Download, Megaphone, Users, User, MessageCircle, TrendingUp, Award, Activity, Settings, UserCheck, Upload, FileSpreadsheet, Mic, PenTool, Radio, PhoneOff, Monitor, Copy, Volume2, Calendar, Lock, Unlock, Layers, ListChecks, List } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NotificationBell } from "@/components/NotificationBell";
 import { StarRating } from "@/components/StarRating";
@@ -156,6 +156,8 @@ export default function InstructorDashboard() {
     lessonId: "",
     randomOrder: false,
     shuffleAnswers: false,
+    timerMode: "none" as string,
+    timerValue: "",
   });
   const [isTextImportOpen, setIsTextImportOpen] = useState(false);
   const [textImportTestId, setTextImportTestId] = useState<string | null>(null);
@@ -205,6 +207,9 @@ export default function InstructorDashboard() {
   ]);
   const [expandedTests, setExpandedTests] = useState<Set<string>>(new Set());
   const [expandedAnalytics, setExpandedAnalytics] = useState<Set<string>>(new Set());
+  const [sectionsDialogTestId, setSectionsDialogTestId] = useState<string | null>(null);
+  const [sectionForm, setSectionForm] = useState({ title: "", timerType: "per_question", timerValue: "60", readingPassage: "" });
+  const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
 
   // Test Import states
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -839,6 +844,8 @@ export default function InstructorDashboard() {
           lessonId: testForm.lessonId || null,
           randomOrder: testForm.randomOrder,
           shuffleAnswers: testForm.shuffleAnswers,
+          timerMode: testForm.timerMode,
+          timerValue: testForm.timerValue ? parseInt(testForm.timerValue) : null,
         });
       } else {
         await apiRequest("POST", `/api/instructor/courses/${selectedCourse.id}/tests`, {
@@ -847,6 +854,8 @@ export default function InstructorDashboard() {
           lessonId: testForm.lessonId || null,
           randomOrder: testForm.randomOrder,
           shuffleAnswers: testForm.shuffleAnswers,
+          timerMode: testForm.timerMode,
+          timerValue: testForm.timerValue ? parseInt(testForm.timerValue) : null,
         });
       }
     },
@@ -857,7 +866,7 @@ export default function InstructorDashboard() {
         description: editingTest ? "Test yangilandi" : "Test qo'shildi" 
       });
       setIsAddTestOpen(false);
-      setTestForm({ title: "", passingScore: "", lessonId: "", randomOrder: false, shuffleAnswers: false });
+      setTestForm({ title: "", passingScore: "", lessonId: "", randomOrder: false, shuffleAnswers: false, timerMode: "none", timerValue: "" });
       setEditingTest(null);
     },
     onError: (error: Error) => {
@@ -875,6 +884,74 @@ export default function InstructorDashboard() {
     },
     onError: (error: Error) => {
       toast({ title: "Xatolik", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const { data: testSectionsData } = useQuery<any[]>({
+    queryKey: ["/api/instructor/tests", sectionsDialogTestId, "sections"],
+    enabled: !!sectionsDialogTestId,
+  });
+
+  const { data: sectionTestQuestions } = useQuery<any>({
+    queryKey: ["/api/instructor/tests", sectionsDialogTestId, "questions"],
+    enabled: !!sectionsDialogTestId,
+  });
+
+  const addSectionMutation = useMutation({
+    mutationFn: async () => {
+      if (!sectionsDialogTestId) return;
+      const existingSections = testSectionsData || [];
+      await apiRequest("POST", `/api/instructor/tests/${sectionsDialogTestId}/sections`, {
+        title: sectionForm.title,
+        timerType: sectionForm.timerType,
+        timerValue: parseInt(sectionForm.timerValue) || 60,
+        readingPassage: sectionForm.readingPassage || null,
+        orderIndex: existingSections.length,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/instructor/tests", sectionsDialogTestId, "sections"] });
+      setSectionForm({ title: "", timerType: "per_question", timerValue: "60", readingPassage: "" });
+      toast({ title: "Bo'lim qo'shildi" });
+    },
+  });
+
+  const updateSectionMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingSectionId) return;
+      await apiRequest("PATCH", `/api/instructor/test-sections/${editingSectionId}`, {
+        title: sectionForm.title,
+        timerType: sectionForm.timerType,
+        timerValue: parseInt(sectionForm.timerValue) || 60,
+        readingPassage: sectionForm.readingPassage || null,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/instructor/tests", sectionsDialogTestId, "sections"] });
+      setEditingSectionId(null);
+      setSectionForm({ title: "", timerType: "per_question", timerValue: "60", readingPassage: "" });
+      toast({ title: "Bo'lim yangilandi" });
+    },
+  });
+
+  const deleteSectionMutation = useMutation({
+    mutationFn: async (sectionId: string) => {
+      await apiRequest("DELETE", `/api/instructor/test-sections/${sectionId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/instructor/tests", sectionsDialogTestId, "sections"] });
+      toast({ title: "Bo'lim o'chirildi" });
+    },
+  });
+
+  const assignQuestionSectionMutation = useMutation({
+    mutationFn: async ({ questionId, sectionId }: { questionId: string; sectionId: string | null }) => {
+      await apiRequest("PATCH", `/api/instructor/questions/${questionId}/section`, { sectionId });
+    },
+    onSuccess: () => {
+      if (sectionsDialogTestId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/instructor/tests", sectionsDialogTestId, "questions"] });
+      }
     },
   });
 
@@ -2194,7 +2271,12 @@ export default function InstructorDashboard() {
                               <Button variant="outline" size="sm" onClick={() => { setTextImportTestId(test.id); setTextImportContent(""); setIsTextImportOpen(true); }} data-testid={`button-text-import-${test.id}`}>
                                 <FileText className="w-3 h-3 mr-1" />Matn
                               </Button>
-                              <Button variant="ghost" size="icon" onClick={() => { setEditingTest(test); setTestForm({ title: test.title, passingScore: test.passingScore?.toString() || "", lessonId: test.lessonId || "", randomOrder: test.randomOrder || false, shuffleAnswers: test.shuffleAnswers || false }); setIsAddTestOpen(true); }} data-testid={`button-edit-test-${test.id}`}>
+                              {(test as any).timerMode === 'sections' && (
+                                <Button variant="outline" size="sm" onClick={() => { setSectionsDialogTestId(test.id); setSectionForm({ title: "", timerType: "per_question", timerValue: "60", readingPassage: "" }); setEditingSectionId(null); }} data-testid={`button-sections-${test.id}`}>
+                                  <List className="w-3 h-3 mr-1" />Bo'limlar
+                                </Button>
+                              )}
+                              <Button variant="ghost" size="icon" onClick={() => { setEditingTest(test); setTestForm({ title: test.title, passingScore: test.passingScore?.toString() || "", lessonId: test.lessonId || "", randomOrder: test.randomOrder || false, shuffleAnswers: test.shuffleAnswers || false, timerMode: (test as any).timerMode || "none", timerValue: (test as any).timerValue?.toString() || "" }); setIsAddTestOpen(true); }} data-testid={`button-edit-test-${test.id}`}>
                                 <Edit className="w-4 h-4" />
                               </Button>
                               <Button variant="ghost" size="icon" onClick={() => { if (confirm("Testni o'chirishga ishonchingiz komilmi?")) deleteTestMutation.mutate(test.id); }} data-testid={`button-delete-test-${test.id}`}>
@@ -3695,6 +3777,58 @@ Bunny.net: https://iframe.mediadelivery.net/embed/...'
                 />
               </div>
             </div>
+            <div className="space-y-3 p-3 bg-muted/30 rounded-lg border">
+              <Label className="text-sm font-medium">Vaqt sozlamalari</Label>
+              <div className="space-y-2">
+                <Select
+                  value={testForm.timerMode}
+                  onValueChange={(value) => setTestForm({ ...testForm, timerMode: value, timerValue: "" })}
+                >
+                  <SelectTrigger data-testid="select-timer-mode">
+                    <SelectValue placeholder="Vaqt rejimini tanlang" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Vaqt cheklovisiz</SelectItem>
+                    <SelectItem value="global">Umumiy vaqt (butun test uchun)</SelectItem>
+                    <SelectItem value="per_question">Har bir savolga alohida vaqt</SelectItem>
+                    <SelectItem value="sections">Bo'limlar bo'yicha vaqt</SelectItem>
+                  </SelectContent>
+                </Select>
+                {testForm.timerMode === "global" && (
+                  <div className="space-y-1">
+                    <Label className="text-xs">Umumiy vaqt (daqiqalarda)</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={testForm.timerValue}
+                      onChange={(e) => setTestForm({ ...testForm, timerValue: e.target.value })}
+                      placeholder="60"
+                      data-testid="input-global-timer"
+                    />
+                    <p className="text-xs text-muted-foreground">Butun test uchun umumiy vaqt</p>
+                  </div>
+                )}
+                {testForm.timerMode === "per_question" && (
+                  <div className="space-y-1">
+                    <Label className="text-xs">Har bir savol uchun standart vaqt (soniyalarda)</Label>
+                    <Input
+                      type="number"
+                      min="10"
+                      value={testForm.timerValue}
+                      onChange={(e) => setTestForm({ ...testForm, timerValue: e.target.value })}
+                      placeholder="60"
+                      data-testid="input-per-question-timer"
+                    />
+                    <p className="text-xs text-muted-foreground">Alohida savollar uchun vaqtni savol tahriridan o'zgartirish mumkin</p>
+                  </div>
+                )}
+                {testForm.timerMode === "sections" && (
+                  <p className="text-xs text-muted-foreground">
+                    Bo'limlarni test yaratgandan so'ng sozlash mumkin. Test saqlangach, savollar ro'yxatida "Bo'limlar" tugmasi paydo bo'ladi.
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button
@@ -5172,6 +5306,159 @@ function CourseAnalyticsPanel({ courseId }: { courseId: string }) {
           </CardContent>
         </Card>
       )}
+
+      {/* Sections Management Dialog */}
+      <Dialog open={!!sectionsDialogTestId} onOpenChange={(open) => { if (!open) { setSectionsDialogTestId(null); setEditingSectionId(null); } }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-sections">
+          <DialogHeader>
+            <DialogTitle>Test bo'limlari boshqaruvi</DialogTitle>
+            <DialogDescription>Bo'limlar yarating va savollarni ularga biriktiring</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="p-4 rounded-md border border-border space-y-3">
+              <h4 className="font-medium text-sm">{editingSectionId ? "Bo'limni tahrirlash" : "Yangi bo'lim qo'shish"}</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <Label>Bo'lim nomi</Label>
+                  <Input
+                    value={sectionForm.title}
+                    onChange={(e) => setSectionForm(p => ({ ...p, title: e.target.value }))}
+                    placeholder="Masalan: Reading Section"
+                    data-testid="input-section-title"
+                  />
+                </div>
+                <div>
+                  <Label>Timer turi</Label>
+                  <Select value={sectionForm.timerType} onValueChange={(v) => setSectionForm(p => ({ ...p, timerType: v }))}>
+                    <SelectTrigger data-testid="select-section-timer-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="per_question">Har bir savol uchun</SelectItem>
+                      <SelectItem value="total">Umumiy vaqt</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Vaqt ({sectionForm.timerType === 'per_question' ? 'sekundlarda, har savol' : 'sekundlarda, jami'})</Label>
+                  <Input
+                    type="number"
+                    value={sectionForm.timerValue}
+                    onChange={(e) => setSectionForm(p => ({ ...p, timerValue: e.target.value }))}
+                    data-testid="input-section-timer-value"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label>O'qish matni (ixtiyoriy)</Label>
+                  <Textarea
+                    value={sectionForm.readingPassage}
+                    onChange={(e) => setSectionForm(p => ({ ...p, readingPassage: e.target.value }))}
+                    placeholder="Bu bo'lim uchun doimiy ko'rinadigan matn (masalan: Reading passage)"
+                    rows={3}
+                    data-testid="input-section-reading"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {editingSectionId ? (
+                  <>
+                    <Button size="sm" onClick={() => updateSectionMutation.mutate()} disabled={!sectionForm.title || updateSectionMutation.isPending} data-testid="button-update-section">
+                      Saqlash
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => { setEditingSectionId(null); setSectionForm({ title: "", timerType: "per_question", timerValue: "60", readingPassage: "" }); }}>
+                      Bekor qilish
+                    </Button>
+                  </>
+                ) : (
+                  <Button size="sm" onClick={() => addSectionMutation.mutate()} disabled={!sectionForm.title || addSectionMutation.isPending} data-testid="button-add-section">
+                    <Plus className="w-3 h-3 mr-1" />Bo'lim qo'shish
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {testSectionsData && testSectionsData.length > 0 && (() => {
+              const allQuestions = Array.isArray(sectionTestQuestions) ? sectionTestQuestions : (sectionTestQuestions?.questions || []);
+              const unassigned = allQuestions.filter((q: any) => !q.sectionId);
+              return (
+                <div className="space-y-3">
+                  <h4 className="font-medium text-sm">Mavjud bo'limlar</h4>
+                  {testSectionsData.map((section: any, idx: number) => {
+                    const sectionQs = allQuestions.filter((q: any) => q.sectionId === section.id);
+                    return (
+                      <div key={section.id} className="p-3 rounded-md border border-border space-y-2" data-testid={`section-item-${section.id}`}>
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary">{idx + 1}</Badge>
+                            <span className="font-medium text-sm">{section.title}</span>
+                            <Badge variant="outline" className="text-xs">{sectionQs.length} savol</Badge>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Badge variant="outline" className="text-xs">
+                              {section.timerType === 'per_question' ? `${section.timerValue}s/savol` : `${section.timerValue}s jami`}
+                            </Badge>
+                            {section.readingPassage && <Badge variant="outline" className="text-xs">Matn bor</Badge>}
+                            <Button size="icon" variant="ghost" onClick={() => {
+                              setEditingSectionId(section.id);
+                              setSectionForm({
+                                title: section.title,
+                                timerType: section.timerType || "per_question",
+                                timerValue: (section.timerValue || 60).toString(),
+                                readingPassage: section.readingPassage || "",
+                              });
+                            }} data-testid={`button-edit-section-${section.id}`}>
+                              <Edit className="w-3 h-3" />
+                            </Button>
+                            <Button size="icon" variant="ghost" onClick={() => { if (confirm("Bu bo'limni o'chirishga ishonchingiz komilmi?")) deleteSectionMutation.mutate(section.id); }} data-testid={`button-delete-section-${section.id}`}>
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                        {sectionQs.length > 0 && (
+                          <div className="pl-6 space-y-1">
+                            {sectionQs.map((q: any, qi: number) => (
+                              <div key={q.id} className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                                <span className="truncate max-w-[300px]">{qi + 1}. {q.questionText}</span>
+                                <Button size="sm" variant="ghost" className="text-xs h-6" onClick={() => assignQuestionSectionMutation.mutate({ questionId: q.id, sectionId: null })} data-testid={`button-unassign-${q.id}`}>
+                                  Chiqarish
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {unassigned.length > 0 && (
+                    <div className="p-3 rounded-md border border-dashed border-border space-y-2">
+                      <h4 className="font-medium text-sm text-muted-foreground">Biriktirilmagan savollar ({unassigned.length})</h4>
+                      <div className="space-y-1">
+                        {unassigned.map((q: any, qi: number) => (
+                          <div key={q.id} className="flex items-center justify-between gap-2 text-xs">
+                            <span className="truncate max-w-[250px] text-muted-foreground">{qi + 1}. {q.questionText}</span>
+                            <Select onValueChange={(sectionId) => assignQuestionSectionMutation.mutate({ questionId: q.id, sectionId })}>
+                              <SelectTrigger className="w-[140px] h-7 text-xs" data-testid={`select-assign-${q.id}`}>
+                                <SelectValue placeholder="Bo'limga qo'sh" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {testSectionsData.map((sec: any) => (
+                                  <SelectItem key={sec.id} value={sec.id}>{sec.title}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

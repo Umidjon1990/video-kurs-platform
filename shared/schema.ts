@@ -357,6 +357,20 @@ export const tests = pgTable("tests", {
   isDraft: boolean("is_draft").default(true),
   randomOrder: boolean("random_order").default(false),
   shuffleAnswers: boolean("shuffle_answers").default(false),
+  timerMode: varchar("timer_mode", { length: 20 }).default("none"),
+  timerValue: integer("timer_value"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Test Sections table (for grouping questions with shared timers/reading passages)
+export const testSections = pgTable("test_sections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  testId: varchar("test_id").notNull().references(() => tests.id, { onDelete: 'cascade' }),
+  title: varchar("title", { length: 255 }).notNull(),
+  orderIndex: integer("order_index").notNull().default(0),
+  timerType: varchar("timer_type", { length: 20 }).notNull().default("per_question"),
+  timerValue: integer("timer_value").notNull().default(60),
+  readingPassage: text("reading_passage"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -364,10 +378,12 @@ export const tests = pgTable("tests", {
 export const questions = pgTable("questions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   testId: varchar("test_id").notNull().references(() => tests.id, { onDelete: 'cascade' }),
+  sectionId: varchar("section_id").references(() => testSections.id, { onDelete: 'set null' }),
   type: varchar("type", { length: 50 }).notNull(), // multiple_choice, true_false, fill_blanks, matching, short_answer, essay
   questionText: text("question_text").notNull(),
   points: integer("points").notNull().default(1),
   order: integer("order").notNull(),
+  timeLimit: integer("time_limit"),
   mediaUrl: text("media_url"), // For images, audio, video
   correctAnswer: text("correct_answer"), // For simple answer types
   config: jsonb("config").default(sql`'{}'`), // Type-specific configuration
@@ -398,6 +414,14 @@ export const testAttempts = pgTable("test_attempts", {
 });
 
 // Relations - defined after all tables
+export const testSectionsRelations = relations(testSections, ({ one, many }) => ({
+  test: one(tests, {
+    fields: [testSections.testId],
+    references: [tests.id],
+  }),
+  questions: many(questions),
+}));
+
 export const testsRelations = relations(tests, ({ one, many }) => ({
   course: one(courses, {
     fields: [tests.courseId],
@@ -407,6 +431,7 @@ export const testsRelations = relations(tests, ({ one, many }) => ({
     fields: [tests.lessonId],
     references: [lessons.id],
   }),
+  sections: many(testSections),
   questions: many(questions),
   attempts: many(testAttempts),
 }));
@@ -415,6 +440,10 @@ export const questionsRelations = relations(questions, ({ one, many }) => ({
   test: one(tests, {
     fields: [questions.testId],
     references: [tests.id],
+  }),
+  section: one(testSections, {
+    fields: [questions.sectionId],
+    references: [testSections.id],
   }),
   options: many(questionOptions),
 }));
@@ -699,6 +728,11 @@ export const insertAssignmentSchema = createInsertSchema(assignments).omit({
 });
 
 export const insertTestSchema = createInsertSchema(tests).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTestSectionSchema = createInsertSchema(testSections).omit({
   id: true,
   createdAt: true,
 });
@@ -1157,6 +1191,9 @@ export type Assignment = typeof assignments.$inferSelect;
 
 export type InsertTest = z.infer<typeof insertTestSchema>;
 export type Test = typeof tests.$inferSelect;
+
+export type InsertTestSection = z.infer<typeof insertTestSectionSchema>;
+export type TestSection = typeof testSections.$inferSelect;
 
 export type InsertQuestion = z.infer<typeof insertQuestionSchema>;
 export type Question = typeof questions.$inferSelect;

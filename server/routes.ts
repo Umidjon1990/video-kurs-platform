@@ -10,7 +10,7 @@ import { ObjectStorageService } from "./objectStorage";
 import { db } from "./db";
 import bcrypt from "bcryptjs";
 import passport from "passport";
-import { users, courses, lessons, assignments, tests, questions, questionOptions, enrollments, submissions, testAttempts, notifications, conversations, messages, siteSettings, testimonials, subscriptionPlans, coursePlanPricing, userSubscriptions, passwordResetRequests, speakingTests, speakingTestSections, speakingQuestions, speakingSubmissions, speakingAnswers, speakingEvaluations, essaySubmissions, courseRatings, courseLikes, lessonProgress, announcements, liveRooms, courseGroupChats, userPresence, courseModules, lessonSections, courseResourceTypes, lessonEssayQuestions, studentGroups, studentGroupMembers, groupCourseSettings, curatorInvites, groupMessages } from "@shared/schema";
+import { users, courses, lessons, assignments, tests, testSections, questions, questionOptions, enrollments, submissions, testAttempts, notifications, conversations, messages, siteSettings, testimonials, subscriptionPlans, coursePlanPricing, userSubscriptions, passwordResetRequests, speakingTests, speakingTestSections, speakingQuestions, speakingSubmissions, speakingAnswers, speakingEvaluations, essaySubmissions, courseRatings, courseLikes, lessonProgress, announcements, liveRooms, courseGroupChats, userPresence, courseModules, lessonSections, courseResourceTypes, lessonEssayQuestions, studentGroups, studentGroupMembers, groupCourseSettings, curatorInvites, groupMessages } from "@shared/schema";
 import { eq, and, or, desc, sql, count, avg, inArray } from "drizzle-orm";
 import {
   insertCourseSchema,
@@ -149,20 +149,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!test || !test.lessonId) return res.status(404).json({ message: "Test topilmadi" });
       const lesson = await storage.getLesson(test.lessonId);
       if (!lesson || !lesson.isDemo) return res.status(403).json({ message: "Bu test demo emas" });
-      const questions = await storage.getQuestionsByTest(testId);
-      const enriched = await Promise.all(questions.map(async (q: any) => {
+      const [questionsData, sections] = await Promise.all([
+        storage.getQuestionsByTest(testId),
+        storage.getTestSectionsByTest(testId),
+      ]);
+      const enriched = await Promise.all(questionsData.map(async (q: any) => {
         let correctCount = 1;
         if (q.type === 'multiple_choice') {
           const opts = await storage.getQuestionOptionsByQuestion(q.id);
           correctCount = opts.filter((o: any) => o.isCorrect).length;
         }
         return {
-          id: q.id, testId: q.testId, type: q.type, questionText: q.questionText, points: q.points, order: q.order, mediaUrl: q.mediaUrl,
+          id: q.id, testId: q.testId, sectionId: q.sectionId, type: q.type, questionText: q.questionText, points: q.points, order: q.order, timeLimit: q.timeLimit, mediaUrl: q.mediaUrl,
           correctCount: q.type === 'multiple_choice' ? correctCount : undefined,
           config: q.type === 'matching' ? { leftColumn: (q.config as any)?.leftColumn || [], rightColumn: (q.config as any)?.rightColumn || [] } : (q.config || {}),
         };
       }));
-      res.json(enriched);
+      res.json({
+        questions: enriched,
+        sections: sections.map(s => ({ id: s.id, title: s.title, orderIndex: s.orderIndex, timerType: s.timerType, timerValue: s.timerValue, readingPassage: s.readingPassage })),
+        timerMode: test.timerMode || 'none',
+        timerValue: test.timerValue,
+      });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -2343,6 +2351,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ TEST SECTIONS API ============
+  app.get('/api/instructor/tests/:testId/sections', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const instructorId = req.user.claims.sub;
+      const test = await storage.getTest(req.params.testId);
+      if (!test) return res.status(404).json({ message: "Test topilmadi" });
+      const course = await storage.getCourse(test.courseId!);
+      if (!course || (course.instructorId !== instructorId && req.user.claims.role !== 'admin')) {
+        return res.status(403).json({ message: "Ruxsat yo'q" });
+      }
+      const sections = await storage.getTestSectionsByTest(req.params.testId);
+      res.json(sections);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/instructor/tests/:testId/sections', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { testId } = req.params;
+      const instructorId = req.user.claims.sub;
+      const test = await storage.getTest(testId);
+      if (!test) return res.status(404).json({ message: "Test topilmadi" });
+      const course = await storage.getCourse(test.courseId!);
+      if (!course || (course.instructorId !== instructorId && req.user.claims.role !== 'admin')) {
+        return res.status(403).json({ message: "Ruxsat yo'q" });
+      }
+      const { title, orderIndex, timerType, timerValue, readingPassage } = req.body;
+      const section = await storage.createTestSection({
+        testId,
+        title: title || "Bo'lim",
+        orderIndex: orderIndex ?? 0,
+        timerType: timerType || "per_question",
+        timerValue: timerValue ?? 60,
+        readingPassage: readingPassage || null,
+      });
+      res.json(section);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch('/api/instructor/test-sections/:sectionId', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const instructorId = req.user.claims.sub;
+      const section = await storage.getTestSection(req.params.sectionId);
+      if (!section) return res.status(404).json({ message: "Bo'lim topilmadi" });
+      const test = await storage.getTest(section.testId);
+      if (!test) return res.status(404).json({ message: "Test topilmadi" });
+      const course = await storage.getCourse(test.courseId!);
+      if (!course || (course.instructorId !== instructorId && req.user.claims.role !== 'admin')) {
+        return res.status(403).json({ message: "Ruxsat yo'q" });
+      }
+      const updated = await storage.updateTestSection(req.params.sectionId, req.body);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete('/api/instructor/test-sections/:sectionId', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const instructorId = req.user.claims.sub;
+      const section = await storage.getTestSection(req.params.sectionId);
+      if (!section) return res.status(404).json({ message: "Bo'lim topilmadi" });
+      const test = await storage.getTest(section.testId);
+      if (!test) return res.status(404).json({ message: "Test topilmadi" });
+      const course = await storage.getCourse(test.courseId!);
+      if (!course || (course.instructorId !== instructorId && req.user.claims.role !== 'admin')) {
+        return res.status(403).json({ message: "Ruxsat yo'q" });
+      }
+      await storage.deleteTestSection(req.params.sectionId);
+      res.json({ message: "Bo'lim o'chirildi" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch('/api/instructor/questions/:questionId/section', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const instructorId = req.user.claims.sub;
+      const questionRows = await db.select().from(questions).where(eq(questions.id, req.params.questionId));
+      if (!questionRows.length) return res.status(404).json({ message: "Savol topilmadi" });
+      const test = await storage.getTest(questionRows[0].testId);
+      if (!test) return res.status(404).json({ message: "Test topilmadi" });
+      const course = await storage.getCourse(test.courseId!);
+      if (!course || (course.instructorId !== instructorId && req.user.claims.role !== 'admin')) {
+        return res.status(403).json({ message: "Ruxsat yo'q" });
+      }
+      const { sectionId } = req.body;
+      if (sectionId) {
+        const section = await storage.getTestSection(sectionId);
+        if (!section || section.testId !== test.id) {
+          return res.status(400).json({ message: "Bo'lim bu testga tegishli emas" });
+        }
+      }
+      const question = await storage.updateQuestion(req.params.questionId, { sectionId: sectionId || null });
+      res.json(question);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Questions API
   app.get('/api/instructor/tests/:testId/questions', isAuthenticated, isInstructor, async (req: any, res) => {
     try {
@@ -4063,9 +4174,13 @@ So'zlar soni: ${submission.wordCount}`;
   app.get('/api/tests/:testId/questions', isAuthenticated, async (req, res) => {
     try {
       const { testId } = req.params;
-      const questions = await storage.getQuestionsByTest(testId);
+      const [questionsData, sections, test] = await Promise.all([
+        storage.getQuestionsByTest(testId),
+        storage.getTestSectionsByTest(testId),
+        storage.getTest(testId),
+      ]);
       
-      const enriched = await Promise.all(questions.map(async (q: any) => {
+      const enriched = await Promise.all(questionsData.map(async (q: any) => {
         let correctCount = 1;
         if (q.type === 'multiple_choice') {
           const opts = await storage.getQuestionOptionsByQuestion(q.id);
@@ -4074,10 +4189,12 @@ So'zlar soni: ${submission.wordCount}`;
         return {
           id: q.id,
           testId: q.testId,
+          sectionId: q.sectionId,
           type: q.type,
           questionText: q.questionText,
           points: q.points,
           order: q.order,
+          timeLimit: q.timeLimit,
           mediaUrl: q.mediaUrl,
           correctCount: q.type === 'multiple_choice' ? correctCount : undefined,
           config: q.type === 'matching' ? {
@@ -4087,7 +4204,19 @@ So'zlar soni: ${submission.wordCount}`;
         };
       }));
       
-      res.json(enriched);
+      res.json({
+        questions: enriched,
+        sections: sections.map(s => ({
+          id: s.id,
+          title: s.title,
+          orderIndex: s.orderIndex,
+          timerType: s.timerType,
+          timerValue: s.timerValue,
+          readingPassage: s.readingPassage,
+        })),
+        timerMode: test?.timerMode || 'none',
+        timerValue: test?.timerValue,
+      });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

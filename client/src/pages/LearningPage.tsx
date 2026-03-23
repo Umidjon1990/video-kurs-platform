@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -37,6 +37,14 @@ export default function LearningPage() {
   const [testAnswers, setTestAnswers] = useState<Record<string, any>>({});
   const [testResult, setTestResult] = useState<any>(null);
   const [shuffleSeed, setShuffleSeed] = useState(0);
+  const [globalTimer, setGlobalTimer] = useState<number>(0);
+  const [questionTimer, setQuestionTimer] = useState<number>(0);
+  const [currentQuestionIdx, setCurrentQuestionIdx] = useState<number>(0);
+  const [currentSectionIdx, setCurrentSectionIdx] = useState<number>(0);
+  const [sectionTimer, setSectionTimer] = useState<number>(0);
+  const [timerActive, setTimerActive] = useState(false);
+  const [testStarted, setTestStarted] = useState(false);
+  const timerRef = useRef<any>(null);
   const [ratingDialog, setRatingDialog] = useState(false);
   const [selectedRating, setSelectedRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
@@ -130,10 +138,31 @@ export default function LearningPage() {
     enabled: isAuthenticated,
   });
 
-  const { data: testQuestions } = useQuery<any[]>({
+  const { data: testQuestionsData } = useQuery<any>({
     queryKey: ["/api/tests", testDialog.testId, "questions"],
     enabled: !!testDialog.testId && testDialog.open,
   });
+
+  const testQuestions = useMemo(() => {
+    if (!testQuestionsData) return undefined;
+    if (Array.isArray(testQuestionsData)) return testQuestionsData;
+    return testQuestionsData.questions || [];
+  }, [testQuestionsData]);
+
+  const testSections = useMemo(() => {
+    if (!testQuestionsData || Array.isArray(testQuestionsData)) return [];
+    return testQuestionsData.sections || [];
+  }, [testQuestionsData]);
+
+  const testTimerMode = useMemo(() => {
+    if (!testQuestionsData || Array.isArray(testQuestionsData)) return 'none';
+    return testQuestionsData.timerMode || 'none';
+  }, [testQuestionsData]);
+
+  const testTimerValue = useMemo(() => {
+    if (!testQuestionsData || Array.isArray(testQuestionsData)) return null;
+    return testQuestionsData.timerValue;
+  }, [testQuestionsData]);
 
   // Seeded random for consistent shuffle within a session
   const seededRandom = (seed: number, idx: number) => {
@@ -361,11 +390,174 @@ export default function LearningPage() {
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/student/test-attempts'] });
       setTestResult(data);
+      stopTimer();
+      setTestStarted(false);
     },
     onError: (error: Error) => {
       toast({ title: "Xatolik", description: error.message, variant: "destructive" });
     },
   });
+
+  const stopTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    setTimerActive(false);
+  }, []);
+
+  const startGlobalTimer = useCallback((seconds: number) => {
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    setGlobalTimer(seconds);
+    setTimerActive(true);
+    timerRef.current = setInterval(() => {
+      setGlobalTimer(prev => {
+        if (prev <= 1) {
+          if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  const startQuestionTimer = useCallback((seconds: number) => {
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    setQuestionTimer(seconds);
+    setTimerActive(true);
+    timerRef.current = setInterval(() => {
+      setQuestionTimer(prev => {
+        if (prev <= 1) {
+          if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  const startSectionTimer = useCallback((seconds: number) => {
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    setSectionTimer(seconds);
+    setTimerActive(true);
+    timerRef.current = setInterval(() => {
+      setSectionTimer(prev => {
+        if (prev <= 1) {
+          if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const handleStartTest = useCallback(() => {
+    setTestStarted(true);
+    setCurrentQuestionIdx(0);
+    setCurrentSectionIdx(0);
+    if (testTimerMode === 'global' && testTimerValue) {
+      startGlobalTimer(testTimerValue * 60);
+    } else if (testTimerMode === 'per_question' && shuffledTestQuestions.length > 0) {
+      const q = shuffledTestQuestions[0];
+      const tl = q.timeLimit || testTimerValue || 60;
+      startQuestionTimer(tl);
+    } else if (testTimerMode === 'sections' && testSections.length > 0) {
+      const sec = testSections[0];
+      if (sec.timerType === 'total') {
+        startSectionTimer(sec.timerValue);
+      } else if (sec.timerType === 'per_question') {
+        const sectionQuestions = shuffledTestQuestions.filter((q: any) => q.sectionId === sec.id);
+        if (sectionQuestions.length > 0) {
+          startQuestionTimer(sectionQuestions[0].timeLimit || sec.timerValue || 60);
+        }
+      }
+    }
+  }, [testTimerMode, testTimerValue, shuffledTestQuestions, testSections, startGlobalTimer, startQuestionTimer, startSectionTimer]);
+
+  const timerExpiredRef = useRef(false);
+
+  useEffect(() => {
+    if (globalTimer === 0 && testTimerMode === 'global' && testStarted && !testResult && timerActive) {
+      setTimerActive(false);
+      submitTestMutation.mutate();
+    }
+  }, [globalTimer, testTimerMode, testStarted, testResult, timerActive]);
+
+  useEffect(() => {
+    if (questionTimer === 0 && testStarted && !testResult && timerActive) {
+      if (testTimerMode === 'per_question') {
+        const nextIdx = currentQuestionIdx + 1;
+        if (nextIdx < shuffledTestQuestions.length) {
+          setCurrentQuestionIdx(nextIdx);
+          const q = shuffledTestQuestions[nextIdx];
+          const tl = q.timeLimit || testTimerValue || 60;
+          startQuestionTimer(tl);
+        } else {
+          submitTestMutation.mutate();
+        }
+      } else if (testTimerMode === 'sections') {
+        const sec = testSections[currentSectionIdx];
+        const sectionQuestions = shuffledTestQuestions.filter((q: any) => q.sectionId === sec?.id);
+        const localIdx = sectionQuestions.findIndex((q: any) => q.id === shuffledTestQuestions[currentQuestionIdx]?.id);
+        const nextLocalIdx = localIdx + 1;
+        if (nextLocalIdx < sectionQuestions.length) {
+          const globalNextIdx = shuffledTestQuestions.findIndex((q: any) => q.id === sectionQuestions[nextLocalIdx].id);
+          setCurrentQuestionIdx(globalNextIdx);
+          startQuestionTimer(sectionQuestions[nextLocalIdx].timeLimit || sec.timerValue || 60);
+        } else {
+          const nextSecIdx = currentSectionIdx + 1;
+          if (nextSecIdx < testSections.length) {
+            setCurrentSectionIdx(nextSecIdx);
+            const nextSec = testSections[nextSecIdx];
+            const nextSecQuestions = shuffledTestQuestions.filter((q: any) => q.sectionId === nextSec.id);
+            if (nextSecQuestions.length > 0) {
+              const gi = shuffledTestQuestions.findIndex((q: any) => q.id === nextSecQuestions[0].id);
+              setCurrentQuestionIdx(gi);
+              if (nextSec.timerType === 'total') {
+                startSectionTimer(nextSec.timerValue);
+              } else {
+                startQuestionTimer(nextSecQuestions[0].timeLimit || nextSec.timerValue || 60);
+              }
+            }
+          } else {
+            submitTestMutation.mutate();
+          }
+        }
+      }
+    }
+  }, [questionTimer, testStarted, testResult, testTimerMode, timerActive]);
+
+  useEffect(() => {
+    if (sectionTimer === 0 && testTimerMode === 'sections' && testStarted && !testResult && timerActive) {
+      const nextSecIdx = currentSectionIdx + 1;
+      if (nextSecIdx < testSections.length) {
+        setCurrentSectionIdx(nextSecIdx);
+        const nextSec = testSections[nextSecIdx];
+        const nextSecQuestions = shuffledTestQuestions.filter((q: any) => q.sectionId === nextSec.id);
+        if (nextSecQuestions.length > 0) {
+          const gi = shuffledTestQuestions.findIndex((q: any) => q.id === nextSecQuestions[0].id);
+          setCurrentQuestionIdx(gi);
+          if (nextSec.timerType === 'total') {
+            startSectionTimer(nextSec.timerValue);
+          } else {
+            startQuestionTimer(nextSecQuestions[0].timeLimit || nextSec.timerValue || 60);
+          }
+        }
+      } else {
+        submitTestMutation.mutate();
+      }
+    }
+  }, [sectionTimer, testTimerMode, testStarted, testResult, timerActive]);
+
+  useEffect(() => {
+    return () => stopTimer();
+  }, [stopTimer]);
 
   const submitAssignmentMutation = useMutation({
     mutationFn: async () => {
@@ -722,6 +914,8 @@ export default function LearningPage() {
                                 setTestAnswers({});
                                 setTestResult(null);
                                 setShuffleSeed(Date.now());
+                                setTestStarted(false);
+                                stopTimer();
                               }}>
                                 {lastAttempt ? "Qayta Topshirish" : "Boshlash"}
                               </Button>
@@ -846,112 +1040,246 @@ export default function LearningPage() {
 
       {/* Test Taking Dialog */}
       <Dialog open={testDialog.open} onOpenChange={(open) => {
-        if (!open) { setTestDialog({ open: false, testId: null }); setTestAnswers({}); setTestResult(null); }
+        if (!open) { setTestDialog({ open: false, testId: null }); setTestAnswers({}); setTestResult(null); stopTimer(); setTestStarted(false); }
       }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-test-taking">
-          <DialogHeader>
-            <DialogTitle data-testid="text-test-title">
-              {testDialog.test?.title || "Test"}
-            </DialogTitle>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden" data-testid="dialog-test-taking">
+          <DialogHeader className="shrink-0">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <DialogTitle data-testid="text-test-title">
+                {testDialog.test?.title || "Test"}
+              </DialogTitle>
+              {testStarted && !testResult && (
+                <div className="flex items-center gap-2">
+                  {testTimerMode === 'global' && (
+                    <Badge variant={globalTimer <= 60 ? "destructive" : "secondary"} className="font-mono text-sm" data-testid="badge-global-timer">
+                      <Clock className="w-3.5 h-3.5 mr-1" />{formatTime(globalTimer)}
+                    </Badge>
+                  )}
+                  {testTimerMode === 'per_question' && (
+                    <Badge variant={questionTimer <= 10 ? "destructive" : "secondary"} className="font-mono text-sm" data-testid="badge-question-timer">
+                      <Clock className="w-3.5 h-3.5 mr-1" />{formatTime(questionTimer)}
+                    </Badge>
+                  )}
+                  {testTimerMode === 'sections' && testSections[currentSectionIdx] && (
+                    <>
+                      <Badge variant="outline" className="text-xs">{testSections[currentSectionIdx].title}</Badge>
+                      {testSections[currentSectionIdx].timerType === 'total' ? (
+                        <Badge variant={sectionTimer <= 30 ? "destructive" : "secondary"} className="font-mono text-sm">
+                          <Clock className="w-3.5 h-3.5 mr-1" />{formatTime(sectionTimer)}
+                        </Badge>
+                      ) : (
+                        <Badge variant={questionTimer <= 10 ? "destructive" : "secondary"} className="font-mono text-sm">
+                          <Clock className="w-3.5 h-3.5 mr-1" />{formatTime(questionTimer)}
+                        </Badge>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
             {testDialog.test?.passingScore && (
               <DialogDescription>
                 O'tish bali: {testDialog.test.passingScore}% | Savollar: {shuffledTestQuestions.length} ta
+                {testTimerMode !== 'none' && !testStarted && (
+                  <span className="ml-2 text-primary">
+                    {testTimerMode === 'global' && testTimerValue ? `| Vaqt: ${testTimerValue} daqiqa` : ''}
+                    {testTimerMode === 'per_question' ? '| Har bir savolga alohida vaqt' : ''}
+                    {testTimerMode === 'sections' ? `| ${testSections.length} ta bo'lim` : ''}
+                  </span>
+                )}
               </DialogDescription>
             )}
           </DialogHeader>
 
           {testResult ? (
-            /* Result screen */
-            <div className="space-y-6 py-4">
+            <div className="space-y-6 py-4 overflow-y-auto">
               <div className={`p-6 rounded-xl text-center ${testResult.isPassed ? 'bg-green-500/10 border-2 border-green-500/30' : 'bg-destructive/10 border-2 border-destructive/30'}`}>
                 <div className="text-4xl mb-2">{testResult.isPassed ? <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto" /> : <XCircle className="w-12 h-12 text-destructive mx-auto" />}</div>
                 <h3 className="text-2xl font-bold mb-1">{testResult.percentage?.toFixed(1)}%</h3>
                 <p className="text-lg font-semibold">{testResult.isPassed ? "Test muvaffaqiyatli o'tildi!" : "Test o'tilmadi"}</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Ballar: {testResult.score} / {testResult.totalPoints}
-                </p>
+                <p className="text-sm text-muted-foreground mt-1">Ballar: {testResult.score} / {testResult.totalPoints}</p>
                 {testDialog.test?.passingScore && !testResult.isPassed && (
-                  <p className="text-sm text-destructive mt-2">
-                    O'tish uchun {testDialog.test.passingScore}% kerak
-                  </p>
+                  <p className="text-sm text-destructive mt-2">O'tish uchun {testDialog.test.passingScore}% kerak</p>
                 )}
               </div>
               <div className="flex gap-3">
                 {!testResult.isPassed && (
-                  <button className="btn-3d-danger flex-1" onClick={() => {
-                    setTestResult(null);
-                    setTestAnswers({});
-                    setShuffleSeed(Date.now());
-                  }} data-testid="button-retake-test">
-                    Qayta Topshirish
-                  </button>
+                  <button className="btn-3d-danger flex-1" onClick={() => { setTestResult(null); setTestAnswers({}); setShuffleSeed(Date.now()); setTestStarted(false); }} data-testid="button-retake-test">Qayta Topshirish</button>
                 )}
-                <button className="btn-3d-outline flex-1" onClick={() => {
-                  setTestDialog({ open: false, testId: null });
-                  setTestAnswers({});
-                  setTestResult(null);
-                }}>
+                <button className="btn-3d-outline flex-1" onClick={() => { setTestDialog({ open: false, testId: null }); setTestAnswers({}); setTestResult(null); }}>
                   {testResult.isPassed ? "Yopish" : "Keyinroq"}
                 </button>
               </div>
             </div>
+          ) : !testQuestions ? (
+            <div className="flex justify-center py-8"><div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" /></div>
+          ) : shuffledTestQuestions.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">Bu testda savollar yo'q</p>
+          ) : testTimerMode !== 'none' && !testStarted ? (
+            <div className="space-y-4 py-6 text-center">
+              <div className="p-4 bg-muted/30 rounded-lg space-y-2">
+                <Clock className="w-10 h-10 mx-auto text-primary" />
+                <h3 className="text-lg font-semibold">Testni boshlashga tayyormisiz?</h3>
+                {testTimerMode === 'global' && <p className="text-sm text-muted-foreground">Umumiy vaqt: <span className="font-bold text-primary">{testTimerValue} daqiqa</span></p>}
+                {testTimerMode === 'per_question' && <p className="text-sm text-muted-foreground">Har bir savolga alohida vaqt berilgan</p>}
+                {testTimerMode === 'sections' && (
+                  <div className="space-y-1 text-sm text-muted-foreground">
+                    <p>{testSections.length} ta bo'lim:</p>
+                    {testSections.map((sec: any, i: number) => (
+                      <p key={sec.id} className="text-xs">{i + 1}. {sec.title} — {sec.timerType === 'total' ? `${Math.floor(sec.timerValue / 60)} daqiqa` : `har biriga ${sec.timerValue} soniya`}</p>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button className="btn-3d-primary w-full" onClick={handleStartTest} data-testid="button-start-timed-test">Boshlash</button>
+            </div>
           ) : (
-            /* Questions screen */
-            <div className="space-y-6 py-2">
-              {!testQuestions ? (
-                <div className="flex justify-center py-8">
-                  <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-                </div>
-              ) : shuffledTestQuestions.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">Bu testda savollar yo'q</p>
-              ) : (
-                shuffledTestQuestions.map((question: any, qIdx: number) => {
-                  const hasArabic = isArabic(question.questionText);
-                  return (
-                  <div key={question.id} className="space-y-3">
-                    <div className="flex items-start gap-3">
-                      <span className="question-number-badge shrink-0 w-8 h-8 rounded-full bg-primary/15 text-primary text-sm font-bold flex items-center justify-center">{qIdx + 1}</span>
-                      <div className="flex-1">
-                        <p
-                          className={`font-semibold test-question-font ${hasArabic ? 'arabic-text' : ''}`}
-                          dir="ltr"
-                          data-testid={`question-text-${question.id}`}
-                        >
-                          {question.questionText}
-                        </p>
-                        <div className="mt-3">
-                          <TestQuestionInput
-                            question={question}
-                            value={testAnswers[question.id]}
-                            onChange={(val) => setTestAnswers(prev => ({ ...prev, [question.id]: val }))}
-                            shuffleAnswers={testDialog.test?.shuffleAnswers || false}
-                            shuffleSeed={shuffleSeed + qIdx}
-                            seededRandom={seededRandom}
-                          />
+            <>
+              {testTimerMode === 'per_question' && testStarted ? (
+                <div className="flex-1 overflow-y-auto space-y-4 py-2">
+                  {(() => {
+                    const question = shuffledTestQuestions[currentQuestionIdx];
+                    if (!question) return null;
+                    const hasArabic = isArabic(question.questionText);
+                    return (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <span className="text-sm text-muted-foreground">{currentQuestionIdx + 1} / {shuffledTestQuestions.length}</span>
+                          <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                            <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${((currentQuestionIdx + 1) / shuffledTestQuestions.length) * 100}%` }} />
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <span className="question-number-badge shrink-0 w-8 h-8 rounded-full bg-primary/15 text-primary text-sm font-bold flex items-center justify-center">{currentQuestionIdx + 1}</span>
+                          <div className="flex-1">
+                            <p className={`font-semibold test-question-font ${hasArabic ? 'arabic-text' : ''}`} dir="ltr" data-testid={`question-text-${question.id}`}>{question.questionText}</p>
+                            <div className="mt-3">
+                              <TestQuestionInput question={question} value={testAnswers[question.id]} onChange={(val) => setTestAnswers(prev => ({ ...prev, [question.id]: val }))} shuffleAnswers={testDialog.test?.shuffleAnswers || false} shuffleSeed={shuffleSeed + currentQuestionIdx} seededRandom={seededRandom} />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex gap-3 pt-4 border-t">
+                          {currentQuestionIdx > 0 && (
+                            <button className="btn-3d-outline flex-1" onClick={() => { setCurrentQuestionIdx(prev => prev - 1); }} data-testid="button-prev-question">Oldingi</button>
+                          )}
+                          {currentQuestionIdx < shuffledTestQuestions.length - 1 ? (
+                            <button className="btn-3d-primary flex-1" onClick={() => {
+                              const nextIdx = currentQuestionIdx + 1;
+                              setCurrentQuestionIdx(nextIdx);
+                              const nextQ = shuffledTestQuestions[nextIdx];
+                              const tl = nextQ.timeLimit || testTimerValue || 60;
+                              startQuestionTimer(tl);
+                            }} data-testid="button-next-question">Keyingi</button>
+                          ) : (
+                            <button className="btn-3d-primary flex-1" onClick={() => submitTestMutation.mutate()} disabled={submitTestMutation.isPending} data-testid="button-submit-test">
+                              {submitTestMutation.isPending ? "Topshirilmoqda..." : "Topshirish"}
+                            </button>
+                          )}
                         </div>
                       </div>
+                    );
+                  })()}
+                </div>
+              ) : testTimerMode === 'sections' && testStarted ? (
+                <div className="flex-1 overflow-hidden flex flex-col">
+                  {(() => {
+                    const currentSection = testSections[currentSectionIdx];
+                    if (!currentSection) return null;
+                    const sectionQuestions = shuffledTestQuestions.filter((q: any) => q.sectionId === currentSection.id);
+                    const unassigned = currentSectionIdx === 0 ? shuffledTestQuestions.filter((q: any) => !q.sectionId) : [];
+                    const displayQuestions = [...sectionQuestions, ...unassigned];
+                    return (
+                      <>
+                        {currentSection.readingPassage && (
+                          <div className="shrink-0 max-h-[35vh] overflow-y-auto p-4 bg-muted/40 border-b rounded-t-lg text-sm leading-relaxed" data-testid="reading-passage">
+                            <div className="flex items-center gap-2 mb-2">
+                              <BookOpen className="w-4 h-4 text-primary" />
+                              <span className="font-semibold text-primary text-xs">Reading Passage</span>
+                            </div>
+                            <div className="whitespace-pre-wrap">{currentSection.readingPassage}</div>
+                          </div>
+                        )}
+                        <div className="flex-1 overflow-y-auto space-y-4 p-2">
+                          {displayQuestions.map((question: any, qIdx: number) => {
+                            const hasArabic = isArabic(question.questionText);
+                            const globalIdx = shuffledTestQuestions.findIndex((q: any) => q.id === question.id);
+                            return (
+                              <div key={question.id} className="space-y-3">
+                                <div className="flex items-start gap-3">
+                                  <span className="question-number-badge shrink-0 w-8 h-8 rounded-full bg-primary/15 text-primary text-sm font-bold flex items-center justify-center">{globalIdx + 1}</span>
+                                  <div className="flex-1">
+                                    <p className={`font-semibold test-question-font ${hasArabic ? 'arabic-text' : ''}`} dir="ltr" data-testid={`question-text-${question.id}`}>{question.questionText}</p>
+                                    <div className="mt-3">
+                                      <TestQuestionInput question={question} value={testAnswers[question.id]} onChange={(val) => setTestAnswers(prev => ({ ...prev, [question.id]: val }))} shuffleAnswers={testDialog.test?.shuffleAnswers || false} shuffleSeed={shuffleSeed + globalIdx} seededRandom={seededRandom} />
+                                    </div>
+                                  </div>
+                                </div>
+                                {qIdx < displayQuestions.length - 1 && <hr className="border-border/50" />}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="shrink-0 flex gap-2 pt-3 border-t">
+                          {currentSectionIdx > 0 && (
+                            <button className="btn-3d-outline flex-1" onClick={() => {
+                              const prevIdx = currentSectionIdx - 1;
+                              setCurrentSectionIdx(prevIdx);
+                              const prevSec = testSections[prevIdx];
+                              if (prevSec.timerType === 'total') startSectionTimer(prevSec.timerValue);
+                            }}>Oldingi bo'lim</button>
+                          )}
+                          {currentSectionIdx < testSections.length - 1 ? (
+                            <button className="btn-3d-primary flex-1" onClick={() => {
+                              const nextIdx = currentSectionIdx + 1;
+                              setCurrentSectionIdx(nextIdx);
+                              const nextSec = testSections[nextIdx];
+                              if (nextSec.timerType === 'total') {
+                                startSectionTimer(nextSec.timerValue);
+                              } else {
+                                const nextSecQ = shuffledTestQuestions.filter((q: any) => q.sectionId === nextSec.id);
+                                if (nextSecQ.length > 0) startQuestionTimer(nextSecQ[0].timeLimit || nextSec.timerValue || 60);
+                              }
+                            }}>Keyingi bo'lim</button>
+                          ) : (
+                            <button className="btn-3d-primary flex-1" onClick={() => submitTestMutation.mutate()} disabled={submitTestMutation.isPending} data-testid="button-submit-test">
+                              {submitTestMutation.isPending ? "Topshirilmoqda..." : "Topshirish"}
+                            </button>
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              ) : (
+                <div className="flex-1 overflow-y-auto space-y-6 py-2">
+                  {shuffledTestQuestions.map((question: any, qIdx: number) => {
+                    const hasArabic = isArabic(question.questionText);
+                    return (
+                      <div key={question.id} className="space-y-3">
+                        <div className="flex items-start gap-3">
+                          <span className="question-number-badge shrink-0 w-8 h-8 rounded-full bg-primary/15 text-primary text-sm font-bold flex items-center justify-center">{qIdx + 1}</span>
+                          <div className="flex-1">
+                            <p className={`font-semibold test-question-font ${hasArabic ? 'arabic-text' : ''}`} dir="ltr" data-testid={`question-text-${question.id}`}>{question.questionText}</p>
+                            <div className="mt-3">
+                              <TestQuestionInput question={question} value={testAnswers[question.id]} onChange={(val) => setTestAnswers(prev => ({ ...prev, [question.id]: val }))} shuffleAnswers={testDialog.test?.shuffleAnswers || false} shuffleSeed={shuffleSeed + qIdx} seededRandom={seededRandom} />
+                            </div>
+                          </div>
+                        </div>
+                        {qIdx < shuffledTestQuestions.length - 1 && <hr className="border-border/50" />}
+                      </div>
+                    );
+                  })}
+                  {shuffledTestQuestions.length > 0 && (
+                    <div className="flex gap-3 pt-4 border-t">
+                      <button className="btn-3d-outline flex-1" onClick={() => setTestDialog({ open: false, testId: null })}>Bekor qilish</button>
+                      <button className="btn-3d-primary flex-1" onClick={() => submitTestMutation.mutate()} disabled={submitTestMutation.isPending} data-testid="button-submit-test">
+                        {submitTestMutation.isPending ? "Topshirilmoqda..." : "Topshirish"}
+                      </button>
                     </div>
-                    {qIdx < shuffledTestQuestions.length - 1 && <hr className="border-border/50" />}
-                  </div>
-                  );
-                })
-              )}
-              {shuffledTestQuestions.length > 0 && (
-                <div className="flex gap-3 pt-4 border-t">
-                  <button className="btn-3d-outline flex-1" onClick={() => setTestDialog({ open: false, testId: null })}>
-                    Bekor qilish
-                  </button>
-                  <button
-                    className="btn-3d-primary flex-1"
-                    onClick={() => submitTestMutation.mutate()}
-                    disabled={submitTestMutation.isPending}
-                    data-testid="button-submit-test"
-                  >
-                    {submitTestMutation.isPending ? "Topshirilmoqda..." : "Topshirish"}
-                  </button>
+                  )}
                 </div>
               )}
-            </div>
+            </>
           )}
         </DialogContent>
       </Dialog>

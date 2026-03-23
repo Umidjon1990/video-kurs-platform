@@ -226,10 +226,16 @@ export default function HomePage() {
     enabled: !!selectedDemoLesson?.id,
   });
 
-  const { data: demoTestQuestions } = useQuery<any[]>({
+  const { data: demoTestQuestionsData } = useQuery<any>({
     queryKey: ["/api/public/tests", demoTestDialog.testId, "questions"],
     enabled: !!demoTestDialog.testId && demoTestDialog.open,
   });
+
+  const demoTestQuestions = useMemo(() => {
+    if (!demoTestQuestionsData) return undefined;
+    if (Array.isArray(demoTestQuestionsData)) return demoTestQuestionsData;
+    return demoTestQuestionsData.questions || [];
+  }, [demoTestQuestionsData]);
 
   const seededRandom = (seed: number, idx: number) => {
     let h = seed ^ (idx * 2654435761);
