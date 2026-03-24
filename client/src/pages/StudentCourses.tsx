@@ -207,6 +207,12 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
       if (status.scheduleReady) {
         return 'Dars ochildi! Avvalgi dars testini ishlang';
       }
+      if (status.unlockDate) {
+        const d = new Date(status.unlockDate);
+        const day = d.getDate().toString().padStart(2, '0');
+        const month = (d.getMonth() + 1).toString().padStart(2, '0');
+        return `${day}.${month} da ochiladi · Oldingi darsning testini topshiring!`;
+      }
       return 'Oldingi darsning testini topshiring!';
     }
     if (status.reason === 'schedule') {
@@ -214,8 +220,7 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
         const d = new Date(status.unlockDate);
         const day = d.getDate().toString().padStart(2, '0');
         const month = (d.getMonth() + 1).toString().padStart(2, '0');
-        const year = d.getFullYear();
-        return `${year}-${month}-${day} da ochiladi`;
+        return `${day}.${month} da ochiladi`;
       }
       return 'Hali ochilmagan';
     }
