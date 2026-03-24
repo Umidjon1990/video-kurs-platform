@@ -2036,6 +2036,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         moduleId: moduleId !== undefined ? (moduleId && moduleId.trim() !== '' ? moduleId : null) : undefined,
       };
       
+      console.log('[DEBUG] Lesson PATCH updateData keys:', Object.keys(updateData), 'requiresTestPass:', updateData.requiresTestPass);
+      
       const updatedLesson = await storage.updateLesson(lessonId, updateData);
       
       // Handle essay question update/create
