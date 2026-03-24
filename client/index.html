@@ -23,6 +23,23 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      document.documentElement.classList.add("dark");
+      document.body.style.backgroundColor = "#111827";
+      document.body.style.color = "#e5e7eb";
+      window.onerror = function(msg, src, line, col, err) {
+        var root = document.getElementById("root");
+        if (root && !root.hasChildNodes()) {
+          root.innerHTML = '<div style="padding:40px;text-align:center;font-family:sans-serif"><h2>Xatolik yuz berdi</h2><p style="color:#9ca3af">Sahifani qayta yuklang (Ctrl+Shift+R)</p><pre style="text-align:left;max-width:600px;margin:20px auto;padding:16px;background:#1f2937;border-radius:8px;overflow:auto;font-size:12px;color:#f87171">' + msg + '</pre><button onclick="location.reload(true)" style="padding:8px 24px;background:#3b82f6;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px">Qayta yuklash</button></div>';
+        }
+      };
+      window.addEventListener("unhandledrejection", function(e) {
+        var root = document.getElementById("root");
+        if (root && !root.hasChildNodes()) {
+          root.innerHTML = '<div style="padding:40px;text-align:center;font-family:sans-serif"><h2>Xatolik yuz berdi</h2><p style="color:#9ca3af">Sahifani qayta yuklang (Ctrl+Shift+R)</p><pre style="text-align:left;max-width:600px;margin:20px auto;padding:16px;background:#1f2937;border-radius:8px;overflow:auto;font-size:12px;color:#f87171">' + (e.reason || 'Unknown error') + '</pre><button onclick="location.reload(true)" style="padding:8px 24px;background:#3b82f6;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px">Qayta yuklash</button></div>';
+        }
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
