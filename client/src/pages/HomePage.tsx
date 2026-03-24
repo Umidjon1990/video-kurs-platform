@@ -888,24 +888,14 @@ export default function HomePage() {
                             <span className="hand-btn-hint" aria-hidden="true">👉</span><span className="ic"><Info className="w-4 h-4" /></span>
                             Kurs haqida
                           </button>
-                          <div className="grid grid-cols-2 gap-2">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); const b = e.currentTarget; doAnim(b, 'pop', 550); setTimeout(() => setSelectedCourseForLessons(course), 160); }}
-                              className="py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-blue-400 to-blue-600 shadow-[0_5px_0_0_#1e3a8a,0_7px_14px_rgba(30,58,138,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#1e3a8a] active:translate-y-[3px] transition-all duration-75 cursor-pointer flex items-center justify-center gap-1"
-                              data-testid={`button-view-lessons-${course.id}`}
-                            >
-                              <span className="ic"><Play className="w-3.5 h-3.5 fill-white" /></span>
-                              Darslar
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); doAnim(e.currentTarget, 'shoot', 500); window.open("https://t.me/zamonaviytalimuz", "_blank", "noopener,noreferrer"); }}
-                              className="py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-green-400 to-green-600 shadow-[0_5px_0_0_#166534,0_7px_14px_rgba(22,101,52,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#166534] active:translate-y-[3px] transition-all duration-75 cursor-pointer flex items-center justify-center gap-1"
-                              data-testid={`button-enroll-${course.id}`}
-                            >
-                              <span className="ic"><ArrowRight className="w-4 h-4" /></span>
-                              Yozilish
-                            </button>
-                          </div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); const b = e.currentTarget; doAnim(b, 'pop', 550); setTimeout(() => setSelectedCourseForLessons(course), 160); }}
+                            className="w-full py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-green-400 to-emerald-600 shadow-[0_5px_0_0_#166534,0_7px_14px_rgba(22,101,52,0.3)] hover:brightness-105 active:shadow-[0_2px_0_0_#166534] active:translate-y-[3px] transition-all duration-75 cursor-pointer flex items-center justify-center gap-1.5"
+                            data-testid={`button-view-lessons-${course.id}`}
+                          >
+                            <span className="ic"><Play className="w-3.5 h-3.5 fill-white" /></span>
+                            Bepul Darslarni Ko'rish
+                          </button>
                         </div>
                       </Card>
                     </div>
@@ -2073,22 +2063,24 @@ export default function HomePage() {
                   {/* Action buttons */}
                   <div className="flex gap-3 pt-1">
                     <Button
-                      variant="outline"
+                      variant={(dc as any).isFree ? "default" : "outline"}
                       className="flex-1"
                       onClick={() => { setDetailCourse(null); setSelectedCourseForLessons(dc); }}
                       data-testid={`button-detail-view-lessons-${dc.id}`}
                     >
                       <List className="w-4 h-4 mr-2" />
-                      Darslarni Ko'rish
+                      {(dc as any).isFree ? "Bepul Darslarni Ko'rish" : "Darslarni Ko'rish"}
                     </Button>
-                    <Button
-                      className="flex-1"
-                      onClick={() => window.open("https://t.me/zamonaviytalimuz", "_blank", "noopener,noreferrer")}
-                      data-testid={`button-detail-enroll-${dc.id}`}
-                    >
-                      <Send className="w-4 h-4 mr-2" />
-                      Yozilish
-                    </Button>
+                    {!(dc as any).isFree && (
+                      <Button
+                        className="flex-1"
+                        onClick={() => window.open("https://t.me/zamonaviytalimuz", "_blank", "noopener,noreferrer")}
+                        data-testid={`button-detail-enroll-${dc.id}`}
+                      >
+                        <Send className="w-4 h-4 mr-2" />
+                        Yozilish
+                      </Button>
+                    )}
                   </div>
 
                   {/* Promo video button */}
