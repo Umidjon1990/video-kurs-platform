@@ -222,14 +222,25 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
     [tests, activeLessonId]
   );
 
-  const { data: testQuestions } = useQuery<any[]>({
+  const { data: testQuestionsData } = useQuery<any>({
     queryKey: ["/api/tests", activeTestId, "questions"],
     queryFn: () => fetch(`/api/tests/${activeTestId}/questions`, { credentials: 'include' }).then(r => r.json()),
     enabled: !!activeTestId,
   });
 
+  const testQuestions = useMemo(() => {
+    if (!testQuestionsData) return [];
+    if (Array.isArray(testQuestionsData)) return testQuestionsData;
+    if (Array.isArray(testQuestionsData.questions)) return testQuestionsData.questions;
+    return [];
+  }, [testQuestionsData]);
+
+  const testTimerMode = testQuestionsData?.timerMode || 'none';
+  const testTimerValue = testQuestionsData?.timerValue || 0;
+  const testSections = testQuestionsData?.sections || [];
+
   const shuffledQuestions = useMemo(() => {
-    if (!testQuestions) return [];
+    if (!testQuestions || testQuestions.length === 0) return [];
     if (!activeTest?.shuffleQuestions) return testQuestions;
     const seed = shuffleSeed || 1;
     const arr = [...testQuestions];
