@@ -198,7 +198,7 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
   const getLockReason = (lessonId: string): string | null => {
     const status = lockedLessons[lessonId];
     if (!status || !status.locked) return null;
-    if (status.reason === 'test_gate') return 'Oldingi dars testidan o\'ting';
+    if (status.reason === 'test_gate') return 'Oldingi darsning testini topshiring!';
     if (status.reason === 'schedule') {
       if (status.unlockDate) {
         const d = new Date(status.unlockDate);
@@ -275,6 +275,11 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
       setTestResult(result);
       queryClient.invalidateQueries({ queryKey: ["/api/courses", state.courseId, "lesson-lock-status"] });
       queryClient.invalidateQueries({ queryKey: [`/api/courses/${state.courseId}/tests`] });
+      if (result.isPassed) {
+        toast({ title: "Tabriklaymiz!", description: "Testdan muvaffaqiyatli o'tdingiz! Keyingi dars ochildi." });
+      } else {
+        toast({ title: "Test topshirildi", description: `Natija: ${result.percentage || 0}%. O'tish uchun yetarli ball to'planmadi. Qayta urinib ko'ring.`, variant: "destructive" });
+      }
     } catch (err: any) {
       toast({ title: "Xatolik", description: err.message || "Test topshirishda xatolik", variant: "destructive" });
     } finally {
@@ -503,6 +508,31 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                 </Button>
               </div>
 
+              {/* Test gate warning banner — shows when current lesson has tests and next lesson is locked by test_gate */}
+              {(() => {
+                if (!currentLesson || isLessonLocked(currentLesson.id, currentLesson)) return null;
+                if (lessonTests.length === 0) return null;
+                const curIdx = sortedLessons.findIndex(l => l.id === currentLesson.id);
+                const hasTestGateLockedNext = sortedLessons.slice(curIdx + 1).some(nl => {
+                  const st = lockedLessons[nl.id];
+                  return st && st.locked && st.reason === 'test_gate';
+                });
+                if (!hasTestGateLockedNext) return null;
+                return (
+                  <div className="mx-3 mt-3 mb-1 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-3" data-testid="test-gate-warning">
+                    <div className="shrink-0 w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center mt-0.5">
+                      <AlertTriangle className="w-4 h-4 text-amber-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-amber-300">Avval testni ishlang!</p>
+                      <p className="text-xs text-amber-400/80 mt-0.5 leading-relaxed">
+                        Keyingi darsga o'tish uchun shu darsning testini muvaffaqiyatli topshirishingiz kerak. Pastdagi "Testlar" bo'limiga o'ting.
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* ── Lesson Tabs: Umumiy / Vazifalar / Testlar + Darslar (mobile) ── */}
               <div className="border-t border-white/8">
                 <Tabs defaultValue="umumiy" className="w-full">
@@ -715,8 +745,14 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                         return (
                           <button
                             key={lesson.id}
-                            onClick={() => { if (!locked) { setActiveLessonId(lesson.id); } }}
-                            disabled={locked}
+                            onClick={() => {
+                              if (locked) {
+                                const reason = getLockReason(lesson.id);
+                                toast({ title: "Dars qulflangan", description: reason || "Bu darsga hali kirish mumkin emas", variant: "destructive" });
+                              } else {
+                                setActiveLessonId(lesson.id);
+                              }
+                            }}
                             data-testid={`mobile-lesson-${lesson.id}`}
                             className={`w-full text-left px-4 py-2.5 flex items-start gap-3 transition-all duration-200 group
                               ${locked
@@ -783,8 +819,15 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                   return (
                     <button
                       key={lesson.id}
-                      onClick={() => { if (!locked) { setActiveLessonId(lesson.id); setMobileLessonsOpen(false); } }}
-                      disabled={locked}
+                      onClick={() => {
+                        if (locked) {
+                          const reason = getLockReason(lesson.id);
+                          toast({ title: "Dars qulflangan", description: reason || "Bu darsga hali kirish mumkin emas", variant: "destructive" });
+                        } else {
+                          setActiveLessonId(lesson.id);
+                          setMobileLessonsOpen(false);
+                        }
+                      }}
                       className={`w-full text-left px-4 py-3 flex items-start gap-3 transition-all duration-200 group
                         ${locked
                           ? 'opacity-60 cursor-not-allowed border-l-2 border-red-500/30'
