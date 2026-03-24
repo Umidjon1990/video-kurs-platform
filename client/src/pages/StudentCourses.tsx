@@ -273,7 +273,7 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
       const res = await apiRequest("POST", `/api/student/tests/${activeTestId}/submit`, { answers: testAnswers });
       const result = await res.json();
       setTestResult(result);
-      queryClient.invalidateQueries({ queryKey: [`/api/courses/${state.courseId}/lesson-lock-status`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/courses", state.courseId, "lesson-lock-status"] });
       queryClient.invalidateQueries({ queryKey: [`/api/courses/${state.courseId}/tests`] });
     } catch (err: any) {
       toast({ title: "Xatolik", description: err.message || "Test topshirishda xatolik", variant: "destructive" });
