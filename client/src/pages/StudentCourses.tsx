@@ -524,9 +524,9 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                       <AlertTriangle className="w-4 h-4 text-amber-400" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-amber-300">Avval testni ishlang!</p>
+                      <p className="text-sm font-semibold text-amber-300">Avval darsni ko'ring va testni ishlang!</p>
                       <p className="text-xs text-amber-400/80 mt-0.5 leading-relaxed">
-                        Keyingi darsga o'tish uchun shu darsning testini muvaffaqiyatli topshirishingiz kerak. Pastdagi "Testlar" bo'limiga o'ting.
+                        Keyingi darsga o'tish uchun avval shu darsni ko'ring va testni muvaffaqiyatli topshiring. Pastdagi "Testlar" bo'limiga o'ting.
                       </p>
                     </div>
                   </div>
