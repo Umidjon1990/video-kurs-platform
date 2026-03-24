@@ -270,7 +270,7 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
     if (!activeTestId) return;
     setIsSubmittingTest(true);
     try {
-      const res = await apiRequest("POST", `/api/tests/${activeTestId}/submit`, { answers: testAnswers });
+      const res = await apiRequest("POST", `/api/student/tests/${activeTestId}/submit`, { answers: testAnswers });
       const result = await res.json();
       setTestResult(result);
     } catch (err: any) {
@@ -861,7 +861,7 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                       {testResult.isPassed ? <CheckCircle2 className="w-10 h-10 text-green-400" /> : <XCircle className="w-10 h-10 text-red-400" />}
                     </div>
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-white">{testResult.totalPoints ? ((testResult.score / testResult.totalPoints) * 100).toFixed(0) : 0}%</p>
+                      <p className="text-2xl font-bold text-white">{testResult.percentage != null ? Math.round(testResult.percentage) : (testResult.totalPoints ? ((testResult.score / testResult.totalPoints) * 100).toFixed(0) : 0)}%</p>
                       <p className={`text-sm font-medium mt-1 ${testResult.isPassed ? 'text-green-400' : 'text-red-400'}`}>
                         {testResult.isPassed ? "Tabriklaymiz! Test o'tildi" : "Test o'tilmadi"}
                       </p>
