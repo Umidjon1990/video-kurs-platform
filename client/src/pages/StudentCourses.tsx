@@ -182,7 +182,7 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
     },
   });
 
-  const { data: lockStatusData } = useQuery<{ settings: any; lockedLessons: Record<string, { locked: boolean; unlockDate?: string; reason: string }> }>({
+  const { data: lockStatusData } = useQuery<{ settings: any; lockedLessons: Record<string, { locked: boolean; unlockDate?: string; reason: string; scheduleReady?: boolean }> }>({
     queryKey: ["/api/courses", state.courseId, "lesson-lock-status"],
     queryFn: () => fetch(`/api/courses/${state.courseId}/lesson-lock-status`, { credentials: 'include' }).then(r => r.json()),
   });
@@ -195,10 +195,20 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
     return status.locked === true;
   };
 
+  const isTestGateScheduleReady = (lessonId: string): boolean => {
+    const status = lockedLessons[lessonId];
+    return !!(status && status.locked && status.reason === 'test_gate' && status.scheduleReady);
+  };
+
   const getLockReason = (lessonId: string): string | null => {
     const status = lockedLessons[lessonId];
     if (!status || !status.locked) return null;
-    if (status.reason === 'test_gate') return 'Oldingi darsning testini topshiring!';
+    if (status.reason === 'test_gate') {
+      if (status.scheduleReady) {
+        return 'Dars ochildi! Avvalgi dars testini ishlang';
+      }
+      return 'Oldingi darsning testini topshiring!';
+    }
     if (status.reason === 'schedule') {
       if (status.unlockDate) {
         const d = new Date(status.unlockDate);
@@ -756,16 +766,24 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                             data-testid={`mobile-lesson-${lesson.id}`}
                             className={`w-full text-left px-4 py-2.5 flex items-start gap-3 transition-all duration-200 group
                               ${locked
-                                ? 'opacity-60 cursor-not-allowed border-l-2 border-red-500/30'
+                                ? isTestGateScheduleReady(lesson.id)
+                                  ? 'opacity-80 cursor-not-allowed border-l-2 border-amber-500/40'
+                                  : 'opacity-60 cursor-not-allowed border-l-2 border-red-500/30'
                                 : isActive
                                   ? 'bg-primary/15 border-l-2 border-primary'
                                   : 'hover:bg-white/5 border-l-2 border-transparent'
                               }`}
                           >
                             <div className={`shrink-0 w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold mt-0.5
-                              ${locked ? 'bg-red-500/15 text-red-400' : isActive ? 'bg-primary text-white' : 'bg-white/8 text-slate-500 group-hover:bg-white/12'}`}>
+                              ${locked
+                                ? isTestGateScheduleReady(lesson.id)
+                                  ? 'bg-amber-500/15 text-amber-400'
+                                  : 'bg-red-500/15 text-red-400'
+                                : isActive ? 'bg-primary text-white' : 'bg-white/8 text-slate-500 group-hover:bg-white/12'}`}>
                               {locked ? (
-                                <Lock className="w-3 h-3" />
+                                isTestGateScheduleReady(lesson.id)
+                                  ? <AlertTriangle className="w-3 h-3" />
+                                  : <Lock className="w-3 h-3" />
                               ) : lesson.isDemo ? (
                                 <Play className="w-3 h-3" />
                               ) : (
@@ -782,8 +800,8 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                                 {lesson.title}
                               </p>
                               {locked && getLockReason(lesson.id) && (
-                                <p className="text-[11px] text-red-400 font-semibold mt-1 flex items-center gap-1">
-                                  <span className="inline-block w-1 h-1 rounded-full bg-red-400 shrink-0" />
+                                <p className={`text-[11px] font-semibold mt-1 flex items-center gap-1 ${isTestGateScheduleReady(lesson.id) ? 'text-amber-400' : 'text-red-400'}`}>
+                                  <span className={`inline-block w-1 h-1 rounded-full shrink-0 ${isTestGateScheduleReady(lesson.id) ? 'bg-amber-400' : 'bg-red-400'}`} />
                                   {getLockReason(lesson.id)}
                                 </p>
                               )}
@@ -830,16 +848,24 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                       }}
                       className={`w-full text-left px-4 py-3 flex items-start gap-3 transition-all duration-200 group
                         ${locked
-                          ? 'opacity-60 cursor-not-allowed border-l-2 border-red-500/30'
+                          ? isTestGateScheduleReady(lesson.id)
+                            ? 'opacity-80 cursor-not-allowed border-l-2 border-amber-500/40'
+                            : 'opacity-60 cursor-not-allowed border-l-2 border-red-500/30'
                           : isActive
                             ? 'bg-primary/15 border-l-2 border-primary'
                             : 'hover:bg-white/5 border-l-2 border-transparent'
                         }`}
                     >
                       <div className={`shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold mt-0.5
-                        ${locked ? 'bg-red-500/15 text-red-400' : isActive ? 'bg-primary text-white' : 'bg-white/8 text-slate-500 group-hover:bg-white/12'}`}>
+                        ${locked
+                          ? isTestGateScheduleReady(lesson.id)
+                            ? 'bg-amber-500/15 text-amber-400'
+                            : 'bg-red-500/15 text-red-400'
+                          : isActive ? 'bg-primary text-white' : 'bg-white/8 text-slate-500 group-hover:bg-white/12'}`}>
                         {locked ? (
-                          <Lock className="w-3.5 h-3.5" />
+                          isTestGateScheduleReady(lesson.id)
+                            ? <AlertTriangle className="w-3.5 h-3.5" />
+                            : <Lock className="w-3.5 h-3.5" />
                         ) : lesson.isDemo ? (
                           <Play className="w-3 h-3" />
                         ) : (
@@ -859,8 +885,8 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                           <span className="inline-block mt-0.5 text-[10px] text-orange-400 font-semibold bg-orange-400/10 px-1.5 py-0.5 rounded">Demo</span>
                         )}
                         {locked && getLockReason(lesson.id) && (
-                          <p className="text-[11px] text-red-400 font-semibold mt-1 flex items-center gap-1">
-                            <span className="inline-block w-1 h-1 rounded-full bg-red-400 shrink-0" />
+                          <p className={`text-[11px] font-semibold mt-1 flex items-center gap-1 ${isTestGateScheduleReady(lesson.id) ? 'text-amber-400' : 'text-red-400'}`}>
+                            <span className={`inline-block w-1 h-1 rounded-full shrink-0 ${isTestGateScheduleReady(lesson.id) ? 'bg-amber-400' : 'bg-red-400'}`} />
                             {getLockReason(lesson.id)}
                           </p>
                         )}

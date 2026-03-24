@@ -7673,7 +7673,11 @@ So'zlar soni: ${submission.wordCount}`;
           }
         }
 
-        lockedLessons[lesson.id] = { locked, unlockDate, reason };
+        let scheduleReady = true;
+        if (unlockDate && now < new Date(unlockDate)) {
+          scheduleReady = false;
+        }
+        lockedLessons[lesson.id] = { locked, unlockDate, reason, scheduleReady };
       }
 
       res.json({ settings, lockedLessons });
