@@ -149,10 +149,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!test || !test.lessonId) return res.status(404).json({ message: "Test topilmadi" });
       const lesson = await storage.getLesson(test.lessonId);
       if (!lesson || !lesson.isDemo) return res.status(403).json({ message: "Bu test demo emas" });
-      const [questionsData, sections] = await Promise.all([
-        storage.getQuestionsByTest(testId),
-        storage.getTestSectionsByTest(testId),
-      ]);
+      const questionsData = await storage.getQuestionsByTest(testId);
+      let sections: any[] = [];
+      try {
+        sections = await storage.getTestSectionsByTest(testId);
+      } catch (e) {
+        console.log('[WARN] Public test sections fetch error:', (e as Error).message);
+      }
       const enriched = await Promise.all(questionsData.map(async (q: any) => {
         let correctCount = 1;
         if (q.type === 'multiple_choice') {
@@ -4178,11 +4181,16 @@ So'zlar soni: ${submission.wordCount}`;
   app.get('/api/tests/:testId/questions', isAuthenticated, async (req, res) => {
     try {
       const { testId } = req.params;
-      const [questionsData, sections, test] = await Promise.all([
+      const [questionsData, test] = await Promise.all([
         storage.getQuestionsByTest(testId),
-        storage.getTestSectionsByTest(testId),
         storage.getTest(testId),
       ]);
+      let sections: any[] = [];
+      try {
+        sections = await storage.getTestSectionsByTest(testId);
+      } catch (e) {
+        console.log('[WARN] Could not fetch test sections:', (e as Error).message);
+      }
       
       const enriched = await Promise.all(questionsData.map(async (q: any) => {
         let correctCount = 1;

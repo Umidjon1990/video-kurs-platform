@@ -36,6 +36,7 @@ import CuratorRegister from "@/pages/CuratorRegister";
 import AnnouncementsPage from "@/pages/AnnouncementsPage";
 import NotFound from "@/pages/not-found";
 import { UrgentBanner } from "@/components/UrgentBanner";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const PUBLIC_PATHS = ["/explore", "/login", "/register", "/checkout", "/curator/register"];
 
@@ -85,13 +86,15 @@ function Router() {
   const isFullScreen = location.startsWith('/learn/') || location.startsWith('/live/');
   if (isFullScreen) {
     return (
-      <div className="h-full w-full flex flex-col overflow-hidden">
-        <Switch>
-          <Route path="/learn/:courseId" component={LearningPage} />
-          <Route path="/live/:roomId" component={LiveRoom} />
-          <Route component={NotFound} />
-        </Switch>
-      </div>
+      <ErrorBoundary key={location} fallbackMessage="Sahifani yuklashda xatolik yuz berdi">
+        <div className="h-full w-full flex flex-col overflow-hidden">
+          <Switch>
+            <Route path="/learn/:courseId" component={LearningPage} />
+            <Route path="/live/:roomId" component={LiveRoom} />
+            <Route component={NotFound} />
+          </Switch>
+        </div>
+      </ErrorBoundary>
     );
   }
 

@@ -138,9 +138,10 @@ export default function LearningPage() {
     enabled: isAuthenticated,
   });
 
-  const { data: testQuestionsData } = useQuery<any>({
+  const { data: testQuestionsData, isError: testQuestionsError, isLoading: testQuestionsLoading } = useQuery<any>({
     queryKey: ["/api/tests", testDialog.testId, "questions"],
     enabled: !!testDialog.testId && testDialog.open,
+    retry: 1,
   });
 
   const testQuestions = useMemo(() => {
@@ -1091,7 +1092,15 @@ export default function LearningPage() {
             )}
           </DialogHeader>
 
-          {testResult ? (
+          {testQuestionsError ? (
+            <div className="space-y-4 py-6 text-center">
+              <XCircle className="w-12 h-12 text-destructive mx-auto" />
+              <p className="text-muted-foreground">Test savollarini yuklashda xatolik yuz berdi</p>
+              <Button variant="outline" onClick={() => { setTestDialog({ open: false, testId: null }); }} data-testid="button-close-test-error">Yopish</Button>
+            </div>
+          ) : testQuestionsLoading ? (
+            <div className="flex justify-center py-8"><div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" /></div>
+          ) : testResult ? (
             <div className="space-y-6 py-4 overflow-y-auto">
               <div className={`p-6 rounded-xl text-center ${testResult.isPassed ? 'bg-green-500/10 border-2 border-green-500/30' : 'bg-destructive/10 border-2 border-destructive/30'}`}>
                 <div className="text-4xl mb-2">{testResult.isPassed ? <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto" /> : <XCircle className="w-12 h-12 text-destructive mx-auto" />}</div>
