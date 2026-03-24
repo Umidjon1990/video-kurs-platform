@@ -7604,9 +7604,16 @@ So'zlar soni: ${submission.wordCount}`;
           if ((prevLesson as any).requiresTestPass) {
             const gateTestId = testByLesson[prevLesson.id];
             if (gateTestId) {
-              const passed = attempts.some(
-                a => a.testId === gateTestId && (a.score ?? 0) >= (settings.minPassScore ?? 80)
-              );
+              const passed = attempts.some(a => {
+                if (a.testId !== gateTestId) return false;
+                if (a.isPassed) return true;
+                const total = a.totalPoints ?? 0;
+                if (total > 0) {
+                  const pct = ((a.score ?? 0) / total) * 100;
+                  return pct >= (settings.minPassScore ?? 80);
+                }
+                return false;
+              });
               if (!passed) {
                 locked = true;
                 reason = 'test_gate';
@@ -7631,9 +7638,16 @@ So'zlar soni: ${submission.wordCount}`;
               }
               const gateTestId = testByLesson[gateLesson.id];
               if (gateTestId) {
-                const passed = attempts.some(
-                  a => a.testId === gateTestId && (a.score ?? 0) >= (settings.minPassScore ?? 80)
-                );
+                const passed = attempts.some(a => {
+                  if (a.testId !== gateTestId) return false;
+                  if (a.isPassed) return true;
+                  const total = a.totalPoints ?? 0;
+                  if (total > 0) {
+                    const pct = ((a.score ?? 0) / total) * 100;
+                    return pct >= (settings.minPassScore ?? 80);
+                  }
+                  return false;
+                });
                 if (!passed) {
                   locked = true;
                   reason = 'test_gate';
