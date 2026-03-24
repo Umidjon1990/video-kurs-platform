@@ -7569,6 +7569,24 @@ So'zlar soni: ${submission.wordCount}`;
         return idx;
       }
 
+      // Helper to check if a test has been passed
+      const isTestPassed = (gateTestId: string): boolean => {
+        return attempts.some(a => {
+          if (a.testId !== gateTestId) return false;
+          if (a.isPassed) return true;
+          const total = a.totalPoints ?? 0;
+          if (total > 0) {
+            const pct = ((a.score ?? 0) / total) * 100;
+            return pct >= (settings.minPassScore ?? 80);
+          }
+          return false;
+        });
+      };
+
+      // Track cascading test gate block: if any previous lesson's test gate
+      // hasn't been passed, ALL subsequent lessons remain locked
+      let cascadeTestGateBlocked = false;
+
       for (let i = 0; i < sorted.length; i++) {
         const lesson = sorted[i];
         let locked = false;
@@ -7593,30 +7611,28 @@ So'zlar soni: ${submission.wordCount}`;
           if (now < targetDate) { locked = true; reason = 'schedule'; }
         }
 
+        // Cascading test gate: if a previous lesson's test gate was not passed,
+        // all subsequent lessons remain locked until that test is passed
+        if (i > 0 && cascadeTestGateBlocked) {
+          locked = true;
+          reason = 'test_gate';
+        }
+
         // Test gate check (stacks with schedule)
         // Two modes:
         // 1. Course/group-level testGateEnabled: checks at module boundaries
         // 2. Per-lesson requiresTestPass: checks if previous lesson has mandatory test
-        if (i > 0 && !locked) {
+        if (i > 0 && !cascadeTestGateBlocked) {
           const prevLesson = sorted[i - 1];
 
           // Per-lesson test gate: if previous lesson has requiresTestPass=true
           if ((prevLesson as any).requiresTestPass) {
             const gateTestId = testByLesson[prevLesson.id];
             if (gateTestId) {
-              const passed = attempts.some(a => {
-                if (a.testId !== gateTestId) return false;
-                if (a.isPassed) return true;
-                const total = a.totalPoints ?? 0;
-                if (total > 0) {
-                  const pct = ((a.score ?? 0) / total) * 100;
-                  return pct >= (settings.minPassScore ?? 80);
-                }
-                return false;
-              });
-              if (!passed) {
+              if (!isTestPassed(gateTestId)) {
                 locked = true;
                 reason = 'test_gate';
+                cascadeTestGateBlocked = true;
               }
             }
           }
@@ -7638,22 +7654,22 @@ So'zlar soni: ${submission.wordCount}`;
               }
               const gateTestId = testByLesson[gateLesson.id];
               if (gateTestId) {
-                const passed = attempts.some(a => {
-                  if (a.testId !== gateTestId) return false;
-                  if (a.isPassed) return true;
-                  const total = a.totalPoints ?? 0;
-                  if (total > 0) {
-                    const pct = ((a.score ?? 0) / total) * 100;
-                    return pct >= (settings.minPassScore ?? 80);
-                  }
-                  return false;
-                });
-                if (!passed) {
+                if (!isTestPassed(gateTestId)) {
                   locked = true;
                   reason = 'test_gate';
+                  cascadeTestGateBlocked = true;
                 }
               }
             }
+          }
+        }
+
+        // Check if current lesson has a test gate that could block subsequent lessons
+        // Reset cascade if this lesson's test has been passed
+        if ((lesson as any).requiresTestPass) {
+          const currentTestId = testByLesson[lesson.id];
+          if (currentTestId && !isTestPassed(currentTestId)) {
+            cascadeTestGateBlocked = true;
           }
         }
 
