@@ -103,6 +103,8 @@ export default function InstructorDashboard() {
     unlockIntervalDays: "1",
     unlockWeekDays: [] as string[],
     unlockStartDate: "",
+    testGateEnabled: false,
+    minPassScore: "80",
   });
 
   const [lessonForm, setLessonForm] = useState({
@@ -112,6 +114,7 @@ export default function InstructorDashboard() {
     pdfUrl: "",
     duration: "",
     isDemo: false,
+    requiresTestPass: false,
     moduleId: "", // Course module ID (optional)
     // Insho (essay) maydonlari
     essayQuestion: "",
@@ -587,6 +590,8 @@ export default function InstructorDashboard() {
         unlockIntervalDays: parseInt(courseForm.unlockIntervalDays) || 1,
         unlockWeekDays: courseForm.unlockWeekDays,
         unlockStartDate: courseForm.unlockStartDate ? new Date(courseForm.unlockStartDate).toISOString() : null,
+        testGateEnabled: courseForm.testGateEnabled,
+        minPassScore: parseInt(courseForm.minPassScore) || 80,
       };
       
       // Only include pricing data for paid courses
@@ -620,7 +625,7 @@ export default function InstructorDashboard() {
         description: editingCourse ? "Kurs yangilandi" : "Kurs yaratildi" 
       });
       setIsCreateCourseOpen(false);
-      setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "", promoVideoUrl: "", isFree: false, subscriptionDays: "30", levelId: "", selectedResourceTypes: [], unlockType: "free", unlockIntervalDays: "1", unlockWeekDays: [], unlockStartDate: "" });
+      setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "", promoVideoUrl: "", isFree: false, subscriptionDays: "30", levelId: "", selectedResourceTypes: [], unlockType: "free", unlockIntervalDays: "1", unlockWeekDays: [], unlockStartDate: "", testGateEnabled: false, minPassScore: "80" });
       setEditingCourse(null);
     },
     onError: (error: Error) => {
@@ -680,7 +685,7 @@ export default function InstructorDashboard() {
         description: editingLesson ? "Dars yangilandi" : "Dars qo'shildi" 
       });
       setIsAddLessonOpen(false);
-      setLessonForm({ title: "", videoUrl: "", description: "", pdfUrl: "", duration: "", isDemo: false, moduleId: "", essayQuestion: "", essayMinWords: "", essayMaxWords: "", essayInstructions: "" });
+      setLessonForm({ title: "", videoUrl: "", description: "", pdfUrl: "", duration: "", isDemo: false, requiresTestPass: false, moduleId: "", essayQuestion: "", essayMinWords: "", essayMaxWords: "", essayInstructions: "" });
       setEditingLesson(null);
     },
     onError: (error: Error) => {
@@ -1725,6 +1730,8 @@ export default function InstructorDashboard() {
                               unlockStartDate: (course as any).unlockStartDate
                                 ? new Date((course as any).unlockStartDate).toISOString().slice(0, 16)
                                 : "",
+                              testGateEnabled: (course as any).testGateEnabled || false,
+                              minPassScore: ((course as any).minPassScore || 80).toString(),
                             });
                             setEditingCourse(course);
                             setIsCreateCourseOpen(true);
@@ -2109,6 +2116,7 @@ export default function InstructorDashboard() {
                                     pdfUrl: (lesson as any).pdfUrl || "",
                                     duration: lesson.duration?.toString() || "",
                                     isDemo: lesson.isDemo || false,
+                                    requiresTestPass: (lesson as any).requiresTestPass || false,
                                     moduleId: (lesson as any).moduleId || "",
                                     ...essayData,
                                   });
@@ -2941,6 +2949,39 @@ export default function InstructorDashboard() {
                   </p>
                 </div>
               )}
+
+              <div className="space-y-3 pt-3 border-t">
+                <Label className="text-sm font-semibold flex items-center gap-2">
+                  <ClipboardCheck className="w-4 h-4" />
+                  Majburiy test sozlamalari
+                </Label>
+                <div className="flex items-center gap-3">
+                  <Switch
+                    checked={courseForm.testGateEnabled}
+                    onCheckedChange={(checked) => setCourseForm({ ...courseForm, testGateEnabled: checked })}
+                    data-testid="switch-test-gate"
+                  />
+                  <div>
+                    <Label className="text-sm">Modul chegarasida testni majburiy qilish</Label>
+                    <p className="text-xs text-muted-foreground">Yoqilsa, o'quvchi oldingi modul/dars testini yechmasa keyingisiga o'ta olmaydi</p>
+                  </div>
+                </div>
+                {courseForm.testGateEnabled && (
+                  <div className="pl-6">
+                    <Label className="text-xs">O'tish foizi (%)</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={courseForm.minPassScore}
+                      onChange={(e) => setCourseForm({ ...courseForm, minPassScore: e.target.value })}
+                      className="w-24"
+                      data-testid="input-min-pass-score"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">O'quvchi kamida shu foizni to'plashi kerak</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           <DialogFooter className="flex-shrink-0">
@@ -2949,7 +2990,7 @@ export default function InstructorDashboard() {
               onClick={() => {
                 setIsCreateCourseOpen(false);
                 setEditingCourse(null);
-                setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "", promoVideoUrl: "", isFree: false, subscriptionDays: "30", levelId: "", selectedResourceTypes: [], unlockType: "free", unlockIntervalDays: "1", unlockWeekDays: [], unlockStartDate: "" });
+                setCourseForm({ title: "", description: "", author: "", category: "", price: "", discountPercentage: "0", thumbnailUrl: "", imageUrl: "", promoVideoUrl: "", isFree: false, subscriptionDays: "30", levelId: "", selectedResourceTypes: [], unlockType: "free", unlockIntervalDays: "1", unlockWeekDays: [], unlockStartDate: "", testGateEnabled: false, minPassScore: "80" });
               }}
               data-testid="button-cancel-create-course"
             >
@@ -2973,7 +3014,7 @@ export default function InstructorDashboard() {
         setIsAddLessonOpen(open);
         if (!open) {
           setEditingLesson(null);
-          setLessonForm({ title: "", videoUrl: "", description: "", pdfUrl: "", duration: "", isDemo: false, moduleId: "", essayQuestion: "", essayMinWords: "", essayMaxWords: "", essayInstructions: "" });
+          setLessonForm({ title: "", videoUrl: "", description: "", pdfUrl: "", duration: "", isDemo: false, requiresTestPass: false, moduleId: "", essayQuestion: "", essayMinWords: "", essayMaxWords: "", essayInstructions: "" });
         }
       }}>
         <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col" data-testid="dialog-add-lesson">
@@ -3220,6 +3261,17 @@ Bunny.net: https://iframe.mediadelivery.net/embed/...'
               />
               <Label htmlFor="is-demo" className="cursor-pointer">
                 Bu sinov darsi (bepul ko'rish mumkin)
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="requires-test"
+                checked={lessonForm.requiresTestPass}
+                onCheckedChange={(checked) => setLessonForm({ ...lessonForm, requiresTestPass: checked === true })}
+                data-testid="checkbox-requires-test"
+              />
+              <Label htmlFor="requires-test" className="cursor-pointer">
+                Test majburiy (bu dars testini yechmasdan keyingisiga o'tib bo'lmaydi)
               </Label>
             </div>
             

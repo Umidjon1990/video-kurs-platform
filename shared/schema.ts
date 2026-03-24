@@ -136,6 +136,8 @@ export const courses = pgTable("courses", {
   unlockIntervalDays: integer("unlock_interval_days").default(1),
   unlockWeekDays: jsonb("unlock_week_days").$type<string[]>().default([]),
   unlockStartDate: timestamp("unlock_start_date"),
+  testGateEnabled: boolean("test_gate_enabled").default(false),
+  minPassScore: integer("min_pass_score").default(80),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -246,6 +248,7 @@ export const lessons = pgTable("lessons", {
   order: integer("order").notNull(),
   duration: integer("duration"), // in minutes
   isDemo: boolean("is_demo").default(false), // Bepul demo dars
+  requiresTestPass: boolean("requires_test_pass").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

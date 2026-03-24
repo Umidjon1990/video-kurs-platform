@@ -1665,6 +1665,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         subscriptionDays: isFree ? null : (subscriptionDays || 30),
         levelId: levelId || null,
         promoVideoUrl: promoVideoUrl || null,
+        testGateEnabled: req.body.testGateEnabled || false,
+        minPassScore: req.body.minPassScore || 80,
       });
       const course = await storage.createCourse(courseData);
       
@@ -1737,6 +1739,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         unlockIntervalDays: true,
         unlockWeekDays: true,
         unlockStartDate: true,
+        testGateEnabled: true,
+        minPassScore: true,
       }).partial();
       
       const updateData = editableFields.parse(req.body);
@@ -7391,23 +7395,46 @@ So'zlar soni: ${submission.wordCount}`;
         settings = await storage.getGroupCourseSettings(groupId, courseId);
       }
 
-      // Fallback: use course-level unlock settings
-      if (!settings || settings.unlockType === 'free') {
-        const course = await storage.getCourse(courseId);
-        if (course && course.unlockType && course.unlockType !== 'free') {
+      // Fallback: use course-level settings (including test gate)
+      const course = await storage.getCourse(courseId);
+      if (!settings && course) {
+        const hasSchedule = course.unlockType && course.unlockType !== 'free';
+        const hasTestGate = course.testGateEnabled;
+        if (hasSchedule || hasTestGate) {
           settings = {
-            unlockType: course.unlockType,
+            unlockType: course.unlockType || 'free',
             unlockIntervalDays: course.unlockIntervalDays ?? 1,
             unlockWeekDays: course.unlockWeekDays ?? [],
             unlockStartDate: course.unlockStartDate,
-            testGateEnabled: false,
-            minPassScore: 70,
+            testGateEnabled: course.testGateEnabled ?? false,
+            minPassScore: course.minPassScore ?? 80,
           };
         }
       }
 
-      if (!settings || settings.unlockType === 'free') {
-        return res.json({ settings: settings || null, lockedLessons: {} });
+      // Check if any lesson has requiresTestPass — if so, we need to process even without schedule
+      const courseLessons = await storage.getLessonsByCourse(courseId);
+      const hasPerLessonGate = courseLessons.some((l: any) => l.requiresTestPass);
+
+      if (!settings && hasPerLessonGate) {
+        settings = {
+          unlockType: 'free',
+          unlockIntervalDays: 1,
+          unlockWeekDays: [],
+          unlockStartDate: null,
+          testGateEnabled: false,
+          minPassScore: course?.minPassScore ?? 80,
+        };
+      }
+
+      if (!settings) {
+        return res.json({ settings: null, lockedLessons: {} });
+      }
+
+      const hasAnyGate = settings.testGateEnabled || hasPerLessonGate;
+      const onlyTestGate = settings.unlockType === 'free' && hasAnyGate;
+      if (!onlyTestGate && settings.unlockType === 'free') {
+        return res.json({ settings, lockedLessons: {} });
       }
 
       // Individual start date logic:
@@ -7434,8 +7461,7 @@ So'zlar soni: ${submission.wordCount}`;
         settings.unlockStartDate = new Date();
       }
 
-      // Get all lessons ordered
-      const courseLessons = await storage.getLessonsByCourse(courseId);
+      // Get all lessons ordered (reuse courseLessons from above)
       const sorted = [...courseLessons].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
       // Get student's test attempts
@@ -7556,35 +7582,50 @@ So'zlar soni: ${submission.wordCount}`;
         }
 
         // Test gate check (stacks with schedule)
-        // For module-based lessons: only check test gate when crossing module boundaries.
-        // Lessons within the same module should NOT block each other via test gate.
-        if (settings.testGateEnabled && i > 0 && !locked) {
-          const currentModuleId = lesson.moduleId;
+        // Two modes:
+        // 1. Course/group-level testGateEnabled: checks at module boundaries
+        // 2. Per-lesson requiresTestPass: checks if previous lesson has mandatory test
+        if (i > 0 && !locked) {
           const prevLesson = sorted[i - 1];
 
-          // Skip test gate if this lesson is in the same module as the previous lesson
-          const sameModule = currentModuleId && prevLesson.moduleId && currentModuleId === prevLesson.moduleId;
-
-          if (!sameModule) {
-            // Find the last lesson of the previous module/standalone to check its test
-            let gateLesson = prevLesson;
-            if (prevLesson.moduleId) {
-              // Find the last lesson in the previous module (check all lessons with that moduleId)
-              for (let k = i - 1; k >= 0; k--) {
-                if (sorted[k].moduleId === prevLesson.moduleId) {
-                  const tid = testByLesson[sorted[k].id];
-                  if (tid) { gateLesson = sorted[k]; break; }
-                }
-              }
-            }
-            const gateTestId = testByLesson[gateLesson.id];
+          // Per-lesson test gate: if previous lesson has requiresTestPass=true
+          if ((prevLesson as any).requiresTestPass) {
+            const gateTestId = testByLesson[prevLesson.id];
             if (gateTestId) {
               const passed = attempts.some(
-                a => a.testId === gateTestId && (a.score ?? 0) >= (settings.minPassScore ?? 70)
+                a => a.testId === gateTestId && (a.score ?? 0) >= (settings.minPassScore ?? 80)
               );
               if (!passed) {
                 locked = true;
                 reason = 'test_gate';
+              }
+            }
+          }
+
+          // Course/group-level test gate: checks at module boundaries
+          if (!locked && settings.testGateEnabled) {
+            const currentModuleId = lesson.moduleId;
+            const sameModule = currentModuleId && prevLesson.moduleId && currentModuleId === prevLesson.moduleId;
+
+            if (!sameModule) {
+              let gateLesson = prevLesson;
+              if (prevLesson.moduleId) {
+                for (let k = i - 1; k >= 0; k--) {
+                  if (sorted[k].moduleId === prevLesson.moduleId) {
+                    const tid = testByLesson[sorted[k].id];
+                    if (tid) { gateLesson = sorted[k]; break; }
+                  }
+                }
+              }
+              const gateTestId = testByLesson[gateLesson.id];
+              if (gateTestId) {
+                const passed = attempts.some(
+                  a => a.testId === gateTestId && (a.score ?? 0) >= (settings.minPassScore ?? 80)
+                );
+                if (!passed) {
+                  locked = true;
+                  reason = 'test_gate';
+                }
               }
             }
           }

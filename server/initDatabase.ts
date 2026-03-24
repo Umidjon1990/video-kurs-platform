@@ -2,11 +2,17 @@ import { db } from "./db";
 import { subscriptionPlans } from "@shared/schema";
 import { sql } from "drizzle-orm";
 
-/**
- * Ensures that the database has at least one subscription plan.
- * This is critical for the system to function, as course enrollments require a plan.
- * Runs automatically on server startup.
- */
+export async function runMigrations() {
+  try {
+    await db.execute(sql`ALTER TABLE courses ADD COLUMN IF NOT EXISTS test_gate_enabled BOOLEAN DEFAULT false`);
+    await db.execute(sql`ALTER TABLE courses ADD COLUMN IF NOT EXISTS min_pass_score INTEGER DEFAULT 80`);
+    await db.execute(sql`ALTER TABLE lessons ADD COLUMN IF NOT EXISTS requires_test_pass BOOLEAN DEFAULT false`);
+    console.log('[DB Init] ✓ Migrations applied');
+  } catch (error) {
+    console.error('[DB Init] Migration error:', error);
+  }
+}
+
 export async function ensureDefaultSubscriptionPlan() {
   try {
     console.log('[DB Init] Checking for subscription plans...');

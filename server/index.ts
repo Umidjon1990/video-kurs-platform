@@ -2,7 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startSubscriptionScheduler } from "./subscriptionScheduler";
-import { ensureDefaultSubscriptionPlan } from "./initDatabase";
+import { ensureDefaultSubscriptionPlan, runMigrations } from "./initDatabase";
 
 const app = express();
 app.use(express.json());
@@ -39,7 +39,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Initialize database - ensure default subscription plan exists
+  await runMigrations();
   await ensureDefaultSubscriptionPlan();
   
   const server = await registerRoutes(app);
