@@ -2036,8 +2036,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         moduleId: moduleId !== undefined ? (moduleId && moduleId.trim() !== '' ? moduleId : null) : undefined,
       };
       
-      console.log('[DEBUG] Lesson PATCH updateData keys:', Object.keys(updateData), 'requiresTestPass:', updateData.requiresTestPass);
-      
       const updatedLesson = await storage.updateLesson(lessonId, updateData);
       
       // Handle essay question update/create
@@ -4302,21 +4300,25 @@ So'zlar soni: ${submission.wordCount}`;
             totalScore += question.points;
           }
         } else if (question.type === 'fill_blanks') {
-          if (studentAnswer.toLowerCase().trim() === question.correctAnswer?.toLowerCase().trim()) {
+          const sa = typeof studentAnswer === 'string' ? studentAnswer : String(studentAnswer || '');
+          if (sa.toLowerCase().trim() === question.correctAnswer?.toLowerCase().trim()) {
             totalScore += question.points;
           }
         } else if (question.type === 'matching') {
-          const config = question.config as any;
-          const correctPairs = config.correctPairs || [];
-          const studentPairs = studentAnswer;
-          
-          if (JSON.stringify(correctPairs.sort()) === JSON.stringify(studentPairs.sort())) {
-            totalScore += question.points;
-          }
+          try {
+            const config = question.config as any;
+            const correctPairs = config.correctPairs || [];
+            const studentPairs = Array.isArray(studentAnswer) ? studentAnswer : [];
+            
+            if (JSON.stringify([...correctPairs].sort()) === JSON.stringify([...studentPairs].sort())) {
+              totalScore += question.points;
+            }
+          } catch (e) { /* matching comparison failed */ }
         } else if (question.type === 'short_answer') {
-          const keywords = question.correctAnswer?.toLowerCase().split(',').map(k => k.trim()) || [];
-          const studentText = studentAnswer.toLowerCase();
-          const matchedKeywords = keywords.filter(k => studentText.includes(k));
+          const sa = typeof studentAnswer === 'string' ? studentAnswer : String(studentAnswer || '');
+          const keywords = question.correctAnswer?.toLowerCase().split(',').map((k: string) => k.trim()) || [];
+          const studentText = sa.toLowerCase();
+          const matchedKeywords = keywords.filter((k: string) => studentText.includes(k));
           
           if (matchedKeywords.length >= keywords.length * 0.5) {
             totalScore += question.points;

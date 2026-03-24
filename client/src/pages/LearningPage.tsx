@@ -1042,7 +1042,7 @@ export default function LearningPage() {
       <Dialog open={testDialog.open} onOpenChange={(open) => {
         if (!open) { setTestDialog({ open: false, testId: null }); setTestAnswers({}); setTestResult(null); stopTimer(); setTestStarted(false); }
       }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden" data-testid="dialog-test-taking">
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden bg-background" data-testid="dialog-test-taking">
           <DialogHeader className="shrink-0">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <DialogTitle data-testid="text-test-title">
