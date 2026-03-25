@@ -1066,6 +1066,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Bulk import students
   app.post('/api/admin/bulk-import-students', isAuthenticated, isAdmin, async (req, res) => {
     try {
+      console.log('[Bulk Import] Request received');
       const { students, courseIds, groupId, subscriptionDays } = req.body;
 
       const bulkImportSchema = z.object({
@@ -1166,7 +1167,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
 
           if (validated.groupId && newUserId) {
-            await autoEnrollMemberInGroupCourses(validated.groupId, newUserId);
+            try {
+              await autoEnrollMemberInGroupCourses(validated.groupId, newUserId);
+            } catch (enrollErr: any) {
+              console.error(`[Bulk Import] autoEnroll error for user ${newUserId}:`, enrollErr.message);
+            }
           }
 
           created++;
