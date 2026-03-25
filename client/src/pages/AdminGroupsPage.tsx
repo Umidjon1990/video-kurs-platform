@@ -45,6 +45,7 @@ import {
   Clock,
   GraduationCap,
   ChevronRight,
+  Check,
 } from "lucide-react";
 import {
   Select,
@@ -170,7 +171,7 @@ export default function AdminGroupsPage() {
   const [memberAddStartDate, setMemberAddStartDate] = useState("");
   const [editingMemberDate, setEditingMemberDate] = useState<{ userId: string; date: string } | null>(null);
   const [assignCourseData, setAssignCourseData] = useState({
-    courseId: "",
+    courseIds: [] as string[],
     subscriptionDays: "30",
     unlockType: "free",
     unlockStartDate: "",
@@ -299,28 +300,32 @@ export default function AdminGroupsPage() {
   });
 
   const assignCourseMutation = useMutation({
-    mutationFn: async ({ groupId, courseId, subscriptionDays, unlockType, unlockStartDate, unlockIntervalDays, unlockWeekDays }: {
-      groupId: string; courseId: string; subscriptionDays: string;
+    mutationFn: async ({ groupId, courseIds, subscriptionDays, unlockType, unlockStartDate, unlockIntervalDays, unlockWeekDays }: {
+      groupId: string; courseIds: string[]; subscriptionDays: string;
       unlockType: string; unlockStartDate: string; unlockIntervalDays: string; unlockWeekDays: string[];
     }) => {
-      const res = await apiRequest("POST", `/api/admin/student-groups/${groupId}/assign-course`, { courseId, subscriptionDays });
-      const data = await res.json();
-      const effectiveStartDate = unlockStartDate || (unlockType !== "free" ? new Date().toISOString() : null);
-      await apiRequest("POST", "/api/group-course-settings", {
-        groupId,
-        courseId,
-        unlockType,
-        unlockStartDate: effectiveStartDate,
-        unlockIntervalDays: parseInt(unlockIntervalDays) || 1,
-        unlockWeekDays,
-        testGateEnabled: false,
-        minPassScore: 70,
-      });
-      return data;
+      const results: string[] = [];
+      for (const courseId of courseIds) {
+        const res = await apiRequest("POST", `/api/admin/student-groups/${groupId}/assign-course`, { courseId, subscriptionDays });
+        const data = await res.json();
+        results.push(data.message);
+        const effectiveStartDate = unlockStartDate || (unlockType !== "free" ? new Date().toISOString() : null);
+        await apiRequest("POST", "/api/group-course-settings", {
+          groupId,
+          courseId,
+          unlockType,
+          unlockStartDate: effectiveStartDate,
+          unlockIntervalDays: parseInt(unlockIntervalDays) || 1,
+          unlockWeekDays,
+          testGateEnabled: false,
+          minPassScore: 70,
+        });
+      }
+      return { message: `${courseIds.length} ta kurs biriktirildi`, details: results };
     },
     onSuccess: (data: any) => {
       setIsAssignCourseOpen(false);
-      setAssignCourseData({ courseId: "", subscriptionDays: "30", unlockType: "free", unlockStartDate: "", unlockIntervalDays: "1", unlockWeekDays: [] });
+      setAssignCourseData({ courseIds: [], subscriptionDays: "30", unlockType: "free", unlockStartDate: "", unlockIntervalDays: "1", unlockWeekDays: [] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/student-groups", selectedGroup?.id, "courses"] });
       setTimeout(() => refetchGroupCourses(), 300);
       toast({ title: "Muvaffaqiyatli", description: data.message });
@@ -951,27 +956,55 @@ export default function AdminGroupsPage() {
       </Dialog>
 
       {/* ── Assign Course Dialog ── */}
-      <Dialog open={isAssignCourseOpen} onOpenChange={open => { setIsAssignCourseOpen(open); if (!open) setAssignCourseData({ courseId: "", subscriptionDays: "30", unlockType: "free", unlockStartDate: "", unlockIntervalDays: "1", unlockWeekDays: [] }); }}>
+      <Dialog open={isAssignCourseOpen} onOpenChange={open => { setIsAssignCourseOpen(open); if (!open) setAssignCourseData({ courseIds: [], subscriptionDays: "30", unlockType: "free", unlockStartDate: "", unlockIntervalDays: "1", unlockWeekDays: [] }); }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Guruhga Kurs Biriktirish</DialogTitle>
             <DialogDescription>
-              <span className="font-semibold">{selectedGroup?.name}</span> guruhiga kurs va dars jadvalini sozlang
+              <span className="font-semibold">{selectedGroup?.name}</span> guruhiga kurslarni tanlang va dars jadvalini sozlang
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-[65vh]">
             <div className="space-y-4 py-2 pr-2">
-              {/* Course select */}
+              {/* Multi course select */}
               <div className="space-y-2">
-                <Label>Kurs *</Label>
-                <Select value={assignCourseData.courseId} onValueChange={v => setAssignCourseData({ ...assignCourseData, courseId: v })}>
-                  <SelectTrigger data-testid="select-course-for-group">
-                    <SelectValue placeholder="Kursni tanlang" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {allCourses.map(c => <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <Label>Kurslar * <span className="text-muted-foreground font-normal">({assignCourseData.courseIds.length} ta tanlandi)</span></Label>
+                {(() => {
+                  const alreadyAssignedIds = groupCourses.map((gc: any) => gc.courseId || gc.id);
+                  const availableCourses = allCourses.filter(c => !alreadyAssignedIds.includes(c.id));
+                  return availableCourses.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-3 text-center">Barcha kurslar allaqachon biriktirilgan</p>
+                  ) : (
+                    <div className="border rounded-lg max-h-48 overflow-y-auto">
+                      {availableCourses.map(c => {
+                        const isSelected = assignCourseData.courseIds.includes(c.id);
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => {
+                              const ids = isSelected
+                                ? assignCourseData.courseIds.filter(id => id !== c.id)
+                                : [...assignCourseData.courseIds, c.id];
+                              setAssignCourseData({ ...assignCourseData, courseIds: ids });
+                            }}
+                            className={`w-full text-left px-3 py-2.5 flex items-center gap-3 border-b last:border-b-0 transition-colors ${
+                              isSelected ? 'bg-primary/10' : 'hover:bg-muted/50'
+                            }`}
+                            data-testid={`checkbox-course-${c.id}`}
+                          >
+                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+                              isSelected ? 'bg-primary border-primary' : 'border-muted-foreground/40'
+                            }`}>
+                              {isSelected && <Check className="w-3 h-3 text-primary-foreground" />}
+                            </div>
+                            <span className="text-sm truncate">{c.title}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Subscription days */}
@@ -1095,17 +1128,17 @@ export default function AdminGroupsPage() {
             <Button
               onClick={() => selectedGroup && assignCourseMutation.mutate({
                 groupId: selectedGroup.id,
-                courseId: assignCourseData.courseId,
+                courseIds: assignCourseData.courseIds,
                 subscriptionDays: assignCourseData.subscriptionDays,
                 unlockType: assignCourseData.unlockType,
                 unlockStartDate: assignCourseData.unlockStartDate,
                 unlockIntervalDays: assignCourseData.unlockIntervalDays,
                 unlockWeekDays: assignCourseData.unlockWeekDays,
               })}
-              disabled={!assignCourseData.courseId || assignCourseMutation.isPending}
+              disabled={assignCourseData.courseIds.length === 0 || assignCourseMutation.isPending}
               data-testid="button-confirm-assign-course-group"
             >
-              {assignCourseMutation.isPending ? "Saqlanmoqda..." : "Kurs Biriktirish"}
+              {assignCourseMutation.isPending ? "Saqlanmoqda..." : `${assignCourseData.courseIds.length > 0 ? assignCourseData.courseIds.length + ' ta ' : ''}Kurs Biriktirish`}
             </Button>
           </DialogFooter>
         </DialogContent>
