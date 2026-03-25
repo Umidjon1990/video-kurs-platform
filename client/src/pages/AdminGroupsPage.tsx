@@ -867,7 +867,7 @@ export default function AdminGroupsPage() {
             <div className="flex justify-end">
               <Button
                 size="sm"
-                onClick={() => { setAssignCourseData({ courseId: "", subscriptionDays: "30" }); setIsAssignCourseOpen(true); }}
+                onClick={() => { setAssignCourseData({ courseIds: [], subscriptionDays: "30", unlockType: "free", unlockStartDate: "", unlockIntervalDays: "1", unlockWeekDays: [] }); setIsAssignCourseOpen(true); }}
                 data-testid="button-add-course-to-group"
               >
                 <Plus className="w-4 h-4 mr-1" /> Kurs qo'shish
@@ -883,7 +883,7 @@ export default function AdminGroupsPage() {
               <div className="flex flex-col items-center py-10 gap-3 text-muted-foreground">
                 <BookOpen className="w-10 h-10" />
                 <p className="text-sm">Hali kurs biriktirilmagan</p>
-                <Button size="sm" onClick={() => { setAssignCourseData({ courseId: "", subscriptionDays: "30" }); setIsAssignCourseOpen(true); }}>
+                <Button size="sm" onClick={() => { setAssignCourseData({ courseIds: [], subscriptionDays: "30", unlockType: "free", unlockStartDate: "", unlockIntervalDays: "1", unlockWeekDays: [] }); setIsAssignCourseOpen(true); }}>
                   <Plus className="w-4 h-4 mr-1" /> Kurs qo'shish
                 </Button>
               </div>
