@@ -154,11 +154,11 @@ export function ModernVideoPlayer({ videoUrl, title, paused, onError }: ModernVi
       }
     }
 
-    // Bunny.net Stream — disable autoplay
+    // Bunny.net Stream — optimized embed
     if (content.includes('mediadelivery.net')) {
       const separator = content.includes('?') ? '&' : '?';
-      const bunnyUrl = `${content}${separator}autoplay=false&preload=true`;
-      return { type: 'other', embedUrl: bunnyUrl };
+      const bunnyUrl = `${content}${separator}autoplay=false&preload=metadata&responsive=true`;
+      return { type: 'bunny', embedUrl: bunnyUrl };
     }
 
     // Kinescope, Vimeo and other platforms
@@ -293,10 +293,11 @@ export function ModernVideoPlayer({ videoUrl, title, paused, onError }: ModernVi
         ref={iframeRef}
         src={parsedVideo.embedUrl}
         className="w-full h-full"
-        style={{ position: 'relative', zIndex: 1 }}
+        style={{ position: 'relative', zIndex: 1, border: 'none' }}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
         allowFullScreen
         playsInline
+        loading="eager"
         {...{ 'webkit-playsinline': '' } as any}
         onLoad={handleIframeLoad}
         onError={handleIframeError}
