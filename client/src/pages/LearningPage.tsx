@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef, useCallback } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback, memo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -661,13 +661,13 @@ export default function LearningPage() {
       <div
         key={lesson.id}
         onClick={() => !isLocked && setCurrentLessonId(lesson.id)}
-        className={`group relative flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ${
+        className={`group relative flex items-center gap-3 p-3 rounded-lg ${
           isLocked ? 'opacity-50 cursor-not-allowed bg-muted/30' : 'hover-elevate cursor-pointer'
-        } ${isActive ? `bg-gradient-to-r ${colors?.bg || 'from-primary/10 to-primary/5'} ring-2 ${colors?.ring || 'ring-primary'} shadow-sm` : ''}`}
+        } ${isActive ? `bg-gradient-to-r ${colors?.bg || 'from-primary/10 to-primary/5'} ring-2 ${colors?.ring || 'ring-primary'}` : ''}`}
         data-testid={`lesson-item-${lesson.id}`}
       >
-        <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-          isLocked ? 'bg-muted' : isCompleted ? 'bg-green-500 dark:bg-green-600 shadow-md shadow-green-500/30' : isActive ? `${colors?.badge || 'bg-primary'} shadow-md` : 'bg-muted/50'
+        <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${
+          isLocked ? 'bg-muted' : isCompleted ? 'bg-green-500 dark:bg-green-600' : isActive ? `${colors?.badge || 'bg-primary'}` : 'bg-muted/50'
         }`}>
           {isLocked ? (
             <Lock className="w-4 h-4 text-muted-foreground" />
@@ -704,7 +704,7 @@ export default function LearningPage() {
   return (
     <div className="h-full bg-background flex flex-col w-full">
       {/* Mobile Header Bar - Modern App-like */}
-      <div className="sm:hidden sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b px-4 h-14 flex items-center justify-between gap-3">
+      <div className="sm:hidden sticky top-0 z-50 bg-background border-b px-4 h-14 flex items-center justify-between gap-3">
         <Button
           variant="ghost"
           size="icon"
@@ -770,9 +770,9 @@ export default function LearningPage() {
               return (
                 <div className="max-w-5xl mx-auto w-full">
                   {/* Player Area */}
-                  <div className="aspect-video bg-black sm:rounded-2xl overflow-hidden shadow-2xl relative">
+                  <div className="aspect-video bg-black sm:rounded-2xl overflow-hidden relative">
                     {isLocked ? (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/95 backdrop-blur-md p-6 text-center">
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/95 p-6 text-center">
                         <Lock className="w-12 h-12 text-primary mb-4" />
                         <h3 className="text-xl font-bold mb-2">Dars yopiq</h3>
                         <p className="text-muted-foreground text-sm max-w-xs mx-auto">
@@ -783,8 +783,6 @@ export default function LearningPage() {
                       <ModernVideoPlayer 
                         videoUrl={currentLesson.videoUrl || ""} 
                         paused={testDialog.open}
-                        lessonId={currentLesson.id}
-                        onComplete={() => saveProgressMutation.mutate({ lessonId: currentLesson.id, completed: true })}
                       />
                     )}
                   </div>
@@ -963,7 +961,7 @@ export default function LearningPage() {
 
       {/* Mobile Nav */}
       {currentLesson && (
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-lg border-t">
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-background border-t">
           {/* Lesson list hint bar */}
           <button
             className="w-full flex items-center justify-center gap-2 py-2 text-xs font-semibold text-primary border-b border-primary/20 bg-primary/5 active:bg-primary/10"
