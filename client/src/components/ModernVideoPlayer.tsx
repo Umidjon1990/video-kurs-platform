@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, memo } from "react";
 import { Play, Maximize2, Minimize2 } from "lucide-react";
 
 interface ModernVideoPlayerProps {
@@ -9,7 +9,7 @@ interface ModernVideoPlayerProps {
   [key: string]: any;
 }
 
-export function ModernVideoPlayer({ videoUrl, title, paused, onError }: ModernVideoPlayerProps) {
+export const ModernVideoPlayer = memo(function ModernVideoPlayer({ videoUrl, title, paused, onError }: ModernVideoPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [isNativeFullscreen, setIsNativeFullscreen] = useState(false);
@@ -84,13 +84,11 @@ export function ModernVideoPlayer({ videoUrl, title, paused, onError }: ModernVi
     setIsCssFullscreen(true);
   };
 
-  // Reset loading state when videoUrl changes
   useEffect(() => {
     setIsLoading(true);
     setHasError(false);
   }, [videoUrl]);
 
-  // Fallback timeout to hide loading after 3 seconds (for platforms that don't fire onLoad reliably)
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (isLoading) {
@@ -105,7 +103,6 @@ export function ModernVideoPlayer({ videoUrl, title, paused, onError }: ModernVi
   const parseVideoUrl = (content: string): { type: string; embedUrl: string } | null => {
     if (!content) return null;
 
-    // Check if it's an iframe embed code
     if (content.startsWith('<iframe') || content.startsWith('<embed')) {
       const srcMatch = content.match(/src=["']([^"']+)["']/i);
       if (srcMatch && srcMatch[1]) {
@@ -122,7 +119,6 @@ export function ModernVideoPlayer({ videoUrl, title, paused, onError }: ModernVi
       return { type: 'raw-iframe', embedUrl: content };
     }
 
-    // Google Drive URLs
     if (content.includes('drive.google.com')) {
       let fileId = '';
       if (content.includes('/file/d/')) {
@@ -138,7 +134,6 @@ export function ModernVideoPlayer({ videoUrl, title, paused, onError }: ModernVi
       }
     }
 
-    // YouTube URLs
     if (content.includes('youtube.com') || content.includes('youtu.be')) {
       let videoId = '';
       if (content.includes('youtube.com/watch?v=')) {
@@ -154,14 +149,12 @@ export function ModernVideoPlayer({ videoUrl, title, paused, onError }: ModernVi
       }
     }
 
-    // Bunny.net Stream — optimized embed
     if (content.includes('mediadelivery.net')) {
       const separator = content.includes('?') ? '&' : '?';
       const bunnyUrl = `${content}${separator}autoplay=false&preload=metadata&responsive=true`;
       return { type: 'bunny', embedUrl: bunnyUrl };
     }
 
-    // Kinescope, Vimeo and other platforms
     if (content.includes('kinescope.io') ||
         content.includes('vimeo.com') ||
         content.includes('player.vimeo.com') ||
@@ -170,7 +163,6 @@ export function ModernVideoPlayer({ videoUrl, title, paused, onError }: ModernVi
       return { type: 'other', embedUrl: content };
     }
 
-    // Direct URL
     if (content.startsWith('http://') || content.startsWith('https://')) {
       return { type: 'direct', embedUrl: content };
     }
@@ -206,9 +198,9 @@ export function ModernVideoPlayer({ videoUrl, title, paused, onError }: ModernVi
       <div className="aspect-video bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl flex items-center justify-center p-6">
         <div className="text-center text-white">
           <p className="mb-4 text-white/70">Video formatini aniqlab bo'lmadi</p>
-          <a 
-            href={videoUrl} 
-            target="_blank" 
+          <a
+            href={videoUrl}
+            target="_blank"
             rel="noopener noreferrer"
             className="text-primary hover:underline break-all text-sm"
           >
@@ -219,7 +211,6 @@ export function ModernVideoPlayer({ videoUrl, title, paused, onError }: ModernVi
     );
   }
 
-  // Raw iframe content - inject mobile-friendly attributes
   if (parsedVideo.type === 'raw-iframe') {
     const mobileFixedHtml = parsedVideo.embedUrl
       .replace(/<iframe/gi, '<iframe playsinline webkit-playsinline')
@@ -230,17 +221,12 @@ export function ModernVideoPlayer({ videoUrl, title, paused, onError }: ModernVi
         return match;
       });
     return (
-      <div className="relative aspect-video bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-xl overflow-hidden shadow-2xl group">
-        <div 
+      <div className="relative aspect-video bg-black rounded-xl overflow-hidden">
+        <div
           className="w-full h-full"
           dangerouslySetInnerHTML={{ __html: mobileFixedHtml }}
           data-testid="video-player-raw-iframe"
         />
-        {/* Gradient overlays for style */}
-        <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-black/40 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-black/50 to-transparent" />
-        </div>
       </div>
     );
   }
@@ -248,7 +234,7 @@ export function ModernVideoPlayer({ videoUrl, title, paused, onError }: ModernVi
   return (
     <div
       ref={containerRef}
-      className={`relative bg-black shadow-2xl group ${isCssFullscreen ? 'rounded-none' : 'aspect-video rounded-xl overflow-hidden'}`}
+      className={`relative bg-black ${isCssFullscreen ? 'rounded-none' : 'aspect-video rounded-xl overflow-hidden'}`}
       style={isCssFullscreen ? {
         position: 'fixed',
         inset: 0,
@@ -258,27 +244,25 @@ export function ModernVideoPlayer({ videoUrl, title, paused, onError }: ModernVi
         overflow: 'hidden',
       } : undefined}
     >
-      {/* Loading overlay - pointer-events-none so iframe is always clickable */}
       {isLoading && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 pointer-events-none">
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black pointer-events-none">
           <div className="text-center">
             <div className="relative">
-              <div className="w-20 h-20 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
-              <Play className="w-8 h-8 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary" />
+              <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+              <Play className="w-6 h-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary" />
             </div>
-            <p className="mt-4 text-sm text-white/60">Video yuklanmoqda...</p>
+            <p className="mt-3 text-sm text-white/60">Video yuklanmoqda...</p>
           </div>
         </div>
       )}
 
-      {/* Error state */}
       {hasError && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-gradient-to-br from-red-900/50 to-gray-900">
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black">
           <div className="text-center text-white">
             <p className="text-lg mb-2">Video yuklanmadi</p>
-            <a 
-              href={videoUrl} 
-              target="_blank" 
+            <a
+              href={videoUrl}
+              target="_blank"
               rel="noopener noreferrer"
               className="text-primary hover:underline text-sm"
             >
@@ -288,46 +272,29 @@ export function ModernVideoPlayer({ videoUrl, title, paused, onError }: ModernVi
         </div>
       )}
 
-      {/* Video iframe */}
       <iframe
         ref={iframeRef}
         src={parsedVideo.embedUrl}
         className="w-full h-full"
-        style={{ position: 'relative', zIndex: 1, border: 'none' }}
+        style={{ border: 'none' }}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
         allowFullScreen
         playsInline
-        loading="eager"
         {...{ 'webkit-playsinline': '' } as any}
         onLoad={handleIframeLoad}
         onError={handleIframeError}
         data-testid="modern-video-player"
       />
 
-      {/* Gradient overlays for style */}
-      <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-        <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-black/40 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-black/50 to-transparent" />
-      </div>
-
-      {/* Title overlay */}
-      {title && (
-        <div className="absolute top-0 left-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-10">
-          <h3 className="text-white font-medium text-sm sm:text-base line-clamp-1 drop-shadow-lg">
-            {title}
-          </h3>
-        </div>
-      )}
-
-      {/* Fullscreen toggle button */}
       <button
         onClick={toggleFullscreen}
         title={isFullscreen ? "Kichraytirish" : "To'liq ekran"}
-        className={`absolute z-30 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-black/70 hover:bg-black/90 text-white text-xs font-medium backdrop-blur-sm border border-white/30 transition-all duration-200 ${
+        className={`absolute z-30 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-black/70 text-white text-xs font-medium border border-white/20 transition-opacity duration-200 opacity-0 hover:opacity-100 focus:opacity-100 ${
           isFullscreen
-            ? "top-4 right-4"
+            ? "top-4 right-4 opacity-100"
             : "bottom-3 right-3"
         }`}
+        style={{ willChange: 'opacity' }}
       >
         {isFullscreen ? (
           <Minimize2 className="w-4 h-4" />
@@ -339,7 +306,7 @@ export function ModernVideoPlayer({ videoUrl, title, paused, onError }: ModernVi
 
     </div>
   );
-}
+});
 
 export function VideoPlayerSkeleton() {
   return (
