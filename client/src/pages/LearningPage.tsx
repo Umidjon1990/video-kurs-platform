@@ -71,6 +71,10 @@ export default function LearningPage() {
   ];
   
   useEffect(() => {
+    setVideoPlaying(false);
+  }, [currentLessonId, setVideoPlaying]);
+
+  useEffect(() => {
     return () => { setVideoPlaying(false); };
   }, [setVideoPlaying]);
 

@@ -24,6 +24,7 @@ export const ModernVideoPlayer = memo(function ModernVideoPlayer({ videoUrl, tit
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (!event.data || typeof event.data !== 'string') return;
+      if (iframeRef.current?.contentWindow && event.source !== iframeRef.current.contentWindow) return;
       try {
         const data = JSON.parse(event.data);
         if (data.event === 'play' || data.event === 'playing' || data.info?.playerState === 1 || data.method === 'play') {
@@ -34,7 +35,10 @@ export const ModernVideoPlayer = memo(function ModernVideoPlayer({ videoUrl, tit
       } catch {}
     };
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      onPlayingChangeRef.current?.(false);
+    };
   }, []);
 
   useEffect(() => {
@@ -107,6 +111,7 @@ export const ModernVideoPlayer = memo(function ModernVideoPlayer({ videoUrl, tit
   useEffect(() => {
     setIsLoading(true);
     setHasError(false);
+    onPlayingChangeRef.current?.(false);
   }, [videoUrl]);
 
   useEffect(() => {
