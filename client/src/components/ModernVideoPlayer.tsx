@@ -155,8 +155,12 @@ export const ModernVideoPlayer = memo(function ModernVideoPlayer({ videoUrl, tit
       return { type: 'bunny', embedUrl: bunnyUrl };
     }
 
-    if (content.includes('kinescope.io') ||
-        content.includes('vimeo.com') ||
+    if (content.includes('kinescope.io')) {
+      const separator = content.includes('?') ? '&' : '?';
+      return { type: 'kinescope', embedUrl: `${content}${separator}preload=metadata&autoplay=0` };
+    }
+
+    if (content.includes('vimeo.com') ||
         content.includes('player.vimeo.com') ||
         content.includes('dailymotion.com') ||
         content.includes('wistia.com')) {
