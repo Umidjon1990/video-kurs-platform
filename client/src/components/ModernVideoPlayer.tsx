@@ -6,10 +6,11 @@ interface ModernVideoPlayerProps {
   title?: string;
   paused?: boolean;
   onError?: () => void;
+  onPlayingChange?: (isPlaying: boolean) => void;
   [key: string]: any;
 }
 
-export const ModernVideoPlayer = memo(function ModernVideoPlayer({ videoUrl, title, paused, onError }: ModernVideoPlayerProps) {
+export const ModernVideoPlayer = memo(function ModernVideoPlayer({ videoUrl, title, paused, onError, onPlayingChange }: ModernVideoPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [isNativeFullscreen, setIsNativeFullscreen] = useState(false);
@@ -17,6 +18,24 @@ export const ModernVideoPlayer = memo(function ModernVideoPlayer({ videoUrl, tit
   const isFullscreen = isNativeFullscreen || isCssFullscreen;
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const onPlayingChangeRef = useRef(onPlayingChange);
+  onPlayingChangeRef.current = onPlayingChange;
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (!event.data || typeof event.data !== 'string') return;
+      try {
+        const data = JSON.parse(event.data);
+        if (data.event === 'play' || data.event === 'playing' || data.info?.playerState === 1 || data.method === 'play') {
+          onPlayingChangeRef.current?.(true);
+        } else if (data.event === 'pause' || data.event === 'paused' || data.event === 'ended' || data.info?.playerState === 2 || data.info?.playerState === 0 || data.method === 'pause') {
+          onPlayingChangeRef.current?.(false);
+        }
+      } catch {}
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
 
   useEffect(() => {
     if (paused && iframeRef.current?.contentWindow) {
@@ -31,6 +50,7 @@ export const ModernVideoPlayer = memo(function ModernVideoPlayer({ videoUrl, tit
       if (src.includes('mediadelivery.net')) {
         iframe.contentWindow.postMessage(JSON.stringify({ event: 'pause' }), '*');
       }
+      onPlayingChangeRef.current?.(false);
     }
   }, [paused]);
 

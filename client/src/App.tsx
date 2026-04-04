@@ -37,6 +37,7 @@ import AnnouncementsPage from "@/pages/AnnouncementsPage";
 import NotFound from "@/pages/not-found";
 import { UrgentBanner } from "@/components/UrgentBanner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { VideoPlaybackProvider } from "@/hooks/useVideoPlayback";
 
 const PUBLIC_PATHS = ["/explore", "/login", "/register", "/checkout", "/curator/register"];
 
@@ -183,8 +184,10 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Router />
+        <VideoPlaybackProvider>
+          <Toaster />
+          <Router />
+        </VideoPlaybackProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

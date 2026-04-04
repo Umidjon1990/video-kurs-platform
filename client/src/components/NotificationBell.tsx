@@ -14,6 +14,7 @@ import { uz } from "date-fns/locale";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Notification } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { useVideoPlayback } from "@/hooks/useVideoPlayback";
 
 interface NotificationBellProps {
   onNotificationAction?: (notification: Notification) => void;
@@ -22,10 +23,11 @@ interface NotificationBellProps {
 export function NotificationBell({ onNotificationAction }: NotificationBellProps = {}) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const { isVideoPlaying } = useVideoPlayback();
 
   const { data: notifications = [] } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
-    refetchInterval: 30000,
+    refetchInterval: isVideoPlaying ? false : 30000,
   });
 
   const markAsReadMutation = useMutation({

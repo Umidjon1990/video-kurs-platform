@@ -16,9 +16,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { NotificationBell } from "@/components/NotificationBell";
 import { StarRating } from "@/components/StarRating";
 import { ModernVideoPlayer } from "@/components/ModernVideoPlayer";
-import { CourseGroupChat, OnlineUsersList } from "@/components/CourseGroupChat";
-import { CourseVoiceChat } from "@/components/CourseVoiceChat";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useVideoPlayback } from "@/hooks/useVideoPlayback";
 import type { Course, Lesson, Assignment, Test } from "@shared/schema";
 
 export default function LearningPage() {
@@ -26,6 +25,7 @@ export default function LearningPage() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading, user, isInstructor, isAdmin } = useAuth();
   const [, setLocation] = useLocation();
+  const { isVideoPlaying, setVideoPlaying } = useVideoPlayback();
   
   // Preview mode for instructors and admins (bypass enrollment checks)
   const isPreviewMode = isInstructor || isAdmin;
@@ -70,6 +70,10 @@ export default function LearningPage() {
     { bg: "from-cyan-500/15 to-sky-500/15 dark:from-cyan-500/25 dark:to-sky-500/25", border: "border-cyan-500/40 dark:border-cyan-400/50", ring: "ring-cyan-500", text: "text-cyan-600 dark:text-cyan-400", badge: "bg-cyan-500 dark:bg-cyan-600" },
   ];
   
+  useEffect(() => {
+    return () => { setVideoPlaying(false); };
+  }, [setVideoPlaying]);
+
   const toggleModule = (moduleId: string) => {
     // Default to expanded (true) if not set, then toggle
     setExpandedModules(prev => ({ ...prev, [moduleId]: !(prev[moduleId] ?? true) }));
@@ -231,7 +235,7 @@ export default function LearningPage() {
   }>({
     queryKey: ["/api/courses", courseId, "lesson-lock-status"],
     enabled: !!courseId && isAuthenticated && !isPreviewMode,
-    refetchInterval: 60 * 1000,
+    refetchInterval: isVideoPlaying ? false : 60 * 1000,
   });
   
   // Fetch all essay questions for the course
@@ -783,6 +787,7 @@ export default function LearningPage() {
                       <ModernVideoPlayer 
                         videoUrl={currentLesson.videoUrl || ""} 
                         paused={testDialog.open}
+                        onPlayingChange={setVideoPlaying}
                       />
                     )}
                   </div>

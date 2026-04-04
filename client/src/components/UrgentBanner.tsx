@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { AlertTriangle, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useVideoPlayback } from "@/hooks/useVideoPlayback";
 
 interface UrgentAnnouncement {
   id: string;
@@ -15,11 +16,12 @@ interface UrgentAnnouncement {
 export function UrgentBanner() {
   const { isAuthenticated } = useAuth();
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const { isVideoPlaying } = useVideoPlayback();
 
   const { data: urgentAnnouncements = [] } = useQuery<UrgentAnnouncement[]>({
     queryKey: ["/api/announcements/urgent"],
     enabled: isAuthenticated,
-    refetchInterval: 30000,
+    refetchInterval: isVideoPlaying ? false : 30000,
   });
 
   const visible = urgentAnnouncements.filter(a => !dismissed.has(a.id));
