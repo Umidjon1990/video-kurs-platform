@@ -13,7 +13,6 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { SiTelegram } from "react-icons/si";
-import { motion } from "framer-motion";
 import type { SiteSetting } from "@shared/schema";
 
 export function ModernFooter() {
@@ -72,31 +71,6 @@ export function ModernFooter() {
 
   return (
     <footer className="relative overflow-hidden wow-footer">
-      {/* Aurora blobs in footer */}
-      <div
-        className="absolute top-0 left-0 w-[500px] h-[500px] rounded-full pointer-events-none"
-        style={{
-          background: "radial-gradient(circle, rgba(124,58,237,0.18) 0%, transparent 70%)",
-          filter: "blur(60px)",
-          transform: "translate(-30%, -30%)",
-        }}
-      />
-      <div
-        className="absolute bottom-0 right-0 w-[400px] h-[400px] rounded-full pointer-events-none"
-        style={{
-          background: "radial-gradient(circle, rgba(37,99,235,0.15) 0%, transparent 70%)",
-          filter: "blur(60px)",
-          transform: "translate(30%, 30%)",
-        }}
-      />
-      <div
-        className="absolute top-1/2 left-1/2 w-[600px] h-[300px] rounded-full pointer-events-none"
-        style={{
-          background: "radial-gradient(circle, rgba(6,182,212,0.08) 0%, transparent 70%)",
-          filter: "blur(60px)",
-          transform: "translate(-50%, -50%)",
-        }}
-      />
 
       {/* Dot grid */}
       <div
@@ -113,11 +87,7 @@ export function ModernFooter() {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* CTA Banner */}
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+        <div
           className="mt-16 mb-16 rounded-3xl p-px"
           style={{
             background: "linear-gradient(135deg, rgba(124,58,237,0.6), rgba(37,99,235,0.4), rgba(6,182,212,0.4))",
@@ -125,7 +95,7 @@ export function ModernFooter() {
         >
           <div
             className="rounded-3xl px-8 py-10 md:py-12 text-center"
-            style={{ background: "rgba(10,5,32,0.85)", backdropFilter: "blur(20px)" }}
+            style={{ background: "rgba(10,5,32,0.95)" }}
           >
             <h3 className="text-2xl md:text-3xl font-black text-white mb-3">
               Bugun o'rganishni boshlang!
@@ -152,7 +122,6 @@ export function ModernFooter() {
                   className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl font-bold text-white transition-all hover:scale-105 active:scale-95"
                   style={{
                     background: "rgba(255,255,255,0.10)",
-                    backdropFilter: "blur(12px)",
                     border: "1px solid rgba(255,255,255,0.2)",
                   }}
                 >
@@ -162,7 +131,7 @@ export function ModernFooter() {
               </Link>
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {/* Main Footer Grid */}
         <div className="py-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 border-t border-white/8">

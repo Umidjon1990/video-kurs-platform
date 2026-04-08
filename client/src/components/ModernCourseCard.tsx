@@ -1,5 +1,4 @@
 import { Link } from "wouter";
-import { motion } from "framer-motion";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -77,12 +76,7 @@ export function ModernCourseCard({ course, index = 0, onViewLessons }: ModernCou
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.1 }}
-      className={isFree ? "free-course-wrapper" : ""}
-    >
+    <div className={isFree ? "free-course-wrapper" : ""}>
       {/* Animated stars for free courses */}
       {isFree && (
         <>
@@ -245,6 +239,6 @@ export function ModernCourseCard({ course, index = 0, onViewLessons }: ModernCou
           </Link>
         </CardFooter>
       </Card>
-    </motion.div>
+    </div>
   );
 }

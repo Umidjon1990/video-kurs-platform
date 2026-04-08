@@ -37,7 +37,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
 
 type MenuItem = {
   title: string;
@@ -345,11 +344,7 @@ export function AppSidebar() {
 
                 return (
                   <SidebarMenuItem key={item.title}>
-                    <motion.div
-                      initial={{ opacity: 0, x: -12 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.28, delay: i * 0.05 }}
-                    >
+                    <div>
                       <SidebarMenuButton
                         asChild
                         isActive={isActive}
@@ -377,10 +372,9 @@ export function AppSidebar() {
                               }} />
                           )}
                           <item.icon
-                            className="h-4 w-4 shrink-0 transition-all duration-200"
+                            className="h-4 w-4 shrink-0 transition-colors duration-200"
                             style={isActive ? {
                               color: item.activeColor,
-                              filter: `drop-shadow(0 0 5px ${item.glowColor})`,
                             } : {}}
                           />
                           <span className="text-[13px] font-semibold truncate group-data-[collapsible=icon]:hidden flex-1">
@@ -392,7 +386,7 @@ export function AppSidebar() {
                           )}
                         </Link>
                       </SidebarMenuButton>
-                    </motion.div>
+                    </div>
                   </SidebarMenuItem>
                 );
               })}

@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, Play, Users } from "lucide-react";
 import type { Course, CoursePlanPricing, SubscriptionPlan } from "@shared/schema";
-import { motion } from "framer-motion";
 import { StarRating } from "@/components/StarRating";
 
 interface CourseCardProps {
@@ -86,7 +85,7 @@ export function CourseCard({ course, onEnroll, onViewDemo, isEnrolled, index = 0
         </div>
       )}
       {course.category && (
-        <Badge className="absolute bottom-3 left-3 bg-background/90 backdrop-blur">
+        <Badge className="absolute bottom-3 left-3 bg-background/90">
           {course.category}
         </Badge>
       )}
@@ -195,12 +194,7 @@ export function CourseCard({ course, onEnroll, onViewDemo, isEnrolled, index = 0
   );
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.3 }}
-      className="h-full"
-    >
+    <div className="h-full">
       {discountPercent > 0 ? (
         <div className={`p-1 bg-gradient-to-br ${gradient} rounded-lg h-full`}>
           <Card className="hover-elevate h-full flex flex-col overflow-hidden border-0" data-testid={`card-course-${course.id}`}>
@@ -216,6 +210,6 @@ export function CourseCard({ course, onEnroll, onViewDemo, isEnrolled, index = 0
           {cardFooter}
         </Card>
       )}
-    </motion.div>
+    </div>
   );
 }
