@@ -170,7 +170,7 @@ export const ModernVideoPlayer = memo(function ModernVideoPlayer({ videoUrl, tit
       }
       if (videoId) {
         const origin = typeof window !== 'undefined' ? window.location.origin : '';
-        return { type: 'youtube', embedUrl: `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&enablejsapi=1&origin=${encodeURIComponent(origin)}&fs=1` };
+        return { type: 'youtube', embedUrl: `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&enablejsapi=1&origin=${encodeURIComponent(origin)}&fs=1&vq=auto` };
       }
     }
 
