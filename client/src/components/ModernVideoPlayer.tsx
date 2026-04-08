@@ -406,58 +406,58 @@ export const ModernVideoPlayer = memo(function ModernVideoPlayer({ videoUrl, tit
         data-testid="modern-video-player"
       />
 
-      <div className={`absolute z-30 flex items-center gap-2 transition-opacity duration-200 opacity-0 hover:opacity-100 focus-within:opacity-100 ${
-        isFullscreen ? "top-4 right-4 opacity-100" : "top-3 right-3"
-      }`}>
-        <div ref={qualityMenuRef} className="relative">
-          <button
-            onClick={() => setShowQualityMenu(!showQualityMenu)}
-            title="Video sifati"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-black/70 text-white text-xs font-medium border border-white/20"
-            data-testid="button-video-quality"
-          >
-            <Settings2 className="w-4 h-4" />
-            <span>{selectedQuality === 'auto' ? 'Sifat' : `${selectedQuality}p`}</span>
-          </button>
+      <div className={`absolute z-30 ${isFullscreen ? "top-4 right-4" : "top-3 right-3"}`} ref={qualityMenuRef}>
+        <button
+          onClick={() => setShowQualityMenu(!showQualityMenu)}
+          title="Video sifati"
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-white text-xs font-medium border transition-colors ${
+            showQualityMenu || selectedQuality !== 'auto'
+              ? 'bg-primary/80 border-primary/50'
+              : 'bg-black/60 border-white/20'
+          }`}
+          data-testid="button-video-quality"
+        >
+          <Settings2 className="w-4 h-4" />
+          <span>{selectedQuality === 'auto' ? 'Sifat' : `${selectedQuality}p`}</span>
+        </button>
 
-          {showQualityMenu && (
-            <div className="absolute bottom-full right-0 mb-2 w-40 rounded-lg bg-gray-900/95 border border-white/15 overflow-hidden" data-testid="menu-video-quality">
-              <div className="px-3 py-2 border-b border-white/10">
-                <p className="text-xs font-semibold text-white/80">Video sifati</p>
-              </div>
-              {QUALITY_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => {
-                    setSelectedQuality(opt.value);
-                    setShowQualityMenu(false);
-                    setIsLoading(true);
-                  }}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 text-sm transition-colors ${
-                    selectedQuality === opt.value
-                      ? 'text-primary bg-primary/10'
-                      : 'text-white/80 hover:bg-white/10'
-                  }`}
-                  data-testid={`button-quality-${opt.value}`}
-                >
-                  <span>{opt.label}</span>
-                  {selectedQuality === opt.value && <Check className="w-3.5 h-3.5 text-primary" />}
-                </button>
-              ))}
-              {parsedVideo.type === 'bunny' && selectedQuality !== 'auto' && (
-                <div className="px-3 py-2 border-t border-white/10">
-                  <p className="text-[10px] text-white/50">Bunny playerda ham sifatni o'zgartiring</p>
-                </div>
-              )}
+        {showQualityMenu && (
+          <div className="absolute top-full right-0 mt-1 w-44 rounded-lg bg-gray-900/95 border border-white/15 overflow-hidden shadow-xl" data-testid="menu-video-quality">
+            <div className="px-3 py-2 border-b border-white/10">
+              <p className="text-xs font-semibold text-white/80">Video sifati</p>
             </div>
-          )}
-        </div>
+            {QUALITY_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => {
+                  setSelectedQuality(opt.value);
+                  setShowQualityMenu(false);
+                  setIsLoading(true);
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2.5 text-sm transition-colors ${
+                  selectedQuality === opt.value
+                    ? 'text-primary bg-primary/10'
+                    : 'text-white/80 hover:bg-white/10'
+                }`}
+                data-testid={`button-quality-${opt.value}`}
+              >
+                <span>{opt.label}</span>
+                {selectedQuality === opt.value && <Check className="w-3.5 h-3.5 text-primary" />}
+              </button>
+            ))}
+            {parsedVideo.type === 'bunny' && selectedQuality !== 'auto' && (
+              <div className="px-3 py-2 border-t border-white/10">
+                <p className="text-[10px] text-white/50">Bunny playerda ham sifatni o'zgartiring</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <button
         onClick={toggleFullscreen}
         title={isFullscreen ? "Kichraytirish" : "To'liq ekran"}
-        className={`absolute z-30 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-black/70 text-white text-xs font-medium border border-white/20 transition-opacity duration-200 opacity-0 hover:opacity-100 focus:opacity-100 ${
+        className={`absolute z-30 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-black/60 text-white text-xs font-medium border border-white/20 transition-opacity duration-200 opacity-0 hover:opacity-100 focus:opacity-100 ${
           isFullscreen
             ? "top-4 left-4 opacity-100"
             : "bottom-3 right-3"
