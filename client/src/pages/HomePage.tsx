@@ -28,7 +28,6 @@ const getIconComponent = (iconName: string | null | undefined) => {
   const Icon = iconMap[iconName];
   return Icon ? <Icon className="w-4 h-4" /> : null;
 };
-import { motion } from "framer-motion";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -334,11 +333,6 @@ export default function HomePage() {
           background: 'linear-gradient(135deg, #0a0520 0%, #0d1440 40%, #0a1628 70%, #0d0a30 100%)',
         }}
       >
-        {/* Aurora blobs */}
-        <div className="wow-blob wow-blob-1" />
-        <div className="wow-blob wow-blob-2" />
-        <div className="wow-blob wow-blob-3" />
-        <div className="wow-blob wow-blob-4" />
 
         {/* Dot grid overlay */}
         <div className="absolute inset-0 wow-dot-grid" />
@@ -367,14 +361,10 @@ export default function HomePage() {
         <div className="relative flex-1 flex flex-col items-center justify-center text-center px-4 sm:px-6 py-24 md:py-32">
 
           {/* Platform badge */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: -10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+          <div
             className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold mb-8"
             style={{
               background: 'rgba(124,58,237,0.22)',
-              backdropFilter: 'blur(14px)',
               border: '1px solid rgba(124,58,237,0.5)',
               color: '#c4b5fd',
             }}
@@ -382,15 +372,10 @@ export default function HomePage() {
             <Sparkles className="w-4 h-4 text-yellow-400" />
             O'zbekistonning zamonaviy ta'lim platformasi
             <Sparkles className="w-4 h-4 text-yellow-400" />
-          </motion.div>
+          </div>
 
           {/* Main title */}
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.85, delay: 0.15 }}
-            className="mb-6"
-          >
+          <div className="mb-6">
             <h1
               className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-white tracking-tight leading-none mb-3"
               data-testid="text-hero-title"
@@ -400,41 +385,27 @@ export default function HomePage() {
             <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight leading-none wow-shimmer-text">
               Zamonaviy Ta'lim
             </h2>
-          </motion.div>
+          </div>
 
-          {/* Animated gradient divider */}
-          <motion.div
-            initial={{ scaleX: 0 }}
-            animate={{ scaleX: 1 }}
-            transition={{ duration: 0.9, delay: 0.4 }}
-            className="wow-gradient-line w-40 h-1 rounded-full mx-auto mb-8"
-          />
+          {/* Gradient divider */}
+          <div className="wow-gradient-line w-40 h-1 rounded-full mx-auto mb-8" />
 
           {/* Subtitle */}
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.55 }}
+          <p
             className="text-lg sm:text-xl md:text-2xl max-w-2xl mx-auto mb-10 leading-relaxed"
             style={{ color: 'rgba(255,255,255,0.68)' }}
           >
             Professional zamonaviy video darslar.
             <br />
             Bilimingizni oshiring va kelajagingizni yarating!
-          </motion.p>
+          </p>
 
-          {/* Glassmorphism search bar */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.68 }}
-            className="w-full max-w-2xl mx-auto mb-8"
-          >
+          {/* Search bar */}
+          <div className="w-full max-w-2xl mx-auto mb-8">
             <div
-              className="relative flex items-center p-2 rounded-2xl shadow-2xl"
+              className="relative flex items-center p-2 rounded-2xl"
               style={{
                 background: 'rgba(255,255,255,0.08)',
-                backdropFilter: 'blur(20px)',
                 border: '1px solid rgba(255,255,255,0.15)',
               }}
             >
@@ -459,13 +430,10 @@ export default function HomePage() {
                 <span className="hidden sm:inline">Qidirish</span>
               </button>
             </div>
-          </motion.div>
+          </div>
 
           {/* CTA buttons */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.82 }}
+          <div
             className="flex flex-wrap gap-4 justify-center mb-16"
           >
             <button
@@ -483,30 +451,21 @@ export default function HomePage() {
               Kurslarni Ko'rish
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
-          </motion.div>
+          </div>
 
           {/* Stats grid */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.98 }}
-            className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-3xl w-full mx-auto"
-          >
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-3xl w-full mx-auto">
             {[
               { Icon: Users,    value: `${courses?.reduce((s, c) => s + (c.enrollmentsCount || 0), 0) || 0}+`, label: 'Talabalar',  color: '#7c3aed' },
               { Icon: BookOpen, value: `${courses?.length || 0}`,                                              label: 'Kurslar',    color: '#2563eb' },
               { Icon: Star,     value: '4.9★',                                                                 label: 'Reyting',    color: '#f59e0b' },
               { Icon: Award,    value: '100%',                                                                 label: 'Sertifikat', color: '#06b6d4' },
             ].map((stat, i) => (
-              <motion.div
+              <div
                 key={stat.label}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 1.1 + i * 0.08 }}
                 className="flex flex-col items-center p-4 rounded-2xl text-center"
                 style={{
                   background: 'rgba(255,255,255,0.07)',
-                  backdropFilter: 'blur(12px)',
                   border: '1px solid rgba(255,255,255,0.12)',
                 }}
               >
@@ -518,9 +477,9 @@ export default function HomePage() {
                 </div>
                 <div className="text-2xl font-black text-white">{stat.value}</div>
                 <div className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.5)' }}>{stat.label}</div>
-              </motion.div>
+              </div>
             ))}
-          </motion.div>
+          </div>
         </div>
 
         {/* Scroll indicator */}
@@ -544,19 +503,6 @@ export default function HomePage() {
             backgroundSize: "32px 32px",
           }}
         />
-        {/* Aurora blobs */}
-        <div
-          className="absolute top-10 right-0 w-[500px] h-[500px] rounded-full pointer-events-none"
-          style={{ background: "radial-gradient(circle, rgba(124,58,237,0.25) 0%, transparent 70%)", filter: "blur(80px)" }}
-        />
-        <div
-          className="absolute bottom-10 left-0 w-[500px] h-[400px] rounded-full pointer-events-none"
-          style={{ background: "radial-gradient(circle, rgba(37,99,235,0.20) 0%, transparent 70%)", filter: "blur(80px)" }}
-        />
-        <div
-          className="absolute top-1/2 left-1/2 w-96 h-96 rounded-full pointer-events-none"
-          style={{ background: "radial-gradient(circle, rgba(6,182,212,0.12) 0%, transparent 70%)", filter: "blur(60px)", transform: "translate(-50%,-50%)" }}
-        />
         {/* Top separator gradient */}
         <div
           className="absolute top-0 left-0 right-0 h-[2px] pointer-events-none wow-header-border"
@@ -564,13 +510,7 @@ export default function HomePage() {
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           {/* Section Header */}
-          <motion.div 
-            className="text-center mb-12"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-          >
+          <div className="text-center mb-12">
             <div className="wow-badge mb-4" data-testid="badge-courses-label">
               <BookOpen className="w-4 h-4" />
               <span>Bizning Kurslar</span>
@@ -608,16 +548,10 @@ export default function HomePage() {
                 </button>
               )}
             </div>
-          </motion.div>
+          </div>
 
-          {/* WOW Filter Bar */}
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="mb-12"
-          >
+          {/* Filter Bar */}
+          <div className="mb-12">
             {/* Gradient border wrapper */}
             <div
               className="rounded-2xl p-px"
@@ -629,8 +563,6 @@ export default function HomePage() {
                 className="rounded-2xl p-6 space-y-5"
                 style={{
                   background: "rgba(255,255,255,0.04)",
-                  backdropFilter: "blur(20px)",
-                  WebkitBackdropFilter: "blur(20px)",
                 }}
               >
                 {/* CEFR Levels */}
@@ -704,16 +636,13 @@ export default function HomePage() {
 
               </div>
             </div>
-          </motion.div>
+          </div>
 
         {isLoading ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {[...Array(6)].map((_, i) => (
-              <motion.div
+              <div
                 key={i}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: i * 0.1 }}
               >
                 <div
                   className="rounded-xl overflow-hidden"
@@ -735,7 +664,7 @@ export default function HomePage() {
                     </div>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
         ) : courses && courses.length > 0 ? (
@@ -806,11 +735,8 @@ export default function HomePage() {
               const isFree = (course as any).isFree === true;
 
               return (
-                <motion.div
+                <div
                   key={course.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
                   className={isFree ? "free-course-wrapper" : ""}
                 >
                   {/* BEPUL KURSLAR - maxsus dizayn */}
@@ -1021,14 +947,12 @@ export default function HomePage() {
                       </Card>
                     </>
                   )}
-          </motion.div>
+          </div>
               );
             })}
           </div>
         ) : (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
+          <div
             className="text-center py-20"
           >
             <div
@@ -1049,7 +973,7 @@ export default function HomePage() {
               <X className="w-4 h-4" />
               Filterlarni tozalash
             </button>
-          </motion.div>
+          </div>
         )}
         </div>
       </div>
@@ -1060,16 +984,10 @@ export default function HomePage() {
           {/* Smooth transition from dark courses section */}
           <div className="absolute top-0 left-0 right-0 h-24 pointer-events-none" style={{ background: "linear-gradient(to bottom, #0a0520, transparent)" }} />
           <div className="absolute inset-0 bg-gradient-to-br from-violet-50/80 via-background to-blue-50/60 dark:from-violet-950/20 dark:via-background dark:to-blue-950/20 pointer-events-none" />
-          <div className="absolute top-10 left-[10%] w-72 h-72 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(124,58,237,0.07)' }} />
-          <div className="absolute bottom-10 right-[10%] w-80 h-80 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(37,99,235,0.07)' }} />
 
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-            <motion.div
+            <div
               className="text-center mb-14"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
             >
               <div className="wow-badge mb-4" data-testid="badge-testimonials-label">
                 <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
@@ -1081,15 +999,11 @@ export default function HomePage() {
               <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
                 Minglab talabalar bizga ishonishdi va karyeralarini qurishdi
               </p>
-            </motion.div>
+            </div>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {testimonials.slice(0, 6).map((testimonial, idx) => (
-                <motion.div
+                <div
                   key={testimonial.id}
-                  initial={{ opacity: 0, y: 24 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: idx * 0.08 }}
                 >
                   <Card className="wow-card-glow h-full" data-testid={`card-testimonial-${testimonial.id}`}>
                     <CardHeader>
@@ -1119,7 +1033,7 @@ export default function HomePage() {
                       </p>
                     </CardContent>
                   </Card>
-                </motion.div>
+                </div>
               ))}
             </div>
           </div>
@@ -1158,12 +1072,8 @@ export default function HomePage() {
             <div className="absolute inset-0 dot-pattern opacity-20 pointer-events-none" />
             
             <div className="relative py-20">
-              <motion.div 
+              <div 
                 className="text-center mb-12 px-4"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5 }}
               >
                 <div className="wow-badge mb-4" data-testid="badge-certificates-label">
                   <Award className="w-4 h-4" />
@@ -1173,7 +1083,7 @@ export default function HomePage() {
                 <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
                   Bizning professional sertifikatlarimiz va litsenziyalarimiz
                 </p>
-              </motion.div>
+              </div>
             <div className="relative overflow-hidden">
               <div 
                 className="flex gap-6 animate-certificate-scroll pl-4"
@@ -1225,18 +1135,12 @@ export default function HomePage() {
           style={{ background: "linear-gradient(180deg, #0a0520 0%, #0d1440 100%)" }}
         >
           {/* Aurora orbs */}
-          <div className="wow-blob wow-blob-1 absolute" style={{ top: "10%", left: "5%", width: 320, height: 320, background: "rgba(124,58,237,0.15)", filter: "blur(70px)" }} />
-          <div className="wow-blob wow-blob-2 absolute" style={{ bottom: "5%", right: "8%", width: 260, height: 260, background: "rgba(6,182,212,0.12)", filter: "blur(60px)" }} />
           {/* Dot grid */}
           <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "32px 32px", pointerEvents: "none" }} />
 
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-            <motion.div
+            <div
               className="max-w-4xl mx-auto"
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
             >
               <div className="wow-badge mb-5" data-testid="badge-about-label">
                 <Users className="w-4 h-4" />
@@ -1252,7 +1156,7 @@ export default function HomePage() {
                   border: "1px solid rgba(255,255,255,0.10)",
                   borderRadius: 24,
                   padding: "32px 40px",
-                  backdropFilter: "blur(12px)",
+                  
                   position: "relative",
                   overflow: "hidden",
                 }}
@@ -1267,7 +1171,7 @@ export default function HomePage() {
                   {getSetting("about_us")}
                 </p>
               </div>
-            </motion.div>
+            </div>
           </div>
         </div>
       )}
@@ -1280,18 +1184,12 @@ export default function HomePage() {
           style={{ background: "linear-gradient(180deg, #0d1440 0%, #0a0520 100%)" }}
         >
           {/* Aurora orbs */}
-          <div className="wow-blob wow-blob-3 absolute" style={{ top: "15%", right: "5%", width: 300, height: 300, background: "rgba(37,99,235,0.15)", filter: "blur(70px)" }} />
-          <div className="wow-blob wow-blob-4 absolute" style={{ bottom: "10%", left: "10%", width: 240, height: 240, background: "rgba(236,72,153,0.10)", filter: "blur(60px)" }} />
           {/* Dot grid */}
           <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "32px 32px", pointerEvents: "none" }} />
 
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-            <motion.div
+            <div
               className="text-center mb-14"
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
             >
               <div className="wow-badge mb-5" data-testid="badge-contact-label">
                 <Mail className="w-4 h-4" />
@@ -1303,7 +1201,7 @@ export default function HomePage() {
               <p style={{ color: "rgba(255,255,255,0.45)" }} className="max-w-2xl mx-auto text-lg">
                 Savollaringiz bormi? Biz sizga yordam berishga tayyormiz!
               </p>
-            </motion.div>
+            </div>
 
             {/* Contact cards grid */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 max-w-5xl mx-auto">
@@ -1333,12 +1231,8 @@ export default function HomePage() {
                   testId: "card-contact-address", external: false,
                 },
               ].filter(Boolean).map((card: any, i: number) => (
-                <motion.div
+                <div
                   key={card.label}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: i * 0.1 }}
                   style={{ position: "relative" }}
                 >
                   {/* Animated gradient border */}
@@ -1361,7 +1255,7 @@ export default function HomePage() {
                         background: "linear-gradient(160deg, rgba(20,10,50,0.92), rgba(10,5,32,0.95))",
                         borderRadius: 20, padding: "28px 20px", textAlign: "center",
                         textDecoration: "none", transition: "transform 0.2s, box-shadow 0.2s",
-                        backdropFilter: "blur(12px)",
+                        
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.transform = "translateY(-6px)";
@@ -1386,7 +1280,7 @@ export default function HomePage() {
                         position: "relative", zIndex: 1,
                         background: "linear-gradient(160deg, rgba(20,10,50,0.92), rgba(10,5,32,0.95))",
                         borderRadius: 20, padding: "28px 20px", textAlign: "center",
-                        backdropFilter: "blur(12px)",
+                        
                       }}
                     >
                       <div style={{ width: 56, height: 56, borderRadius: 16, background: `linear-gradient(135deg, ${card.from}, ${card.to})`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", boxShadow: `0 8px 24px ${card.glow}` }}>
@@ -1396,7 +1290,7 @@ export default function HomePage() {
                       <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, wordBreak: "break-all" }}>{card.value}</p>
                     </div>
                   )}
-                </motion.div>
+                </div>
               ))}
             </div>
           </div>
@@ -1981,11 +1875,8 @@ export default function HomePage() {
                           {rawLines.map((line: string, i: number) => {
                             const pal = palettes[i % palettes.length];
                             return (
-                              <motion.div
+                              <div
                                 key={i}
-                                initial={{ opacity: 0, x: -18 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ duration: 0.32, delay: i * 0.06 }}
                                 style={{
                                   display: 'flex',
                                   alignItems: 'center',
@@ -1998,10 +1889,6 @@ export default function HomePage() {
                                   position: 'relative',
                                   overflow: 'hidden',
                                   transition: 'transform 0.18s, box-shadow 0.18s',
-                                }}
-                                whileHover={{
-                                  scale: 1.015,
-                                  boxShadow: `0 4px 18px ${pal.glow}, 0 2px 0 rgba(0,0,0,0.4)`,
                                 }}
                               >
                                 {/* Left shimmer accent line */}
@@ -2026,7 +1913,7 @@ export default function HomePage() {
                                 <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.82)', lineHeight: 1.45, fontWeight: 500 }}>
                                   {line}
                                 </span>
-                              </motion.div>
+                              </div>
                             );
                           })}
                         </div>
@@ -2124,7 +2011,7 @@ export default function HomePage() {
 
           {/* Header */}
           <div className="relative flex-shrink-0 flex items-center gap-3 px-4 py-3 border-b"
-            style={{ borderColor: 'rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(12px)' }}>
+            style={{ borderColor: 'rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.03)',  }}>
             <button
               onClick={() => setSelectedCourseForLessons(null)}
               className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200"
@@ -2155,9 +2042,7 @@ export default function HomePage() {
           <div className="relative flex-1 overflow-y-auto" style={{ padding: '12px 12px 20px' }}>
             {isCourseLessonsLoading ? (
               <div className="flex flex-col items-center justify-center h-full gap-4">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
+                <div
                   style={{ width: 44, height: 44, borderRadius: '50%', border: '3px solid rgba(124,58,237,0.2)', borderTopColor: '#7c3aed' }}
                 />
                 <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13 }}>Yuklanmoqda...</p>
@@ -2177,11 +2062,8 @@ export default function HomePage() {
                   const WowLessonItem = ({ lesson, index, courseId }: { lesson: any; index: number; courseId: string }) => {
                     const canViewDemo = lesson.isDemo && lesson.videoUrl && lesson.videoUrl.trim() !== '';
                     return (
-                      <motion.div
+                      <div
                         key={lesson.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.3, delay: index * 0.05 }}
                         onClick={() => canViewDemo && openDemoLesson(lesson, courseId)}
                         data-testid={`public-lesson-${lesson.id}`}
                         style={{
@@ -2199,11 +2081,6 @@ export default function HomePage() {
                           position: 'relative',
                           overflow: 'hidden',
                         }}
-                        whileHover={canViewDemo ? {
-                          scale: 1.01,
-                          boxShadow: '0 4px 20px rgba(251,146,60,0.25)',
-                        } : {}}
-                        whileTap={canViewDemo ? { scale: 0.99 } : {}}
                       >
                         {/* Left accent line for demo */}
                         {canViewDemo && (
@@ -2214,32 +2091,26 @@ export default function HomePage() {
 
                         {/* Icon */}
                         {canViewDemo ? (
-                          <motion.div
-                            animate={{ boxShadow: ['0 0 10px rgba(251,146,60,0.4)', '0 0 20px rgba(251,146,60,0.7)', '0 0 10px rgba(251,146,60,0.4)'] }}
-                            transition={{ duration: 2, repeat: Infinity }}
+                          <div
                             style={{ width:36, height:36, borderRadius:10, flexShrink:0,
                               background:'linear-gradient(145deg, #fb923c, #f59e0b)',
                               boxShadow:'0 4px 0 0 #92400e, 0 6px 14px rgba(251,146,60,0.45)',
                               display:'flex', alignItems:'center', justifyContent:'center',
                               border:'1px solid rgba(251,146,60,0.6)' }}>
                             <Play style={{ width:15, height:15, color:'#fff', fill:'#fff' }} />
-                          </motion.div>
+                          </div>
                         ) : (
-                          <motion.div
-                            animate={{ rotateY: [0, 8, -8, 0] }}
-                            transition={{ duration: 4, repeat: Infinity, delay: index * 0.3 }}
+                          <div
                             style={{ width:36, height:36, borderRadius:10, flexShrink:0,
                               background:'linear-gradient(145deg, #1e1b4b, #312e81)',
                               boxShadow:'0 4px 0 0 #1e1b4b, 0 6px 14px rgba(99,102,241,0.25)',
                               display:'flex', alignItems:'center', justifyContent:'center',
                               border:'1px solid rgba(99,102,241,0.3)' }}>
-                            <motion.div
-                              animate={{ scale: [1, 1.08, 1] }}
-                              transition={{ duration: 3, repeat: Infinity, delay: index * 0.2 }}
+                            <div
                             >
                               <Lock style={{ width:15, height:15, color:'rgba(165,180,252,0.7)' }} />
-                            </motion.div>
-                          </motion.div>
+                            </div>
+                          </div>
                         )}
 
                         {/* Text */}
@@ -2277,7 +2148,7 @@ export default function HomePage() {
                             PREMIUM
                           </span>
                         )}
-                      </motion.div>
+                      </div>
                     );
                   };
 
@@ -2301,11 +2172,8 @@ export default function HomePage() {
                           globalLessonIndex += lessonsInModule.length;
 
                           return (
-                            <motion.div
+                            <div
                               key={module.id}
-                              initial={{ opacity: 0, y: 16 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ duration: 0.4, delay: moduleIndex * 0.08 }}
                               data-testid={`public-module-${module.id}`}
                               style={{ borderRadius: 18, overflow:'hidden',
                                 background: `linear-gradient(135deg, ${pal.light} 0%, rgba(255,255,255,0.02) 100%)`,
@@ -2319,16 +2187,14 @@ export default function HomePage() {
 
                                 <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:10 }}>
                                   {/* Module number badge */}
-                                  <motion.div
-                                    animate={{ boxShadow: [`0 0 8px ${pal.glow}`, `0 0 16px ${pal.glow}`, `0 0 8px ${pal.glow}`] }}
-                                    transition={{ duration: 2.5, repeat: Infinity }}
+                                  <div
                                     style={{ width:38, height:38, borderRadius:12, flexShrink:0,
                                       background:`linear-gradient(145deg, ${pal.from}, ${pal.to})`,
                                       boxShadow:`0 4px 0 0 rgba(0,0,0,0.4), 0 6px 14px ${pal.glow}`,
                                       display:'flex', alignItems:'center', justifyContent:'center',
                                       border:`1px solid ${pal.from}60` }}>
                                     <span style={{ color:'#fff', fontWeight:800, fontSize:14 }}>{moduleIndex + 1}</span>
-                                  </motion.div>
+                                  </div>
 
                                   <div style={{ flex:1, minWidth:0 }}>
                                     <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:3 }}>
@@ -2360,10 +2226,7 @@ export default function HomePage() {
 
                                 {/* Animated progress bar */}
                                 <div style={{ height:5, borderRadius:10, background:'rgba(255,255,255,0.07)', overflow:'hidden' }}>
-                                  <motion.div
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${(demoCount / lessonsInModule.length) * 100}%` }}
-                                    transition={{ duration: 1, delay: moduleIndex * 0.15 + 0.3, ease: 'easeOut' }}
+                                  <div
                                     style={{ height:'100%', borderRadius:10,
                                       background:`linear-gradient(90deg, ${pal.from}, ${pal.to})`,
                                       boxShadow:`0 0 8px ${pal.glow}` }}
@@ -2390,7 +2253,7 @@ export default function HomePage() {
                                   />
                                 ))}
                               </div>
-                            </motion.div>
+                            </div>
                           );
                         })}
 
@@ -2427,16 +2290,14 @@ export default function HomePage() {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-full gap-4">
-                <motion.div
-                  animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.05, 1] }}
-                  transition={{ duration: 3, repeat: Infinity }}
+                <div
                   style={{ width:60, height:60, borderRadius:18,
                     background:'linear-gradient(145deg, #1e1b4b, #312e81)',
                     boxShadow:'0 8px 24px rgba(99,102,241,0.3)',
                     display:'flex', alignItems:'center', justifyContent:'center' }}
                 >
                   <BookOpen style={{ width:28, height:28, color:'rgba(165,180,252,0.6)' }} />
-                </motion.div>
+                </div>
                 <p style={{ color:'rgba(255,255,255,0.35)', fontSize:14 }}>Hali darslar qo'shilmagan</p>
               </div>
             )}

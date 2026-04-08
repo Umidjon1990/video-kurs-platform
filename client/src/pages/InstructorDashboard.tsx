@@ -378,7 +378,7 @@ export default function InstructorDashboard() {
   const { data: unreadCount } = useQuery<{ count: number }>({
     queryKey: ["/api/chat/unread-count"],
     enabled: isAuthenticated,
-    refetchInterval: 10000, // Poll every 10 seconds
+    refetchInterval: 30000,
   });
 
   const { data: lessons } = useQuery<Lesson[]>({
@@ -445,7 +445,7 @@ export default function InstructorDashboard() {
   const { data: liveRooms } = useQuery<any[]>({
     queryKey: ["/api/instructor/live-rooms"],
     enabled: isAuthenticated,
-    refetchInterval: 10000, // Poll every 10 seconds
+    refetchInterval: 30000,
   });
   
   const [isLiveRoomDialogOpen, setIsLiveRoomDialogOpen] = useState(false);

@@ -83,14 +83,11 @@ export function ModernHeader() {
       className="sticky top-0 z-50 w-full transition-all duration-500"
       style={{
         background: isScrolled
-          ? "hsl(var(--background) / 0.90)"
-          : "rgba(10, 5, 32, 0.65)",
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
+          ? "hsl(var(--background) / 0.97)"
+          : "rgba(10, 5, 32, 0.92)",
         borderBottom: isScrolled
           ? "1px solid hsl(var(--border) / 0.5)"
           : "1px solid rgba(255,255,255,0.08)",
-        boxShadow: isScrolled ? "0 4px 32px rgba(124,58,237,0.06)" : "none",
       }}
     >
       {/* Animated gradient bottom border line */}
@@ -278,8 +275,7 @@ export function ModernHeader() {
             exit={{ opacity: 0, height: 0 }}
             className="md:hidden"
             style={{
-              background: isScrolled ? "hsl(var(--background) / 0.95)" : "rgba(10,5,32,0.95)",
-              backdropFilter: "blur(20px)",
+              background: isScrolled ? "hsl(var(--background) / 0.97)" : "rgba(10,5,32,0.97)",
               borderTop: "1px solid rgba(255,255,255,0.08)",
             }}
           >

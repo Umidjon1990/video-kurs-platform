@@ -25,51 +25,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import type { Course, StudentCourseProgress } from "@shared/schema";
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1 },
-  },
-};
-
-const itemVariants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: {
-    y: 0,
-    opacity: 1,
-    transition: { type: "spring", stiffness: 100 },
-  },
-};
-
-const GalaxyBackground = () => (
-  <div className="absolute inset-0 overflow-hidden pointer-events-none">
-    {[...Array(15)].map((_, i) => (
-      <motion.div
-        key={i}
-        className="absolute w-1 h-1 bg-white rounded-full opacity-20"
-        initial={{
-          x: Math.random() * 100 + "%",
-          y: Math.random() * 100 + "%",
-          scale: Math.random() * 0.5 + 0.5
-        }}
-        animate={{
-          y: [null, Math.random() * -100 - 50],
-          opacity: [0.2, 0.5, 0],
-        }}
-        transition={{
-          duration: Math.random() * 10 + 10,
-          repeat: Infinity,
-          ease: "linear",
-          delay: Math.random() * 10,
-        }}
-      />
-    ))}
-    <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[120px] animate-pulse" />
-    <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 rounded-full blur-[120px] animate-pulse" />
-    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[60%] bg-blue-600/5 rounded-full blur-[120px]" />
-  </div>
-);
+const GalaxyBackground = () => null;
 
 interface VideoModalState {
   courseId: string;
@@ -362,16 +318,7 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
         onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       >
         {/* Backdrop */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="absolute inset-0 bg-black/85 backdrop-blur-xl"
-        />
-
-        {/* Ambient glow accents */}
-        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-violet-600/8 rounded-full blur-[150px] pointer-events-none" />
-        <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-blue-600/8 rounded-full blur-[150px] pointer-events-none" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-cyan-600/5 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute inset-0 bg-black/90" />
 
         {/* 7D Animated Border Wrapper */}
         <motion.div
@@ -382,15 +329,6 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
           className="relative z-10 w-full max-w-6xl sm:rounded-3xl p-[2px] video-modal-7d"
           style={{ maxHeight: '100vh' }}
         >
-          {/* Corner spark glows */}
-          <div className="modal-corner-spark absolute -top-1 -left-1 w-6 h-6 rounded-full pointer-events-none"
-            style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.9) 0%, transparent 70%)', filter: 'blur(4px)' }} />
-          <div className="modal-corner-spark absolute -top-1 -right-1 w-6 h-6 rounded-full pointer-events-none"
-            style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.9) 0%, transparent 70%)', filter: 'blur(4px)' }} />
-          <div className="modal-corner-spark absolute -bottom-1 -left-1 w-6 h-6 rounded-full pointer-events-none"
-            style={{ background: 'radial-gradient(circle, rgba(236,72,153,0.9) 0%, transparent 70%)', filter: 'blur(4px)' }} />
-          <div className="modal-corner-spark absolute -bottom-1 -right-1 w-6 h-6 rounded-full pointer-events-none"
-            style={{ background: 'radial-gradient(circle, rgba(37,99,235,0.9) 0%, transparent 70%)', filter: 'blur(4px)' }} />
 
         {/* Modal inner */}
         <div
@@ -474,10 +412,8 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                   )
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <motion.div
-                      className="w-10 h-10 border-2 border-primary/30 border-t-primary rounded-full"
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    <div
+                      className="w-10 h-10 border-2 border-primary/30 border-t-primary rounded-full animate-spin"
                     />
                   </div>
                 )}
@@ -551,7 +487,7 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
               {/* ── Lesson Tabs: Umumiy / Vazifalar / Testlar + Darslar (mobile) ── */}
               <div className="border-t border-white/8">
                 <Tabs defaultValue="umumiy" className="w-full">
-                  <TabsList className="w-full rounded-none bg-black/60 backdrop-blur-sm border-b border-white/8 h-11 px-2 gap-1 justify-start overflow-x-auto flex-nowrap">
+                  <TabsList className="w-full rounded-none bg-black/60 border-b border-white/8 h-11 px-2 gap-1 justify-start overflow-x-auto flex-nowrap">
                     <TabsTrigger
                       value="umumiy"
                       className="rounded-lg text-[13px] gap-1.5 data-[state=active]:bg-white/10 data-[state=active]:text-white text-slate-500 shrink-0"
@@ -897,8 +833,7 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                         )}
                       </div>
                       {isActive && !locked && (
-                        <motion.div
-                          layoutId="active-indicator"
+                        <div
                           className="w-1.5 h-1.5 rounded-full bg-primary mt-2 shrink-0"
                         />
                       )}
@@ -988,7 +923,7 @@ function VideoLessonModal({ state, onClose }: VideoLessonModalProps) {
                       </div>
                     ))}
 
-                    <div className="sticky bottom-0 pt-3 pb-1 bg-[rgba(6,2,18,0.95)] backdrop-blur-sm">
+                    <div className="sticky bottom-0 pt-3 pb-1 bg-[rgba(6,2,18,0.98)]">
                       <Button
                         onClick={submitTest}
                         disabled={isSubmittingTest || Object.keys(testAnswers).length === 0}
@@ -1043,7 +978,7 @@ export default function StudentCourses() {
   const { data: activeLiveRooms } = useQuery<any[]>({
     queryKey: ["/api/live-rooms/active"],
     enabled: isAuthenticated,
-    refetchInterval: 15000,
+    refetchInterval: 30000,
   });
 
   const { data: studentSubscriptions } = useQuery<any[]>({
@@ -1071,10 +1006,8 @@ export default function StudentCourses() {
     return (
       <div className="h-screen flex items-center justify-center bg-[#050218]">
         <div className="relative">
-          <motion.div
-            className="w-20 h-20 border-4 border-primary/20 border-t-primary rounded-full"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          <div
+            className="w-20 h-20 border-4 border-primary/20 border-t-primary rounded-full animate-spin"
           />
           <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-primary animate-pulse" />
         </div>
@@ -1115,21 +1048,15 @@ export default function StudentCourses() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 pb-24">
 
             {/* Header Section */}
-            <motion.header
-              className="mb-12 relative"
-              initial="hidden"
-              animate="visible"
-              variants={containerVariants}
-            >
-              <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <header className="mb-12 relative">
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div className="space-y-4">
-                  <motion.div
-                    className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium backdrop-blur-md"
-                    whileHover={{ scale: 1.05 }}
+                  <div
+                    className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium"
                   >
                     <Flame className="w-4 h-4" />
                     <span>{getGreeting()}, {firstName}</span>
-                  </motion.div>
+                  </div>
 
                   <h1 className="text-4xl md:text-6xl font-black tracking-tight" data-testid="text-student-title">
                     O'rganishda <span className="bg-gradient-to-r from-primary via-purple-400 to-blue-400 bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(var(--primary),0.3)]">Davom Eting</span>
@@ -1140,9 +1067,8 @@ export default function StudentCourses() {
                   </p>
                 </div>
 
-                <motion.div
-                  variants={itemVariants}
-                  className="hidden lg:flex items-center gap-4 bg-white/5 backdrop-blur-xl border border-white/10 p-2 rounded-2xl"
+                <div
+                  className="hidden lg:flex items-center gap-4 bg-white/5 border border-white/10 p-2 rounded-2xl"
                 >
                   <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center border border-primary/30">
                     <Crown className="w-6 h-6 text-primary" />
@@ -1151,14 +1077,11 @@ export default function StudentCourses() {
                     <p className="text-xs text-slate-500 font-medium">Status</p>
                     <p className="text-sm font-bold text-slate-200">Premium Talaba</p>
                   </div>
-                </motion.div>
-              </motion.div>
+                </div>
+              </div>
 
               {/* Quick Stats Grid */}
-              <motion.div
-                variants={containerVariants}
-                className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-10"
-              >
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-10">
                 <StatsCard
                   title="Jami Kurslar"
                   value={totalEnrolled}
@@ -1207,18 +1130,16 @@ export default function StudentCourses() {
                   glowColor="rgba(168,85,247,0.45)"
                   delay={0.4}
                 />
-              </motion.div>
-            </motion.header>
+              </div>
+            </header>
 
             {/* Active Content Section */}
             <div className="space-y-12">
 
               {/* Live Rooms */}
               {activeLiveRooms && activeLiveRooms.some(r => r.status === 'active') && (
-                <motion.section
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="relative overflow-hidden rounded-3xl border border-red-500/30 bg-red-500/5 backdrop-blur-md p-6"
+                <section
+                  className="relative overflow-hidden rounded-3xl border border-red-500/30 bg-red-500/5 p-6"
                 >
                   <div className="absolute top-0 right-0 p-4">
                     <span className="flex h-3 w-3">
@@ -1234,10 +1155,9 @@ export default function StudentCourses() {
 
                   <div className="grid gap-4 md:grid-cols-2">
                     {activeLiveRooms.filter(r => r.status === 'active').map((room: any) => (
-                      <motion.div
+                      <div
                         key={room.id}
-                        whileHover={{ scale: 1.02 }}
-                        className="bg-white/5 border border-white/10 p-4 rounded-2xl flex items-center justify-between group cursor-pointer"
+                        className="bg-white/5 border border-white/10 p-4 rounded-2xl flex items-center justify-between group cursor-pointer hover-elevate"
                         onClick={() => {
                           if (room.platform === 'zoom' && room.zoomJoinUrl) {
                             window.open(room.zoomJoinUrl, '_blank');
@@ -1258,19 +1178,15 @@ export default function StudentCourses() {
                         <Button variant="ghost" size="icon" className="rounded-full">
                           <ArrowRight className="w-5 h-5" />
                         </Button>
-                      </motion.div>
+                      </div>
                     ))}
                   </div>
-                </motion.section>
+                </section>
               )}
 
               {/* Subscription Status Cards */}
               {studentSubscriptions && studentSubscriptions.filter((s: any) => s.subscription?.status === 'active').length > 0 && (
-                <motion.section
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                >
+                <section>
                   <div className="flex items-center gap-3 mb-5">
                     <div className="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center border border-cyan-500/30">
                       <CalendarDays className="w-4 h-4 text-cyan-400" />
@@ -1301,10 +1217,9 @@ export default function StudentCourses() {
                         };
 
                         return (
-                          <motion.div
+                          <div
                             key={sub.id}
-                            whileHover={{ y: -4 }}
-                            className={`relative overflow-hidden rounded-2xl border backdrop-blur-xl p-5
+                            className={`relative overflow-hidden rounded-2xl border p-5
                               ${isExpiringSoonUrgent
                                 ? 'border-red-500/40 bg-red-500/5'
                                 : isExpiringSoon
@@ -1348,11 +1263,9 @@ export default function StudentCourses() {
                               </div>
 
                               <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
-                                <motion.div
+                                <div
                                   className={`h-full rounded-full ${isExpiringSoonUrgent ? 'bg-red-500' : isExpiringSoon ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                                  initial={{ width: 0 }}
-                                  animate={{ width: `${progressPercent}%` }}
-                                  transition={{ duration: 1, delay: 0.3, ease: "easeOut" }}
+                                  style={{ width: `${progressPercent}%` }}
                                 />
                               </div>
 
@@ -1372,17 +1285,17 @@ export default function StudentCourses() {
                                 </div>
                               </div>
                             </div>
-                          </motion.div>
+                          </div>
                         );
                       })}
                   </div>
-                </motion.section>
+                </section>
               )}
 
               {/* Tabs System — 2 tabs only */}
               <Tabs defaultValue="enrolled" className="w-full">
                 <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
-                  <TabsList className="bg-white/5 border border-white/10 p-1.5 rounded-2xl backdrop-blur-xl h-auto">
+                  <TabsList className="bg-white/5 border border-white/10 p-1.5 rounded-2xl h-auto">
                     <TabsTrigger
                       value="enrolled"
                       className="rounded-xl px-6 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white transition-all duration-300"
@@ -1400,12 +1313,9 @@ export default function StudentCourses() {
                   </TabsList>
                 </div>
 
-                <AnimatePresence mode="wait">
                   <TabsContent value="enrolled" className="focus-visible:outline-none" key="enrolled">
                     {enrolledCourses && enrolledCourses.length === 0 ? (
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
+                      <div
                         className="text-center py-24 bg-white/5 rounded-[2rem] border border-white/10 border-dashed"
                       >
                         <div className="w-24 h-24 mx-auto mb-6 rounded-3xl bg-primary/10 flex items-center justify-center border border-primary/20">
@@ -1420,23 +1330,13 @@ export default function StudentCourses() {
                           Kurslarni Ko'rish
                           <ArrowRight className="w-4 h-4 ml-2" />
                         </Button>
-                      </motion.div>
+                      </div>
                     ) : (
-                      <motion.div
-                        variants={containerVariants}
-                        initial="hidden"
-                        animate="visible"
-                        className="grid gap-8 md:grid-cols-2 lg:grid-cols-3"
-                      >
+                      <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
                         {enrolledCourses?.map((course, index) => {
                           const progress = progressData?.find(p => p.course.id === course.id);
                           return (
-                            <motion.div
-                              key={course.id}
-                              variants={itemVariants}
-                              whileHover={{ y: -8 }}
-                              className="h-full"
-                            >
+                            <div key={course.id} className="h-full">
                               {progress ? (
                                 <ProgressCard
                                   progress={progress}
@@ -1450,26 +1350,17 @@ export default function StudentCourses() {
                                   index={index}
                                 />
                               )}
-                            </motion.div>
+                            </div>
                           );
                         })}
-                      </motion.div>
+                      </div>
                     )}
                   </TabsContent>
 
                   <TabsContent value="all" className="focus-visible:outline-none" key="all">
-                    <motion.div
-                      variants={containerVariants}
-                      initial="hidden"
-                      animate="visible"
-                      className="grid gap-8 md:grid-cols-2 lg:grid-cols-3"
-                    >
+                    <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
                       {allCourses?.map((course, index) => (
-                        <motion.div
-                          key={course.id}
-                          variants={itemVariants}
-                          whileHover={{ y: -8 }}
-                        >
+                        <div key={course.id}>
                           <CourseCard
                             course={course}
                             onEnroll={handleEnroll}
@@ -1477,11 +1368,10 @@ export default function StudentCourses() {
                             isEnrolled={enrolledCourseIds.has(course.id)}
                             index={index}
                           />
-                        </motion.div>
+                        </div>
                       ))}
-                    </motion.div>
+                    </div>
                   </TabsContent>
-                </AnimatePresence>
               </Tabs>
             </div>
           </div>

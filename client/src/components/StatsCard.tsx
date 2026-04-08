@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { LucideIcon, TrendingUp, TrendingDown } from "lucide-react";
-import { motion, useInView } from "framer-motion";
 
 interface StatsCardProps {
   title: string;
@@ -23,10 +22,14 @@ interface StatsCardProps {
 function AnimatedNumber({ value, duration = 1.2 }: { value: number; duration?: number }) {
   const [displayValue, setDisplayValue] = useState(0);
   const ref = useRef<HTMLSpanElement>(null);
-  const isInView = useInView(ref, { once: true });
+  const hasAnimated = useRef(false);
 
   useEffect(() => {
-    if (!isInView) return;
+    if (hasAnimated.current) {
+      setDisplayValue(value);
+      return;
+    }
+    hasAnimated.current = true;
     let startTime: number;
     let animationFrame: number;
     const animate = (timestamp: number) => {
@@ -38,7 +41,7 @@ function AnimatedNumber({ value, duration = 1.2 }: { value: number; duration?: n
     };
     animationFrame = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animationFrame);
-  }, [value, duration, isInView]);
+  }, [value, duration]);
 
   return <span ref={ref}>{displayValue.toLocaleString('uz-UZ')}</span>;
 }
@@ -54,7 +57,6 @@ export function StatsCard({
   iconBg = "bg-violet-500/20",
   iconColor = "text-violet-300",
   borderColor = "border-violet-500/40",
-  glowColor = "rgba(139,92,246,0.4)",
   delay = 0,
 }: StatsCardProps) {
   const TrendIcon = trend && trend.value >= 0 ? TrendingUp : TrendingDown;
@@ -68,11 +70,7 @@ export function StatsCard({
   const displayValue = isNumericValue ? <AnimatedNumber value={value as number} /> : value;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 24, scale: 0.92 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay }}
-      whileHover={{ y: -6, scale: 1.03, transition: { duration: 0.25 } }}
+    <div
       className="h-full group cursor-default"
       data-testid={testId}
     >
@@ -81,27 +79,9 @@ export function StatsCard({
           h-full relative overflow-hidden rounded-2xl
           bg-gradient-to-br ${gradient}
           border ${borderColor}
-          backdrop-blur-xl
-          transition-all duration-300
-          group-hover:border-opacity-70
         `}
-        style={{
-          boxShadow: `0 0 0 1px rgba(255,255,255,0.05), 0 4px 32px ${glowColor}, inset 0 1px 0 rgba(255,255,255,0.1)`,
-        }}
       >
-        {/* 3D top sheen */}
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-
-        {/* Glow blob */}
-        <div
-          className="absolute -top-8 -right-8 w-28 h-28 rounded-full blur-3xl opacity-40 group-hover:opacity-70 transition-opacity duration-500"
-          style={{ background: glowColor }}
-        />
-
-        {/* Bottom reflection */}
-        <div className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full blur-2xl opacity-20"
-          style={{ background: glowColor }}
-        />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
         <div className="relative p-5 sm:p-6">
           <div className="flex items-start justify-between gap-3">
@@ -111,32 +91,21 @@ export function StatsCard({
               </p>
 
               <div className="flex items-baseline gap-2 flex-wrap">
-                <motion.span
-                  className="text-3xl sm:text-4xl font-black tracking-tight"
-                  style={{
-                    color: '#fff',
-                    textShadow: `0 0 20px ${glowColor}, 0 0 40px ${glowColor}, 0 2px 4px rgba(0,0,0,0.8)`,
-                    WebkitTextStroke: '0.3px rgba(255,255,255,0.2)',
-                  }}
+                <span
+                  className="text-3xl sm:text-4xl font-black tracking-tight text-white"
                   data-testid={testId ? `${testId}-value` : undefined}
-                  initial={{ scale: 0.4, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: delay + 0.2, type: "spring", stiffness: 260, damping: 20 }}
                 >
                   {displayValue}
-                </motion.span>
+                </span>
 
                 {trend && (
-                  <motion.div
+                  <div
                     className={`flex items-center gap-1 text-xs font-bold ${trendColor} px-2 py-0.5 rounded-full bg-white/5 border border-white/10`}
                     data-testid={testId ? `${testId}-trend` : undefined}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: delay + 0.4 }}
                   >
                     <TrendIcon className="h-3 w-3" />
                     {Math.abs(trend.value)}%
-                  </motion.div>
+                  </div>
                 )}
               </div>
 
@@ -145,34 +114,14 @@ export function StatsCard({
               )}
             </div>
 
-            {/* Icon box with 3D effect */}
-            <motion.div
+            <div
               className={`shrink-0 p-3 sm:p-3.5 rounded-xl ${iconBg} border border-white/10`}
-              style={{
-                boxShadow: `0 0 16px ${glowColor}, inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.2)`,
-              }}
-              initial={{ scale: 0, rotate: -30 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ delay: delay + 0.1, type: "spring", stiffness: 280, damping: 18 }}
-              whileHover={{ rotate: 10, scale: 1.15 }}
             >
-              <Icon
-                className={`h-6 w-6 sm:h-7 sm:w-7 ${iconColor}`}
-                style={{ filter: `drop-shadow(0 0 6px ${glowColor})` }}
-              />
-            </motion.div>
+              <Icon className={`h-6 w-6 sm:h-7 sm:w-7 ${iconColor}`} />
+            </div>
           </div>
         </div>
-
-        {/* Bottom progress bar shimmer */}
-        <motion.div
-          className="absolute bottom-0 left-0 h-0.5 rounded-full"
-          style={{ background: `linear-gradient(90deg, transparent, ${glowColor}, transparent)` }}
-          initial={{ width: "0%" }}
-          animate={{ width: "100%" }}
-          transition={{ delay: delay + 0.5, duration: 0.8, ease: "easeOut" }}
-        />
       </div>
-    </motion.div>
+    </div>
   );
 }

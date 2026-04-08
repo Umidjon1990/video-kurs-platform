@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BookOpen, CheckCircle2, FileText, GraduationCap, ArrowRight, Trophy, Users } from "lucide-react";
 import type { StudentCourseProgress } from "@shared/schema";
-import { motion, useInView } from "framer-motion";
 import { useRef, useEffect, useState } from "react";
 
 interface ProgressCardProps {
@@ -14,14 +13,12 @@ interface ProgressCardProps {
 
 function AnimatedCircularProgress({ percentage, size = 64 }: { percentage: number; size?: number }) {
   const ref = useRef<SVGSVGElement>(null);
-  const isInView = useInView(ref, { once: true });
   const [animatedPercent, setAnimatedPercent] = useState(0);
   const radius = (size / 2) - 4;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference * (1 - animatedPercent / 100);
 
   useEffect(() => {
-    if (!isInView) return;
     let startTime: number;
     let frame: number;
     const animate = (timestamp: number) => {
@@ -33,7 +30,7 @@ function AnimatedCircularProgress({ percentage, size = 64 }: { percentage: numbe
     };
     frame = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(frame);
-  }, [percentage, isInView]);
+  }, [percentage]);
 
   const getColor = () => {
     if (percentage === 100) return "text-green-500 dark:text-green-400";
@@ -98,22 +95,16 @@ export function ProgressCard({ progress, onContinue }: ProgressCardProps) {
   ];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-    >
+    <div>
       <Card className="overflow-hidden h-full hover-elevate" data-testid={`progress-card-${course.id}`}>
         {isCompleted && (
           <div className="h-1 w-full bg-gradient-to-r from-green-400 via-emerald-500 to-teal-500" />
         )}
         {!isCompleted && progressPercentage > 0 && (
           <div className="h-1 w-full bg-muted">
-            <motion.div 
+            <div 
               className="h-full bg-gradient-to-r from-primary to-primary/70"
-              initial={{ width: 0 }}
-              animate={{ width: `${progressPercentage}%` }}
-              transition={{ duration: 1, delay: 0.3 }}
+              style={{ width: `${progressPercentage}%` }}
             />
           </div>
         )}
@@ -151,12 +142,9 @@ export function ProgressCard({ progress, onContinue }: ProgressCardProps) {
 
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            {statItems.map(({ icon: StatIcon, label, testKey, value, color, bg }, idx) => (
-              <motion.div
+            {statItems.map(({ icon: StatIcon, label, testKey, value, color, bg }) => (
+              <div
                 key={testKey}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: idx * 0.05 + 0.2 }}
                 className={`flex items-center gap-2 p-3 rounded-md ${bg}`}
               >
                 <StatIcon className={`w-4 h-4 ${color}`} />
@@ -166,7 +154,7 @@ export function ProgressCard({ progress, onContinue }: ProgressCardProps) {
                     {value}
                   </p>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
 
@@ -210,6 +198,6 @@ export function ProgressCard({ progress, onContinue }: ProgressCardProps) {
           )}
         </CardContent>
       </Card>
-    </motion.div>
+    </div>
   );
 }
