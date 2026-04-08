@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, memo } from "react";
-import { Play, Maximize2, Minimize2 } from "lucide-react";
+import { useState, useRef, useEffect, useCallback, memo } from "react";
+import { Play, Maximize2, Minimize2, Settings2, Check, ChevronUp } from "lucide-react";
 
 interface ModernVideoPlayerProps {
   videoUrl: string;
@@ -10,16 +10,42 @@ interface ModernVideoPlayerProps {
   [key: string]: any;
 }
 
+type QualityOption = { label: string; value: string };
+
+const QUALITY_OPTIONS: QualityOption[] = [
+  { label: 'Avtomatik', value: 'auto' },
+  { label: '1080p', value: '1080' },
+  { label: '720p', value: '720' },
+  { label: '480p', value: '480' },
+  { label: '360p', value: '360' },
+  { label: '240p', value: '240' },
+];
+
 export const ModernVideoPlayer = memo(function ModernVideoPlayer({ videoUrl, title, paused, onError, onPlayingChange }: ModernVideoPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [isNativeFullscreen, setIsNativeFullscreen] = useState(false);
   const [isCssFullscreen, setIsCssFullscreen] = useState(false);
+  const [selectedQuality, setSelectedQuality] = useState<string>('auto');
+  const [showQualityMenu, setShowQualityMenu] = useState(false);
   const isFullscreen = isNativeFullscreen || isCssFullscreen;
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const qualityMenuRef = useRef<HTMLDivElement>(null);
   const onPlayingChangeRef = useRef(onPlayingChange);
   onPlayingChangeRef.current = onPlayingChange;
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (qualityMenuRef.current && !qualityMenuRef.current.contains(e.target as Node)) {
+        setShowQualityMenu(false);
+      }
+    };
+    if (showQualityMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showQualityMenu]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -125,7 +151,15 @@ export const ModernVideoPlayer = memo(function ModernVideoPlayer({ videoUrl, tit
 
   const videoContent = videoUrl?.trim() || '';
 
-  const parseVideoUrl = (content: string): { type: string; embedUrl: string } | null => {
+  const getYouTubeVq = (quality: string) => {
+    const map: Record<string, string> = {
+      'auto': 'auto', '1080': 'hd1080', '720': 'hd720',
+      '480': 'large', '360': 'medium', '240': 'small',
+    };
+    return map[quality] || 'auto';
+  };
+
+  const parseVideoUrl = useCallback((content: string, quality: string): { type: string; embedUrl: string; supportsQuality: boolean } | null => {
     if (!content) return null;
 
     if (content.startsWith('<iframe') || content.startsWith('<embed')) {
@@ -136,12 +170,12 @@ export const ModernVideoPlayer = memo(function ModernVideoPlayer({ videoUrl, tit
           const ytId = iframeSrc.split('youtube.com/embed/')[1]?.split(/[?&]/)[0];
           if (ytId) {
             const origin = encodeURIComponent(window.location.origin);
-            return { type: 'youtube', embedUrl: `https://www.youtube.com/embed/${ytId}?rel=0&modestbranding=1&playsinline=1&enablejsapi=1&origin=${origin}&fs=1` };
+            return { type: 'youtube', supportsQuality: true, embedUrl: `https://www.youtube.com/embed/${ytId}?rel=0&modestbranding=1&playsinline=1&enablejsapi=1&origin=${origin}&fs=1&vq=${getYouTubeVq(quality)}` };
           }
         }
-        return { type: 'iframe', embedUrl: iframeSrc };
+        return { type: 'iframe', embedUrl: iframeSrc, supportsQuality: false };
       }
-      return { type: 'raw-iframe', embedUrl: content };
+      return { type: 'raw-iframe', embedUrl: content, supportsQuality: false };
     }
 
     if (content.includes('drive.google.com')) {
@@ -155,7 +189,7 @@ export const ModernVideoPlayer = memo(function ModernVideoPlayer({ videoUrl, tit
         fileId = content.split('/d/')[1]?.split('/')[0];
       }
       if (fileId) {
-        return { type: 'gdrive', embedUrl: `https://drive.google.com/file/d/${fileId}/preview` };
+        return { type: 'gdrive', embedUrl: `https://drive.google.com/file/d/${fileId}/preview`, supportsQuality: false };
       }
     }
 
@@ -170,36 +204,37 @@ export const ModernVideoPlayer = memo(function ModernVideoPlayer({ videoUrl, tit
       }
       if (videoId) {
         const origin = typeof window !== 'undefined' ? window.location.origin : '';
-        return { type: 'youtube', embedUrl: `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&enablejsapi=1&origin=${encodeURIComponent(origin)}&fs=1&vq=auto` };
+        return { type: 'youtube', supportsQuality: true, embedUrl: `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&enablejsapi=1&origin=${encodeURIComponent(origin)}&fs=1&vq=${getYouTubeVq(quality)}` };
       }
     }
 
     if (content.includes('mediadelivery.net')) {
       const separator = content.includes('?') ? '&' : '?';
       const bunnyUrl = `${content}${separator}autoplay=false&preload=true&responsive=true`;
-      return { type: 'bunny', embedUrl: bunnyUrl };
+      return { type: 'bunny', embedUrl: bunnyUrl, supportsQuality: true };
     }
 
     if (content.includes('kinescope.io')) {
       const separator = content.includes('?') ? '&' : '?';
-      return { type: 'kinescope', embedUrl: `${content}${separator}preload=auto&autoplay=0` };
+      const qualityParam = quality !== 'auto' ? `&quality=${quality}p` : '';
+      return { type: 'kinescope', embedUrl: `${content}${separator}preload=auto&autoplay=0${qualityParam}`, supportsQuality: true };
     }
 
     if (content.includes('vimeo.com') ||
         content.includes('player.vimeo.com') ||
         content.includes('dailymotion.com') ||
         content.includes('wistia.com')) {
-      return { type: 'other', embedUrl: content };
+      return { type: 'other', embedUrl: content, supportsQuality: false };
     }
 
     if (content.startsWith('http://') || content.startsWith('https://')) {
-      return { type: 'direct', embedUrl: content };
+      return { type: 'direct', embedUrl: content, supportsQuality: false };
     }
 
     return null;
-  };
+  }, []);
 
-  const parsedVideo = parseVideoUrl(videoContent);
+  const parsedVideo = parseVideoUrl(videoContent, selectedQuality);
 
   const handleIframeLoad = () => {
     setIsLoading(false);
@@ -371,12 +406,60 @@ export const ModernVideoPlayer = memo(function ModernVideoPlayer({ videoUrl, tit
         data-testid="modern-video-player"
       />
 
+      <div className={`absolute z-30 flex items-center gap-2 transition-opacity duration-200 opacity-0 hover:opacity-100 focus-within:opacity-100 ${
+        isFullscreen ? "top-4 right-4 opacity-100" : "top-3 right-3"
+      }`}>
+        <div ref={qualityMenuRef} className="relative">
+          <button
+            onClick={() => setShowQualityMenu(!showQualityMenu)}
+            title="Video sifati"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-black/70 text-white text-xs font-medium border border-white/20"
+            data-testid="button-video-quality"
+          >
+            <Settings2 className="w-4 h-4" />
+            <span>{selectedQuality === 'auto' ? 'Sifat' : `${selectedQuality}p`}</span>
+          </button>
+
+          {showQualityMenu && (
+            <div className="absolute bottom-full right-0 mb-2 w-40 rounded-lg bg-gray-900/95 border border-white/15 overflow-hidden" data-testid="menu-video-quality">
+              <div className="px-3 py-2 border-b border-white/10">
+                <p className="text-xs font-semibold text-white/80">Video sifati</p>
+              </div>
+              {QUALITY_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => {
+                    setSelectedQuality(opt.value);
+                    setShowQualityMenu(false);
+                    setIsLoading(true);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 text-sm transition-colors ${
+                    selectedQuality === opt.value
+                      ? 'text-primary bg-primary/10'
+                      : 'text-white/80 hover:bg-white/10'
+                  }`}
+                  data-testid={`button-quality-${opt.value}`}
+                >
+                  <span>{opt.label}</span>
+                  {selectedQuality === opt.value && <Check className="w-3.5 h-3.5 text-primary" />}
+                </button>
+              ))}
+              {parsedVideo.type === 'bunny' && selectedQuality !== 'auto' && (
+                <div className="px-3 py-2 border-t border-white/10">
+                  <p className="text-[10px] text-white/50">Bunny playerda ham sifatni o'zgartiring</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
       <button
         onClick={toggleFullscreen}
         title={isFullscreen ? "Kichraytirish" : "To'liq ekran"}
         className={`absolute z-30 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-black/70 text-white text-xs font-medium border border-white/20 transition-opacity duration-200 opacity-0 hover:opacity-100 focus:opacity-100 ${
           isFullscreen
-            ? "top-4 right-4 opacity-100"
+            ? "top-4 left-4 opacity-100"
             : "bottom-3 right-3"
         }`}
         style={{ willChange: 'opacity' }}
