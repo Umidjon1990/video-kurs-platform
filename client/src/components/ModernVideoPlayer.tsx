@@ -176,13 +176,13 @@ export const ModernVideoPlayer = memo(function ModernVideoPlayer({ videoUrl, tit
 
     if (content.includes('mediadelivery.net')) {
       const separator = content.includes('?') ? '&' : '?';
-      const bunnyUrl = `${content}${separator}autoplay=false&preload=metadata&responsive=true`;
+      const bunnyUrl = `${content}${separator}autoplay=false&preload=true&responsive=true`;
       return { type: 'bunny', embedUrl: bunnyUrl };
     }
 
     if (content.includes('kinescope.io')) {
       const separator = content.includes('?') ? '&' : '?';
-      return { type: 'kinescope', embedUrl: `${content}${separator}preload=metadata&autoplay=0` };
+      return { type: 'kinescope', embedUrl: `${content}${separator}preload=auto&autoplay=0` };
     }
 
     if (content.includes('vimeo.com') ||
@@ -238,6 +238,62 @@ export const ModernVideoPlayer = memo(function ModernVideoPlayer({ videoUrl, tit
         </div>
       </div>
     );
+  }
+
+  if (parsedVideo.type === 'direct') {
+    const videoExtensions = /\.(mp4|webm|ogg|mov|m3u8)(\?|$)/i;
+    if (videoExtensions.test(parsedVideo.embedUrl)) {
+      return (
+        <div
+          ref={containerRef}
+          className={`relative bg-black ${isCssFullscreen ? 'rounded-none' : 'aspect-video rounded-xl overflow-hidden'}`}
+          style={isCssFullscreen ? {
+            position: 'fixed',
+            inset: 0,
+            width: '100vw',
+            height: '100vh',
+            zIndex: 99999,
+            overflow: 'hidden',
+          } : undefined}
+        >
+          <video
+            src={parsedVideo.embedUrl}
+            className="w-full h-full"
+            controls
+            playsInline
+            preload="auto"
+            onLoadedData={() => setIsLoading(false)}
+            onError={() => { setIsLoading(false); setHasError(true); onError?.(); }}
+            onPlay={() => onPlayingChangeRef.current?.(true)}
+            onPause={() => onPlayingChangeRef.current?.(false)}
+            onEnded={() => onPlayingChangeRef.current?.(false)}
+            data-testid="modern-video-player-native"
+          />
+          {isLoading && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-black pointer-events-none">
+              <div className="text-center">
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+                  <Play className="w-6 h-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary" />
+                </div>
+                <p className="mt-3 text-sm text-white/60">Video yuklanmoqda...</p>
+              </div>
+            </div>
+          )}
+          <button
+            onClick={toggleFullscreen}
+            title={isFullscreen ? "Kichraytirish" : "To'liq ekran"}
+            className={`absolute z-30 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-black/70 text-white text-xs font-medium border border-white/20 transition-opacity duration-200 opacity-0 hover:opacity-100 focus:opacity-100 ${
+              isFullscreen ? "top-4 right-4 opacity-100" : "bottom-3 right-3"
+            }`}
+            style={{ willChange: 'opacity' }}
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            <span>{isFullscreen ? "Yopish" : "Kattalashtirish"}</span>
+          </button>
+        </div>
+      );
+    }
   }
 
   if (parsedVideo.type === 'raw-iframe') {
