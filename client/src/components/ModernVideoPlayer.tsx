@@ -173,6 +173,16 @@ export const ModernVideoPlayer = memo(function ModernVideoPlayer({ videoUrl, tit
             return { type: 'youtube', supportsQuality: true, embedUrl: `https://www.youtube.com/embed/${ytId}?rel=0&modestbranding=1&playsinline=1&enablejsapi=1&origin=${origin}&fs=1&vq=${getYouTubeVq(quality)}` };
           }
         }
+        if (iframeSrc.includes('kinescope.io')) {
+          let kUrl = iframeSrc;
+          if (!kUrl.includes('/embed/')) {
+            const kid = kUrl.match(/kinescope\.io\/([a-zA-Z0-9-]+)/);
+            if (kid && kid[1]) kUrl = `https://kinescope.io/embed/${kid[1]}`;
+          }
+          const ksep = kUrl.includes('?') ? '&' : '?';
+          const kq = quality !== 'auto' ? `&quality=${quality}` : '';
+          return { type: 'kinescope', embedUrl: `${kUrl}${ksep}autoplay=0${kq}`, supportsQuality: true };
+        }
         return { type: 'iframe', embedUrl: iframeSrc, supportsQuality: false };
       }
       return { type: 'raw-iframe', embedUrl: content, supportsQuality: false };
@@ -215,9 +225,18 @@ export const ModernVideoPlayer = memo(function ModernVideoPlayer({ videoUrl, tit
     }
 
     if (content.includes('kinescope.io')) {
-      const separator = content.includes('?') ? '&' : '?';
-      const qualityParam = quality !== 'auto' ? `&quality=${quality}p` : '';
-      return { type: 'kinescope', embedUrl: `${content}${separator}preload=auto&autoplay=0${qualityParam}`, supportsQuality: true };
+      let kinescopeUrl = content;
+      if (kinescopeUrl.includes('/watch/')) {
+        kinescopeUrl = kinescopeUrl.replace('/watch/', '/embed/');
+      } else if (!kinescopeUrl.includes('/embed/')) {
+        const idMatch = kinescopeUrl.match(/kinescope\.io\/([a-zA-Z0-9-]+)/);
+        if (idMatch && idMatch[1]) {
+          kinescopeUrl = `https://kinescope.io/embed/${idMatch[1]}`;
+        }
+      }
+      const separator = kinescopeUrl.includes('?') ? '&' : '?';
+      const qualityParam = quality !== 'auto' ? `&quality=${quality}` : '';
+      return { type: 'kinescope', embedUrl: `${kinescopeUrl}${separator}autoplay=0${qualityParam}`, supportsQuality: true };
     }
 
     if (content.includes('vimeo.com') ||
@@ -400,6 +419,7 @@ export const ModernVideoPlayer = memo(function ModernVideoPlayer({ videoUrl, tit
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
         allowFullScreen
         playsInline
+        loading="eager"
         {...{ 'webkit-playsinline': '' } as any}
         onLoad={handleIframeLoad}
         onError={handleIframeError}
