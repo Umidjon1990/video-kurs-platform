@@ -8,14 +8,10 @@ import {
   Check,
   ChevronDown,
   Clock3,
-  FileText,
   GraduationCap,
   Lock,
   Play,
   Share2,
-  ShieldCheck,
-  Star,
-  Users,
 } from "lucide-react";
 import type { SiteSetting } from "@shared/schema";
 import { PublicSiteFooter } from "@/components/public/PublicSiteFooter";
@@ -47,7 +43,7 @@ function CoursePageLoading() {
 
 export default function PublicCoursePage() {
   const { courseId } = useParams<{ courseId: string }>();
-  const [previewUrl, setPreviewUrl] = useState("");
+  const [activePreviewId, setActivePreviewId] = useState("");
   const [copied, setCopied] = useState(false);
 
   const { data: courses = [], isLoading: isCoursesLoading } = useQuery<PublicCourse[]>({
@@ -82,25 +78,21 @@ export default function PublicCoursePage() {
   const level = course ? levelForCourse(course, levels) : undefined;
   const isFree = Boolean(course?.isFree) || Number(course?.price || 0) === 0;
   const totalDuration = lessons.reduce((sum, lesson) => sum + Number(lesson.duration || 0), 0);
+  const lessonCount = course?.lessonsCount || lessons.length;
 
   usePublicPage(
     course ? `${course.title} — Zamonaviy Video Darslar` : "Kurs — Zamonaviy Video Darslar",
-    course?.description?.slice(0, 155) || "Video kurs tafsilotlari, darslar dasturi va bepul demo darslar.",
+    course?.description?.slice(0, 155) || "Video kurs tafsilotlari, darslar dasturi va bepul namuna darslar.",
   );
-
-  useEffect(() => {
-    if (!course) return;
-    const previewCandidates = [course.promoVideoUrl, ...demoLessons.map((lesson) => lesson.videoUrl)].filter(Boolean) as string[];
-    const firstPreview = previewCandidates.find((value) => getVideoEmbedUrl(value)) || previewCandidates[0] || "";
-    setPreviewUrl(firstPreview);
-  }, [course, demoLessons]);
 
   const moduleGroups = useMemo(() => {
     const orderedModules = [...modules].sort((a, b) => a.order - b.order);
-    const groups = orderedModules.map((module) => ({
-      module,
-      lessons: lessons.filter((lesson) => lesson.moduleId === module.id).sort((a, b) => a.order - b.order),
-    }));
+    const groups = orderedModules
+      .map((module) => ({
+        module,
+        lessons: lessons.filter((lesson) => lesson.moduleId === module.id).sort((a, b) => a.order - b.order),
+      }))
+      .filter((group) => group.lessons.length > 0);
     const standalone = lessons.filter((lesson) => !lesson.moduleId).sort((a, b) => a.order - b.order);
     if (standalone.length) {
       groups.push({
@@ -111,8 +103,29 @@ export default function PublicCoursePage() {
     return groups;
   }, [courseId, lessons, modules]);
 
-  const selectPreview = (lesson: PublicLesson) => {
-    setPreviewUrl(lesson.videoUrl);
+  const previewOptions = useMemo(() => {
+    const items: Array<{ id: string; title: string; url: string }> = [];
+    if (course?.promoVideoUrl) {
+      items.push({ id: "course-promo", title: "Kurs haqida qisqa video", url: course.promoVideoUrl });
+    }
+    demoLessons.forEach((lesson) => {
+      items.push({ id: lesson.id, title: lesson.title, url: lesson.videoUrl });
+    });
+    return items.filter((item) => Boolean(getVideoEmbedUrl(item.url)));
+  }, [course?.promoVideoUrl, demoLessons]);
+
+  useEffect(() => {
+    if (!previewOptions.length) {
+      setActivePreviewId("");
+      return;
+    }
+    if (!previewOptions.some((item) => item.id === activePreviewId)) {
+      setActivePreviewId(previewOptions[0].id);
+    }
+  }, [activePreviewId, previewOptions]);
+
+  const selectPreview = (previewId: string) => {
+    setActivePreviewId(previewId);
     window.setTimeout(() => document.getElementById("video-preview")?.scrollIntoView({ behavior: "smooth", block: "center" }), 20);
   };
 
@@ -150,7 +163,8 @@ export default function PublicCoursePage() {
     );
   }
 
-  const embedUrl = getVideoEmbedUrl(previewUrl);
+  const activePreview = previewOptions.find((item) => item.id === activePreviewId) || previewOptions[0];
+  const embedUrl = getVideoEmbedUrl(activePreview?.url);
   const checkoutHref = isFree ? `/register?course=${course.id}` : `/checkout/${course.id}`;
 
   return (
@@ -162,13 +176,13 @@ export default function PublicCoursePage() {
           <div className="zvd-detail-grid" aria-hidden="true" />
           <div className="zvd-container">
             <div className="zvd-breadcrumbs">
-              <Link href="/">Bosh sahifa</Link><span>/</span><Link href="/explore">Kurslar</Link><span>/</span><strong>{course.title}</strong>
+              <Link href="/explore"><ArrowLeft size={16} /> Kurslarga qaytish</Link>
             </div>
 
             <div className="zvd-detail-layout">
               <div className="zvd-detail-copy">
                 <div className="zvd-detail-badges">
-                  <span>{level?.code || course.category || "Video kurs"}</span>
+                  <span>{level?.code || (course.category?.toLowerCase() === "language" ? "Til kursi" : course.category) || "Video kurs"}</span>
                   {isFree ? <span className="is-free">Bepul kurs</span> : null}
                   {course.discountPercentage ? <span className="is-discount">−{course.discountPercentage}%</span> : null}
                 </div>
@@ -182,11 +196,11 @@ export default function PublicCoursePage() {
                   <div><small>Kurs muallifi</small><strong>{instructorName(course)}</strong></div>
                 </div>
 
-                <div className="zvd-detail-metrics">
-                  <span><BookOpen size={19} /><strong>{course.lessonsCount || lessons.length}</strong><small>video dars</small></span>
-                  <span><Clock3 size={19} /><strong>{totalDuration || course.subscriptionDays || 0}</strong><small>{totalDuration ? "daqiqa" : "kun kirish"}</small></span>
-                  <span><Users size={19} /><strong>{course.enrollmentsCount || 0}</strong><small>o'quvchi</small></span>
-                  {course.totalRatings ? <span><Star size={19} fill="currentColor" /><strong>{Number(course.averageRating || 0).toFixed(1)}</strong><small>{course.totalRatings} baho</small></span> : null}
+                <div className="zvd-detail-metrics" aria-label="Kurs haqida qisqa ma'lumot">
+                  {lessonCount > 0 ? <span><BookOpen size={19} /><strong>{lessonCount} ta dars</strong></span> : null}
+                  {moduleGroups.length > 0 ? <span><GraduationCap size={19} /><strong>{moduleGroups.length} ta bo'lim</strong></span> : null}
+                  {totalDuration > 0 ? <span><Clock3 size={19} /><strong>{totalDuration} daqiqa</strong></span> : null}
+                  {!totalDuration && course.subscriptionDays ? <span><Clock3 size={19} /><strong>{course.subscriptionDays} kun foydalanish</strong></span> : null}
                 </div>
               </div>
 
@@ -200,7 +214,7 @@ export default function PublicCoursePage() {
                       onError={(event) => { event.currentTarget.style.display = "none"; }}
                     />
                   ) : null}
-                  {previewUrl && <button type="button" onClick={() => document.getElementById("video-preview")?.scrollIntoView({ behavior: "smooth" })} aria-label="Kurs videosini ko'rish"><Play size={23} fill="currentColor" /></button>}
+                  {previewOptions.length > 0 && <button type="button" onClick={() => document.getElementById("video-preview")?.scrollIntoView({ behavior: "smooth" })} aria-label="Bepul darsni ko'rish"><Play size={23} fill="currentColor" /></button>}
                 </div>
                 <div className="zvd-enroll-body">
                   {course.discountPercentage && !isFree ? <del>{formatPrice(course.price)} so'm</del> : null}
@@ -209,11 +223,10 @@ export default function PublicCoursePage() {
                   <Link href={checkoutHref} className="zvd-primary-button">{isFree ? "Bepul boshlash" : "Kursga yozilish"}</Link>
                   <button type="button" className="zvd-share-button" onClick={shareCourse}><Share2 size={17} />{copied ? "Havola nusxalandi" : "Kursni ulashish"}</button>
                   <ul>
-                    <li><Check size={16} />Barcha video darslar</li>
-                    <li><Check size={16} />Topshiriq va testlar</li>
-                    <li><Check size={16} />Mobil va kompyuterda kirish</li>
+                    {lessonCount > 0 ? <li><BookOpen size={16} />{lessonCount} ta video dars</li> : null}
+                    {course.subscriptionDays ? <li><Clock3 size={16} />{course.subscriptionDays} kun foydalanish</li> : null}
+                    <li><Check size={16} />Telefon va kompyuter uchun qulay</li>
                   </ul>
-                  <span className="zvd-secure-note"><ShieldCheck size={16} />Xavfsiz va himoyalangan kirish</span>
                 </div>
               </aside>
             </div>
@@ -222,43 +235,52 @@ export default function PublicCoursePage() {
 
         <section className="zvd-detail-content">
           <div className="zvd-container zvd-detail-content-grid">
-            <div>
+            <div className="zvd-detail-main">
               <section className="zvd-preview-section" id="video-preview">
                 <div className="zvd-content-heading">
-                  <span className="zvd-eyebrow">Kurs bilan tanishing</span>
-                  <h2>Video preview</h2>
+                  <span className="zvd-eyebrow">Bepul ko'rish</span>
+                  <h2>Namuna dars</h2>
+                  <p>Kurs uslubini darsga yozilishdan oldin ko'rib chiqing.</p>
                 </div>
                 <div className="zvd-video-shell">
-                  {embedUrl ? (
+                  {isLessonsLoading && !course.promoVideoUrl ? (
+                    <div className="zvd-video-loading" aria-label="Video yuklanmoqda"><span /></div>
+                  ) : embedUrl ? (
                     <iframe
                       src={embedUrl}
-                      title={`${course.title} video preview`}
+                      title={`${course.title}: ${activePreview?.title || "bepul namuna dars"}`}
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                       allowFullScreen
                     />
                   ) : (
                     <div className="zvd-video-fallback">
                       <Play size={42} />
-                      <strong>Preview tez orada qo'shiladi</strong>
-                      <span>Kurs dasturi bilan quyida tanishing.</span>
+                      <strong>Hozircha bepul video yo'q</strong>
+                      <span>Quyida kurs dasturini ko'rishingiz mumkin.</span>
                     </div>
                   )}
                 </div>
-                {demoLessons.length > 1 && (
-                  <div className="zvd-demo-chips" aria-label="Bepul demo darslar">
-                    {demoLessons.map((lesson, index) => (
-                      <button type="button" key={lesson.id} onClick={() => selectPreview(lesson)} className={lesson.videoUrl === previewUrl ? "is-active" : ""}>
-                        <Play size={14} fill="currentColor" /> Demo {index + 1}: {lesson.title}
-                      </button>
-                    ))}
+                {previewOptions.length > 1 && (
+                  <div className="zvd-preview-picker">
+                    <div>
+                      <span><Play size={15} fill="currentColor" /> Bepul dars</span>
+                      <strong>{activePreview?.title}</strong>
+                    </div>
+                    <label>
+                      <span>Darsni tanlang</span>
+                      <select value={activePreview?.id || ""} onChange={(event) => selectPreview(event.target.value)} aria-label="Bepul darsni tanlash">
+                        {previewOptions.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
+                      </select>
+                      <ChevronDown size={18} aria-hidden="true" />
+                    </label>
                   </div>
                 )}
               </section>
 
               <section className="zvd-curriculum-section">
                 <div className="zvd-content-heading zvd-curriculum-heading">
-                  <div><span className="zvd-eyebrow">Kurs dasturi</span><h2>Darslar va modullar</h2></div>
-                  <span>{modules.length || 1} modul · {lessons.length} dars</span>
+                  <div><span className="zvd-eyebrow">Nimalarni o'rganasiz?</span><h2>Kurs dasturi</h2></div>
+                  <span>{moduleGroups.length} bo'lim · {lessons.length} dars</span>
                 </div>
 
                 {isLessonsLoading ? (
@@ -276,11 +298,11 @@ export default function PublicCoursePage() {
                             <div key={lesson.id} className="zvd-lesson-row">
                               <span className="zvd-lesson-index">{String(index + 1).padStart(2, "0")}</span>
                               <div><strong>{lesson.title}</strong>{lesson.description ? <small>{lesson.description}</small> : null}</div>
-                              <span className="zvd-lesson-duration">{lesson.duration ? `${lesson.duration} daq` : <FileText size={16} />}</span>
+                              {lesson.duration ? <span className="zvd-lesson-duration">{lesson.duration} daq</span> : null}
                               {lesson.isDemo && lesson.videoUrl ? (
-                                <button type="button" onClick={() => selectPreview(lesson)}><Play size={15} fill="currentColor" /> Demo</button>
+                                <button type="button" onClick={() => selectPreview(lesson.id)} aria-label={`${lesson.title} darsini ko'rish`}><Play size={15} fill="currentColor" /> Ko'rish</button>
                               ) : (
-                                <span className="zvd-locked-label"><Lock size={14} /> Yopiq</span>
+                                <span className="zvd-locked-label" aria-label="Kursga yozilgandan so'ng ochiladi"><Lock size={14} /></span>
                               )}
                             </div>
                           ))}
@@ -293,12 +315,6 @@ export default function PublicCoursePage() {
                 )}
               </section>
             </div>
-
-            <aside className="zvd-detail-side-info">
-              <div><h3>Kurs haqida</h3><p>{course.description || "Bosqichma-bosqich o'rganishga mo'ljallangan amaliy video kurs."}</p></div>
-              <div><h3>Sizga nima beradi?</h3><ul><li><Check size={16} />Tartibli o'quv yo'li</li><li><Check size={16} />Istalgan joyda o'rganish</li><li><Check size={16} />Amaliy bilim va ko'nikma</li></ul></div>
-              {level && <div><h3>Daraja</h3><p><strong>{level.code} — {level.name}</strong><br />{level.description}</p></div>}
-            </aside>
           </div>
         </section>
 
