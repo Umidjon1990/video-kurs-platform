@@ -2,13 +2,25 @@
 <html lang="uz">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="theme-color" content="#0d0521" />
-    <title>O'quv Platformasi - Video Kurslar</title>
-    <meta name="description" content="Professional video kurslar platformasi. O'qituvchilar kurs yaratadi, o'quvchilar o'qiydi va rivojlanadi." />
+    <meta name="theme-color" content="#080a10" />
+    <meta name="application-name" content="Zamonaviy Video Darslar" />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="uz_UZ" />
+    <meta property="og:site_name" content="Zamonaviy Video Darslar" />
+    <meta property="og:title" content="Zamonaviy Video Darslar" />
+    <meta property="og:description" content="O'zbek tilidagi amaliy video darslar, qo'llanmalar va kurslar." />
+    <meta property="og:image" content="https://www.zamonaviykurs.uz/og.png" />
+    <meta property="og:image:alt" content="Zamonaviy Video Darslar — bilimni videoda o'rganish platformasi" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://www.zamonaviykurs.uz/og.png" />
+    <title>Zamonaviy Video Darslar — Bilimni videoda o'rganing</title>
+    <meta name="description" content="O'zbek tilidagi amaliy video darslar, qo'llanmalar va kurslar. Bepul demo darslarni tomosha qiling." />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@300;400;500;600;700&family=Merriweather:wght@400;700&display=swap" rel="stylesheet">
@@ -25,8 +37,8 @@
     <div id="root"></div>
     <script>
       document.documentElement.classList.add("dark");
-      document.body.style.backgroundColor = "#111827";
-      document.body.style.color = "#e5e7eb";
+      document.body.style.backgroundColor = "#080a10";
+      document.body.style.color = "#f8fafc";
       window.onerror = function(msg, src, line, col, err) {
         var root = document.getElementById("root");
         if (root && !root.hasChildNodes()) {

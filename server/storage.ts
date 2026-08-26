@@ -129,6 +129,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, or, sql, inArray } from "drizzle-orm";
+import { toPublicInstructor, type PublicInstructor } from "./publicDto";
 
 export interface IStorage {
   // User operations (Replit Auth required)
@@ -566,7 +567,7 @@ export class DatabaseStorage implements IStorage {
     hasDiscount?: boolean;
     levelId?: string;
     resourceTypeIds?: string[];
-  }): Promise<Array<Course & { instructor: User; enrollmentsCount: number; planPricing?: Array<CoursePlanPricing & { plan: SubscriptionPlan }> }>> {
+  }): Promise<Array<Course & { instructor: PublicInstructor; enrollmentsCount: number; lessonsCount: number; planPricing?: Array<CoursePlanPricing & { plan: SubscriptionPlan }> }>> {
     let query = db
       .select({
         course: courses,
@@ -638,10 +639,11 @@ export class DatabaseStorage implements IStorage {
       .where(and(...conditions))
       .orderBy(desc(courses.createdAt));
 
-    // Get enrollments count and planPricing for each course
+    // Public course payload: aggregate only what the catalogue needs and never
+    // expose private instructor fields such as phone, email or password hash.
     const coursesWithCounts = await Promise.all(
       results.map(async ({ course, instructor }) => {
-        const [enrollmentCount, planPricing] = await Promise.all([
+        const [enrollmentCount, lessonsCount, planPricing] = await Promise.all([
           db
             .select({ count: sql<number>`count(*)::int` })
             .from(enrollments)
@@ -654,6 +656,11 @@ export class DatabaseStorage implements IStorage {
                 )
               )
             )
+            .then(result => result[0]?.count || 0),
+          db
+            .select({ count: sql<number>`count(*)::int` })
+            .from(lessons)
+            .where(eq(lessons.courseId, course.id))
             .then(result => result[0]?.count || 0),
           db
             .select({
@@ -669,8 +676,9 @@ export class DatabaseStorage implements IStorage {
 
         return {
           ...course,
-          instructor,
+          instructor: toPublicInstructor(instructor),
           enrollmentsCount: enrollmentCount,
+          lessonsCount,
           planPricing,
         };
       })

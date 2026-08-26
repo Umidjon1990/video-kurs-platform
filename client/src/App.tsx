@@ -1,4 +1,5 @@
 // Replit Auth integration
+import { lazy, Suspense } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -7,39 +8,48 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { useAuth } from "@/hooks/useAuth";
-import HomePage from "@/pages/HomePage";
-import Landing from "@/pages/Landing";
-import Login from "@/pages/Login";
-import Register from "@/pages/Register";
-import AdminDashboard from "@/pages/AdminDashboard";
-import AdminCourses from "@/pages/AdminCourses";
-import AdminPayments from "@/pages/AdminPayments";
-import AdminCMSPage from "@/pages/AdminCMSPage";
-import AdminSubscriptionPlansPage from "@/pages/AdminSubscriptionPlansPage";
-import AdminSubscriptions from "@/pages/AdminSubscriptions";
-import AdminGroupsPage from "@/pages/AdminGroupsPage";
-import InstructorDashboard from "@/pages/InstructorDashboard";
-import InstructorSubscriptions from "@/pages/InstructorSubscriptions";
-import SpeakingTests from "@/pages/SpeakingTests";
-import SpeakingTestEdit from "@/pages/SpeakingTestEdit";
-import StudentCourses from "@/pages/StudentCourses";
-
-import StudentResults from "@/pages/StudentResults";
-import StudentSpeakingTest from "@/pages/StudentSpeakingTest";
-import LearningPage from "@/pages/LearningPage";
-import Checkout from "@/pages/Checkout";
-import ChatPage from "@/pages/ChatPage";
-import LiveRoom from "@/pages/LiveRoom";
-import GroupChat from "@/pages/GroupChat";
-import CuratorDashboard from "@/pages/CuratorDashboard";
-import CuratorRegister from "@/pages/CuratorRegister";
-import AnnouncementsPage from "@/pages/AnnouncementsPage";
+import PublicHomePage from "@/pages/PublicHomePage";
+import PublicCoursePage from "@/pages/PublicCoursePage";
+import PublicLegalPage from "@/pages/PublicLegalPage";
 import NotFound from "@/pages/not-found";
 import { UrgentBanner } from "@/components/UrgentBanner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { VideoPlaybackProvider } from "@/hooks/useVideoPlayback";
 
-const PUBLIC_PATHS = ["/explore", "/login", "/register", "/checkout", "/curator/register"];
+const Login = lazy(() => import("@/pages/Login"));
+const Register = lazy(() => import("@/pages/Register"));
+const AdminDashboard = lazy(() => import("@/pages/AdminDashboard"));
+const AdminCourses = lazy(() => import("@/pages/AdminCourses"));
+const AdminPayments = lazy(() => import("@/pages/AdminPayments"));
+const AdminCMSPage = lazy(() => import("@/pages/AdminCMSPage"));
+const AdminSubscriptionPlansPage = lazy(() => import("@/pages/AdminSubscriptionPlansPage"));
+const AdminSubscriptions = lazy(() => import("@/pages/AdminSubscriptions"));
+const AdminGroupsPage = lazy(() => import("@/pages/AdminGroupsPage"));
+const InstructorDashboard = lazy(() => import("@/pages/InstructorDashboard"));
+const InstructorSubscriptions = lazy(() => import("@/pages/InstructorSubscriptions"));
+const SpeakingTests = lazy(() => import("@/pages/SpeakingTests"));
+const SpeakingTestEdit = lazy(() => import("@/pages/SpeakingTestEdit"));
+const StudentCourses = lazy(() => import("@/pages/StudentCourses"));
+const StudentResults = lazy(() => import("@/pages/StudentResults"));
+const StudentSpeakingTest = lazy(() => import("@/pages/StudentSpeakingTest"));
+const LearningPage = lazy(() => import("@/pages/LearningPage"));
+const Checkout = lazy(() => import("@/pages/Checkout"));
+const ChatPage = lazy(() => import("@/pages/ChatPage"));
+const LiveRoom = lazy(() => import("@/pages/LiveRoom"));
+const GroupChat = lazy(() => import("@/pages/GroupChat"));
+const CuratorDashboard = lazy(() => import("@/pages/CuratorDashboard"));
+const CuratorRegister = lazy(() => import("@/pages/CuratorRegister"));
+const AnnouncementsPage = lazy(() => import("@/pages/AnnouncementsPage"));
+
+const PUBLIC_PATHS = ["/explore", "/kurs", "/privacy", "/terms", "/login", "/register", "/checkout", "/curator/register"];
+
+function RouteLoader() {
+  return (
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#080a10]" role="status" aria-label="Sahifa yuklanmoqda">
+      <div className="h-9 w-9 animate-spin rounded-full border-2 border-white/20 border-t-[#c8f55a]" />
+    </div>
+  );
+}
 
 function Router() {
   const [location] = useLocation();
@@ -54,7 +64,10 @@ function Router() {
   if (isPublicPath) {
     return (
       <Switch>
-        <Route path="/explore" component={HomePage} />
+        <Route path="/explore" component={PublicHomePage} />
+        <Route path="/kurs/:courseId" component={PublicCoursePage} />
+        <Route path="/privacy" component={PublicLegalPage} />
+        <Route path="/terms" component={PublicLegalPage} />
         <Route path="/login" component={Login} />
         <Route path="/register" component={Register} />
         <Route path="/checkout/:courseId" component={Checkout} />
@@ -64,9 +77,9 @@ function Router() {
     );
   }
 
-  // For root path ("/"), show HomePage if not authenticated or still loading
+  // For root path ("/"), show the public catalogue if not authenticated or still loading
   if (location === "/" && (!isAuthenticated || isLoading)) {
-    return <HomePage />;
+    return <PublicHomePage />;
   }
 
   // Show loading spinner for authenticated routes while checking auth
@@ -78,9 +91,9 @@ function Router() {
     );
   }
 
-  // If not authenticated and trying to access protected route, show HomePage
+  // If not authenticated and trying to access a protected route, show the public catalogue
   if (!isAuthenticated) {
-    return <HomePage />;
+    return <PublicHomePage />;
   }
 
   // Full-screen routes (no sidebar/header)
@@ -186,7 +199,9 @@ function App() {
       <TooltipProvider>
         <VideoPlaybackProvider>
           <Toaster />
-          <Router />
+          <Suspense fallback={<RouteLoader />}>
+            <Router />
+          </Suspense>
         </VideoPlaybackProvider>
       </TooltipProvider>
     </QueryClientProvider>

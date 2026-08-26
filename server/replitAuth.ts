@@ -65,18 +65,23 @@ export function getSession() {
 
   const sessionStore = new pgStore(storeConfig);
 
-  // Cookie settings: secure=true only on HTTPS (production/Railway), false on local dev
-  const isProduction = process.env.NODE_ENV === 'production' || isRailway;
+  // Cookie settings must follow the runtime mode; local development is not HTTPS.
+  const isProduction = process.env.NODE_ENV === 'production';
+  const sessionSecret = process.env.SESSION_SECRET;
+
+  if (isProduction && !sessionSecret) {
+    throw new Error('SESSION_SECRET is required in production');
+  }
 
   return session({
-    secret: process.env.SESSION_SECRET || 'fallback-secret-change-in-production',
+    secret: sessionSecret || 'development-only-session-secret',
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
       secure: isProduction,
-      sameSite: isProduction ? 'none' : 'lax',
+      sameSite: 'lax',
       maxAge: sessionTtl,
     },
   });

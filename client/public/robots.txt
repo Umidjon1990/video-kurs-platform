@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin
+Disallow: /instructor
+Disallow: /learn/
+
+Sitemap: https://www.zamonaviykurs.uz/sitemap.xml

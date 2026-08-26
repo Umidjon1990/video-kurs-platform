@@ -1,0 +1,25 @@
+{
+  "name": "Zamonaviy Video Darslar",
+  "short_name": "Video Darslar",
+  "description": "O'zbek tilidagi amaliy video darslar va qo'llanmalar platformasi.",
+  "lang": "uz",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#080a10",
+  "theme_color": "#080a10",
+  "categories": ["education", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Kurslarni ko'rish",
+      "short_name": "Kurslar",
+      "url": "/explore"
+    },
+    {
+      "name": "Shaxsiy kabinet",
+      "short_name": "Kabinet",
+      "url": "/login"
+    }
+  ]
+}

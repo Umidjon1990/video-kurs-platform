@@ -37,6 +37,7 @@ import {
 import { z } from "zod";
 import * as XLSX from "xlsx";
 import { createZoomMeeting, endZoomMeeting, isZoomConfigured } from "./zoom";
+import { toSafeUser } from "./publicDto";
 
 // Grading schema
 const gradingSchema = z.object({
@@ -89,7 +90,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
-      res.json(user);
+      res.json(user ? toSafeUser(user) : null);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
@@ -103,14 +104,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.user?.claims?.sub) {
         const userId = req.user.claims.sub;
         const user = await storage.getUser(userId);
-        return res.json(user);
+        return res.json(user ? toSafeUser(user) : null);
       }
       
       // Check local auth user (passport session)
       if (req.session?.passport?.user) {
         const userId = req.session.passport.user;
         const user = await storage.getUser(userId);
-        return res.json(user);
+        return res.json(user ? toSafeUser(user) : null);
       }
       
       // No user logged in
@@ -252,7 +253,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(users.id, userId))
         .returning();
       
-      res.json(updatedUser);
+      res.json(toSafeUser(updatedUser));
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -392,7 +393,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         return res.json({ 
           message: 'Login muvaffaqiyatli', 
-          user: fullUser 
+          user: toSafeUser(fullUser)
         });
       });
     })(req, res, next);
@@ -576,7 +577,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const instructors = await storage.getUsersByRole('instructor');
       const students = await storage.getUsersByRole('student');
       const admins = await storage.getUsersByRole('admin');
-      res.json([...admins, ...instructors, ...students]);
+      res.json([...admins, ...instructors, ...students].map(toSafeUser));
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -597,7 +598,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { userId } = req.params;
       const { role } = req.body;
       const user = await storage.updateUserRole(userId, role);
-      res.json(user);
+      res.json(toSafeUser(user));
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -6255,9 +6256,36 @@ So'zlar soni: ${submission.wordCount}`;
   // ============ LESSON SECTION ROUTES ============
   
   // Get all sections for a lesson
-  app.get('/api/lessons/:lessonId/sections', async (req, res) => {
+  app.get('/api/lessons/:lessonId/sections', async (req: any, res) => {
     try {
       const { lessonId } = req.params;
+      const lesson = await storage.getLesson(lessonId);
+      if (!lesson) {
+        return res.status(404).json({ message: 'Dars topilmadi' });
+      }
+
+      const course = await storage.getCourse(lesson.courseId);
+      if (!course) {
+        return res.status(404).json({ message: 'Kurs topilmadi' });
+      }
+
+      const userId = req.user?.id || req.user?.claims?.sub;
+      let hasAccess = lesson.isDemo === true || (course.isFree === true && course.status === 'published');
+
+      if (!hasAccess && userId) {
+        const user = await storage.getUser(userId);
+        if (user?.role === 'admin' || (user?.role === 'instructor' && course.instructorId === userId)) {
+          hasAccess = true;
+        } else {
+          const enrollment = await storage.getEnrollmentByCourseAndUser(course.id, userId);
+          hasAccess = enrollment?.paymentStatus === 'confirmed' || enrollment?.paymentStatus === 'approved';
+        }
+      }
+
+      if (!hasAccess) {
+        return res.status(403).json({ message: 'Bu dars bo\'limlariga ruxsat yo\'q' });
+      }
+
       const sections = await storage.getLessonSections(lessonId);
       res.json(sections);
     } catch (error: any) {
