@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, Search, Users, Video } from "lucide-react";
 import { useLocation } from "wouter";
+import { CourseSeriesManager } from "@/components/course-series/CourseSeriesManager";
 
 type Course = {
   id: string;
@@ -116,6 +117,8 @@ export default function AdminCourses() {
           />
         </div>
       </div>
+
+      <CourseSeriesManager />
 
       {/* Courses Table */}
       <Card>

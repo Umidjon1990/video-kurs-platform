@@ -113,6 +113,20 @@ export const courseResourceTypesRelations = relations(courseResourceTypes, ({ on
   }),
 }));
 
+// Course Series table - public catalogue folders containing ordered courses
+export const courseSeries = pgTable("course_series", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: varchar("title", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
+  description: text("description"),
+  coverImageUrl: text("cover_image_url"),
+  ownerId: varchar("owner_id").notNull().references(() => users.id),
+  status: varchar("status", { length: 20 }).notNull().default("draft"),
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Courses table
 export const courses = pgTable("courses", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -121,6 +135,8 @@ export const courses = pgTable("courses", {
   author: text("author"), // Muallif nomi (o'qituvchi tomonidan yoziladi)
   category: varchar("category", { length: 50 }), // IT, Design, Business, Language, Marketing, etc.
   levelId: varchar("level_id").references(() => languageLevels.id), // CEFR daraja (A1, B1, etc.)
+  seriesId: varchar("series_id").references(() => courseSeries.id, { onDelete: "set null" }),
+  seriesOrder: integer("series_order").notNull().default(0),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   originalPrice: decimal("original_price", { precision: 10, scale: 2 }), // Asl narx
   discountPercentage: integer("discount_percentage"), // Chegirma foizi (0-100)
@@ -151,6 +167,10 @@ export const coursesRelations = relations(courses, ({ one, many }) => ({
     fields: [courses.levelId],
     references: [languageLevels.id],
   }),
+  series: one(courseSeries, {
+    fields: [courses.seriesId],
+    references: [courseSeries.id],
+  }),
   lessons: many(lessons),
   assignments: many(assignments),
   tests: many(tests),
@@ -160,6 +180,14 @@ export const coursesRelations = relations(courses, ({ one, many }) => ({
   ratings: many(courseRatings),
   likes: many(courseLikes),
   resourceTypes: many(courseResourceTypes),
+}));
+
+export const courseSeriesRelations = relations(courseSeries, ({ one, many }) => ({
+  owner: one(users, {
+    fields: [courseSeries.ownerId],
+    references: [users.id],
+  }),
+  courses: many(courses),
 }));
 
 // Course Ratings table
@@ -688,6 +716,12 @@ export const insertCourseSchema = createInsertSchema(courses).omit({
   author: z.string().optional().nullable(),
 });
 
+export const insertCourseSeriesSchema = createInsertSchema(courseSeries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertCourseRatingSchema = createInsertSchema(courseRatings).omit({
   id: true,
   createdAt: true,
@@ -1067,6 +1101,8 @@ export type User = typeof users.$inferSelect;
 
 export type InsertCourse = z.infer<typeof insertCourseSchema>;
 export type Course = typeof courses.$inferSelect;
+export type InsertCourseSeries = z.infer<typeof insertCourseSeriesSchema>;
+export type CourseSeries = typeof courseSeries.$inferSelect;
 
 export type InsertCourseRating = z.infer<typeof insertCourseRatingSchema>;
 export type CourseRating = typeof courseRatings.$inferSelect;

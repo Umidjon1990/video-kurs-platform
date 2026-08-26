@@ -39,6 +39,7 @@ import type { Course, Lesson, Assignment, Test, InstructorCourseWithCounts, Cour
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
+import { CourseSeriesManager } from "@/components/course-series/CourseSeriesManager";
 
 function convertToDirectImageUrl(url: string): string {
   if (!url) return url;
@@ -1601,6 +1602,10 @@ export default function InstructorDashboard() {
           )}
         </div>
         
+        <div className="border-t pt-8" />
+
+        <CourseSeriesManager />
+
         <div className="border-t pt-8" />
         
         <div className="flex justify-between items-center">

@@ -10,6 +10,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { useAuth } from "@/hooks/useAuth";
 import PublicHomePage from "@/pages/PublicHomePage";
 import PublicCoursePage from "@/pages/PublicCoursePage";
+import PublicSeriesPage from "@/pages/PublicSeriesPage";
 import PublicLegalPage from "@/pages/PublicLegalPage";
 import NotFound from "@/pages/not-found";
 import { UrgentBanner } from "@/components/UrgentBanner";
@@ -41,7 +42,7 @@ const CuratorDashboard = lazy(() => import("@/pages/CuratorDashboard"));
 const CuratorRegister = lazy(() => import("@/pages/CuratorRegister"));
 const AnnouncementsPage = lazy(() => import("@/pages/AnnouncementsPage"));
 
-const PUBLIC_PATHS = ["/explore", "/kurs", "/privacy", "/terms", "/login", "/register", "/checkout", "/curator/register"];
+const PUBLIC_PATHS = ["/explore", "/kurs", "/toplam", "/privacy", "/terms", "/login", "/register", "/checkout", "/curator/register"];
 
 function RouteLoader() {
   return (
@@ -66,6 +67,7 @@ function Router() {
       <Switch>
         <Route path="/explore" component={PublicHomePage} />
         <Route path="/kurs/:courseId" component={PublicCoursePage} />
+        <Route path="/toplam/:slug" component={PublicSeriesPage} />
         <Route path="/privacy" component={PublicLegalPage} />
         <Route path="/terms" component={PublicLegalPage} />
         <Route path="/login" component={Login} />

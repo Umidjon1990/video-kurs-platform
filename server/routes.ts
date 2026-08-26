@@ -10,8 +10,9 @@ import { ObjectStorageService } from "./objectStorage";
 import { db } from "./db";
 import bcrypt from "bcryptjs";
 import passport from "passport";
-import { users, courses, lessons, assignments, tests, testSections, questions, questionOptions, enrollments, submissions, testAttempts, notifications, conversations, messages, siteSettings, testimonials, subscriptionPlans, coursePlanPricing, userSubscriptions, passwordResetRequests, speakingTests, speakingTestSections, speakingQuestions, speakingSubmissions, speakingAnswers, speakingEvaluations, essaySubmissions, courseRatings, courseLikes, lessonProgress, announcements, liveRooms, courseGroupChats, userPresence, courseModules, lessonSections, courseResourceTypes, lessonEssayQuestions, studentGroups, studentGroupMembers, groupCourseSettings, curatorInvites, groupMessages } from "@shared/schema";
+import { users, courses, courseSeries, languageLevels, lessons, assignments, tests, testSections, questions, questionOptions, enrollments, submissions, testAttempts, notifications, conversations, messages, siteSettings, testimonials, subscriptionPlans, coursePlanPricing, userSubscriptions, passwordResetRequests, speakingTests, speakingTestSections, speakingQuestions, speakingSubmissions, speakingAnswers, speakingEvaluations, essaySubmissions, courseRatings, courseLikes, lessonProgress, announcements, liveRooms, courseGroupChats, userPresence, courseModules, lessonSections, courseResourceTypes, lessonEssayQuestions, studentGroups, studentGroupMembers, groupCourseSettings, curatorInvites, groupMessages } from "@shared/schema";
 import { eq, and, or, desc, sql, count, avg, inArray } from "drizzle-orm";
+import type { Course, CourseSeries, User } from "@shared/schema";
 import {
   insertCourseSchema,
   insertLessonSchema,
@@ -45,6 +46,84 @@ const gradingSchema = z.object({
   feedback: z.string(),
   status: z.enum(['graded', 'needs_revision']),
 });
+
+const courseSeriesMutationSchema = z.object({
+  title: z.string().trim().min(2).max(255),
+  description: z.string().trim().max(3000).optional().nullable(),
+  coverImageUrl: z.string().trim().max(2000).optional().nullable(),
+  status: z.enum(["draft", "published"]).default("draft"),
+  order: z.number().int().min(0).max(10_000).default(0),
+  courseIds: z.array(z.string().min(1)).max(100).default([]),
+});
+
+type CourseSeriesManageRow = {
+  series: CourseSeries;
+  owner: User;
+};
+
+type ManageableCourseRow = Pick<
+  Course,
+  "id" | "title" | "status" | "instructorId" | "seriesId" | "seriesOrder" | "thumbnailUrl" | "imageUrl" | "levelId"
+> & {
+  levelCode: string | null;
+  instructorFirstName: string | null;
+  instructorLastName: string | null;
+};
+
+function slugifySeriesTitle(value: string) {
+  return value
+    .normalize("NFKD")
+    .toLocaleLowerCase("uz")
+    .replace(/[ʻʼ‘’`']/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "kurslar-toplami";
+}
+
+async function uniqueSeriesSlug(title: string) {
+  const base = slugifySeriesTitle(title);
+  const rows = await db.select({ slug: courseSeries.slug }).from(courseSeries);
+  const used = new Set(rows.map((row: { slug: string }) => row.slug));
+  if (!used.has(base)) return base;
+  let suffix = 2;
+  while (used.has(`${base}-${suffix}`)) suffix += 1;
+  return `${base}-${suffix}`;
+}
+
+async function getPublicCourseSeries() {
+  const [rawSeriesRows, publicCourses, levels] = await Promise.all([
+    db.select().from(courseSeries).where(eq(courseSeries.status, "published")).orderBy(courseSeries.order, courseSeries.createdAt),
+    storage.getPublicCourses(),
+    storage.getActiveLanguageLevels(),
+  ]);
+  const seriesRows = rawSeriesRows as CourseSeries[];
+  const levelMap = new Map(levels.map((level) => [level.id, level]));
+
+  return seriesRows
+    .map((series: CourseSeries) => {
+      const seriesCourses = publicCourses
+        .filter((course) => course.seriesId === series.id)
+        .sort((a, b) => (a.seriesOrder || 0) - (b.seriesOrder || 0));
+      const usedLevels = Array.from(new Set(seriesCourses.map((course) => course.levelId).filter(Boolean)))
+        .map((levelId) => levelMap.get(levelId!))
+        .filter(Boolean)
+        .sort((a, b) => Number(a!.order || 0) - Number(b!.order || 0))
+        .map((level) => ({ id: level!.id, code: level!.code, name: level!.name, order: level!.order }));
+
+      return {
+        id: series.id,
+        title: series.title,
+        slug: series.slug,
+        description: series.description,
+        coverImageUrl: series.coverImageUrl,
+        order: series.order,
+        courseCount: seriesCourses.length,
+        lessonsCount: seriesCourses.reduce((sum, course) => sum + (course.lessonsCount || 0), 0),
+        levels: usedLevels,
+        courses: seriesCourses,
+      };
+    })
+    .filter((series) => series.courseCount > 0);
+}
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -3591,7 +3670,204 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // ============ COURSE SERIES MANAGEMENT ============
+  app.get('/api/course-series/manage', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const currentUser = await storage.getUser(userId);
+      if (!currentUser || !['admin', 'instructor'].includes(currentUser.role)) {
+        return res.status(403).json({ message: "Ruxsat yo'q" });
+      }
+
+      const seriesQuery = db
+        .select({ series: courseSeries, owner: users })
+        .from(courseSeries)
+        .innerJoin(users, eq(courseSeries.ownerId, users.id));
+      const seriesRows = (currentUser.role === 'admin'
+        ? await seriesQuery.orderBy(courseSeries.order, courseSeries.createdAt)
+        : await seriesQuery.where(eq(courseSeries.ownerId, userId)).orderBy(courseSeries.order, courseSeries.createdAt)) as CourseSeriesManageRow[];
+
+      const coursesQuery = db
+        .select({
+          id: courses.id,
+          title: courses.title,
+          status: courses.status,
+          instructorId: courses.instructorId,
+          seriesId: courses.seriesId,
+          seriesOrder: courses.seriesOrder,
+          thumbnailUrl: courses.thumbnailUrl,
+          imageUrl: courses.imageUrl,
+          levelId: courses.levelId,
+          levelCode: languageLevels.code,
+          instructorFirstName: users.firstName,
+          instructorLastName: users.lastName,
+        })
+        .from(courses)
+        .innerJoin(users, eq(courses.instructorId, users.id))
+        .leftJoin(languageLevels, eq(courses.levelId, languageLevels.id));
+      const manageableCourses = (currentUser.role === 'admin'
+        ? await coursesQuery.orderBy(desc(courses.createdAt))
+        : await coursesQuery.where(eq(courses.instructorId, userId)).orderBy(desc(courses.createdAt))) as ManageableCourseRow[];
+
+      res.json({
+        series: seriesRows.map(({ series, owner }: CourseSeriesManageRow) => ({
+          ...series,
+          owner: { id: owner.id, firstName: owner.firstName, lastName: owner.lastName },
+        })),
+        courses: manageableCourses,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/course-series', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const currentUser = await storage.getUser(userId);
+      if (!currentUser || !['admin', 'instructor'].includes(currentUser.role)) {
+        return res.status(403).json({ message: "Ruxsat yo'q" });
+      }
+      const payload = courseSeriesMutationSchema.parse(req.body);
+      const courseIds = Array.from(new Set(payload.courseIds));
+      const selectedCourses = (courseIds.length
+        ? await db.select().from(courses).where(inArray(courses.id, courseIds))
+        : []) as Course[];
+      if (selectedCourses.length !== courseIds.length) {
+        return res.status(400).json({ message: "Tanlangan kurslardan biri topilmadi" });
+      }
+      if (currentUser.role === 'instructor' && selectedCourses.some((course) => course.instructorId !== userId)) {
+        return res.status(403).json({ message: "Faqat o'zingizga tegishli kurslarni tanlashingiz mumkin" });
+      }
+      if (currentUser.role === 'instructor') {
+        const assignedSeriesIds = Array.from(new Set(selectedCourses.map((course) => course.seriesId).filter(Boolean))) as string[];
+        if (assignedSeriesIds.length) {
+          const assignedSeries = await db.select().from(courseSeries).where(inArray(courseSeries.id, assignedSeriesIds)) as CourseSeries[];
+          if (assignedSeries.some((series) => series.ownerId !== userId)) {
+            return res.status(403).json({ message: "Admin boshqarayotgan to'plamdagi kursni ko'chirib bo'lmaydi" });
+          }
+        }
+      }
+
+      const slug = await uniqueSeriesSlug(payload.title);
+      const created = await db.transaction(async (tx: any) => {
+        const [series] = await tx.insert(courseSeries).values({
+          title: payload.title,
+          slug,
+          description: payload.description || null,
+          coverImageUrl: payload.coverImageUrl || null,
+          ownerId: userId,
+          status: payload.status,
+          order: payload.order,
+        }).returning();
+        for (const [index, courseId] of courseIds.entries()) {
+          await tx.update(courses).set({ seriesId: series.id, seriesOrder: index }).where(eq(courses.id, courseId));
+        }
+        return series;
+      });
+      res.status(201).json(created);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) return res.status(400).json({ message: error.errors[0]?.message || "Ma'lumotlar noto'g'ri" });
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put('/api/course-series/:seriesId', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { seriesId } = req.params;
+      const userId = req.user.claims.sub;
+      const currentUser = await storage.getUser(userId);
+      const [existing] = await db.select().from(courseSeries).where(eq(courseSeries.id, seriesId));
+      if (!existing) return res.status(404).json({ message: "To'plam topilmadi" });
+      if (!currentUser || (currentUser.role !== 'admin' && existing.ownerId !== userId)) {
+        return res.status(403).json({ message: "Ruxsat yo'q" });
+      }
+
+      const payload = courseSeriesMutationSchema.parse(req.body);
+      const courseIds = Array.from(new Set(payload.courseIds));
+      const selectedCourses = (courseIds.length
+        ? await db.select().from(courses).where(inArray(courses.id, courseIds))
+        : []) as Course[];
+      if (selectedCourses.length !== courseIds.length) {
+        return res.status(400).json({ message: "Tanlangan kurslardan biri topilmadi" });
+      }
+      if (currentUser.role === 'instructor' && selectedCourses.some((course) => course.instructorId !== userId)) {
+        return res.status(403).json({ message: "Faqat o'zingizga tegishli kurslarni tanlashingiz mumkin" });
+      }
+      if (currentUser.role === 'instructor') {
+        const assignedSeriesIds = Array.from(new Set(
+          selectedCourses.map((course) => course.seriesId).filter((id) => Boolean(id && id !== seriesId)),
+        )) as string[];
+        if (assignedSeriesIds.length) {
+          const assignedSeries = await db.select().from(courseSeries).where(inArray(courseSeries.id, assignedSeriesIds)) as CourseSeries[];
+          if (assignedSeries.some((series) => series.ownerId !== userId)) {
+            return res.status(403).json({ message: "Admin boshqarayotgan to'plamdagi kursni ko'chirib bo'lmaydi" });
+          }
+        }
+      }
+
+      const updated = await db.transaction(async (tx: any) => {
+        const [series] = await tx.update(courseSeries).set({
+          title: payload.title,
+          description: payload.description || null,
+          coverImageUrl: payload.coverImageUrl || null,
+          status: payload.status,
+          order: payload.order,
+          updatedAt: new Date(),
+        }).where(eq(courseSeries.id, seriesId)).returning();
+        await tx.update(courses).set({ seriesId: null, seriesOrder: 0 }).where(eq(courses.seriesId, seriesId));
+        for (const [index, courseId] of courseIds.entries()) {
+          await tx.update(courses).set({ seriesId, seriesOrder: index }).where(eq(courses.id, courseId));
+        }
+        return series;
+      });
+      res.json(updated);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) return res.status(400).json({ message: error.errors[0]?.message || "Ma'lumotlar noto'g'ri" });
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete('/api/course-series/:seriesId', isAuthenticated, isInstructor, async (req: any, res) => {
+    try {
+      const { seriesId } = req.params;
+      const userId = req.user.claims.sub;
+      const currentUser = await storage.getUser(userId);
+      const [existing] = await db.select().from(courseSeries).where(eq(courseSeries.id, seriesId));
+      if (!existing) return res.status(404).json({ message: "To'plam topilmadi" });
+      if (!currentUser || (currentUser.role !== 'admin' && existing.ownerId !== userId)) {
+        return res.status(403).json({ message: "Ruxsat yo'q" });
+      }
+      await db.transaction(async (tx: any) => {
+        await tx.update(courses).set({ seriesId: null, seriesOrder: 0 }).where(eq(courses.seriesId, seriesId));
+        await tx.delete(courseSeries).where(eq(courseSeries.id, seriesId));
+      });
+      res.json({ message: "To'plam o'chirildi. Kurslar saqlab qolindi." });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ============ PUBLIC ROUTES (No Auth Required) ============
+  app.get('/api/course-series/public', async (_req, res) => {
+    try {
+      res.json(await getPublicCourseSeries());
+    } catch (error: any) {
+      console.error('Error in /api/course-series/public:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/course-series/public/:slug', async (req, res) => {
+    try {
+      const series = (await getPublicCourseSeries()).find((item) => item.slug === req.params.slug);
+      if (!series) return res.status(404).json({ message: "To'plam topilmadi" });
+      res.json(series);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Public courses endpoint with filters
   app.get('/api/courses/public', async (req: any, res) => {
     try {

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import type { SiteSetting } from "@shared/schema";
 import { PublicCourseCard } from "@/components/public/PublicCourseCard";
+import { PublicSeriesCard } from "@/components/public/PublicSeriesCard";
 import { PublicSiteFooter } from "@/components/public/PublicSiteFooter";
 import { PublicSiteHeader } from "@/components/public/PublicSiteHeader";
 import { usePublicPage } from "@/hooks/usePublicPage";
@@ -24,6 +25,7 @@ import {
   instructorName,
   publicCategoryLabel,
   type PublicCourse,
+  type PublicCourseSeries,
   type PublicLanguageLevel,
 } from "@/lib/publicSite";
 import "@/public-site.css";
@@ -86,9 +88,18 @@ export default function PublicHomePage() {
     "O'zbek tilidagi tartibli video darslar va amaliy qo'llanmalar. O'zingizga mos kursni tanlang.",
   );
 
-  const { data: courses = [], isLoading, isError } = useQuery<PublicCourse[]>({
+  const { data: courses = [], isLoading: isCoursesLoading, isError: isCoursesError } = useQuery<PublicCourse[]>({
     queryKey: ["/api/courses/public"],
     staleTime: 60_000,
+  });
+  const {
+    data: publishedSeries = [],
+    isLoading: isSeriesLoading,
+    isError: isSeriesError,
+  } = useQuery<PublicCourseSeries[]>({
+    queryKey: ["/api/course-series/public"],
+    staleTime: 60_000,
+    retry: false,
   });
   const { data: settings } = useQuery<SiteSetting[]>({
     queryKey: ["/api/site-settings"],
@@ -116,12 +127,12 @@ export default function PublicHomePage() {
   );
 
   useEffect(() => {
-    if (location === "/explore" && !isLoading) {
+    if (location === "/explore" && !isCoursesLoading) {
       window.setTimeout(() => {
         document.getElementById("kurslar")?.scrollIntoView({ behavior: "smooth" });
       }, 80);
     }
-  }, [isLoading, location]);
+  }, [isCoursesLoading, location]);
 
   const featuredCourse = useMemo(
     () => catalogueCourses.find((course) => !course.isFree && Number(course.price) > 0) || catalogueCourses[0],
@@ -135,9 +146,48 @@ export default function PublicHomePage() {
       .sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
   }, [catalogueCourses, levels]);
 
+  const catalogueSeries = useMemo<PublicCourseSeries[]>(() => {
+    if (!isSeriesError) return publishedSeries;
+    const inferredCourses = catalogueCourses
+      .filter((course) => course.title.trim().toLocaleLowerCase("uz").startsWith("bosqichli arab tili"))
+      .sort((a, b) => {
+        const aLevel = levels.find((level) => level.id === a.levelId)?.order ?? 99;
+        const bLevel = levels.find((level) => level.id === b.levelId)?.order ?? 99;
+        return Number(aLevel) - Number(bLevel);
+      });
+    if (inferredCourses.length < 2) return [];
+    const inferredLevels = Array.from(new Set(inferredCourses.map((course) => course.levelId).filter(Boolean)))
+      .map((id) => levels.find((level) => level.id === id))
+      .filter(Boolean)
+      .sort((a, b) => Number(a!.order || 0) - Number(b!.order || 0))
+      .map((level) => ({ id: level!.id, code: level!.code, name: level!.name, order: level!.order }));
+    return [{
+      id: "bosqichli-arab-tili-kitoblari",
+      title: "Bosqichli arab tili kitoblari",
+      slug: "bosqichli-arab-tili-kitoblari",
+      description: "Arab tilini bosqichma-bosqich o'rganish uchun tartiblangan video kurslar.",
+      coverImageUrl: courseImage(inferredCourses[0]),
+      order: 0,
+      courseCount: inferredCourses.length,
+      lessonsCount: inferredCourses.reduce((sum, course) => sum + (course.lessonsCount || 0), 0),
+      levels: inferredLevels,
+      courses: inferredCourses,
+    }];
+  }, [catalogueCourses, isSeriesError, levels, publishedSeries]);
+
+  const groupedCourseIds = useMemo(
+    () => new Set(catalogueSeries.flatMap((series) => series.courses.map((course) => course.id))),
+    [catalogueSeries],
+  );
+
+  const standaloneCourses = useMemo(
+    () => catalogueCourses.filter((course) => !groupedCourseIds.has(course.id)),
+    [catalogueCourses, groupedCourseIds],
+  );
+
   const filteredCourses = useMemo(() => {
     const normalizedSearch = search.trim().toLocaleLowerCase("uz");
-    return catalogueCourses.filter((course) => {
+    return standaloneCourses.filter((course) => {
       const isFree = Boolean(course.isFree) || Number(course.price) === 0;
       const matchesFilter = filter === "all" || (filter === "free" ? isFree : !isFree);
       const matchesLevel = !levelId || course.levelId === levelId;
@@ -146,7 +196,22 @@ export default function PublicHomePage() {
         .some((value) => value!.toLocaleLowerCase("uz").includes(normalizedSearch));
       return matchesFilter && matchesLevel && matchesSearch;
     });
-  }, [catalogueCourses, filter, levelId, search]);
+  }, [filter, levelId, search, standaloneCourses]);
+
+  const filteredSeries = useMemo(() => {
+    const normalizedSearch = search.trim().toLocaleLowerCase("uz");
+    return catalogueSeries.filter((series) => {
+      const matchesFilter = filter === "all" || series.courses.some((course) => {
+        const isFree = Boolean(course.isFree) || Number(course.price) === 0;
+        return filter === "free" ? isFree : !isFree;
+      });
+      const matchesLevel = !levelId || series.courses.some((course) => course.levelId === levelId);
+      const matchesSearch = !normalizedSearch || [series.title, series.description, ...series.courses.map((course) => course.title)]
+        .filter(Boolean)
+        .some((value) => value!.toLocaleLowerCase("uz").includes(normalizedSearch));
+      return matchesFilter && matchesLevel && matchesSearch;
+    });
+  }, [catalogueSeries, filter, levelId, search]);
 
   const realLessonCount = useMemo(
     () => catalogueCourses.reduce((sum, course) => sum + (course.lessonsCount || 0), 0),
@@ -154,6 +219,8 @@ export default function PublicHomePage() {
   );
 
   const hasActiveFilters = Boolean(search || levelId || filter !== "all");
+  const resultCount = filteredSeries.length + filteredCourses.length;
+  const isLoading = isCoursesLoading || (isSeriesLoading && !isSeriesError);
   const clearFilters = () => {
     setSearch("");
     setFilter("all");
@@ -291,7 +358,7 @@ export default function PublicHomePage() {
             </div>
 
             <div className="zvd-results-summary" aria-live="polite">
-              <span><strong>{isLoading ? "—" : filteredCourses.length}</strong> ta kurs</span>
+              <span><strong>{isLoading ? "—" : resultCount}</strong> ta natija</span>
               {hasActiveFilters && (
                 <button type="button" onClick={clearFilters}>
                   <RotateCcw size={15} /> Tozalash
@@ -301,16 +368,19 @@ export default function PublicHomePage() {
 
             {isLoading ? (
               <CourseGridSkeleton />
-            ) : isError ? (
+            ) : isCoursesError ? (
               <div className="zvd-empty-state">
                 <BookOpen size={32} />
                 <h3>Kurslar yuklanmadi</h3>
                 <p>Sahifani qayta yuklab ko'ring.</p>
               </div>
-            ) : filteredCourses.length ? (
+            ) : resultCount ? (
               <div className="zvd-course-grid">
+                {filteredSeries.map((series, index) => (
+                  <PublicSeriesCard key={series.id} series={series} priority={index < 2} />
+                ))}
                 {filteredCourses.map((course, index) => (
-                  <PublicCourseCard key={course.id} course={course} levels={levels} priority={index < 3} />
+                  <PublicCourseCard key={course.id} course={course} levels={levels} priority={index + filteredSeries.length < 3} />
                 ))}
               </div>
             ) : (

@@ -48,6 +48,19 @@ export type PublicLanguageLevel = Pick<
   "id" | "code" | "name" | "description" | "order"
 >;
 
+export type PublicCourseSeries = {
+  id: string;
+  title: string;
+  slug: string;
+  description?: string | null;
+  coverImageUrl?: string | null;
+  order: number;
+  courseCount: number;
+  lessonsCount: number;
+  levels: Array<Pick<PublicLanguageLevel, "id" | "code" | "name" | "order">>;
+  courses: PublicCourse[];
+};
+
 export function formatPrice(value: string | number | null | undefined) {
   const amount = Number(value || 0);
   return new Intl.NumberFormat("uz-UZ").format(amount);
@@ -67,8 +80,8 @@ export function instructorName(course: PublicCourse) {
   return course.author?.trim() || name || "Zamonaviy ta'lim jamoasi";
 }
 
-export function courseImage(course: PublicCourse) {
-  const source = (course.thumbnailUrl || course.imageUrl || "").trim();
+export function publicImageUrl(value?: string | null) {
+  const source = (value || "").trim();
   if (!source) return "";
 
   if (source.includes("drive.google.com")) {
@@ -82,6 +95,10 @@ export function courseImage(course: PublicCourse) {
   }
 
   return source;
+}
+
+export function courseImage(course: PublicCourse) {
+  return publicImageUrl(course.thumbnailUrl || course.imageUrl);
 }
 
 export function publicCategoryLabel(value?: string | null) {
