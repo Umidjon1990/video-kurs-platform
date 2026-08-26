@@ -53,7 +53,7 @@ export function PublicCourseCard({ course, levels, priority = false }: PublicCou
         </div>
 
         <Link href={`/kurs/${course.id}`} className="zvd-course-link">
-          Batafsil <ArrowUpRight size={17} />
+          Kursni boshlash <ArrowUpRight size={17} />
         </Link>
       </div>
     </article>
