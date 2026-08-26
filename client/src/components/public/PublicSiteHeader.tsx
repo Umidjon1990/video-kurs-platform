@@ -5,8 +5,6 @@ import { useAuth } from "@/hooks/useAuth";
 
 const navItems = [
   { label: "Kurslar", href: "/explore" },
-  { label: "Qanday ishlaydi", href: "/#qanday-ishlaydi" },
-  { label: "Biz haqimizda", href: "/#biz-haqimizda" },
   { label: "Aloqa", href: "/#aloqa" },
 ];
 

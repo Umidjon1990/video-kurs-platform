@@ -1,11 +1,11 @@
 import { Link } from "wouter";
-import { ArrowUpRight, BookOpen, Clock3, Play, Star, Users } from "lucide-react";
+import { ArrowUpRight, BookOpen, Clock3, Play } from "lucide-react";
 import {
   courseImage,
   effectiveCoursePrice,
   formatPrice,
-  instructorName,
   levelForCourse,
+  publicCategoryLabel,
   type PublicCourse,
   type PublicLanguageLevel,
 } from "@/lib/publicSite";
@@ -20,7 +20,6 @@ export function PublicCourseCard({ course, levels, priority = false }: PublicCou
   const image = courseImage(course);
   const level = levelForCourse(course, levels);
   const isFree = course.isFree || Number(course.price) === 0;
-  const hasRating = Boolean(course.totalRatings && course.totalRatings > 0);
 
   return (
     <article className="zvd-course-card">
@@ -43,21 +42,18 @@ export function PublicCourseCard({ course, levels, priority = false }: PublicCou
 
       <div className="zvd-course-body">
         <div className="zvd-course-topline">
-          <span>{level?.code || course.category || "Video kurs"}</span>
+          <span>{level?.code || publicCategoryLabel(course.category)}</span>
           {course.discountPercentage ? <strong>−{course.discountPercentage}%</strong> : null}
         </div>
         <Link href={`/kurs/${course.id}`} className="zvd-course-title">{course.title}</Link>
-        <p className="zvd-course-author">{instructorName(course)}</p>
 
         <div className="zvd-course-meta">
           <span><BookOpen size={15} />{course.lessonsCount || 0} dars</span>
-          <span><Users size={15} />{course.enrollmentsCount || 0} o'quvchi</span>
-          {hasRating ? <span><Star size={15} fill="currentColor" />{Number(course.averageRating || 0).toFixed(1)}</span> : null}
-          {!hasRating && course.subscriptionDays ? <span><Clock3 size={15} />{course.subscriptionDays} kun</span> : null}
+          {course.subscriptionDays ? <span><Clock3 size={15} />{course.subscriptionDays} kun</span> : null}
         </div>
 
         <Link href={`/kurs/${course.id}`} className="zvd-course-link">
-          Kursni ko'rish <ArrowUpRight size={17} />
+          Batafsil <ArrowUpRight size={17} />
         </Link>
       </div>
     </article>

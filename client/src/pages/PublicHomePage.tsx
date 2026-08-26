@@ -3,20 +3,14 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import {
   ArrowRight,
-  BadgeCheck,
   BookOpen,
-  Check,
+  ChevronDown,
   ChevronRight,
   CirclePlay,
-  Clock3,
-  GraduationCap,
-  Headphones,
   Play,
+  RotateCcw,
   Search,
-  ShieldCheck,
   Sparkles,
-  Star,
-  Users,
 } from "lucide-react";
 import type { SiteSetting } from "@shared/schema";
 import { PublicCourseCard } from "@/components/public/PublicCourseCard";
@@ -28,12 +22,42 @@ import {
   effectiveCoursePrice,
   formatPrice,
   instructorName,
+  publicCategoryLabel,
   type PublicCourse,
   type PublicLanguageLevel,
 } from "@/lib/publicSite";
 import "@/public-site.css";
 
 type CourseFilter = "all" | "free" | "paid";
+
+function useCommunityCount() {
+  const [count, setCount] = useState(960);
+
+  useEffect(() => {
+    const target = 1000;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) {
+      setCount(target);
+      return;
+    }
+
+    const startedAt = performance.now();
+    const duration = 1200;
+    let frame = 0;
+
+    const animate = (now: number) => {
+      const progress = Math.min((now - startedAt) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setCount(Math.round(960 + (target - 960) * eased));
+      if (progress < 1) frame = window.requestAnimationFrame(animate);
+    };
+
+    frame = window.requestAnimationFrame(animate);
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  return count;
+}
 
 function CourseGridSkeleton() {
   return (
@@ -55,10 +79,11 @@ export default function PublicHomePage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<CourseFilter>("all");
   const [levelId, setLevelId] = useState("");
+  const communityCount = useCommunityCount();
 
   usePublicPage(
     "Zamonaviy Video Darslar — Bilimni videoda o'rganing",
-    "O'zbek tilidagi amaliy video darslar, qo'llanmalar va kurslar. Bepul demo darslarni tomosha qiling va o'zingizga mos kursni tanlang.",
+    "O'zbek tilidagi tartibli video darslar va amaliy qo'llanmalar. O'zingizga mos kursni tanlang.",
   );
 
   const { data: courses = [], isLoading, isError } = useQuery<PublicCourse[]>({
@@ -103,6 +128,13 @@ export default function PublicHomePage() {
     [catalogueCourses],
   );
 
+  const availableLevels = useMemo(() => {
+    const usedLevelIds = new Set(catalogueCourses.map((course) => course.levelId).filter(Boolean));
+    return [...levels]
+      .filter((level) => usedLevelIds.has(level.id))
+      .sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
+  }, [catalogueCourses, levels]);
+
   const filteredCourses = useMemo(() => {
     const normalizedSearch = search.trim().toLocaleLowerCase("uz");
     return catalogueCourses.filter((course) => {
@@ -116,12 +148,17 @@ export default function PublicHomePage() {
     });
   }, [catalogueCourses, filter, levelId, search]);
 
-  const stats = useMemo(() => ({
-    students: catalogueCourses.reduce((sum, course) => sum + (course.enrollmentsCount || 0), 0),
-    lessons: catalogueCourses.reduce((sum, course) => sum + (course.lessonsCount || 0), 0),
-    free: catalogueCourses.filter((course) => course.isFree || Number(course.price) === 0).length,
-  }), [catalogueCourses]);
+  const realLessonCount = useMemo(
+    () => catalogueCourses.reduce((sum, course) => sum + (course.lessonsCount || 0), 0),
+    [catalogueCourses],
+  );
 
+  const hasActiveFilters = Boolean(search || levelId || filter !== "all");
+  const clearFilters = () => {
+    setSearch("");
+    setFilter("all");
+    setLevelId("");
+  };
   const jumpToCourses = () => document.getElementById("kurslar")?.scrollIntoView({ behavior: "smooth" });
 
   return (
@@ -137,38 +174,34 @@ export default function PublicHomePage() {
           <div className="zvd-container zvd-hero-layout">
             <div className="zvd-hero-copy">
               <div className="zvd-hero-kicker">
-                <Sparkles size={16} /> O'zbek tilidagi zamonaviy ta'lim platformasi
+                <Sparkles size={16} /> O'zbek tilidagi video kurslar
               </div>
               <h1>
-                Bilimni tomosha qiling.
-                <span>Natijani hayotda qo'llang.</span>
+                Bilimni videoda{" "}
+                <span>oson o'rganing.</span>
               </h1>
-              <p>
-                Mualliflik qo'llanmalari, video darslar va amaliy topshiriqlarni bitta qulay platformada o'rganing.
-              </p>
+              <p>Kitob va qo'llanmalar asosidagi tartibli darslar — telefon va kompyuterda.</p>
 
               <div className="zvd-hero-actions">
                 <button type="button" className="zvd-primary-button" onClick={jumpToCourses}>
                   Kurslarni ko'rish <ArrowRight size={18} />
                 </button>
-                <Link href="/register" className="zvd-secondary-button">
-                  Bepul boshlash
-                </Link>
               </div>
 
-              <div className="zvd-hero-proof">
-                <div className="zvd-avatar-stack" aria-hidden="true">
-                  <span>ZD</span><span>01</span><span>+</span>
+              <div className="zvd-hero-metrics">
+                <div aria-label="Mingdan ortiq ta'lim hamjamiyati">
+                  <strong aria-hidden="true">{formatPrice(communityCount)}+</strong>
+                  <span>ta'lim hamjamiyati</span>
                 </div>
-                <div>
-                  <strong>{stats.students > 0 ? `${formatPrice(stats.students)}+` : "Yuzlab"} o'quvchi</strong>
-                  <span>allaqachon o'rganmoqda</span>
+                <div aria-label={`${realLessonCount || 0} ta real video dars`}>
+                  <strong>{realLessonCount || "—"}</strong>
+                  <span>real video dars</span>
                 </div>
               </div>
             </div>
 
             <div className="zvd-hero-showcase">
-              <div className="zvd-showcase-label"><CirclePlay size={16} /> Haftaning tavsiya etilgan kursi</div>
+              <div className="zvd-showcase-label"><CirclePlay size={16} /> Tavsiya etilgan kurs</div>
               {featuredCourse ? (
                 <Link href={`/kurs/${featuredCourse.id}`} className="zvd-featured-card">
                   <div className="zvd-featured-media">
@@ -182,10 +215,10 @@ export default function PublicHomePage() {
                     ) : null}
                     <span className="zvd-featured-overlay" />
                     <span className="zvd-featured-play"><Play size={22} fill="currentColor" /></span>
-                    <span className="zvd-featured-count">{featuredCourse.lessonsCount || 0} video dars</span>
+                    <span className="zvd-featured-count">{featuredCourse.lessonsCount || 0} dars</span>
                   </div>
                   <div className="zvd-featured-body">
-                    <span>{featuredCourse.category || "Video qo'llanma"}</span>
+                    <span>{publicCategoryLabel(featuredCourse.category)}</span>
                     <h2>{featuredCourse.title}</h2>
                     <p>{instructorName(featuredCourse)}</p>
                     <div>
@@ -197,18 +230,7 @@ export default function PublicHomePage() {
               ) : (
                 <div className="zvd-featured-card zvd-featured-loading" />
               )}
-              <div className="zvd-floating-note zvd-note-top"><Headphones size={17} /> Istalgan joyda</div>
-              <div className="zvd-floating-note zvd-note-bottom"><BadgeCheck size={17} /> Sifatli darslar</div>
             </div>
-          </div>
-        </section>
-
-        <section className="zvd-stat-strip" aria-label="Platforma statistikasi">
-          <div className="zvd-container zvd-stat-grid">
-            <div><strong>{courses.length || "—"}</strong><span>Video kurs</span></div>
-            <div><strong>{stats.lessons || "—"}</strong><span>Tizimli dars</span></div>
-            <div><strong>{stats.students || "—"}+</strong><span>Faol o'quvchi</span></div>
-            <div><strong>{stats.free || "—"}</strong><span>Bepul kurs</span></div>
           </div>
         </section>
 
@@ -216,9 +238,8 @@ export default function PublicHomePage() {
           <div className="zvd-container">
             <div className="zvd-section-heading">
               <div>
-                <span className="zvd-eyebrow">Video kutubxona</span>
-                <h2>O'zingizga mos kursni tanlang</h2>
-                <p>Darajangiz va maqsadingizga mos amaliy video darslar.</p>
+                <span className="zvd-eyebrow">Kurslar</span>
+                <h2>O'zingizga mosini toping</h2>
               </div>
               <div className="zvd-search-box">
                 <Search size={19} aria-hidden="true" />
@@ -226,14 +247,14 @@ export default function PublicHomePage() {
                   type="search"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Kurs nomi bo'yicha qidiring"
+                  placeholder="Kursni qidiring"
                   aria-label="Kurslarni qidirish"
                 />
               </div>
             </div>
 
             <div className="zvd-filter-row" aria-label="Kurs filtrlari">
-              <div className="zvd-segmented-control">
+              <div className="zvd-segmented-control" aria-label="Kurs turi">
                 {([
                   ["all", "Barchasi"],
                   ["free", "Bepul"],
@@ -251,20 +272,30 @@ export default function PublicHomePage() {
                 ))}
               </div>
 
-              {levels.length > 0 && (
-                <div className="zvd-level-filters" aria-label="Darajalar">
-                  <button type="button" className={!levelId ? "is-active" : ""} onClick={() => setLevelId("")}>Barcha daraja</button>
-                  {levels.map((level) => (
-                    <button
-                      type="button"
-                      key={level.id}
-                      className={levelId === level.id ? "is-active" : ""}
-                      onClick={() => setLevelId(level.id)}
-                    >
-                      {level.code}
-                    </button>
-                  ))}
-                </div>
+              {availableLevels.length > 0 && (
+                <label className="zvd-level-picker">
+                  <span>Daraja</span>
+                  <div>
+                    <select value={levelId} onChange={(event) => setLevelId(event.target.value)}>
+                      <option value="">Barcha darajalar</option>
+                      {availableLevels.map((level) => (
+                        <option value={level.id} key={level.id}>
+                          {level.code}{level.name ? ` — ${level.name}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown size={17} aria-hidden="true" />
+                  </div>
+                </label>
+              )}
+            </div>
+
+            <div className="zvd-results-summary" aria-live="polite">
+              <span><strong>{isLoading ? "—" : filteredCourses.length}</strong> ta kurs</span>
+              {hasActiveFilters && (
+                <button type="button" onClick={clearFilters}>
+                  <RotateCcw size={15} /> Tozalash
+                </button>
               )}
             </div>
 
@@ -273,8 +304,8 @@ export default function PublicHomePage() {
             ) : isError ? (
               <div className="zvd-empty-state">
                 <BookOpen size={32} />
-                <h3>Kurslarni yuklab bo'lmadi</h3>
-                <p>Internet aloqasini tekshirib, sahifani qayta yuklang.</p>
+                <h3>Kurslar yuklanmadi</h3>
+                <p>Sahifani qayta yuklab ko'ring.</p>
               </div>
             ) : filteredCourses.length ? (
               <div className="zvd-course-grid">
@@ -286,60 +317,10 @@ export default function PublicHomePage() {
               <div className="zvd-empty-state">
                 <Search size={32} />
                 <h3>Mos kurs topilmadi</h3>
-                <p>Qidiruv so'zini yoki filtrlarni o'zgartirib ko'ring.</p>
-                <button type="button" onClick={() => { setSearch(""); setFilter("all"); setLevelId(""); }}>Filtrlarni tozalash</button>
+                <p>Boshqa daraja yoki qidiruvni sinab ko'ring.</p>
+                <button type="button" onClick={clearFilters}>Filtrlarni tozalash</button>
               </div>
             )}
-          </div>
-        </section>
-
-        <section className="zvd-how-section" id="qanday-ishlaydi">
-          <div className="zvd-container">
-            <div className="zvd-centered-heading">
-              <span className="zvd-eyebrow">Oddiy va tushunarli</span>
-              <h2>O'rganishning uch qadami</h2>
-              <p>Kerakli kursni toping, darslarni tartib bilan ko'ring va bilimni amalda mustahkamlang.</p>
-            </div>
-            <div className="zvd-how-grid">
-              <article><span>01</span><div><Search size={24} /></div><h3>Kursni tanlang</h3><p>Daraja, mavzu va maqsadingiz bo'yicha mos kursni toping.</p></article>
-              <article><span>02</span><div><CirclePlay size={24} /></div><h3>Video darsni ko'ring</h3><p>Darslar ketma-ketligi va demo videolar bilan tanishib boring.</p></article>
-              <article><span>03</span><div><GraduationCap size={24} /></div><h3>Natijaga erishing</h3><p>Topshiriq va testlar orqali o'rganganlaringizni mustahkamlang.</p></article>
-            </div>
-          </div>
-        </section>
-
-        <section className="zvd-value-section" id="biz-haqimizda">
-          <div className="zvd-container zvd-value-layout">
-            <div className="zvd-value-panel">
-              <span className="zvd-value-ring"><Star size={28} fill="currentColor" /></span>
-              <div className="zvd-value-quote">
-                <strong>“Har bir dars — aniq natija uchun.”</strong>
-                <p>Zamonaviy ta'lim jamoasi</p>
-              </div>
-              <div className="zvd-mini-metrics">
-                <span><strong>24/7</strong><small>kirish imkoniyati</small></span>
-                <span><strong>100%</strong><small>mobil moslashuv</small></span>
-              </div>
-            </div>
-
-            <div className="zvd-value-copy">
-              <span className="zvd-eyebrow">Nega aynan biz?</span>
-              <h2>Kitobdan videoga, videodan natijaga.</h2>
-              <p>
-                Murakkab qo'llanmalarni tartibli, qisqa va amaliy video darslarga aylantiramiz. Siz esa o'z vaqtingizda, istalgan qurilmada o'rganasiz.
-              </p>
-              <ul>
-                <li><Check size={18} />Darslar kitob va qo'llanmalar asosida tizimlangan</li>
-                <li><Check size={18} />Telefon, planshet va kompyuterda qulay ishlaydi</li>
-                <li><Check size={18} />Bepul demo orqali kursni oldindan ko'rish mumkin</li>
-                <li><Check size={18} />Progress, test va topshiriqlar bitta kabinetda</li>
-              </ul>
-              <div className="zvd-trust-row">
-                <span><ShieldCheck size={20} />Xavfsiz to'lov</span>
-                <span><Clock3 size={20} />O'z tempingizda</span>
-                <span><Users size={20} />Jamoa yordami</span>
-              </div>
-            </div>
           </div>
         </section>
       </main>

@@ -84,6 +84,19 @@ export function courseImage(course: PublicCourse) {
   return source;
 }
 
+export function publicCategoryLabel(value?: string | null) {
+  const category = value?.trim();
+  if (!category) return "Video kurs";
+
+  const labels: Record<string, string> = {
+    language: "Til kursi",
+    speaking: "So'zlashuv",
+    writing: "Yozuv",
+  };
+
+  return labels[category.toLocaleLowerCase("uz")] || category;
+}
+
 export function getSetting(
   settings: SiteSetting[] | undefined,
   ...keys: string[]
