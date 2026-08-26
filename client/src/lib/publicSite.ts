@@ -68,7 +68,20 @@ export function instructorName(course: PublicCourse) {
 }
 
 export function courseImage(course: PublicCourse) {
-  return course.thumbnailUrl || course.imageUrl || "";
+  const source = (course.thumbnailUrl || course.imageUrl || "").trim();
+  if (!source) return "";
+
+  if (source.includes("drive.google.com")) {
+    const fileMatch = source.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    const idMatch = source.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    const fileId = fileMatch?.[1] || idMatch?.[1];
+
+    if (fileId) {
+      return `https://lh3.googleusercontent.com/d/${fileId}`;
+    }
+  }
+
+  return source;
 }
 
 export function getSetting(

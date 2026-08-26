@@ -192,7 +192,14 @@ export default function PublicCoursePage() {
 
               <aside className="zvd-enroll-card">
                 <div className="zvd-enroll-media">
-                  {courseImage(course) ? <img src={courseImage(course)} alt={`${course.title} kursi muqovasi`} /> : <span><BookOpen size={56} /></span>}
+                  <span aria-hidden="true"><BookOpen size={56} /></span>
+                  {courseImage(course) ? (
+                    <img
+                      src={courseImage(course)}
+                      alt={`${course.title} kursi muqovasi`}
+                      onError={(event) => { event.currentTarget.style.display = "none"; }}
+                    />
+                  ) : null}
                   {previewUrl && <button type="button" onClick={() => document.getElementById("video-preview")?.scrollIntoView({ behavior: "smooth" })} aria-label="Kurs videosini ko'rish"><Play size={23} fill="currentColor" /></button>}
                 </div>
                 <div className="zvd-enroll-body">

@@ -25,11 +25,15 @@ export function PublicCourseCard({ course, levels, priority = false }: PublicCou
   return (
     <article className="zvd-course-card">
       <Link href={`/kurs/${course.id}`} className="zvd-course-media" aria-label={`${course.title} kursini ko'rish`}>
+        <span className="zvd-course-placeholder" aria-hidden="true"><BookOpen size={42} /></span>
         {image ? (
-          <img src={image} alt={`${course.title} kursi muqovasi`} loading={priority ? "eager" : "lazy"} />
-        ) : (
-          <span className="zvd-course-placeholder"><BookOpen size={42} /></span>
-        )}
+          <img
+            src={image}
+            alt={`${course.title} kursi muqovasi`}
+            loading={priority ? "eager" : "lazy"}
+            onError={(event) => { event.currentTarget.style.display = "none"; }}
+          />
+        ) : null}
         <span className="zvd-course-scrim" />
         <span className="zvd-course-play"><Play size={18} fill="currentColor" /></span>
         <span className={`zvd-price-badge ${isFree ? "is-free" : ""}`}>

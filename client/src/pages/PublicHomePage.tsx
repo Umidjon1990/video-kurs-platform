@@ -172,11 +172,14 @@ export default function PublicHomePage() {
               {featuredCourse ? (
                 <Link href={`/kurs/${featuredCourse.id}`} className="zvd-featured-card">
                   <div className="zvd-featured-media">
+                    <span className="zvd-featured-placeholder" aria-hidden="true"><BookOpen size={64} /></span>
                     {courseImage(featuredCourse) ? (
-                      <img src={courseImage(featuredCourse)} alt={`${featuredCourse.title} kursi`} />
-                    ) : (
-                      <span className="zvd-featured-placeholder"><BookOpen size={64} /></span>
-                    )}
+                      <img
+                        src={courseImage(featuredCourse)}
+                        alt={`${featuredCourse.title} kursi`}
+                        onError={(event) => { event.currentTarget.style.display = "none"; }}
+                      />
+                    ) : null}
                     <span className="zvd-featured-overlay" />
                     <span className="zvd-featured-play"><Play size={22} fill="currentColor" /></span>
                     <span className="zvd-featured-count">{featuredCourse.lessonsCount || 0} video dars</span>
