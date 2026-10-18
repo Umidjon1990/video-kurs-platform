@@ -510,3 +510,26 @@ test("central admin can grade assignments, essays and speaking work with an audi
     3,
   );
 });
+
+test("verified legacy linking preserves native accounts and per-order progress without duplicating coin enrollments",async()=>{
+  const bcrypt=(await import("bcryptjs")).default;
+  const nativeId=randomUUID(),enrollment=randomUUID(),subscription=randomUUID();
+  const hash=await bcrypt.hash("old-private-password",4);
+  await pool.query("INSERT INTO users(id,email,password_hash,first_name,role,status) VALUES($1,'old-fixture@example.test',$2,'Original','student','active')",[nativeId,hash]);
+  await pool.query("INSERT INTO enrollments(id,user_id,course_id,plan_id,payment_method,payment_status) VALUES($1,$2,$3,$4,'manual','approved')",[enrollment,nativeId,courseId,planId]);
+  await pool.query("INSERT INTO user_subscriptions(id,user_id,course_id,plan_id,enrollment_id,start_date,end_date,status) VALUES($1,$2,$3,$4,$5,now(),now()+interval '10 days','active')",[subscription,nativeId,courseId,planId,enrollment]);
+  async function link(external:string,password="old-private-password"){
+    const response=await fetch(base+"/api/platform/legacy/link",{method:"POST",headers,body:JSON.stringify({externalUserId:external,username:"old-fixture@example.test",password})});return {status:response.status,data:await response.json()};
+  }
+  assert.equal((await link(externalUserId,"incorrect")).status,401);
+  const aliasBefore=(await pool.query("SELECT native_user_id FROM platform_identities WHERE external_user_id=$1",[externalUserId])).rows[0].native_user_id;
+  const first=await link(externalUserId);assert.equal(first.status,200);assert.equal(first.data.grants.length,1);
+  const again=await link(externalUserId);assert.equal(again.data.grants[0].orderId,first.data.grants[0].orderId);
+  assert.equal((await link("different-central-user")).status,409);
+  assert.equal((await pool.query("SELECT native_user_id FROM platform_identities WHERE external_user_id=$1",[externalUserId])).rows[0].native_user_id,aliasBefore);
+  const legacyHeaders={...headers,"x-platform-order":first.data.grants[0].orderId};
+  const owned=await fetch(base+"/api/platform/owned/"+encodeURIComponent(courseId+":"+planId)+"/view",{headers:legacyHeaders});assert.equal(owned.status,200);
+  assert.equal((await pool.query("SELECT native_user_id FROM platform_grants WHERE order_id=$1",[first.data.grants[0].orderId])).rows[0].native_user_id,nativeId);
+  assert.equal((await pool.query("SELECT user_id FROM enrollments WHERE id=$1",[enrollment])).rows[0].user_id,nativeId);
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM users WHERE email='old-fixture@example.test'")).rows[0].n,1);
+});
