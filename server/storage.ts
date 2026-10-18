@@ -1093,6 +1093,7 @@ export class DatabaseStorage implements IStorage {
         eq(enrollments.courseId, courseId),
         eq(enrollments.userId, userId)
       ))
+      .orderBy(sql`CASE WHEN ${enrollments.paymentStatus} IN ('approved','confirmed') THEN 0 ELSE 1 END`,desc(enrollments.enrolledAt))
       .limit(1);
     return enrollment || null;
   }
@@ -1723,8 +1724,9 @@ export class DatabaseStorage implements IStorage {
       );
     
     const totalRevenue = confirmedEnrollments.reduce((sum, { enrollment, course }) => {
+      if(enrollment.paymentMethod==='platform_coin')return sum;
       // Use discounted price if available, otherwise original price
-      const price = Number(course?.discountedPrice) || Number(course?.price) || 0;
+      const price = Number(course?.price) || 0;
       return sum + price;
     }, 0);
     
@@ -3110,7 +3112,7 @@ export class DatabaseStorage implements IStorage {
   async getCourseOnlineStatus(courseId: string): Promise<{ userId: string; isOnline: boolean; lastActiveAt: Date }[]> {
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
     const presences = await db.select().from(userPresence)
-      .where(eq(userPresence.courseId, courseId));
+      .where(eq(userPresence.currentCourseId, courseId));
     
     return presences.map(p => ({
       userId: p.userId,
@@ -3179,6 +3181,7 @@ export class DatabaseStorage implements IStorage {
       id: studentGroups.id,
       name: studentGroups.name,
       description: studentGroups.description,
+      curatorId: studentGroups.curatorId,
       createdAt: studentGroups.createdAt,
     })
     .from(studentGroupMembers)

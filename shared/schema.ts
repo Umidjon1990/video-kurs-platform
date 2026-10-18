@@ -708,7 +708,7 @@ export const insertUserSchema = createInsertSchema(users).omit({
   updatedAt: true,
 });
 
-export const insertCourseSchema = createInsertSchema(courses).omit({
+export const insertCourseSchema = createInsertSchema(courses, {unlockWeekDays:z.array(z.string()).nullable().optional()}).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -1181,6 +1181,10 @@ export const essaySubmissions = pgTable("essay_submissions", {
   studentId: varchar("student_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   essayText: text("essay_text").notNull(), // Student's Arabic essay
   wordCount: integer("word_count").notNull().default(0), // Actual word count
+  manualScore:integer('manual_score'),
+  manualFeedback:text('manual_feedback'),
+  manualCheckedAt:timestamp('manual_checked_at'),
+  manualCheckedBy:text('manual_checked_by'),
   // AI Feedback
   aiChecked: boolean("ai_checked").default(false), // Faqat 1 marta tekshiriladi
   aiFeedback: text("ai_feedback"), // OpenAI natijasi (o'zbekcha)
@@ -1207,6 +1211,7 @@ export const essaySubmissionsRelations = relations(essaySubmissions, ({ one }) =
 }));
 
 export const insertEssaySubmissionSchema = createInsertSchema(essaySubmissions).omit({
+  manualScore:true,manualFeedback:true,manualCheckedAt:true,manualCheckedBy:true,
   id: true,
   aiChecked: true,
   aiFeedback: true,
@@ -1470,7 +1475,7 @@ export const groupCourseSettingsRelations = relations(groupCourseSettings, ({ on
   course: one(courses, { fields: [groupCourseSettings.courseId], references: [courses.id] }),
 }));
 
-export const insertGroupCourseSettingsSchema = createInsertSchema(groupCourseSettings).omit({
+export const insertGroupCourseSettingsSchema = createInsertSchema(groupCourseSettings, {unlockWeekDays:z.array(z.string()).nullable().optional()}).omit({
   id: true,
   createdAt: true,
   updatedAt: true,

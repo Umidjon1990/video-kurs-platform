@@ -20,3 +20,6 @@ export function toPublicInstructor(user: User): PublicInstructor {
     profileImageUrl: user.profileImageUrl,
   };
 }
+
+/** Credential hashes are never part of an HTTP response, including joined legacy records. */
+export function stripCredentialHashes(value:any):any{if(Array.isArray(value))return value.map(stripCredentialHashes);if(value&&typeof value==='object'&&!(value instanceof Date)&&!Buffer.isBuffer(value))return Object.fromEntries(Object.entries(value).filter(([key])=>key!=='passwordHash'&&key!=='password_hash').map(([key,v])=>[key,stripCredentialHashes(v)]));return value;}

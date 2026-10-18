@@ -2320,7 +2320,7 @@ export default function InstructorDashboard() {
                                 </Badge>
                               )}
                             </div>
-                            <Button variant="outline" size="sm" onClick={() => { setTestForm({ title: "", passingScore: "", lessonId: lesson.id }); setEditingTest(null); setIsAddTestOpen(true); }} data-testid={`button-add-test-for-lesson-${lesson.id}`}>
+                            <Button variant="outline" size="sm" onClick={() => { setTestForm({ title: "", passingScore: "", lessonId: lesson.id,randomOrder:false,shuffleAnswers:false,timerMode:"none",timerValue:"" }); setEditingTest(null); setIsAddTestOpen(true); }} data-testid={`button-add-test-for-lesson-${lesson.id}`}>
                               <Plus className="w-4 h-4 mr-2" />Test Qo'shish
                             </Button>
                           </div>
@@ -3749,7 +3749,7 @@ Bunny.net: https://iframe.mediadelivery.net/embed/...'
         setIsAddTestOpen(open);
         if (!open) {
           setEditingTest(null);
-          setTestForm({ title: "", passingScore: "", lessonId: "", randomOrder: false, shuffleAnswers: false });
+          setTestForm({ title: "", passingScore: "", lessonId: "", randomOrder: false, shuffleAnswers: false,timerMode:"none",timerValue:"" });
         }
       }}>
         <DialogContent data-testid="dialog-add-test">
@@ -4873,6 +4873,158 @@ Bunny.net: https://iframe.mediadelivery.net/embed/...'
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Sections Management Dialog */}
+      <Dialog open={!!sectionsDialogTestId} onOpenChange={(open) => { if (!open) { setSectionsDialogTestId(null); setEditingSectionId(null); } }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-sections">
+          <DialogHeader>
+            <DialogTitle>Test bo'limlari boshqaruvi</DialogTitle>
+            <DialogDescription>Bo'limlar yarating va savollarni ularga biriktiring</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="p-4 rounded-md border border-border space-y-3">
+              <h4 className="font-medium text-sm">{editingSectionId ? "Bo'limni tahrirlash" : "Yangi bo'lim qo'shish"}</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <Label>Bo'lim nomi</Label>
+                  <Input
+                    value={sectionForm.title}
+                    onChange={(e) => setSectionForm(p => ({ ...p, title: e.target.value }))}
+                    placeholder="Masalan: Reading Section"
+                    data-testid="input-section-title"
+                  />
+                </div>
+                <div>
+                  <Label>Timer turi</Label>
+                  <Select value={sectionForm.timerType} onValueChange={(v) => setSectionForm(p => ({ ...p, timerType: v }))}>
+                    <SelectTrigger data-testid="select-section-timer-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="per_question">Har bir savol uchun</SelectItem>
+                      <SelectItem value="total">Umumiy vaqt</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Vaqt ({sectionForm.timerType === 'per_question' ? 'sekundlarda, har savol' : 'sekundlarda, jami'})</Label>
+                  <Input
+                    type="number"
+                    value={sectionForm.timerValue}
+                    onChange={(e) => setSectionForm(p => ({ ...p, timerValue: e.target.value }))}
+                    data-testid="input-section-timer-value"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label>O'qish matni (ixtiyoriy)</Label>
+                  <Textarea
+                    value={sectionForm.readingPassage}
+                    onChange={(e) => setSectionForm(p => ({ ...p, readingPassage: e.target.value }))}
+                    placeholder="Bu bo'lim uchun doimiy ko'rinadigan matn (masalan: Reading passage)"
+                    rows={3}
+                    data-testid="input-section-reading"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {editingSectionId ? (
+                  <>
+                    <Button size="sm" onClick={() => updateSectionMutation.mutate()} disabled={!sectionForm.title || updateSectionMutation.isPending} data-testid="button-update-section">
+                      Saqlash
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => { setEditingSectionId(null); setSectionForm({ title: "", timerType: "per_question", timerValue: "60", readingPassage: "" }); }}>
+                      Bekor qilish
+                    </Button>
+                  </>
+                ) : (
+                  <Button size="sm" onClick={() => addSectionMutation.mutate()} disabled={!sectionForm.title || addSectionMutation.isPending} data-testid="button-add-section">
+                    <Plus className="w-3 h-3 mr-1" />Bo'lim qo'shish
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {testSectionsData && testSectionsData.length > 0 && (() => {
+              const allQuestions = Array.isArray(sectionTestQuestions) ? sectionTestQuestions : (sectionTestQuestions?.questions || []);
+              const unassigned = allQuestions.filter((q: any) => !q.sectionId);
+              return (
+                <div className="space-y-3">
+                  <h4 className="font-medium text-sm">Mavjud bo'limlar</h4>
+                  {testSectionsData.map((section: any, idx: number) => {
+                    const sectionQs = allQuestions.filter((q: any) => q.sectionId === section.id);
+                    return (
+                      <div key={section.id} className="p-3 rounded-md border border-border space-y-2" data-testid={`section-item-${section.id}`}>
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary">{idx + 1}</Badge>
+                            <span className="font-medium text-sm">{section.title}</span>
+                            <Badge variant="outline" className="text-xs">{sectionQs.length} savol</Badge>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Badge variant="outline" className="text-xs">
+                              {section.timerType === 'per_question' ? `${section.timerValue}s/savol` : `${section.timerValue}s jami`}
+                            </Badge>
+                            {section.readingPassage && <Badge variant="outline" className="text-xs">Matn bor</Badge>}
+                            <Button size="icon" variant="ghost" onClick={() => {
+                              setEditingSectionId(section.id);
+                              setSectionForm({
+                                title: section.title,
+                                timerType: section.timerType || "per_question",
+                                timerValue: (section.timerValue || 60).toString(),
+                                readingPassage: section.readingPassage || "",
+                              });
+                            }} data-testid={`button-edit-section-${section.id}`}>
+                              <Edit className="w-3 h-3" />
+                            </Button>
+                            <Button size="icon" variant="ghost" onClick={() => { if (confirm("Bu bo'limni o'chirishga ishonchingiz komilmi?")) deleteSectionMutation.mutate(section.id); }} data-testid={`button-delete-section-${section.id}`}>
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                        {sectionQs.length > 0 && (
+                          <div className="pl-6 space-y-1">
+                            {sectionQs.map((q: any, qi: number) => (
+                              <div key={q.id} className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                                <span className="truncate max-w-[300px]">{qi + 1}. {q.questionText}</span>
+                                <Button size="sm" variant="ghost" className="text-xs h-6" onClick={() => assignQuestionSectionMutation.mutate({ questionId: q.id, sectionId: null })} data-testid={`button-unassign-${q.id}`}>
+                                  Chiqarish
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {unassigned.length > 0 && (
+                    <div className="p-3 rounded-md border border-dashed border-border space-y-2">
+                      <h4 className="font-medium text-sm text-muted-foreground">Biriktirilmagan savollar ({unassigned.length})</h4>
+                      <div className="space-y-1">
+                        {unassigned.map((q: any, qi: number) => (
+                          <div key={q.id} className="flex items-center justify-between gap-2 text-xs">
+                            <span className="truncate max-w-[250px] text-muted-foreground">{qi + 1}. {q.questionText}</span>
+                            <Select onValueChange={(sectionId) => assignQuestionSectionMutation.mutate({ questionId: q.id, sectionId })}>
+                              <SelectTrigger className="w-[140px] h-7 text-xs" data-testid={`select-assign-${q.id}`}>
+                                <SelectValue placeholder="Bo'limga qo'sh" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {testSectionsData.map((sec: any) => (
+                                  <SelectItem key={sec.id} value={sec.id}>{sec.title}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -5364,158 +5516,7 @@ function CourseAnalyticsPanel({ courseId }: { courseId: string }) {
         </Card>
       )}
 
-      {/* Sections Management Dialog */}
-      <Dialog open={!!sectionsDialogTestId} onOpenChange={(open) => { if (!open) { setSectionsDialogTestId(null); setEditingSectionId(null); } }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-sections">
-          <DialogHeader>
-            <DialogTitle>Test bo'limlari boshqaruvi</DialogTitle>
-            <DialogDescription>Bo'limlar yarating va savollarni ularga biriktiring</DialogDescription>
-          </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="p-4 rounded-md border border-border space-y-3">
-              <h4 className="font-medium text-sm">{editingSectionId ? "Bo'limni tahrirlash" : "Yangi bo'lim qo'shish"}</h4>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="col-span-2">
-                  <Label>Bo'lim nomi</Label>
-                  <Input
-                    value={sectionForm.title}
-                    onChange={(e) => setSectionForm(p => ({ ...p, title: e.target.value }))}
-                    placeholder="Masalan: Reading Section"
-                    data-testid="input-section-title"
-                  />
-                </div>
-                <div>
-                  <Label>Timer turi</Label>
-                  <Select value={sectionForm.timerType} onValueChange={(v) => setSectionForm(p => ({ ...p, timerType: v }))}>
-                    <SelectTrigger data-testid="select-section-timer-type">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="per_question">Har bir savol uchun</SelectItem>
-                      <SelectItem value="total">Umumiy vaqt</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Vaqt ({sectionForm.timerType === 'per_question' ? 'sekundlarda, har savol' : 'sekundlarda, jami'})</Label>
-                  <Input
-                    type="number"
-                    value={sectionForm.timerValue}
-                    onChange={(e) => setSectionForm(p => ({ ...p, timerValue: e.target.value }))}
-                    data-testid="input-section-timer-value"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <Label>O'qish matni (ixtiyoriy)</Label>
-                  <Textarea
-                    value={sectionForm.readingPassage}
-                    onChange={(e) => setSectionForm(p => ({ ...p, readingPassage: e.target.value }))}
-                    placeholder="Bu bo'lim uchun doimiy ko'rinadigan matn (masalan: Reading passage)"
-                    rows={3}
-                    data-testid="input-section-reading"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2">
-                {editingSectionId ? (
-                  <>
-                    <Button size="sm" onClick={() => updateSectionMutation.mutate()} disabled={!sectionForm.title || updateSectionMutation.isPending} data-testid="button-update-section">
-                      Saqlash
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => { setEditingSectionId(null); setSectionForm({ title: "", timerType: "per_question", timerValue: "60", readingPassage: "" }); }}>
-                      Bekor qilish
-                    </Button>
-                  </>
-                ) : (
-                  <Button size="sm" onClick={() => addSectionMutation.mutate()} disabled={!sectionForm.title || addSectionMutation.isPending} data-testid="button-add-section">
-                    <Plus className="w-3 h-3 mr-1" />Bo'lim qo'shish
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            {testSectionsData && testSectionsData.length > 0 && (() => {
-              const allQuestions = Array.isArray(sectionTestQuestions) ? sectionTestQuestions : (sectionTestQuestions?.questions || []);
-              const unassigned = allQuestions.filter((q: any) => !q.sectionId);
-              return (
-                <div className="space-y-3">
-                  <h4 className="font-medium text-sm">Mavjud bo'limlar</h4>
-                  {testSectionsData.map((section: any, idx: number) => {
-                    const sectionQs = allQuestions.filter((q: any) => q.sectionId === section.id);
-                    return (
-                      <div key={section.id} className="p-3 rounded-md border border-border space-y-2" data-testid={`section-item-${section.id}`}>
-                        <div className="flex items-center justify-between gap-2 flex-wrap">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary">{idx + 1}</Badge>
-                            <span className="font-medium text-sm">{section.title}</span>
-                            <Badge variant="outline" className="text-xs">{sectionQs.length} savol</Badge>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Badge variant="outline" className="text-xs">
-                              {section.timerType === 'per_question' ? `${section.timerValue}s/savol` : `${section.timerValue}s jami`}
-                            </Badge>
-                            {section.readingPassage && <Badge variant="outline" className="text-xs">Matn bor</Badge>}
-                            <Button size="icon" variant="ghost" onClick={() => {
-                              setEditingSectionId(section.id);
-                              setSectionForm({
-                                title: section.title,
-                                timerType: section.timerType || "per_question",
-                                timerValue: (section.timerValue || 60).toString(),
-                                readingPassage: section.readingPassage || "",
-                              });
-                            }} data-testid={`button-edit-section-${section.id}`}>
-                              <Edit className="w-3 h-3" />
-                            </Button>
-                            <Button size="icon" variant="ghost" onClick={() => { if (confirm("Bu bo'limni o'chirishga ishonchingiz komilmi?")) deleteSectionMutation.mutate(section.id); }} data-testid={`button-delete-section-${section.id}`}>
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </div>
-                        {sectionQs.length > 0 && (
-                          <div className="pl-6 space-y-1">
-                            {sectionQs.map((q: any, qi: number) => (
-                              <div key={q.id} className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                                <span className="truncate max-w-[300px]">{qi + 1}. {q.questionText}</span>
-                                <Button size="sm" variant="ghost" className="text-xs h-6" onClick={() => assignQuestionSectionMutation.mutate({ questionId: q.id, sectionId: null })} data-testid={`button-unassign-${q.id}`}>
-                                  Chiqarish
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-
-                  {unassigned.length > 0 && (
-                    <div className="p-3 rounded-md border border-dashed border-border space-y-2">
-                      <h4 className="font-medium text-sm text-muted-foreground">Biriktirilmagan savollar ({unassigned.length})</h4>
-                      <div className="space-y-1">
-                        {unassigned.map((q: any, qi: number) => (
-                          <div key={q.id} className="flex items-center justify-between gap-2 text-xs">
-                            <span className="truncate max-w-[250px] text-muted-foreground">{qi + 1}. {q.questionText}</span>
-                            <Select onValueChange={(sectionId) => assignQuestionSectionMutation.mutate({ questionId: q.id, sectionId })}>
-                              <SelectTrigger className="w-[140px] h-7 text-xs" data-testid={`select-assign-${q.id}`}>
-                                <SelectValue placeholder="Bo'limga qo'sh" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {testSectionsData.map((sec: any) => (
-                                  <SelectItem key={sec.id} value={sec.id}>{sec.title}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

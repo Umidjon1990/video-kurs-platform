@@ -71,14 +71,14 @@ export const ModernVideoPlayer = memo(function ModernVideoPlayer({ videoUrl, tit
     if (paused && iframeRef.current?.contentWindow) {
       const iframe = iframeRef.current;
       const src = iframe.src || '';
-      iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
-      iframe.contentWindow.postMessage(JSON.stringify({ method: 'pause' }), '*');
-      iframe.contentWindow.postMessage(JSON.stringify({ command: 'pause' }), '*');
+      iframe.contentWindow?.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+      iframe.contentWindow?.postMessage(JSON.stringify({ method: 'pause' }), '*');
+      iframe.contentWindow?.postMessage(JSON.stringify({ command: 'pause' }), '*');
       if (src.includes('kinescope')) {
-        iframe.contentWindow.postMessage(JSON.stringify({ type: 'player:call', data: { method: 'pause' } }), '*');
+        iframe.contentWindow?.postMessage(JSON.stringify({ type: 'player:call', data: { method: 'pause' } }), '*');
       }
       if (src.includes('mediadelivery.net')) {
-        iframe.contentWindow.postMessage(JSON.stringify({ event: 'pause' }), '*');
+        iframe.contentWindow?.postMessage(JSON.stringify({ event: 'pause' }), '*');
       }
       onPlayingChangeRef.current?.(false);
     }

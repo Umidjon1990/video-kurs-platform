@@ -1,3 +1,9 @@
+import {randomUUID} from 'node:crypto';
+import {registerNativePlatformExams} from './platform-exams';
+import {savePrivateSubmission,registerPrivateFiles,existingWork,persistAssignment,persistSpeaking} from './private-files';
+import {registerCoursePlatform} from './platform';
+import {createCourseContentGuard,learnerConfig,coursePermission} from './course-access';
+import {getCourseLocks} from './course-locks';
 // API routes with Replit Auth
 import type { Express } from "express";
 import { createServer, type Server } from "http";
@@ -148,8 +154,9 @@ const objectStorage = new ObjectStorageService();
 // File upload utility
 async function uploadSubmissionFile(
   file: Express.Multer.File,
-  folder: string
+  folder: string,ownerId:string,courseId:string
 ): Promise<string> {
+  if(process.env.PRIVATE_UPLOAD_DIR)return savePrivateSubmission(file,ownerId,courseId);
   const timestamp = Date.now();
   const uniqueFilename = `${folder}/${timestamp}_${file.originalname}`;
   
@@ -163,6 +170,17 @@ async function uploadSubmissionFile(
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware setup
   await setupAuth(app);
+  await registerCoursePlatform(app);
+  registerPrivateFiles(app,isAuthenticated);
+  app.use((req,res,next)=>{
+    // The legacy submit route must use server grading too; never trust a client-supplied score.
+    if((req as any).platformGrant&&/^\/api\/(?:student\/)?tests\/[^/]+\/submit$/.test(req.path))return res.status(409).json({message:'Testning amaldagi urinishini yakunlang'});
+    const match=/^\/api\/tests\/([^/]+)\/submit$/.exec(req.path);
+    if(req.method==='POST'&&match)req.url='/api/student/tests/'+match[1]+'/submit';
+    next();
+  });
+  app.use(createCourseContentGuard(storage,getCourseLocks));
+  await registerNativePlatformExams(app);
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
@@ -245,7 +263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return {
           id: q.id, testId: q.testId, sectionId: q.sectionId, type: q.type, questionText: q.questionText, points: q.points, order: q.order, timeLimit: q.timeLimit, mediaUrl: q.mediaUrl,
           correctCount: q.type === 'multiple_choice' ? correctCount : undefined,
-          config: q.type === 'matching' ? { leftColumn: (q.config as any)?.leftColumn || [], rightColumn: (q.config as any)?.rightColumn || [] } : (q.config || {}),
+          config: q.type === 'matching' ? { leftColumn: (q.config as any)?.leftColumn || [], rightColumn: (q.config as any)?.rightColumn || [] } : learnerConfig(q.config || {}),
         };
       }));
       res.json({
@@ -304,9 +322,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const config = question.config as any;
           if (JSON.stringify((config.correctPairs || []).sort()) === JSON.stringify(studentAnswer.sort())) totalScore += question.points;
         } else if (question.type === 'short_answer') {
-          const keywords = question.correctAnswer?.toLowerCase().split(',').map((k: string) => k.trim()) || [];
+          const keywords = question.correctAnswer?.toLowerCase().split(',').map((k: string) => k.trim()).filter(Boolean) || [];
           const matchedKeywords = keywords.filter((k: string) => studentAnswer.toLowerCase().includes(k));
-          if (matchedKeywords.length >= keywords.length * 0.5) totalScore += question.points;
+          if (keywords.length>0 && matchedKeywords.length >= keywords.length * 0.5) totalScore += question.points;
         }
       }
       const percentage = totalPoints > 0 ? (totalScore / totalPoints) * 100 : 0;
@@ -4153,7 +4171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { lessonId } = req.params;
       const essayQuestion = await storage.getLessonEssayQuestion(lessonId);
-      res.json(essayQuestion || null);
+      res.json(essayQuestion?.isActive===false?null:essayQuestion || null);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -4183,11 +4201,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const { lessonId } = req.params;
-      const { essayText, wordCount } = req.body;
+      const essayText=z.string().trim().min(1).max(100000).parse(req.body.essayText);
+      const wordCount=essayText.split(/\s+/u).filter(Boolean).length;
       
       // Get the essay question
       const essayQuestion = await storage.getLessonEssayQuestion(lessonId);
-      if (!essayQuestion) {
+      if (!essayQuestion||essayQuestion.isActive===false) {
         return res.status(404).json({ message: "Bu dars uchun insho topshirig'i mavjud emas" });
       }
       
@@ -4494,7 +4513,7 @@ So'zlar soni: ${submission.wordCount}`;
           config: q.type === 'matching' ? {
             leftColumn: (q.config as any)?.leftColumn || [],
             rightColumn: (q.config as any)?.rightColumn || [],
-          } : (q.config || {}),
+          } : learnerConfig(q.config || {}),
         };
       }));
       
@@ -4606,11 +4625,11 @@ So'zlar soni: ${submission.wordCount}`;
           } catch (e) { /* matching comparison failed */ }
         } else if (question.type === 'short_answer') {
           const sa = typeof studentAnswer === 'string' ? studentAnswer : String(studentAnswer || '');
-          const keywords = question.correctAnswer?.toLowerCase().split(',').map((k: string) => k.trim()) || [];
+          const keywords = question.correctAnswer?.toLowerCase().split(',').map((k: string) => k.trim()).filter(Boolean) || [];
           const studentText = sa.toLowerCase();
           const matchedKeywords = keywords.filter((k: string) => studentText.includes(k));
           
-          if (matchedKeywords.length >= keywords.length * 0.5) {
+          if (keywords.length>0 && matchedKeywords.length >= keywords.length * 0.5) {
             totalScore += question.points;
           }
         }
@@ -5225,6 +5244,12 @@ So'zlar soni: ${submission.wordCount}`;
         return res.status(404).json({ message: "Vazifa topilmadi" });
       }
       
+      const permission=await coursePermission(storage,userId,assignment.courseId);
+      if(!permission.allowed||(req.platformGrant&&req.platformGrant.courseId!==assignment.courseId))return res.status(403).json({message:'Kursga faol kirish huquqi kerak'});
+      if(req.platformGrant?.features?.hasAssignments!==undefined&&req.platformGrant.features.hasAssignments!==true)return res.status(403).json({message:'Tarifda vazifalar yo‘q'});
+      const locks=await getCourseLocks(assignment.courseId,userId);if(assignment.lessonId&&locks.lockedLessons?.[assignment.lessonId]?.locked)return res.status(403).json({message:'Dars hali ochilmagan'});
+      const requestKey=req.platformGrant?z.string().uuid().parse(req.body.requestKey):null;
+      if(requestKey){const previous=await existingWork('assignment',userId,requestKey,assignmentId);if(previous)return res.json(previous);}
       // Upload files to Google Cloud Storage
       const imageUrls: string[] = [];
       const audioUrls: string[] = [];
@@ -5234,35 +5259,29 @@ So'zlar soni: ${submission.wordCount}`;
       
       if (files.images) {
         for (const file of files.images) {
-          const url = await uploadSubmissionFile(file, 'submissions/images');
+          const url = await uploadSubmissionFile(file, 'submissions/images',userId,assignment.courseId);
           imageUrls.push(url);
         }
       }
       
       if (files.audios) {
         for (const file of files.audios) {
-          const url = await uploadSubmissionFile(file, 'submissions/audios');
+          const url = await uploadSubmissionFile(file, 'submissions/audios',userId,assignment.courseId);
           audioUrls.push(url);
         }
       }
       
       if (files.files) {
         for (const file of files.files) {
-          const url = await uploadSubmissionFile(file, 'submissions/files');
+          const url = await uploadSubmissionFile(file, 'submissions/files',userId,assignment.courseId);
           fileUrls.push(url);
         }
       }
       
-      const submission = await storage.createSubmission({
-        assignmentId,
-        userId,
-        content,
-        imageUrls,
-        audioUrls,
-        fileUrls,
-        status: 'new_submitted',
-      });
-      
+      let submission:any;
+      if(requestKey){const result=await persistAssignment({userId,assignmentId,key:requestKey,content:z.string().max(100000).parse(content||''),imageUrls,audioUrls,fileUrls});submission=result.submission;if(result.duplicate)return res.json(submission);}
+      else submission=await storage.createSubmission({assignmentId,userId,content,imageUrls,audioUrls,fileUrls,status:'new_submitted'});
+
       // O'qituvchiga ogohlantirish yuborish
       const course = await storage.getCourse(assignment.courseId);
       if (course) {
@@ -6310,7 +6329,7 @@ So'zlar soni: ${submission.wordCount}`;
       const sectionsWithQuestions = await Promise.all(
         sections.map(async (section) => {
           const questions = await storage.getSpeakingQuestions(section.id);
-          return { ...section, questions };
+          return { ...section, questions:questions.map(learnerConfig) };
         })
       );
       
@@ -6342,30 +6361,16 @@ So'zlar soni: ${submission.wordCount}`;
       }
       
       // Parse answers from request body
-      const answersData = JSON.parse(req.body.answers);
-      
-      // Create submission
-      const submission = await storage.createSpeakingSubmission({
-        speakingTestId: testId,
-        userId,
-        status: 'submitted',
-      });
-      
-      // Upload audio files and create answers
-      for (let i = 0; i < answersData.length; i++) {
-        const answerData = answersData[i];
-        const audioFile = files[i];
-        
-        // Upload audio to object storage
-        const audioUrl = await uploadSubmissionFile(audioFile, 'speaking-tests');
-        
-        await storage.createSpeakingAnswer({
-          submissionId: submission.id,
-          questionId: answerData.questionId,
-          audioUrl,
-        });
-      }
-      
+      const answersData=z.array(z.object({questionId:z.string().min(1)})).min(1).max(50).parse(JSON.parse(req.body.answers));
+      const allowedSections=await storage.getSpeakingTestSections(testId);
+      const allowedQuestions=(await Promise.all(allowedSections.map(s=>storage.getSpeakingQuestions(s.id)))).flat();
+      if(answersData.length!==files.length||new Set(answersData.map(a=>a.questionId)).size!==answersData.length||answersData.some(a=>!allowedQuestions.some(q=>q.id===a.questionId)))return res.status(400).json({message:'Audio javoblar test savollariga mos emas'});
+
+      const requestKey=req.platformGrant?z.string().uuid().parse(req.body.requestKey):randomUUID();
+      const previous=await existingWork('speaking',userId,requestKey,testId);if(previous)return res.json(previous);
+      const uploaded:{questionId:string;audioUrl:string}[]=[];
+      try{for(let i=0;i<answersData.length;i++)uploaded.push({questionId:answersData[i].questionId,audioUrl:await uploadSubmissionFile(files[i],'speaking-tests',userId,speakingTest.courseId)});}catch(error){const {discardPrivateFiles}=await import('./private-files');await discardPrivateFiles(uploaded.map(a=>a.audioUrl),userId);throw error;}
+      const submission=await persistSpeaking({userId,testId,key:requestKey,answers:uploaded});
       res.json(submission);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -7361,6 +7366,7 @@ So'zlar soni: ${submission.wordCount}`;
     if (courseIds.length === 0) return;
     const plans = await storage.getSubscriptionPlans();
     const plan = plans[0];
+      if(!plan)throw new Error("Obuna tarifi yaratilmagan");
     for (const courseId of courseIds) {
       const existing = await storage.getEnrollmentByCourseAndUser(courseId, userId);
       if (existing) {
@@ -7373,14 +7379,14 @@ So'zlar soni: ${submission.wordCount}`;
       }
       const days = daysMap[courseId] || 30;
       const enrollment = await storage.createEnrollment({
-        userId, courseId, planId: plan?.id || null,
+        userId, courseId, planId: plan.id,
         paymentMethod: 'manual', paymentStatus: 'approved', groupId,
       });
       const startDate = new Date();
       const endDate = new Date();
       endDate.setDate(endDate.getDate() + days);
       await db.insert(userSubscriptions).values({
-        userId, courseId, planId: plan?.id || null,
+        userId, courseId, planId: plan.id,
         enrollmentId: enrollment.id, startDate, endDate, status: 'active',
       });
     }
@@ -7584,6 +7590,7 @@ So'zlar soni: ${submission.wordCount}`;
       const members = await storage.getGroupMembers(groupId);
       const plans = await storage.getSubscriptionPlans();
       const plan = plans[0];
+      if(!plan)throw new Error("Obuna tarifi yaratilmagan");
 
       let enrolled = 0;
       let skipped = 0;
@@ -7595,7 +7602,7 @@ So'zlar soni: ${submission.wordCount}`;
         const enrollment = await storage.createEnrollment({
           userId: member.userId,
           courseId,
-          planId: plan?.id || null,
+          planId: plan.id,
           paymentMethod: 'manual',
           paymentStatus: 'approved',
           groupId,
@@ -7607,7 +7614,7 @@ So'zlar soni: ${submission.wordCount}`;
         await db.insert(userSubscriptions).values({
           userId: member.userId,
           courseId,
-          planId: plan?.id || null,
+          planId: plan.id,
           enrollmentId: enrollment.id,
           startDate,
           endDate,
@@ -7700,300 +7707,7 @@ So'zlar soni: ${submission.wordCount}`;
   });
 
   // Lesson lock status for a student in a course
-  app.get('/api/courses/:courseId/lesson-lock-status', isAuthenticated, async (req: any, res) => {
-    try {
-      const { courseId } = req.params;
-      const userId = req.user?.id || req.user?.claims?.sub;
-
-      // Get student's group enrollment
-      const enrollment = await storage.getEnrollmentByCourseAndUser(courseId, userId);
-      if (!enrollment) return res.json({ settings: null, lockedLessons: {} });
-
-      // Try group-specific settings first
-      let settings: any = null;
-      const groupId = enrollment.groupId;
-      if (groupId) {
-        settings = await storage.getGroupCourseSettings(groupId, courseId);
-      }
-
-      // Fallback: use course-level settings (including test gate)
-      const course = await storage.getCourse(courseId);
-      if (!settings && course) {
-        const hasSchedule = course.unlockType && course.unlockType !== 'free';
-        const hasTestGate = course.testGateEnabled;
-        if (hasSchedule || hasTestGate) {
-          settings = {
-            unlockType: course.unlockType || 'free',
-            unlockIntervalDays: course.unlockIntervalDays ?? 1,
-            unlockWeekDays: course.unlockWeekDays ?? [],
-            unlockStartDate: course.unlockStartDate,
-            testGateEnabled: course.testGateEnabled ?? false,
-            minPassScore: course.minPassScore ?? 80,
-          };
-        }
-      }
-
-      // Check if any lesson has requiresTestPass — if so, we need to process even without schedule
-      const courseLessons = await storage.getLessonsByCourse(courseId);
-      const hasPerLessonGate = courseLessons.some((l: any) => l.requiresTestPass);
-
-      if (!settings && hasPerLessonGate) {
-        settings = {
-          unlockType: 'free',
-          unlockIntervalDays: 1,
-          unlockWeekDays: [],
-          unlockStartDate: null,
-          testGateEnabled: false,
-          minPassScore: course?.minPassScore ?? 80,
-        };
-      }
-
-      if (!settings) {
-        return res.json({ settings: null, lockedLessons: {} });
-      }
-
-      const hasAnyGate = settings.testGateEnabled || hasPerLessonGate;
-      const onlyTestGate = settings.unlockType === 'free' && hasAnyGate;
-      if (!onlyTestGate && settings.unlockType === 'free') {
-        return res.json({ settings, lockedLessons: {} });
-      }
-
-      // Individual start date logic:
-      // When useIndividualStartDate is enabled, each student's schedule starts
-      // from their personalStartDate (if set) or addedAt date (when they joined the group).
-      // This means admin doesn't need to set dates per student - it's automatic.
-      if (settings.useIndividualStartDate && groupId) {
-        const membership = await db.select()
-          .from(studentGroupMembers)
-          .where(and(
-            eq(studentGroupMembers.groupId, groupId),
-            eq(studentGroupMembers.userId, userId)
-          ))
-          .limit(1);
-        if (membership[0]) {
-          const personalDate = membership[0].personalStartDate || membership[0].addedAt;
-          if (personalDate) {
-            settings.unlockStartDate = new Date(personalDate);
-          }
-        }
-      }
-
-      if (!settings.unlockStartDate && settings.unlockType !== 'free') {
-        settings.unlockStartDate = new Date();
-      }
-
-      // Get all lessons ordered (reuse courseLessons from above)
-      const sorted = [...courseLessons].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-
-      // Get student's test attempts
-      const attempts = await db.select()
-        .from(testAttempts)
-        .where(eq(testAttempts.userId, userId));
-
-      // Get tests per lesson (each lesson may have a test)
-      const testsForLessons = await db.select()
-        .from(tests)
-        .where(inArray(tests.lessonId, sorted.map(l => l.id)));
-
-      const testByLesson: Record<string, string> = {};
-      for (const t of testsForLessons) {
-        if (t.lessonId) testByLesson[t.lessonId] = t.id;
-      }
-
-      // Calculate lock status for each lesson
-      const lockedLessons: Record<string, { locked: boolean; unlockDate?: string; reason: string }> = {};
-
-      // Normalize to start-of-day for fair date-only comparison
-      const now = new Date();
-      now.setHours(23, 59, 59, 999);
-
-      // Helper: get the unlock date for the Nth lesson in weekly batch mode.
-      // Each session (unlock event) corresponds to one occurrence of a selected weekday.
-      // Sessions cycle through selected weekdays in order, week by week.
-      // Lesson index 0 = startDate itself (always unlocked on day 0).
-      // Lesson index 1 = first selected weekday >= startDate.
-      // Lesson index N = Nth occurrence of any selected weekday from startDate.
-      function getWeeklyBatchUnlockDate(startDate: Date, weekDays: string[], lessonIndex: number): Date {
-        if (lessonIndex === 0) return new Date(startDate);
-        const dayMap: Record<string, number> = {
-          sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
-          thursday: 4, friday: 5, saturday: 6,
-        };
-        const validDays = weekDays
-          .map(d => dayMap[d.toLowerCase()])
-          .filter(d => d !== undefined)
-          .sort((a, b) => a - b);
-        if (validDays.length === 0) return new Date(startDate);
-
-        // Walk forward from startDate, counting occurrences of valid days
-        // until we've found lessonIndex occurrences
-        let count = 0;
-        const date = new Date(startDate);
-        // Move to next day first (lesson 0 is already at startDate)
-        date.setDate(date.getDate() + 1);
-        while (count < lessonIndex) {
-          if (validDays.includes(date.getDay())) {
-            count++;
-            if (count === lessonIndex) break;
-          }
-          date.setDate(date.getDate() + 1);
-        }
-        return date;
-      }
-
-      // Build module-based unlock index: lessons in the same module share the same unlock day.
-      // moduleId → moduleUnlockIndex mapping. Lessons without moduleId get their own index.
-      const moduleUnlockIndexMap = new Map<string, number>();
-      let currentModuleIndex = 0;
-      for (let i = 0; i < sorted.length; i++) {
-        const lesson = sorted[i];
-        if (lesson.moduleId) {
-          if (!moduleUnlockIndexMap.has(lesson.moduleId)) {
-            moduleUnlockIndexMap.set(lesson.moduleId, currentModuleIndex);
-            currentModuleIndex++;
-          }
-        } else {
-          currentModuleIndex++;
-        }
-      }
-
-      function getLessonUnlockIndex(lesson: any, lessonArrayIndex: number): number {
-        if (lesson.moduleId && moduleUnlockIndexMap.has(lesson.moduleId)) {
-          return moduleUnlockIndexMap.get(lesson.moduleId)!;
-        }
-        // No module — count distinct modules before this lesson + standalone lessons before it
-        let idx = 0;
-        const seenModules = new Set<string>();
-        for (let j = 0; j < lessonArrayIndex; j++) {
-          const prev = sorted[j];
-          if (prev.moduleId) {
-            if (!seenModules.has(prev.moduleId)) {
-              seenModules.add(prev.moduleId);
-              idx++;
-            }
-          } else {
-            idx++;
-          }
-        }
-        return idx;
-      }
-
-      // Helper to check if a test has been passed
-      const isTestPassed = (gateTestId: string): boolean => {
-        return attempts.some(a => {
-          if (a.testId !== gateTestId) return false;
-          if (a.isPassed) return true;
-          const total = a.totalPoints ?? 0;
-          if (total > 0) {
-            const pct = ((a.score ?? 0) / total) * 100;
-            return pct >= (settings.minPassScore ?? 80);
-          }
-          return false;
-        });
-      };
-
-      // Track cascading test gate block: if any previous lesson's test gate
-      // hasn't been passed, ALL subsequent lessons remain locked
-      let cascadeTestGateBlocked = false;
-
-      for (let i = 0; i < sorted.length; i++) {
-        const lesson = sorted[i];
-        let locked = false;
-        let unlockDate: string | undefined;
-        let reason = '';
-
-        const unlockIdx = getLessonUnlockIndex(lesson, i);
-
-        // Schedule check: first module/lesson (index 0) is always unlocked by schedule
-        if (settings.unlockType === 'daily' && settings.unlockStartDate && unlockIdx > 0) {
-          const startD = new Date(settings.unlockStartDate);
-          startD.setHours(0, 0, 0, 0);
-          const targetDate = new Date(startD);
-          targetDate.setDate(targetDate.getDate() + unlockIdx * (settings.unlockIntervalDays || 1));
-          unlockDate = targetDate.toISOString();
-          if (now < targetDate) { locked = true; reason = 'schedule'; }
-        } else if (settings.unlockType === 'weekly' && settings.unlockStartDate && settings.unlockWeekDays?.length && unlockIdx > 0) {
-          const startD = new Date(settings.unlockStartDate);
-          startD.setHours(0, 0, 0, 0);
-          const targetDate = getWeeklyBatchUnlockDate(startD, settings.unlockWeekDays as string[], unlockIdx);
-          unlockDate = targetDate.toISOString();
-          if (now < targetDate) { locked = true; reason = 'schedule'; }
-        }
-
-        // Cascading test gate: if a previous lesson's test gate was not passed,
-        // all subsequent lessons remain locked until that test is passed
-        if (i > 0 && cascadeTestGateBlocked) {
-          locked = true;
-          reason = 'test_gate';
-        }
-
-        // Test gate check (stacks with schedule)
-        // Two modes:
-        // 1. Course/group-level testGateEnabled: checks at module boundaries
-        // 2. Per-lesson requiresTestPass: checks if previous lesson has mandatory test
-        if (i > 0 && !cascadeTestGateBlocked) {
-          const prevLesson = sorted[i - 1];
-
-          // Per-lesson test gate: if previous lesson has requiresTestPass=true
-          if ((prevLesson as any).requiresTestPass) {
-            const gateTestId = testByLesson[prevLesson.id];
-            if (gateTestId) {
-              if (!isTestPassed(gateTestId)) {
-                locked = true;
-                reason = 'test_gate';
-                cascadeTestGateBlocked = true;
-              }
-            }
-          }
-
-          // Course/group-level test gate: checks at module boundaries
-          if (!locked && settings.testGateEnabled) {
-            const currentModuleId = lesson.moduleId;
-            const sameModule = currentModuleId && prevLesson.moduleId && currentModuleId === prevLesson.moduleId;
-
-            if (!sameModule) {
-              let gateLesson = prevLesson;
-              if (prevLesson.moduleId) {
-                for (let k = i - 1; k >= 0; k--) {
-                  if (sorted[k].moduleId === prevLesson.moduleId) {
-                    const tid = testByLesson[sorted[k].id];
-                    if (tid) { gateLesson = sorted[k]; break; }
-                  }
-                }
-              }
-              const gateTestId = testByLesson[gateLesson.id];
-              if (gateTestId) {
-                if (!isTestPassed(gateTestId)) {
-                  locked = true;
-                  reason = 'test_gate';
-                  cascadeTestGateBlocked = true;
-                }
-              }
-            }
-          }
-        }
-
-        // Check if current lesson has a test gate that could block subsequent lessons
-        // Reset cascade if this lesson's test has been passed
-        if ((lesson as any).requiresTestPass) {
-          const currentTestId = testByLesson[lesson.id];
-          if (currentTestId && !isTestPassed(currentTestId)) {
-            cascadeTestGateBlocked = true;
-          }
-        }
-
-        let scheduleReady = true;
-        if (unlockDate && now < new Date(unlockDate)) {
-          scheduleReady = false;
-        }
-        lockedLessons[lesson.id] = { locked, unlockDate, reason, scheduleReady };
-      }
-
-      res.json({ settings, lockedLessons });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+  app.get('/api/courses/:courseId/lesson-lock-status',isAuthenticated,async(req:any,res,next)=>{try{res.json(await getCourseLocks(req.params.courseId,req.user?.id||req.user?.claims?.sub));}catch(error){next(error)}});
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CURATOR MANAGEMENT (Admin)
