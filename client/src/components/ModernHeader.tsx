@@ -281,7 +281,7 @@ export function ModernHeader() {
           >
             <nav className="flex flex-col p-4 gap-2">
               {navLinks.map((link) => (
-                <Link key={link.href} href={link.href}>
+                <Link key={link.href} href={link.href||"/"}>
                   <button
                     className="w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
                     style={
