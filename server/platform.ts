@@ -1,3 +1,4 @@
+import {registerCourseLegacy} from "./platform-legacy";
 import {
   pendingPlatformReviews,
   gradePlatformReview,
@@ -85,7 +86,7 @@ export const courseSourceVersion = (
   digest(
     [
       course.id,
-      course.updatedAt?.toISOString?.() || course.updated_at || "",
+      (course.updatedAt || course.updated_at) ? new Date(course.updatedAt || course.updated_at).toISOString() : "",
       planId,
       JSON.stringify(courseFeatures(features)),
     ].join(":"),
@@ -95,7 +96,11 @@ export async function ensurePlatformTables() {
 CREATE TABLE IF NOT EXISTS platform_grants(order_id uuid PRIMARY KEY,external_user_id varchar NOT NULL REFERENCES platform_identities(external_user_id),source_id text NOT NULL,course_id varchar NOT NULL REFERENCES courses(id),plan_id varchar NOT NULL REFERENCES subscription_plans(id),enrollment_id varchar REFERENCES enrollments(id),subscription_id varchar REFERENCES user_subscriptions(id),expires_at timestamptz NOT NULL,revoked_at timestamptz,features jsonb NOT NULL,source_version text NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
 CREATE INDEX IF NOT EXISTS platform_grants_owner_idx ON platform_grants(external_user_id,course_id);
 CREATE TABLE IF NOT EXISTS platform_revocations(order_id uuid PRIMARY KEY,external_user_id varchar NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
-CREATE TABLE IF NOT EXISTS platform_operations(operation_id uuid PRIMARY KEY,order_id uuid NOT NULL,kind text NOT NULL,result jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now());`);
+CREATE TABLE IF NOT EXISTS platform_operations(operation_id uuid PRIMARY KEY,order_id uuid NOT NULL,kind text NOT NULL,result jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
+ALTER TABLE platform_grants ADD COLUMN IF NOT EXISTS native_user_id varchar REFERENCES users(id);
+ALTER TABLE platform_grants ALTER COLUMN expires_at DROP NOT NULL;
+ALTER TABLE platform_grants ALTER COLUMN plan_id DROP NOT NULL;
+UPDATE platform_grants g SET native_user_id=i.native_user_id FROM platform_identities i WHERE i.external_user_id=g.external_user_id AND g.native_user_id IS NULL;`);
 }
 export async function provisionCourse(input: unknown) {
   const v = grantSchema.parse(input);
@@ -238,7 +243,7 @@ async function ownedGrant(req: Request) {
   const order = z.string().uuid().parse(req.get("x-platform-order"));
   const row = (
     await pool.query(
-      "SELECT g.*,i.native_user_id FROM platform_grants g JOIN platform_identities i ON i.external_user_id=g.external_user_id JOIN users u ON u.id=i.native_user_id WHERE g.order_id=$1 AND g.external_user_id=$2 AND g.revoked_at IS NULL AND g.expires_at>now() AND u.status='active'",
+      "SELECT g.*,COALESCE(g.native_user_id,i.native_user_id) AS native_user_id FROM platform_grants g JOIN platform_identities i ON i.external_user_id=g.external_user_id JOIN users u ON u.id=COALESCE(g.native_user_id,i.native_user_id) WHERE g.order_id=$1 AND g.external_user_id=$2 AND g.revoked_at IS NULL AND (g.expires_at IS NULL OR g.expires_at>now()) AND u.status='active'",
       [order, user],
     )
   ).rows[0];
@@ -306,7 +311,7 @@ export async function manageCourseGrant(orderId: string, input: unknown) {
         );
       }
     } else {
-      if (!row || row.revoked_at || !v.days)
+      if (!row || row.revoked_at || !row.expires_at || !v.days)
         throw Object.assign(new Error("Faol xarid va kunlar soni kerak"), {
           status: 409,
         });
@@ -351,6 +356,14 @@ export async function registerCoursePlatform(app: Express) {
     res.set("Cache-Control", "private, no-store");
     next();
   };
+  await registerCourseLegacy(app,auth);
+  app.get("/api/platform/owned/:sourceId/history",auth,handle(async(req,res)=>{
+    const external=z.string().min(1).max(100).parse(req.get("x-platform-user")),order=z.string().uuid().parse(req.get("x-platform-order"));
+    const g=(await pool.query("SELECT g.*,COALESCE(g.native_user_id,i.native_user_id) AS native_user_id FROM platform_grants g JOIN platform_identities i ON i.external_user_id=g.external_user_id WHERE g.order_id=$1 AND g.external_user_id=$2 AND g.source_id=$3",[order,external,req.params.sourceId])).rows[0];
+    if(!g)return res.status(403).json({message:"Xarid mos emas"});
+    const rows=(await pool.query("SELECT a.*,t.title,p.result->>'requiresManualReview' AS platform_manual,EXISTS(SELECT 1 FROM questions q WHERE q.test_id=t.id AND q.type='essay') AS has_essay FROM test_attempts a JOIN tests t ON t.id=a.test_id LEFT JOIN platform_course_attempts p ON p.native_attempt_id=a.id WHERE a.user_id=$1 AND t.course_id=$2 ORDER BY a.completed_at DESC LIMIT 200",[g.native_user_id,g.course_id])).rows;
+    res.json({attempts:rows.map((a:any)=>({id:a.id,title:a.title,status:"submitted",createdAt:a.completed_at,finishedAt:a.completed_at,result:{score:a.score,totalPoints:a.total_points,percentage:a.total_points?a.score/a.total_points*100:0,isPassed:a.is_passed,requiresManualReview:a.platform_manual!==null?a.platform_manual==="true":a.has_essay&&!a.graded_at},feedback:a.feedback||null}))});
+  }));
   app.get(
     "/api/platform/admin/files/:id",
     auth,
@@ -507,7 +520,7 @@ export async function registerCoursePlatform(app: Express) {
       if (!row) return res.status(404).json({ message: "Xarid topilmadi" });
       res.json({
         orderId: row.order_id,
-        active: !row.revoked_at && new Date(row.expires_at) > new Date(),
+        active: !row.revoked_at && (!row.expires_at || new Date(row.expires_at) > new Date()),
         expiresAt: row.expires_at,
       });
     }),
