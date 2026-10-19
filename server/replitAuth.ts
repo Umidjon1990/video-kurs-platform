@@ -124,11 +124,12 @@ async function upsertUser(claims: any) {
   }
 }
 
-export async function setupAuth(app: Express) {
+export async function setupAuth(app: Express, editorMiddleware?: RequestHandler) {
   app.set("trust proxy", 1);
   app.use(getSession());
   app.use(passport.initialize());
   app.use(passport.session());
+  if(editorMiddleware)app.use(editorMiddleware);
 
   if (process.env.REPLIT_DOMAINS) {
     const config = await getOidcConfig();
@@ -283,7 +284,7 @@ export async function setupAuth(app: Express) {
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const user = req.user as any;
 
-  if (!req.isAuthenticated()) {
+  if (!req.isAuthenticated() || user?.id?.startsWith("zt-editor-")&&!req.platformEditor) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 

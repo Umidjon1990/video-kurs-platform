@@ -1,4 +1,5 @@
 import {randomUUID} from 'node:crypto';
+import {courseEditor} from "./platform-editor";
 import {registerNativePlatformExams} from './platform-exams';
 import {savePrivateSubmission,registerPrivateFiles,existingWork,persistAssignment,persistSpeaking} from './private-files';
 import {registerCoursePlatform} from './platform';
@@ -169,7 +170,9 @@ async function uploadSubmissionFile(
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware setup
-  await setupAuth(app);
+  const editor=courseEditor(app);
+  await setupAuth(app,editor.middleware);
+  editor.routes();
   await registerCoursePlatform(app);
   registerPrivateFiles(app,isAuthenticated);
   app.use((req,res,next)=>{
